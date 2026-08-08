@@ -1,23 +1,43 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { RateLimiter, RateLimiterAlgorithm } from '@bts-soft/validation';
+import { RedisModule, RedisService } from '@bts-soft/cache';
+import { RateLimiter, RateLimiterAlgorithm, RedisStore } from '@bts-soft/validation';
+import { AppResolver } from './app.resolver';
+import { JwtAuthGuard } from './common/guards/auth.guard';
+import { HealthController } from './health/health.controller';
+import depthLimit from 'graphql-depth-limit';
+import {
+  CorrelationIdMiddleware,
+  CORRELATION_ID_HEADER,
+} from './common/middlewares/correlation-id.middleware';
 // import { ApolloGatewayDriver, ApolloGatewayDriverConfig } from '@nestjs/apollo';
 // import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
-import { AppResolver } from './app.resolver';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'super-secret-jwt-key',
+    }),
+
+    RedisModule,
+
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: true,
       context: ({ req }: any) => {
         return { req };
       },
+      validationRules: [depthLimit(7)],
       playground: true,
       introspection: true,
-
       formatError: (error: any) => {
         const subgraphError = error.extensions?.response?.body?.errors?.[0];
 
@@ -46,31 +66,30 @@ import { AppResolver } from './app.resolver';
       // gateway: {
       //   supergraphSdl: new IntrospectAndCompose({
       //     subgraphs: [
-      //       // { name: 'user', url: 'http://user-srv:3000/user/graphql' },
+      //       { name: 'user', url: process.env.USER_SERVICE_URL || 'http://user-srv:3000/user/graphql' },
+      //       { name: 'delivery', url: process.env.DELIVERY_SERVICE_URL || 'http://delivery-srv:3000/delivery/graphql' },
       //     ],
       //   }),
-
       //   buildService: ({ url }) => {
       //     return new RemoteGraphQLDataSource({
       //       url,
       //       willSendRequest({ request, context }: any) {
+      //         // Header Propagation: Inject user identity & correlation headers to downstream subgraphs
+      //         if (context.req?.user) {
+      //           request.http.headers.set('x-user-id', context.req.user.userId || '');
+      //           request.http.headers.set('x-user-role', context.req.user.role || '');
+      //           if (context.req.user.sessionId) {
+      //             request.http.headers.set('x-user-session', context.req.user.sessionId);
+      //           }
+      //         }
+      //         if (context.req?.headers?.[CORRELATION_ID_HEADER]) {
+      //           request.http.headers.set(
+      //             CORRELATION_ID_HEADER,
+      //             context.req.headers[CORRELATION_ID_HEADER],
+      //           );
+      //         }
       //         if (context.req?.headers?.authorization) {
-      //           request.http.headers.set(
-      //             'authorization',
-      //             context.req.headers.authorization,
-      //           );
-      //         }
-      //         if (context.req?.headers?.['x-lang']) {
-      //           request.http.headers.set(
-      //             'x-lang',
-      //             context.req.headers['x-lang'],
-      //           );
-      //         }
-      //         if (context.req?.headers?.['accept-language']) {
-      //           request.http.headers.set(
-      //             'accept-language',
-      //             context.req.headers['accept-language'],
-      //           );
+      //           request.http.headers.set('authorization', context.req.headers.authorization);
       //         }
       //       },
       //     });
@@ -79,17 +98,35 @@ import { AppResolver } from './app.resolver';
       
     } as ApolloDriverConfig),
   ],
+  controllers: [HealthController],
   providers: [
     AppResolver,
+
     {
       provide: APP_GUARD,
-      useClass: RateLimiter({
-        algorithm: RateLimiterAlgorithm.TOKEN_BUCKET,
-        limit: Number(process.env.RATE_LIMIT_LIMIT) || 100,
-        windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
-        skipIntrospection: true,
-      }),
+      useClass: JwtAuthGuard,
+    },
+
+    {
+      provide: APP_GUARD,
+      useFactory: (redisService: RedisService) => {
+        return new ((RateLimiter as any)(
+          {
+            algorithm: RateLimiterAlgorithm.TOKEN_BUCKET,
+            limit: Number(process.env.RATE_LIMIT_LIMIT) || 100,
+            windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
+            skipIntrospection: true,
+            store: new RedisStore(redisService),
+          },
+          new RedisStore(redisService),
+        ))();
+      },
+      inject: [RedisService],
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+  }
+}

@@ -22,6 +22,19 @@ spec:
               value: "4000"
             - name: NODE_ENV
               value: "development"
+            - name: REDIS_HOST
+              value: "redis-srv"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: RATE_LIMIT_LIMIT
+              value: "100"
+            - name: RATE_LIMIT_WINDOW_MS
+              value: "60000"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: JWT_SECRET
 ---
 apiVersion: v1
 kind: Service

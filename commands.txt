@@ -1,0 +1,44 @@
+#---commands---
+docker pull node:24.11.0
+
+minikube start --driver=docker --image-mirror-country=all --base-image=docker.io/kicbase/stable:v0.0.48
+
+minikube status
+minikube addons enable ingress
+kubectl apply -f  k8s
+& minikube -p minikube docker-env | Invoke-Expression
+
+skaffold dev --cache-artifacts=true --build-concurrency=0
+
+minikube tunnel
+
+
+#----ToBase64String----
+powershell -Command "[Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('AIzaSyA5U03P6n8HMwsp9B35jOrDz7-HAtJ1MLc'))"
+
+#---nest---
+npx -y @nestjs/cli new api-gateway --package-manager npm --skip-git
+
+#----go---
+go mod init github.com/Omar-Sa6ry/realtime-delivery-microservices/services/delivery-service
+go get github.com/redis/go-redis/v9
+go get github.com/golang-jwt/jwt/v5
+go get github.com/redis/go-redis/v9
+go get github.com/spf13/viper # للـ Config
+go get github.com/99designs/gqlgen # للـ GraphQL
+go get github.com/nats-io/nats.go
+go get google.golang.org/grpc google.golang.org/grpc/credentials/insecure
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+go mod tidy
+
+go run github.com/99designs/gqlgen generate
+
+#----GRPC---- 
+protoc --proto_path=. --go_out=services/delivery-service/internal/protos --go_opt=Mproto/user.proto=github.com/Omar-Sa6ry/realtime-delivery-microservices/services/delivery-service/internal/protos/user --go-grpc_out=services/delivery-service/internal/protos --go-grpc_opt=Mproto/user.proto=github.com/Omar-Sa6ry/realtime-delivery-microservices/services/delivery-service/internal/protos/user proto/user.proto
+protoc -I=proto --go_out=services/auction-service/internal/proto/auction --go_opt=paths=source_relative --go-grpc_out=services/auction-service/internal/proto/auction --go-grpc_opt=paths=source_relative proto/auction.proto
+protoc -I=proto --go_out=services/delivery-service/internal/protos/auction --go_opt=paths=source_relative --go-grpc_out=services/delivery-service/internal/protos/auction --go-grpc_opt=paths=source_relative proto/auction.proto
+
+#----Stripe----
+stripe listen --forward-to localhost:5000/payment/webhook/STRIPE

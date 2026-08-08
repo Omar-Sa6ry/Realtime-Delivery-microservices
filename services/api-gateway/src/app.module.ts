@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { RateLimiter, RateLimiterAlgorithm } from '@bts-soft/validation';
 // import { ApolloGatewayDriver, ApolloGatewayDriverConfig } from '@nestjs/apollo';
 // import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
 import { AppResolver } from './app.resolver';
@@ -77,6 +79,17 @@ import { AppResolver } from './app.resolver';
       
     } as ApolloDriverConfig),
   ],
-  providers: [AppResolver],
+  providers: [
+    AppResolver,
+    {
+      provide: APP_GUARD,
+      useClass: RateLimiter({
+        algorithm: RateLimiterAlgorithm.TOKEN_BUCKET,
+        limit: Number(process.env.RATE_LIMIT_LIMIT) || 100,
+        windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
+        skipIntrospection: true,
+      }),
+    },
+  ],
 })
 export class AppModule {}

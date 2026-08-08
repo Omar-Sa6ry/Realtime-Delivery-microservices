@@ -1,0 +1,29 @@
+apiVersion: skaffold/v4beta3
+kind: Config
+
+manifests:
+  rawYaml:
+    - ./k8s/*
+
+build:
+  local:
+    push: false
+
+  artifacts:
+
+    - image: delivery/api-gateway
+      context: .
+      docker:
+        dockerfile: services/api-gateway/Dockerfile
+      sync:
+        manual:
+          - src: "services/api-gateway/src/**/*.ts"
+            dest: /usr/src/app
+          - src: "proto/**/*.proto"
+            dest: /usr/src/app
+
+portForward:
+  - resourceType: service
+    resourceName: api-gateway-srv
+    port: 4000
+    localPort: 4000

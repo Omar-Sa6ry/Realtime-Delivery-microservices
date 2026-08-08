@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: delivery/api-gateway
+          ports:
+            - containerPort: 4000
+          env:
+            - name: PORT_GATEWAY
+              value: "4000"
+            - name: NODE_ENV
+              value: "development"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-srv
+spec:
+  selector:
+    app: api-gateway
+  ports:
+    - name: http
+      protocol: TCP
+      port: 4000
+      targetPort: 4000

@@ -1,0 +1,32 @@
+# General
+.DS_Store
+.idea/
+.vscode/
+*.log
+.env
+.env.*
+node_modules/
+dist/
+coverage/
+
+# Go
+/bin/
+/obj/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# Kubernetes / Docker local
+k8s/secrets.yaml
+k8s/auction-secrets.yaml
+k8s/delivary-secrets.yaml
+k8s/notification-secrets.yaml
+k8s/ai-secrets.yaml
+docker-compose.override.yml
+
+draft.md

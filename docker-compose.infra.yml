@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  redis-srv:
+    image: redis:alpine
+    pull_policy: missing
+    container_name: redis-srv
+    ports:
+      - "6379:6379"
+
+  nats-srv:
+    image: nats-streaming:0.17.0
+    pull_policy: missing
+    container_name: nats-srv
+    command: ["-p", "4222", "-m", "8222", "-hbi", "5s", "-hbt", "5s", "-hbf", "2", "-SD", "-cid", "ticketing"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  user-db-srv:
+    image: postgres:15
+    pull_policy: missing
+    container_name: user-db-srv
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-delivery_user_db}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+
+volumes:
+  user_db_data:

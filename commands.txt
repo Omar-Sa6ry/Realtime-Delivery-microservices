@@ -12,6 +12,13 @@ skaffold dev --cache-artifacts=true --build-concurrency=0
 
 minikube tunnel
 
+#-----Run All in dev-----
+docker-compose up --build -d
+
+#-----Run Infra Separate-----
+docker-compose -f docker-compose.infra.yml up -d
+cd services/user-service
+npm run start:dev
 
 #----ToBase64String----
 powershell -Command "[Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('AIzaSyA5U03P6n8HMwsp9B35jOrDz7-HAtJ1MLc'))"

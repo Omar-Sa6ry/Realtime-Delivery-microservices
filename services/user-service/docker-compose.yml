@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  user-db-srv:
+    image: postgres:15
+    pull_policy: missing
+    container_name: user-db-srv
+    env_file:
+      - ../../.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-delivery_user_db}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"
+
+  redis-srv:
+    image: redis:alpine
+    pull_policy: missing
+    container_name: redis-srv
+    ports:
+      - "6379:6379"
+
+  nats-srv:
+    image: nats-streaming:0.17.0
+    pull_policy: missing
+    container_name: nats-srv
+    command: ["-p", "4222", "-m", "8222", "-hbi", "5s", "-hbt", "5s", "-hbf", "2", "-SD", "-cid", "ticketing"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  user-service:
+    build:
+      context: ../..
+      dockerfile: services/user-service/Dockerfile
+    container_name: user-service
+    env_file:
+      - ../../.env
+    ports:
+      - "4001:4001"
+      - "50051:50051"
+    environment:
+      PORT_USER: ${PORT_USER:-4001}
+      DB_HOST: "user-db-srv"
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-delivery_user_db}
+      DB_USERNAME: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      NODE_ENV: ${NODE_ENV:-development}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE: ${JWT_EXPIRE:-36000s}
+      REDIS_HOST: "redis-srv"
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
+    depends_on:
+      - user-db-srv
+      - redis-srv
+      - nats-srv
+    volumes:
+      - ./src:/usr/src/app/services/user-service/src
+      - ../../packages/ts:/usr/src/app/packages/ts

@@ -22,6 +22,17 @@ build:
           - src: "protos/**/*.proto"
             dest: /usr/src/app
 
+    - image: delivery/user
+      context: .
+      docker:
+        dockerfile: services/user-service/Dockerfile
+      sync:
+        manual:
+          - src: 'services/user-service/src/**/*.ts'
+            dest: /usr/src/app
+          - src: "protos/**/*.proto"
+            dest: /usr/src/app
+
 portForward:
   - resourceType: service
     resourceName: api-gateway-srv

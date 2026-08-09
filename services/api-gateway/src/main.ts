@@ -2,8 +2,13 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
+import { waitForService } from './utils/waitService.util';
 
 async function bootstrap() {
+    await Promise.all([
+    waitForService('http://user-srv:4001/user/graphql'),
+  ]);
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
   // Trust Proxy is crucial for Rate Limiting behind Load Balancers / Ingress

@@ -14,8 +14,8 @@ import {
   CorrelationIdMiddleware,
   CORRELATION_ID_HEADER,
 } from './common/middlewares/correlation-id.middleware';
-// import { ApolloGatewayDriver, ApolloGatewayDriverConfig } from '@nestjs/apollo';
-// import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
+import { ApolloGatewayDriver, ApolloGatewayDriverConfig } from '@nestjs/apollo';
+import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
 
 @Module({
   imports: [
@@ -30,73 +30,71 @@ import {
     RedisModule,
 
     GraphQLModule.forRoot<ApolloDriverConfig>({
-      driver: ApolloDriver,
-      autoSchemaFile: true,
-      context: ({ req }: any) => {
-        return { req };
-      },
-      validationRules: [depthLimit(7)],
-      playground: true,
-      introspection: true,
-      formatError: (error: any) => {
-        const subgraphError = error.extensions?.response?.body?.errors?.[0];
+      driver: ApolloGatewayDriver,
+      server: {
+        context: ({ req }: any) => {
+          return { req };
+        },
+        validationRules: [depthLimit(7)],
+        playground: true,
+        introspection: true,
+        formatError: (error: any) => {
+          const subgraphError = error.extensions?.response?.body?.errors?.[0];
 
-        if (subgraphError) {
+          if (subgraphError) {
+            return {
+              success: false,
+              statusCode: subgraphError.statusCode || 400,
+              message: subgraphError.message,
+              timeStamp: subgraphError.timeStamp || new Date().toISOString(),
+            } as any;
+          }
+
+          const originalError = error.extensions?.originalError as any;
+          const msg = originalError?.message || error.message;
+          const code =
+            error.extensions?.statusCode || originalError?.statusCode || 400;
+
           return {
             success: false,
-            statusCode: subgraphError.statusCode || 400,
-            message: subgraphError.message,
-            timeStamp: subgraphError.timeStamp || new Date().toISOString(),
+            statusCode: code,
+            message: Array.isArray(msg) ? msg[0] : msg,
+            timeStamp: new Date().toISOString(),
           } as any;
-        }
-
-        const originalError = error.extensions?.originalError as any;
-        const msg = originalError?.message || error.message;
-        const code =
-          error.extensions?.statusCode || originalError?.statusCode || 400;
-
-        return {
-          success: false,
-          statusCode: code,
-          message: Array.isArray(msg) ? msg[0] : msg,
-          timeStamp: new Date().toISOString(),
-        } as any;
+        },
       },
-
-      // gateway: {
-      //   supergraphSdl: new IntrospectAndCompose({
-      //     subgraphs: [
-      //       { name: 'user', url: process.env.USER_SERVICE_URL || 'http://user-srv:3000/user/graphql' },
-      //       { name: 'delivery', url: process.env.DELIVERY_SERVICE_URL || 'http://delivery-srv:3000/delivery/graphql' },
-      //     ],
-      //   }),
-      //   buildService: ({ url }) => {
-      //     return new RemoteGraphQLDataSource({
-      //       url,
-      //       willSendRequest({ request, context }: any) {
-      //         // Header Propagation: Inject user identity & correlation headers to downstream subgraphs
-      //         if (context.req?.user) {
-      //           request.http.headers.set('x-user-id', context.req.user.userId || '');
-      //           request.http.headers.set('x-user-role', context.req.user.role || '');
-      //           if (context.req.user.sessionId) {
-      //             request.http.headers.set('x-user-session', context.req.user.sessionId);
-      //           }
-      //         }
-      //         if (context.req?.headers?.[CORRELATION_ID_HEADER]) {
-      //           request.http.headers.set(
-      //             CORRELATION_ID_HEADER,
-      //             context.req.headers[CORRELATION_ID_HEADER],
-      //           );
-      //         }
-      //         if (context.req?.headers?.authorization) {
-      //           request.http.headers.set('authorization', context.req.headers.authorization);
-      //         }
-      //       },
-      //     });
-      //   },
-      // },
-      
-    } as ApolloDriverConfig),
+      gateway: {
+        supergraphSdl: new IntrospectAndCompose({
+          subgraphs: [
+            { name: 'user', url: process.env.USER_SERVICE_URL || 'http://user-srv:4001/user/graphql' },
+          ],
+        }),
+        buildService: ({ url }) => {
+          return new RemoteGraphQLDataSource({
+            url,
+            willSendRequest({ request, context }: any) {
+              // Header Propagation: Inject user identity & correlation headers to downstream subgraphs
+              if (context.req?.user) {
+                request.http.headers.set('x-user-id', context.req.user.userId || '');
+                request.http.headers.set('x-user-role', context.req.user.role || '');
+                if (context.req.user.sessionId) {
+                  request.http.headers.set('x-user-session', context.req.user.sessionId);
+                }
+              }
+              if (context.req?.headers?.[CORRELATION_ID_HEADER]) {
+                request.http.headers.set(
+                  CORRELATION_ID_HEADER,
+                  context.req.headers[CORRELATION_ID_HEADER],
+                );
+              }
+              if (context.req?.headers?.authorization) {
+                request.http.headers.set('authorization', context.req.headers.authorization);
+              }
+            },
+          });
+        },
+      },
+    } as ApolloGatewayDriverConfig),
   ],
   controllers: [HealthController],
   providers: [

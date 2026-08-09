@@ -25,6 +25,7 @@
     "@as-integrations/express5": "^1.1.2",
     "@bts-soft/cache": "^1.1.8",
     "@bts-soft/validation": "^1.2.1",
+    "@delivery/common": "file:../../packages/ts",
     "@nestjs/apollo": "^13.4.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",

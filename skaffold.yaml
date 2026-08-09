@@ -19,7 +19,7 @@ build:
         manual:
           - src: "services/api-gateway/src/**/*.ts"
             dest: /usr/src/app
-          - src: "proto/**/*.proto"
+          - src: "protos/**/*.proto"
             dest: /usr/src/app
 
 portForward:

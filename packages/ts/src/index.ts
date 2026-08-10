@@ -16,6 +16,7 @@ export * from "./filters/grpc-exception.filter";
 
 // Interfaces
 export * from "./interfaces/user.interface";
+export * from "./interfaces/grpc-user.interface";
 
 // DTOs
 export * from "./dtos/user.dto";

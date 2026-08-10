@@ -74,6 +74,7 @@ export class RoleGuard implements CanActivate {
       email: user.email,
       role: user.role,
       permissions: userPermissions,
+      sessionId: payload.sessionId,
     };
 
     return true;

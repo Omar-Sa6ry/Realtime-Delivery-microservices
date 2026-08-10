@@ -1,67 +1,57 @@
 import { join } from 'path';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { BadRequestException, ValidationPipe } from '@nestjs/common';
-import { initializeTransactionalContext } from 'typeorm-transactional';
+import { ValidationPipe } from '@nestjs/common';
 import { setupInterceptors } from '@bts-soft/core';
 import { I18nValidationException } from 'nestjs-i18n';
-import { DataSource } from 'typeorm';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { graphqlUploadExpress } from 'graphql-upload-minimal';
+import { USER_PACKAGE_NAME } from '@delivery/common';
 
 async function bootstrap() {
-  try {
+  const app = await NestFactory.create(AppModule, { rawBody: true });
+  app.enableCors();
 
-    const app = await NestFactory.create(AppModule, { rawBody: true });
-    app.enableCors();
+  app.use(graphqlUploadExpress({ maxFileSize: 100_000_000, maxFiles: 5 }));
+  setupInterceptors(app as any);
 
-    app.use(graphqlUploadExpress({ maxFileSize: 100_000_000, maxFiles: 5 })); // 100 MB max
-    setupInterceptors(app as any);
-
-    app.useGlobalPipes(
-      new ValidationPipe({
-        transform: true,
-        whitelist: true,
-        stopAtFirstError: true,
-        exceptionFactory: (errors) => {
-          return new I18nValidationException(errors);
-        },
-      }),
-    );
-
-  initializeTransactionalContext();
-
-  const dataSource = app.get(DataSource);
-  if (!dataSource.isInitialized) {
-    await dataSource.initialize();
-  }
-
-    app.connectMicroservice<MicroserviceOptions>({
-      transport: Transport.NATS,
-      options: {
-        servers: [process.env.NATS_URL || 'nats://localhost:4222'],
-        queue: 'user-service',
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      stopAtFirstError: true,
+      exceptionFactory: (errors) => {
+        return new I18nValidationException(errors);
       },
-    });
+    }),
+  );
 
-    // app.connectMicroservice<MicroserviceOptions>({
-    //   transport: Transport.GRPC,
-    //   options: {
-    //     package: 'user',
-    //     protoPath: join(process.cwd(), '../../protos/user.proto'),
-    //     url: '0.0.0.0:50051',
-    //     loader: {
-    //       keepCase: true,
-    //     },
-    //   },
-    // });
+  // NATS Microservice Transport
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.NATS,
+    options: {
+      servers: [process.env.NATS_URL || 'nats://localhost:4222'],
+      queue: 'user-service',
+    },
+  });
 
-    await app.startAllMicroservices();
-    await app.listen(process.env.PORT_USER ?? 3000, '0.0.0.0');
-  } catch (error) {
-    console.error(error);
-    throw new BadRequestException(error);
-  }
+  // gRPC Microservice Transport
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.GRPC,
+    options: {
+      package: USER_PACKAGE_NAME,
+      protoPath: join(process.cwd(), '../../protos/user.proto'),
+      url: '0.0.0.0:50051',
+      loader: {
+        keepCase: true,
+      },
+    },
+  });
+
+  await app.startAllMicroservices();
+  const port = process.env.PORT_USER ?? 4001;
+  await app.listen(port, '0.0.0.0');
+  console.log(`User Service is running on http://0.0.0.0:${port}`);
 }
 
 bootstrap();

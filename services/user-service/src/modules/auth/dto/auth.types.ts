@@ -1,5 +1,11 @@
 import { ObjectType, Field, InputType } from '@nestjs/graphql';
-import { EmailField, PasswordField, NameField, PhoneField, TextField } from '@bts-soft/core';
+import {
+  EmailField,
+  PasswordField,
+  NameField,
+  PhoneField,
+  TextField,
+} from '@bts-soft/core';
 import { GeneralResponse } from '../../../common/graphql/general-response.type';
 
 @ObjectType()
@@ -58,7 +64,7 @@ export class RegisterInput {
   @NameField('lastName', 2, 50, false, true, false)
   lastName: string;
 
-  @PhoneField(undefined, true, true, true)
+  @PhoneField('EG', false, true, false)
   phoneNumber?: string;
 }
 

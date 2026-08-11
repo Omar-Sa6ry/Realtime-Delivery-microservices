@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { User } from '../../common/database/entities/user.entity';
@@ -9,7 +13,7 @@ import { RedisSessionRepository } from '../../common/database/repositories/redis
 import { OutboxWorkerService } from '../../common/messaging/outbox-worker.service';
 import { NotificationService, ChannelType } from '@bts-soft/core';
 import { Role, rolePermissionsMap } from '@delivery/common';
-import { IdGenerator } from '@bts-soft/core';
+import { UserFactory } from './user.factory';
 
 @Injectable()
 export class AuthService {
@@ -22,6 +26,7 @@ export class AuthService {
     private readonly dataSource: DataSource,
     private readonly outboxWorkerService: OutboxWorkerService,
     private readonly notificationService: NotificationService,
+    private readonly userFactory: UserFactory,
   ) {}
 
   async register(
@@ -32,10 +37,13 @@ export class AuthService {
     phoneNumber?: string,
   ): Promise<any> {
     const email = emailInput.toLowerCase().trim();
-    const existing = await this.userRepo.findOne({ where: { email } });
-    if (existing) {
-      throw new BadRequestException('Email already exists');
-    }
+
+    const [existingPhone, existingEmail] = await Promise.all([
+      this.userRepo.findOne({ where: { phoneNumber } }),
+      this.userRepo.findOne({ where: { email } }),
+    ]);
+    if (existingPhone) throw new BadRequestException('Email already exists');
+    if (existingPhone) throw new BadRequestException('Phone already exists');
 
     const hashedPassword = await this.passwordHasher.hash(passwordInput);
 
@@ -43,16 +51,14 @@ export class AuthService {
     const totalUsers = await this.userRepo.count();
     const role = totalUsers === 0 ? Role.ADMIN : Role.USER;
 
-    const user = new User();
-    user.id = IdGenerator.generate('snowflake');
-    user.email = email;
-    user.passwordHash = hashedPassword;
-    user.firstName = firstName;
-    user.lastName = lastName;
-    user.phoneNumber = phoneNumber ? phoneNumber.trim() : undefined;
-    user.role = role;
-    user.isActive = true;
-    user.addresses = [];
+    const user = this.userFactory.createUser(
+      email,
+      hashedPassword,
+      firstName,
+      lastName,
+      role,
+      phoneNumber,
+    );
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -197,7 +203,7 @@ export class AuthService {
     const token = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
     user.resetToken = token;
     user.resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
-    
+
     await this.userRepo.save(user);
 
     // Send email using @bts-soft/notifications from @bts-soft/core
@@ -211,7 +217,11 @@ export class AuthService {
 
   async resetPassword(token: string, passwordNew: string): Promise<void> {
     const user = await this.userRepo.findOne({ where: { resetToken: token } });
-    if (!user || !user.resetTokenExpiry || user.resetTokenExpiry.getTime() < Date.now()) {
+    if (
+      !user ||
+      !user.resetTokenExpiry ||
+      user.resetTokenExpiry.getTime() < Date.now()
+    ) {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
@@ -233,7 +243,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    const session = await this.sessionRepo.getSession(payload.userId, payload.sessionId);
+    const session = await this.sessionRepo.getSession(
+      payload.userId,
+      payload.sessionId,
+    );
     if (!session) {
       throw new UnauthorizedException('Session expired or logged out');
     }

@@ -26,8 +26,8 @@ export class User {
   @Column({ name: 'last_name' })
   lastName: string;
 
-  @Column({ name: 'phone_number', nullable: true })
-  phoneNumber?: string;
+  @Column({ name: 'phone_number' })
+  phoneNumber: string;
 
   @Column({ type: 'varchar', default: Role.USER })
   role: Role;

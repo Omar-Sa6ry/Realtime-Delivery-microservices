@@ -8,7 +8,6 @@ export { UserType };
 @ObjectType()
 export class UserResponse extends GeneralResponse(UserType) {}
 
-
 @InputType()
 export class ChangePasswordInput {
   @PasswordField(8, 30, undefined, false, true, false)

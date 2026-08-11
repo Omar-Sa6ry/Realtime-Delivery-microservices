@@ -2,15 +2,17 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
+import { StructuredLogger } from '@delivery/common';
 import { waitForService } from './utils/waitService.util';
 
 async function bootstrap() {
-    await Promise.all([
-    waitForService('http://user-srv:4001/user/graphql'),
-  ]);
+  await Promise.all([waitForService('http://user-srv:4001/user/graphql')]);
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  
+  const logger = new StructuredLogger();
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger,
+  });
+
   // Trust Proxy is crucial for Rate Limiting behind Load Balancers / Ingress
   app.set('trust proxy', 1);
 
@@ -20,7 +22,8 @@ async function bootstrap() {
   // Security Hardening
   app.use(
     helmet({
-      contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+      contentSecurityPolicy:
+        process.env.NODE_ENV === 'production' ? undefined : false,
       crossOriginEmbedderPolicy: false,
     }),
   );

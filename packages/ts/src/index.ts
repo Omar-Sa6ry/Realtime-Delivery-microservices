@@ -31,3 +31,19 @@ export * from "./modules/auth.module";
 export * from "./nats/events";
 export * from "./nats/nats.module";
 export * from "./nats/nats.service";
+
+// Logging
+export * from "./logging/logger.context";
+export * from "./logging/logger.service";
+export * from "./logging/logger.middleware";
+export * from "./logging/logger.module";
+
+// Metrics
+export * from "./metrics/metrics.service";
+export * from "./metrics/metrics.interceptor";
+export * from "./metrics/metrics.module";
+
+// Automation
+export * from "./automation/health.service";
+export * from "./automation/alert.service";
+export * from "./automation/automation.module";

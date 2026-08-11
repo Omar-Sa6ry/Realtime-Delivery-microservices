@@ -4,7 +4,7 @@ WORKDIR /usr/src/app
 
 COPY packages/ts ./packages/ts
 WORKDIR /usr/src/app/packages/ts
-RUN npm install
+RUN npm install --legacy-peer-deps
 RUN npm run build
 
 WORKDIR /usr/src/app

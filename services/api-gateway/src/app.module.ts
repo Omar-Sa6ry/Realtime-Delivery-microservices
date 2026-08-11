@@ -1,5 +1,5 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -9,6 +9,8 @@ import { RateLimiter, RateLimiterAlgorithm, RedisStore } from '@bts-soft/validat
 import { AppResolver } from './app.resolver';
 import { JwtAuthGuard } from './common/guards/auth.guard';
 import { HealthController } from './health/health.controller';
+import { MetricsController } from './health/metrics.controller';
+import { LoggingModule, MetricsModule, AutomationModule, MetricsInterceptor } from '@delivery/common';
 import depthLimit from 'graphql-depth-limit';
 import {
   CorrelationIdMiddleware,
@@ -95,14 +97,21 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
         },
       },
     } as ApolloGatewayDriverConfig),
+    LoggingModule,
+    MetricsModule,
+    AutomationModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, MetricsController],
   providers: [
     AppResolver,
 
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MetricsInterceptor,
     },
 
     {

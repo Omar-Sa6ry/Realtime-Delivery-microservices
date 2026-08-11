@@ -23,6 +23,7 @@ import { User } from './common/database/entities/user.entity';
 import { Address } from './common/database/entities/address.entity';
 import { Outbox } from './common/database/entities/outbox.entity';
 import { UserService } from './modules/user/user.service';
+import { LoggingModule, MetricsModule, AutomationModule, MetricsInterceptor } from '@delivery/common';
 import { BullModule } from '@nestjs/bullmq';
 
 @Module({
@@ -101,6 +102,9 @@ import { BullModule } from '@nestjs/bullmq';
     CommonModule,
     AuthModule,
     UserModule,
+    LoggingModule,
+    MetricsModule,
+    AutomationModule,
   ],
   providers: [
     {
@@ -110,6 +114,10 @@ import { BullModule } from '@nestjs/bullmq';
     {
       provide: APP_INTERCEPTOR,
       useClass: GraphqlResponseInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MetricsInterceptor,
     },
     {
       provide: 'USER_SERVICE',

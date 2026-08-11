@@ -6,10 +6,14 @@ import { setupInterceptors } from '@bts-soft/core';
 import { I18nValidationException } from 'nestjs-i18n';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { graphqlUploadExpress } from 'graphql-upload-minimal';
-import { USER_PACKAGE_NAME } from '@delivery/common';
+import { USER_PACKAGE_NAME, StructuredLogger } from '@delivery/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const logger = new StructuredLogger();
+  const app = await NestFactory.create(AppModule, { 
+    rawBody: true,
+    logger,
+  });
   app.enableCors();
 
   app.use(graphqlUploadExpress({ maxFileSize: 100_000_000, maxFiles: 5 }));

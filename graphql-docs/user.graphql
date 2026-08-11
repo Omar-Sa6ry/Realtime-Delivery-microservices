@@ -59,7 +59,6 @@ mutation {
     input: {
       firstName: "Ahmed"
       lastName: "Sabry"
-      phoneNumber: "+201234567890"
     }
   ) {
     statusCode

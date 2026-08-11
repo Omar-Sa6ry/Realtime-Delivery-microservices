@@ -19,7 +19,7 @@ export class UserFactory {
     user.passwordHash = passwordHash;
     user.firstName = firstName;
     user.lastName = lastName;
-    user.phoneNumber = phoneNumber ? phoneNumber.trim() : undefined;
+    user.phoneNumber = phoneNumber ? phoneNumber.trim() : '';
     user.role = role;
     user.isActive = true;
     user.addresses = [];

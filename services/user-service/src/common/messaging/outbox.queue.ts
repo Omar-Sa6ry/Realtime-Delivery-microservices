@@ -28,7 +28,7 @@ export class OutboxProcessor extends WorkerHost {
     });
   }
 
-  async process(job: Job<any, any, string>): Promise<any> {
+  async process(job: Job<any, any, string>): Promise<void> {
     const { outboxId } = job.data;
     const event = await this.outboxRepo.findOne({ where: { id: outboxId } });
     

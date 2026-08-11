@@ -8,32 +8,7 @@ import {
 } from '@bts-soft/core';
 import { GeneralResponse } from '../../../common/graphql/general-response.type';
 
-@ObjectType()
-export class UserType {
-  @Field(() => String)
-  id: string;
-
-  @Field(() => String)
-  email: string;
-
-  @Field(() => String)
-  firstName: string;
-
-  @Field(() => String)
-  lastName: string;
-
-  @Field(() => String)
-  role: string;
-
-  @Field(() => String, { nullable: true })
-  phoneNumber?: string;
-
-  @Field(() => Boolean)
-  isActive: boolean;
-
-  @Field(() => Date)
-  createdAt: Date;
-}
+import { UserType } from '../../user/dto/user.types';
 
 @ObjectType()
 export class AuthPayloadType {
@@ -58,10 +33,10 @@ export class RegisterInput {
   @PasswordField(8, 30, undefined, false, true, false)
   password: string;
 
-  @NameField('firstName', 2, 50, false, true, false)
+  @NameField('firstName', 2, 100, false, true, false)
   firstName: string;
 
-  @NameField('lastName', 2, 50, false, true, false)
+  @NameField('lastName', 2, 100, false, true, false)
   lastName: string;
 
   @PhoneField('EG', false, true, false)

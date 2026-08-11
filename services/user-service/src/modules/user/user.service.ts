@@ -3,6 +3,7 @@ import { RedisService } from '@bts-soft/core';
 import { DbUserService } from './db-user.service';
 import { User } from '../../common/database/entities/user.entity';
 import { Address } from '../../common/database/entities/address.entity';
+import { UpdateProfileInput, ChangePasswordInput } from './dto/user.types';
 
 @Injectable()
 export class UserService {
@@ -51,17 +52,15 @@ export class UserService {
 
   async updateProfile(
     userId: string,
-    firstName?: string,
-    lastName?: string,
-    phoneNumber?: string,
+    input: UpdateProfileInput,
   ): Promise<User> {
-    const updatedUser = await this.dbUserService.updateProfile(userId, firstName, lastName, phoneNumber);
+    const updatedUser = await this.dbUserService.updateProfile(userId, input);
     await this.refreshCache(updatedUser);
     return updatedUser;
   }
 
-  async changePassword(userId: string, passwordOld: string, passwordNew: string): Promise<void> {
-    const updatedUser = await this.dbUserService.changePassword(userId, passwordOld, passwordNew);
+  async changePassword(userId: string, input: ChangePasswordInput): Promise<void> {
+    const updatedUser = await this.dbUserService.changePassword(userId, input);
     await this.refreshCache(updatedUser);
   }
 

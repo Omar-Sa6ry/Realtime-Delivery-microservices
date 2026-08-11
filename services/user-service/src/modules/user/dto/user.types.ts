@@ -1,9 +1,37 @@
 import { ObjectType, Field, InputType } from '@nestjs/graphql';
 import { PasswordField, PhoneField, TextField } from '@bts-soft/core';
 import { GeneralResponse } from '../../../common/graphql/general-response.type';
-import { UserType } from '../../auth/dto/auth.types';
+import { IsBoolean, IsOptional, IsNumber } from 'class-validator';
 
-export { UserType };
+@ObjectType()
+export class UserType {
+  @Field(() => String)
+  id: string;
+
+  @Field(() => String)
+  email: string;
+
+  @Field(() => String)
+  firstName: string;
+
+  @Field(() => String)
+  lastName: string;
+
+  @Field(() => String)
+  role: string;
+
+  @Field(() => String, { nullable: true })
+  phoneNumber?: string;
+
+  @Field(() => Boolean)
+  isActive: boolean;
+
+  @Field(() => Date)
+  createdAt: Date;
+
+  @Field(() => [AddressType])
+  addresses: AddressType[];
+}
 
 @ObjectType()
 export class UserResponse extends GeneralResponse(UserType) {}
@@ -19,14 +47,11 @@ export class ChangePasswordInput {
 
 @InputType()
 export class UpdateProfileInput {
-  @TextField('firstName', 2, 50, true, true, true)
+  @TextField('firstName', 2, 100, true, true, true)
   firstName?: string;
 
-  @TextField('lastName', 2, 50, true, true, true)
+  @TextField('lastName', 2, 100, true, true, true)
   lastName?: string;
-
-  @PhoneField(undefined, true, true, true)
-  phoneNumber?: string;
 }
 
 @ObjectType()
@@ -95,12 +120,18 @@ export class AddAddressInput {
   postalCode?: string;
 
   @Field(() => Number, { nullable: true })
+  @IsOptional()
+  @IsNumber()
   latitude?: number;
 
   @Field(() => Number, { nullable: true })
+  @IsOptional()
+  @IsNumber()
   longitude?: number;
 
   @Field(() => Boolean, { nullable: true })
+  @IsOptional()
+  @IsBoolean()
   isDefault?: boolean;
 }
 

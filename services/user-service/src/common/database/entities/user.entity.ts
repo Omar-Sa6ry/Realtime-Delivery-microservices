@@ -14,19 +14,19 @@ export class User {
   @PrimaryColumn({ type: 'varchar', length: 36 })
   id: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, length: 255 })
   email: string;
 
-  @Column({ name: 'password_hash' })
+  @Column({ name: 'password_hash', length: 255 })
   passwordHash: string;
 
-  @Column({ name: 'first_name' })
+  @Column({ name: 'first_name', length: 100 })
   firstName: string;
 
-  @Column({ name: 'last_name' })
+  @Column({ name: 'last_name', length: 100 })
   lastName: string;
 
-  @Column({ name: 'phone_number' })
+  @Column({ name: 'phone_number', unique: true, length: 20 })
   phoneNumber: string;
 
   @Column({ type: 'varchar', default: Role.USER })

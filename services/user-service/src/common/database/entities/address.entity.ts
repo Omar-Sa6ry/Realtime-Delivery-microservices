@@ -16,19 +16,19 @@ export class Address {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column()
+  @Column({ length: 100 })
   title: string;
 
-  @Column()
+  @Column({ length: 255 })
   street: string;
 
-  @Column()
+  @Column({ length: 100 })
   city: string;
 
-  @Column({ nullable: true })
+  @Column({ length: 100, nullable: true })
   state?: string;
 
-  @Column({ name: 'postal_code', nullable: true })
+  @Column({ name: 'postal_code', length: 20, nullable: true })
   postalCode?: string;
 
   @Column({ type: 'double precision', nullable: true })

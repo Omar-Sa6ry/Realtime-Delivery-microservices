@@ -119,23 +119,6 @@ import { BullModule } from '@nestjs/bullmq';
       provide: APP_INTERCEPTOR,
       useClass: MetricsInterceptor,
     },
-    {
-      provide: 'USER_SERVICE',
-      useFactory: (userService: UserService) => {
-        return {
-          findById: async (id: string) => {
-            const user = await userService.findById(id);
-            if (!user) return null;
-            return {
-              id: user.id,
-              email: user.email,
-              role: user.role,
-            };
-          },
-        };
-      },
-      inject: [UserService],
-    },
   ],
 })
 export class AppModule {}

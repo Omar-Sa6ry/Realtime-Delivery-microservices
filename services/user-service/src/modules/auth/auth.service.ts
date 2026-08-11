@@ -14,6 +14,15 @@ import { OutboxWorkerService } from '../../common/messaging/outbox-worker.servic
 import { NotificationService, ChannelType } from '@bts-soft/core';
 import { Role, rolePermissionsMap } from '@delivery/common';
 import { UserFactory } from './user.factory';
+import { I18nService } from 'nestjs-i18n';
+import {
+  RegisterInput,
+  LoginInput,
+  ForgetPasswordInput,
+  ResetPasswordInput,
+  RefreshTokenInput,
+  AuthPayloadType,
+} from './dto/auth.types';
 
 @Injectable()
 export class AuthService {
@@ -27,25 +36,21 @@ export class AuthService {
     private readonly outboxWorkerService: OutboxWorkerService,
     private readonly notificationService: NotificationService,
     private readonly userFactory: UserFactory,
+    private readonly i18n: I18nService,
   ) {}
 
-  async register(
-    emailInput: string,
-    passwordInput: string,
-    firstName: string,
-    lastName: string,
-    phoneNumber?: string,
-  ): Promise<any> {
-    const email = emailInput.toLowerCase().trim();
+  async register(input: RegisterInput): Promise<AuthPayloadType> {
+    const email = input.email.toLowerCase().trim();
+    const { password, firstName, lastName, phoneNumber } = input;
 
     const [existingPhone, existingEmail] = await Promise.all([
-      this.userRepo.findOne({ where: { phoneNumber } }),
+      phoneNumber ? this.userRepo.findOne({ where: { phoneNumber } }) : Promise.resolve(null),
       this.userRepo.findOne({ where: { email } }),
     ]);
-    if (existingPhone) throw new BadRequestException('Email already exists');
-    if (existingPhone) throw new BadRequestException('Phone already exists');
+    if (existingEmail) throw new BadRequestException(this.i18n.t('user.EMAIL_EXISTED'));
+    if (existingPhone) throw new BadRequestException(this.i18n.t('user.PHONE_EXISTED'));
 
-    const hashedPassword = await this.passwordHasher.hash(passwordInput);
+    const hashedPassword = await this.passwordHasher.hash(password);
 
     // Check if it's the first user to make them Admin
     const totalUsers = await this.userRepo.count();
@@ -132,25 +137,26 @@ export class AuthService {
         role: savedUser.role,
         isActive: savedUser.isActive,
         createdAt: savedUser.createdAt,
+        addresses: savedUser.addresses || [],
       },
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     };
   }
 
-  async login(emailInput: string, passwordInput: string): Promise<any> {
-    const email = emailInput.toLowerCase().trim();
+  async login(input: LoginInput): Promise<AuthPayloadType> {
+    const email = input.email.toLowerCase().trim();
     const user = await this.userRepo.findOne({ where: { email } });
     if (!user) {
-      throw new BadRequestException('Invalid credentials');
+      throw new BadRequestException(this.i18n.t('user.INVALID_CREDENTIALS'));
     }
 
     const isValidPassword = await this.passwordHasher.compare(
-      passwordInput,
+      input.password,
       user.passwordHash,
     );
     if (!isValidPassword) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(this.i18n.t('user.INVALID_CREDENTIALS'));
     }
 
     const sessionId = crypto.randomUUID();
@@ -186,14 +192,15 @@ export class AuthService {
         role: user.role,
         isActive: user.isActive,
         createdAt: user.createdAt,
+        addresses: user.addresses || [],
       },
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     };
   }
 
-  async forgetPassword(emailInput: string): Promise<void> {
-    const email = emailInput.toLowerCase().trim();
+  async forgetPassword(input: ForgetPasswordInput): Promise<void> {
+    const email = input.email.toLowerCase().trim();
     const user = await this.userRepo.findOne({ where: { email } });
     if (!user) {
       // Return success silently for security (avoid user enumeration)
@@ -206,26 +213,25 @@ export class AuthService {
 
     await this.userRepo.save(user);
 
-    // Send email using @bts-soft/notifications from @bts-soft/core
-    await this.notificationService.send(ChannelType.EMAIL, {
+    this.notificationService.send(ChannelType.EMAIL, {
       recipientId: user.email,
       subject: 'Password Reset Code',
       body: 'Hi {{name}}, your password reset code is {{token}}.',
       context: { name: user.firstName, token },
-    });
+    }).catch(err => console.error('Failed to send reset password email:', err));
   }
 
-  async resetPassword(token: string, passwordNew: string): Promise<void> {
-    const user = await this.userRepo.findOne({ where: { resetToken: token } });
+  async resetPassword(input: ResetPasswordInput): Promise<void> {
+    const user = await this.userRepo.findOne({ where: { resetToken: input.token } });
     if (
       !user ||
       !user.resetTokenExpiry ||
       user.resetTokenExpiry.getTime() < Date.now()
     ) {
-      throw new BadRequestException('Invalid or expired reset token');
+      throw new BadRequestException(this.i18n.t('user.INVALID_RESET_TOKEN'));
     }
 
-    const hashedPassword = await this.passwordHasher.hash(passwordNew);
+    const hashedPassword = await this.passwordHasher.hash(input.passwordNew);
     user.passwordHash = hashedPassword;
     user.resetToken = undefined;
     user.resetTokenExpiry = undefined;
@@ -237,10 +243,10 @@ export class AuthService {
     await this.sessionRepo.revokeSession(userId, sessionId);
   }
 
-  async refreshToken(refreshToken: string): Promise<any> {
-    const payload = await this.tokenProvider.verifyRefreshToken(refreshToken);
+  async refreshToken(input: RefreshTokenInput): Promise<AuthPayloadType> {
+    const payload = await this.tokenProvider.verifyRefreshToken(input.refreshToken);
     if (!payload || !payload.sessionId) {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new UnauthorizedException(this.i18n.t('user.INVALID_TOKEN'));
     }
 
     const session = await this.sessionRepo.getSession(
@@ -248,12 +254,12 @@ export class AuthService {
       payload.sessionId,
     );
     if (!session) {
-      throw new UnauthorizedException('Session expired or logged out');
+      throw new UnauthorizedException(this.i18n.t('user.SESSION_EXPIRED'));
     }
 
     const user = await this.userRepo.findOne({ where: { id: payload.userId } });
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException(this.i18n.t('user.NOT_FOUND'));
     }
 
     const permissions = rolePermissionsMap[user.role] || [];
@@ -289,6 +295,7 @@ export class AuthService {
         role: user.role,
         isActive: user.isActive,
         createdAt: user.createdAt,
+        addresses: user.addresses || [],
       },
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,

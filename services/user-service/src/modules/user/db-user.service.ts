@@ -8,6 +8,8 @@ import { BcryptPasswordHasher } from '../../common/security/bcrypt-password.hash
 import { OutboxWorkerService } from '../../common/messaging/outbox-worker.service';
 import { Role } from '@delivery/common';
 import { IdGenerator } from '@bts-soft/core';
+import { I18nService } from 'nestjs-i18n';
+import { UpdateProfileInput, ChangePasswordInput } from './dto/user.types';
 
 @Injectable()
 export class DbUserService {
@@ -19,6 +21,7 @@ export class DbUserService {
     private readonly passwordHasher: BcryptPasswordHasher,
     private readonly dataSource: DataSource,
     private readonly outboxWorkerService: OutboxWorkerService,
+    private readonly i18n: I18nService,
   ) {}
 
   async findById(id: string): Promise<User | null> {
@@ -41,20 +44,16 @@ export class DbUserService {
 
   async updateProfile(
     userId: string,
-    firstName?: string,
-    lastName?: string,
-    phoneNumber?: string,
+    input: UpdateProfileInput,
   ): Promise<User> {
     const user = await this.findById(userId);
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BadRequestException(this.i18n.t('user.NOT_FOUND'));
     }
 
+    const { firstName, lastName } = input;
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
-    if (phoneNumber !== undefined) {
-      user.phoneNumber = phoneNumber ? phoneNumber.trim() : undefined;
-    }
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -98,25 +97,25 @@ export class DbUserService {
     return savedUser;
   }
 
-  async changePassword(userId: string, passwordOld: string, passwordNew: string): Promise<User> {
+  async changePassword(userId: string, input: ChangePasswordInput): Promise<User> {
     const user = await this.findById(userId);
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BadRequestException(this.i18n.t('user.NOT_FOUND'));
     }
 
-    const isValid = await this.passwordHasher.compare(passwordOld, user.passwordHash);
+    const isValid = await this.passwordHasher.compare(input.passwordOld, user.passwordHash);
     if (!isValid) {
-      throw new UnauthorizedException('Invalid current password');
+      throw new UnauthorizedException(this.i18n.t('user.INVALID_PASSWORD'));
     }
 
-    user.passwordHash = await this.passwordHasher.hash(passwordNew);
+    user.passwordHash = await this.passwordHasher.hash(input.passwordNew);
     return this.userRepo.save(user);
   }
 
   async promoteUserToAdmin(id: string): Promise<User> {
     const user = await this.findById(id);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(this.i18n.t('user.NOT_FOUND'));
     }
 
     user.role = Role.ADMIN;
@@ -126,7 +125,7 @@ export class DbUserService {
   async toggleUserActive(id: string, isActive: boolean): Promise<User> {
     const user = await this.findById(id);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(this.i18n.t('user.NOT_FOUND'));
     }
 
     user.isActive = isActive;
@@ -136,7 +135,7 @@ export class DbUserService {
   async deleteUser(id: string): Promise<boolean> {
     const user = await this.findById(id);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(this.i18n.t('user.NOT_FOUND'));
     }
 
     const result = await this.userRepo.delete(id);
@@ -146,7 +145,7 @@ export class DbUserService {
   async addAddress(userId: string, input: any): Promise<Address> {
     const user = await this.findById(userId);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(this.i18n.t('user.NOT_FOUND'));
     }
 
     const address = new Address();
@@ -177,12 +176,12 @@ export class DbUserService {
   async deleteAddress(userId: string, addressId: string): Promise<void> {
     const user = await this.findById(userId);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(this.i18n.t('user.NOT_FOUND'));
     }
 
     const hasAddress = user.addresses?.some(a => a.id === addressId);
     if (!hasAddress) {
-      throw new BadRequestException('Address not found on this user profile');
+      throw new BadRequestException(this.i18n.t('user.ADDRESS_NOT_FOUND'));
     }
 
     await this.addressRepo.delete(addressId);
@@ -191,12 +190,12 @@ export class DbUserService {
   async setDefaultAddress(userId: string, addressId: string): Promise<void> {
     const user = await this.findById(userId);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(this.i18n.t('user.NOT_FOUND'));
     }
 
     const hasAddress = user.addresses?.some(a => a.id === addressId);
     if (!hasAddress) {
-      throw new BadRequestException('Address not found on this user profile');
+      throw new BadRequestException(this.i18n.t('user.ADDRESS_NOT_FOUND'));
     }
 
     if (user.addresses) {

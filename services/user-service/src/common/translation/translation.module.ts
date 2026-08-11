@@ -1,15 +1,16 @@
 import * as path from 'path';
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import {
   AcceptLanguageResolver,
   HeaderResolver,
   I18nModule,
 } from 'nestjs-i18n';
 
+@Global()
 @Module({
   imports: [
     I18nModule.forRoot({
-      fallbackLanguage: 'ar',
+      fallbackLanguage: 'en',
       loaderOptions: {
         path: path.join(process.cwd(), 'src/common/translation/locales/'),
         watch: true,

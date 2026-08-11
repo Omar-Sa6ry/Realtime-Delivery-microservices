@@ -1,0 +1,126 @@
+# Register a new user
+mutation {
+  register(
+    input: {
+      firstName: "Omar"
+      lastName: "sabry"
+      email: "omarsdabry@gmail.com"
+      password: "ni7CV1a5+=2004"
+      phoneNumber: "+201000000000"
+    }
+  ) {
+    statusCode
+    message
+    success
+    data {
+      accessToken
+      refreshToken
+      user {
+        id
+        firstName
+        lastName
+        email
+        role
+        phoneNumber
+        createdAt
+      }
+    }
+  }
+}
+
+# Login with email and password
+mutation {
+  login(
+    input: {
+      email: "omarsdabry@gmail.com"
+      password: "Password123!"
+    }
+  ) {
+    statusCode
+    message
+    success
+    data {
+      accessToken
+      refreshToken
+      user {
+        id
+        firstName
+        lastName
+        email
+        role
+        createdAt
+      }
+    }
+  }
+}
+
+# Change password for the currently logged-in user (requires Bearer token)
+mutation {
+  changePassword(
+    input: {
+      passwordOld: "ni7CV1a5+=2004"
+      passwordNew: "O12345hgtehight-"
+    }
+  ) {
+    statusCode
+    message
+    success
+  }
+}
+
+# Request a password reset link/token
+mutation {
+  forgetPassword(
+    input: {
+      email: "omarsdabry@gmail.com"
+    }
+  ) {
+    statusCode
+    message
+    success
+  }
+}
+
+# Reset the password using the token received
+mutation {
+  resetPassword(
+    input: {
+      token: "31a68f136bf4de00617d1790856cc5018a82053362dd88b0244abd5936cac12a923"
+      passwordNew: "O12345hgtehight-"
+    }
+  ) {
+    statusCode
+    message
+    success
+  }
+}
+
+# Logout the current user
+mutation {
+  logout {
+    statusCode
+    message
+    success
+  }
+}
+
+# Refresh the access token
+mutation {
+  refreshToken(
+    input: {
+      refreshToken: "YOUR_REFRESH_TOKEN_HERE"
+    }
+  ) {
+    statusCode
+    message
+    success
+    data {
+      accessToken
+      refreshToken
+      user {
+        id
+        email
+      }
+    }
+  }
+}

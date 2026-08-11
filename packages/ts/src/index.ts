@@ -6,10 +6,12 @@ export * from "./constants/rolePermissionsMap.constant";
 // Decorators
 export * from "./decorators/auth.decorator";
 export * from "./decorators/currentUser.decorator";
+export * from "./decorators/redis-rate-limit.decorator";
 
 // Guards
 export * from "./guard/role.guard";
 export * from "./guard/rate-limiter.guard";
+export * from "./guard/redis-rate-limiter.guard";
 
 // Filters
 export * from "./filters/grpc-exception.filter";

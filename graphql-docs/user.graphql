@@ -1,0 +1,169 @@
+# Get the profile of the currently logged-in user (requires Bearer token)
+query {
+  myProfile {
+    statusCode
+    message
+    success
+    data {
+      id
+      firstName
+      lastName
+      email
+      role
+      phoneNumber
+      createdAt
+    }
+  }
+}
+
+# Get a specific user by their ID (Admin only)
+query {
+  user(id: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
+    statusCode
+    message
+    success
+    data {
+      id
+      firstName
+      lastName
+      email
+      role
+      createdAt
+    }
+  }
+}
+
+# Get a paginated list of users (Admin only)
+query {
+  users(page: 1, limit: 10) {
+    statusCode
+    message
+    success
+    data {
+      total
+      items {
+        id
+        firstName
+        lastName
+        email
+        role
+        createdAt
+      }
+    }
+  }
+}
+
+# Update the profile of the currently logged-in user (requires Bearer token)
+mutation {
+  updateProfile(
+    input: {
+      firstName: "Ahmed"
+      lastName: "Sabry"
+      phoneNumber: "+201234567890"
+    }
+  ) {
+    statusCode
+    message
+    success
+    data {
+      id
+      firstName
+      lastName
+      email
+      role
+      phoneNumber
+      createdAt
+    }
+  }
+}
+
+# Promote a user to Admin (Admin only)
+mutation {
+  promoteUserToAdmin(id: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
+    statusCode
+    message
+    success
+  }
+}
+
+# Toggle user active status (Admin only)
+mutation {
+  toggleUserActive(id: "01KPJSGYC1XNRH3DP7Y1D20CDP", isActive: false) {
+    statusCode
+    message
+    success
+  }
+}
+
+# Delete a user (Admin only)
+mutation {
+  deleteUser(id: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
+    statusCode
+    message
+    success
+  }
+}
+
+# Add a new address to user profile (requires Bearer token)
+mutation {
+  addAddress(
+    input: {
+      title: "Home"
+      street: "El-Galaa Street"
+      city: "Cairo"
+      state: "Cairo Governorate"
+      postalCode: "11511"
+      isDefault: true
+    }
+  ) {
+    statusCode
+    message
+    success
+    data {
+      id
+      title
+      street
+      city
+      state
+      postalCode
+      isDefault
+    }
+  }
+}
+
+# Delete an address from user profile (requires Bearer token)
+mutation {
+  deleteAddress(addressId: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
+    statusCode
+    message
+    success
+  }
+}
+
+# Set an address as default (requires Bearer token)
+mutation {
+  setDefaultAddress(addressId: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
+    statusCode
+    message
+    success
+  }
+}
+
+# Retrieve currently logged-in user's addresses (requires Bearer token)
+query {
+  myAddresses {
+    statusCode
+    message
+    success
+    data {
+      id
+      title
+      street
+      city
+      state
+      postalCode
+      isDefault
+      createdAt
+    }
+  }
+}

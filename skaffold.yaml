@@ -32,6 +32,8 @@ build:
             dest: /usr/src/app
           - src: "protos/**/*.proto"
             dest: /usr/src/app
+          - src: 'packages/ts/dist/**/*.js'
+            dest: /usr/src/app
 
 portForward:
   - resourceType: service

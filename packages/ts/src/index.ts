@@ -32,6 +32,9 @@ export * from "./nats/events";
 export * from "./nats/nats.module";
 export * from "./nats/nats.service";
 
+// Events (Kafka / media service)
+export * from "./events/media.events";
+
 // Logging
 export * from "./logging/logger.context";
 export * from "./logging/logger.service";

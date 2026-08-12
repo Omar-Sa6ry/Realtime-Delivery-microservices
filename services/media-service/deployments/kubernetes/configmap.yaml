@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: media-service-config
+  namespace: default
+data:
+  # Server
+  PORT_MEDIA: "4002"
+  PORT_MEDIA_METRICS: "9102"
+  NODE_ENV: "production"
+
+  # AWS (region only; credentials via secret)
+  AWS_REGION: "us-east-1"
+
+  # DynamoDB
+  DYNAMODB_TABLE_NAME: "media-service"
+
+  # Redis
+  REDIS_HOST: "redis-srv"
+  REDIS_PORT: "6379"
+  REDIS_TTL: "3600"
+
+  # Kafka
+  KAFKA_BROKERS: "kafka-srv:9092"
+  KAFKA_GROUP_ID: "media-service"
+  KAFKA_TOPIC_PREFIX: "media"
+
+  # Upload limits
+  MEDIA_MAX_FILE_SIZE_BYTES: "53687091200"  # 50 GB
+  MEDIA_MAX_CONCURRENT_UPLOADS: "5"
+  MEDIA_STORAGE_QUOTA_BYTES: "53687091200"
+  MEDIA_UPLOAD_SESSION_TTL: "86400"  # 24h
+
+  MEDIA_ALLOWED_TYPES: >-
+    image/jpeg,image/png,image/gif,image/webp,
+    video/mp4,video/quicktime,video/x-msvideo,video/webm,
+    application/pdf,application/zip,text/plain
+
+  # S3
+  S3_PRESIGNED_URL_EXPIRY: "3600"
+  S3_MULTIPART_MIN_PART_SIZE: "5242880"  # 5 MB
+  S3_LIFECYCLE_ABORT_DAYS: "7"
+
+  # Worker pool sizes
+  MEDIA_SCAN_WORKERS: "4"
+  MEDIA_IMAGE_WORKERS: "4"
+  MEDIA_VIDEO_WORKERS: "2"
+  MEDIA_DELETE_WORKERS: "4"
+  MEDIA_OUTBOX_WORKERS: "2"
+
+  # Reconciliation
+  MEDIA_RECONCILE_INTERVAL: "300"     # 5 minutes
+  MEDIA_STUCK_UPLOAD_TIMEOUT: "3600"  # 1 hour
+  MEDIA_STUCK_PROCESSING_TIMEOUT: "7200"  # 2 hours
+
+  # Rate limiting (per user, per minute)
+  MEDIA_RATE_LIMIT_UPLOAD_PER_MINUTE: "10"
+  MEDIA_RATE_LIMIT_DOWNLOAD_PER_MINUTE: "60"
+
+  # ClamAV (Phase 6)
+  CLAMAV_HOST: "clamav-srv"
+  CLAMAV_PORT: "3310"
+
+  # FFmpeg (Phase 6)
+  FFMPEG_BINARY: "/usr/bin/ffmpeg"

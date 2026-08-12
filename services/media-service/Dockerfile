@@ -1,6 +1,7 @@
 # ─── Stage 1: Build ────────────────────────────────────────────────────────────
 FROM golang:1.25-alpine AS builder
 
+
 # Install build tools
 RUN apk add --no-cache git ca-certificates tzdata
 
@@ -25,8 +26,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     ./cmd/server
 
 # ─── Stage 2: Runtime ──────────────────────────────────────────────────────────
-# Use distroless for minimal attack surface — no shell, no package manager.
-FROM gcr.io/distroless/static-debian12:nonroot AS runtime
+FROM alpine:3.19 AS runtime
+
+# Install ffmpeg, ffprobe, and dependencies
+RUN apk add --no-cache ffmpeg ca-certificates tzdata
 
 # Copy timezone data and CA certificates from builder
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
@@ -35,10 +38,7 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # Copy the binary
 COPY --from=builder /workspace/bin/media-service /media-service
 
-# gRPC port and metrics port
-EXPOSE 4002 9102
-
-# Run as nonroot user (distroless default)
-USER nonroot:nonroot
+# gRPC port, websocket port, and metrics port
+EXPOSE 4002 4003 9102
 
 ENTRYPOINT ["/media-service"]

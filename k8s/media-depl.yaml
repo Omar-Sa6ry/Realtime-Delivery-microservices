@@ -1,0 +1,165 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: media-service-config
+  namespace: default
+data:
+  # Server
+  PORT_MEDIA: "4002"
+  PORT_MEDIA_METRICS: "9102"
+  PORT_MEDIA_WS: "4003"
+  NODE_ENV: "development"
+
+  # AWS 
+  AWS_REGION: "us-east-1"
+  AWS_ENDPOINT: "http://localstack-srv:4566"
+  DYNAMODB_ENDPOINT: "http://localstack-srv:4566"
+
+
+  # DynamoDB
+  DYNAMODB_TABLE_NAME: "media-service"
+
+  # Redis
+  REDIS_HOST: "redis-srv"
+  REDIS_PORT: "6379"
+  REDIS_TTL: "3600"
+
+  # Kafka
+  KAFKA_BROKERS: "kafka-srv:9092"
+  KAFKA_GROUP_ID: "media-service"
+  KAFKA_TOPIC_PREFIX: "media"
+
+  # Upload limits
+  MEDIA_MAX_FILE_SIZE_BYTES: "53687091200"  # 50 GB
+  MEDIA_MAX_CONCURRENT_UPLOADS: "5"
+  MEDIA_STORAGE_QUOTA_BYTES: "53687091200"
+  MEDIA_UPLOAD_SESSION_TTL: "86400"  # 24h
+
+  MEDIA_ALLOWED_TYPES: >-
+    image/jpeg,image/png,image/gif,image/webp,
+    video/mp4,video/quicktime,video/x-msvideo,video/webm,
+    application/pdf,application/zip,text/plain
+
+  # S3
+  S3_PRESIGNED_URL_EXPIRY: "3600"
+  S3_MULTIPART_MIN_PART_SIZE: "5242880"  # 5 MB
+  S3_LIFECYCLE_ABORT_DAYS: "7"
+  S3_BUCKET_NAME: "delivery-micro"
+
+
+  # Worker pool sizes
+  MEDIA_SCAN_WORKERS: "4"
+  MEDIA_IMAGE_WORKERS: "4"
+  MEDIA_VIDEO_WORKERS: "2"
+  MEDIA_DELETE_WORKERS: "4"
+  MEDIA_OUTBOX_WORKERS: "2"
+  MEDIA_COMPRESSION_WORKERS: "4"
+  MEDIA_METADATA_WORKERS: "4"
+
+  # Reconciliation
+  MEDIA_RECONCILE_INTERVAL: "300"     # 5 minutes
+  MEDIA_STUCK_UPLOAD_TIMEOUT: "3600"  # 1 hour
+  MEDIA_STUCK_PROCESSING_TIMEOUT: "7200"  # 2 hours
+
+  # Rate limiting (per user, per minute)
+  MEDIA_RATE_LIMIT_UPLOAD_PER_MINUTE: "10"
+  MEDIA_RATE_LIMIT_DOWNLOAD_PER_MINUTE: "60"
+
+  # ClamAV
+  CLAMAV_HOST: "clamav-srv"
+  CLAMAV_PORT: "3310"
+
+  # FFmpeg
+  FFMPEG_BINARY: "/usr/bin/ffmpeg"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-service
+  namespace: default
+  labels:
+    app: media-service
+    version: "1.0.0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: media-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: media-service
+        version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9102"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: media-service-sa
+      containers:
+      - name: media-service
+        image: delivery/media
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: grpc
+          containerPort: 4002
+        - name: ws
+          containerPort: 4003
+        - name: metrics
+          containerPort: 9102
+        envFrom:
+        - configMapRef:
+            name: media-service-config
+        - secretRef:
+            name: media-service-secrets
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        # Since we use alpine with ffmpeg, we have a writeable tmp directory
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: false
+      terminationGracePeriodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: media-srv
+  namespace: default
+  labels:
+    app: media-service
+spec:
+  selector:
+    app: media-service
+  ports:
+  - name: grpc
+    port: 4002
+    targetPort: 4002
+    protocol: TCP
+  - name: ws
+    port: 4003
+    targetPort: 4003
+    protocol: TCP
+  - name: metrics
+    port: 9102
+    targetPort: 9102
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: media-service-sa
+  namespace: default

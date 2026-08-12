@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localstack-depl
+  namespace: default
+  labels:
+    app: localstack
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: localstack
+  template:
+    metadata:
+      labels:
+        app: localstack
+    spec:
+      containers:
+      - name: localstack
+        image: localstack/localstack:latest
+        ports:
+        - containerPort: 4566
+        env:
+        - name: SERVICES
+          value: "s3,dynamodb"
+        - name: DEFAULT_REGION
+          value: "us-east-1"
+        - name: PERSISTENCE
+          value: "0" # Memory-only for fast tests
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: localstack-srv
+  namespace: default
+spec:
+  selector:
+    app: localstack
+  ports:
+  - name: edge
+    port: 4566
+    targetPort: 4566
+    protocol: TCP
+  type: ClusterIP

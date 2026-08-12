@@ -33,5 +33,37 @@ services:
     volumes:
       - user_db_data:/var/lib/postgresql/data
 
+  zookeeper-srv:
+    image: bitnami/zookeeper:3.9
+    container_name: zookeeper-srv
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+  kafka-srv:
+    image: bitnami/kafka:3.6
+    container_name: kafka-srv
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-srv:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-srv:9092
+    depends_on:
+      - zookeeper-srv
+
+  localstack-srv:
+    image: localstack/localstack:latest
+    container_name: localstack-srv
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,dynamodb
+      - DEFAULT_REGION=us-east-1
+      - PERSISTENCE=0
+
 volumes:
   user_db_data:
+

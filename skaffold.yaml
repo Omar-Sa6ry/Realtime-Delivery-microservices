@@ -35,8 +35,19 @@ build:
           - src: 'packages/ts/dist/**/*.js'
             dest: /usr/src/app
 
+    - image: delivery/media
+      context: .
+      docker:
+        dockerfile: services/media-service/Dockerfile
+
 portForward:
   - resourceType: service
     resourceName: api-gateway-srv
     port: 4000
     localPort: 4000
+    
+  - resourceType: service
+    resourceName: localstack-srv
+    port: 4566
+    localPort: 4566
+

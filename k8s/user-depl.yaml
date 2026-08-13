@@ -61,6 +61,9 @@ spec:
             - name: REDIS_PORT
               value: '6379'
 
+            - name: REDIS_DB
+              value: '0'
+
             - name: NATS_URL
               value: 'nats://nats-srv:4222'
 ---

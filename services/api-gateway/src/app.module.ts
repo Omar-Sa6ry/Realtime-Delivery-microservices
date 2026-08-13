@@ -5,12 +5,21 @@ import { JwtModule } from '@nestjs/jwt';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { RedisModule, RedisService } from '@bts-soft/cache';
-import { RateLimiter, RateLimiterAlgorithm, RedisStore } from '@bts-soft/validation';
+import {
+  RateLimiter,
+  RateLimiterAlgorithm,
+  RedisStore,
+} from '@bts-soft/validation';
 import { AppResolver } from './app.resolver';
 import { JwtAuthGuard } from './common/guards/auth.guard';
 import { HealthController } from './health/health.controller';
 import { MetricsController } from './health/metrics.controller';
-import { LoggingModule, MetricsModule, AutomationModule, MetricsInterceptor } from '@delivery/common';
+import {
+  LoggingModule,
+  MetricsModule,
+  AutomationModule,
+  MetricsInterceptor,
+} from '@delivery/common';
 import depthLimit from 'graphql-depth-limit';
 import {
   CorrelationIdMiddleware,
@@ -68,7 +77,18 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
       gateway: {
         supergraphSdl: new IntrospectAndCompose({
           subgraphs: [
-            { name: 'user', url: process.env.USER_SERVICE_URL || 'http://user-srv:4001/user/graphql' },
+            {
+              name: 'media',
+              url:
+                process.env.MEDIA_SUBGRAPH_URL ||
+                'http://media-srv:4005/media/graphql',
+            },
+            {
+              name: 'user',
+              url:
+                process.env.USER_SERVICE_URL ||
+                'http://user-srv:4001/user/graphql',
+            },
           ],
         }),
         buildService: ({ url }) => {
@@ -77,10 +97,19 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
             willSendRequest({ request, context }: any) {
               // Header Propagation: Inject user identity & correlation headers to downstream subgraphs
               if (context.req?.user) {
-                request.http.headers.set('x-user-id', context.req.user.userId || '');
-                request.http.headers.set('x-user-role', context.req.user.role || '');
+                request.http.headers.set(
+                  'x-user-id',
+                  context.req.user.userId || '',
+                );
+                request.http.headers.set(
+                  'x-user-role',
+                  context.req.user.role || '',
+                );
                 if (context.req.user.sessionId) {
-                  request.http.headers.set('x-user-session', context.req.user.sessionId);
+                  request.http.headers.set(
+                    'x-user-session',
+                    context.req.user.sessionId,
+                  );
                 }
               }
               if (context.req?.headers?.[CORRELATION_ID_HEADER]) {
@@ -90,7 +119,10 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
                 );
               }
               if (context.req?.headers?.authorization) {
-                request.http.headers.set('authorization', context.req.headers.authorization);
+                request.http.headers.set(
+                  'authorization',
+                  context.req.headers.authorization,
+                );
               }
             },
           });

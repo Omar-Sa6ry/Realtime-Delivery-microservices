@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	kafkago "github.com/segmentio/kafka-go"
@@ -52,7 +53,12 @@ func NewConsumer(cfg ConsumerConfig) *Consumer {
 			slog.Debug(fmt.Sprintf(msg, args...), "component", "kafka-consumer", "topic", cfg.Topic)
 		}),
 		ErrorLogger: kafkago.LoggerFunc(func(msg string, args ...interface{}) {
-			slog.Error(fmt.Sprintf(msg, args...), "component", "kafka-consumer", "topic", cfg.Topic)
+			formatted := fmt.Sprintf(msg, args...)
+			if strings.Contains(formatted, "i/o timeout") {
+				slog.Debug(formatted, "component", "kafka-consumer", "topic", cfg.Topic)
+			} else {
+				slog.Error(formatted, "component", "kafka-consumer", "topic", cfg.Topic)
+			}
 		}),
 	})
 

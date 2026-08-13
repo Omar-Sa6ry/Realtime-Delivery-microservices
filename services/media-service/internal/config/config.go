@@ -13,10 +13,10 @@ import (
 // for sensitive fields. Non-sensitive fields carry reasonable defaults.
 type Config struct {
 	// Server
-	GRPCPort       string
-	MetricsPort    string
-	WSPort         string // WebSocket server port (default :4003)
-	Environment    string
+	GraphQLPort  string // GraphQL federation subgraph port (default :4005)
+	MetricsPort  string
+	WSPort       string // WebSocket server port (default :4003)
+	Environment  string
 
 	// AWS
 	AWSRegion          string
@@ -83,7 +83,7 @@ func Load() (*Config, error) {
 	c := &Config{}
 
 	// Server
-	c.GRPCPort = getEnvOrDefault("PORT_MEDIA", "4002")
+	c.GraphQLPort = getEnvOrDefault("PORT_MEDIA_GRAPHQL", "4005")
 	c.MetricsPort = getEnvOrDefault("PORT_MEDIA_METRICS", "9102")
 	c.WSPort = getEnvOrDefault("PORT_MEDIA_WS", "4003")
 	c.Environment = getEnvOrDefault("NODE_ENV", "development")
@@ -113,7 +113,9 @@ func Load() (*Config, error) {
 
 	// DynamoDB
 	c.DynamoDBTableName = getEnvOrDefault("DYNAMODB_TABLE_NAME", "media-service")
-	c.DynamoDBEndpoint = os.Getenv("DYNAMODB_ENDPOINT") // empty = real AWS
+	// Default to the in-cluster LocalStack endpoint. Override with a real AWS
+	// endpoint (no value or empty string) for production deployments.
+	c.DynamoDBEndpoint = getEnvOrDefault("DYNAMODB_ENDPOINT", "http://localstack-srv:4566")
 
 	// Redis
 	c.RedisHost = getEnvOrDefault("REDIS_HOST", "redis-srv")

@@ -5,7 +5,7 @@ metadata:
   namespace: default
 data:
   # Server
-  PORT_MEDIA: "4002"
+  PORT_MEDIA_GRAPHQL: "4005"
   PORT_MEDIA_METRICS: "9102"
   PORT_MEDIA_WS: "4003"
   NODE_ENV: "development"
@@ -22,6 +22,7 @@ data:
   # Redis
   REDIS_HOST: "redis-srv"
   REDIS_PORT: "6379"
+  REDIS_DB: "0"       # Shared Redis database index — all services use DB 0
   REDIS_TTL: "3600"
 
   # Kafka
@@ -102,13 +103,22 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: media-service-sa
+      initContainers:
+      - name: wait-for-kafka
+        image: busybox:1.36
+        # Block until Kafka's port is open (TCP-level). The in-code retry loop then
+        # waits for the broker to be fully initialised before consuming messages.
+        command: ['sh', '-c', 'until nc -z kafka-srv 9092; do echo "Waiting for Kafka..."; sleep 3; done; echo "Kafka TCP ready"']
+      - name: wait-for-localstack
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z localstack-srv 4566; do echo "Waiting for LocalStack..."; sleep 3; done; echo "LocalStack TCP ready"']
       containers:
       - name: media-service
         image: delivery/media
         imagePullPolicy: IfNotPresent
         ports:
-        - name: grpc
-          containerPort: 4002
+        - name: graphql
+          containerPort: 4005
         - name: ws
           containerPort: 4003
         - name: metrics
@@ -143,9 +153,9 @@ spec:
   selector:
     app: media-service
   ports:
-  - name: grpc
-    port: 4002
-    targetPort: 4002
+  - name: graphql
+    port: 4005
+    targetPort: 4005
     protocol: TCP
   - name: ws
     port: 4003

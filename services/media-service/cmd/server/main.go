@@ -25,7 +25,7 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/config"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/scheduler"
-	grpctransport "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/grpc"
+	gqltransport "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/graphql"
 	wstransport "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/websocket"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/validation"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/workers"
@@ -65,16 +65,40 @@ func main() {
 	}()
 
 	// ── DynamoDB Client & Table Provisioning ──────────────────────────────────
+	slog.Info("DynamoDB config", "endpoint", cfg.DynamoDBEndpoint, "table", cfg.DynamoDBTableName, "region", cfg.AWSRegion)
 	dbClient, err := dynamodb.NewClient(ctx, cfg.AWSRegion, cfg.DynamoDBEndpoint, cfg.AWSAccessKeyID, cfg.AWSSecretAccessKey)
 	if err != nil {
 		slog.Error("DynamoDB client init failed", "error", err)
 		os.Exit(1)
 	}
-	if err := dynamodb.EnsureTableExists(ctx, dbClient, cfg.DynamoDBTableName); err != nil {
-		slog.Error("DynamoDB table provisioning failed", "error", err)
+
+	// Retry loop for DynamoDB table provisioning (waits for LocalStack to be fully ready).
+	// Uses a 5-second timeout per attempt and 5-second back-off between attempts.
+	const (
+		dbMaxAttempts = 30
+		dbRetryDelay  = 5 * time.Second
+	)
+	var provisionErr error
+	for i := 0; i < dbMaxAttempts; i++ {
+		provCtx, provCancel := context.WithTimeout(ctx, 5*time.Second)
+		provisionErr = dynamodb.EnsureTableExists(provCtx, dbClient, cfg.DynamoDBTableName)
+		provCancel()
+		if provisionErr == nil {
+			break
+		}
+		slog.Warn("DynamoDB not ready, retrying...",
+			"attempt", i+1,
+			"maxAttempts", dbMaxAttempts,
+			"error", provisionErr,
+			"retryIn", dbRetryDelay,
+		)
+		time.Sleep(dbRetryDelay)
+	}
+	if provisionErr != nil {
+		slog.Error("DynamoDB table provisioning failed after retries", "error", provisionErr)
 		os.Exit(1)
 	}
-	slog.Info("DynamoDB ready", "table", cfg.DynamoDBTableName)
+	slog.Info("DynamoDB ready", "endpoint", cfg.DynamoDBEndpoint, "table", cfg.DynamoDBTableName)
 
 	// ── Repositories ──────────────────────────────────────────────────────────
 	mediaRepo := dynamodb.NewMediaRepository(dbClient, cfg.DynamoDBTableName)
@@ -93,19 +117,54 @@ func main() {
 	slog.Info("S3 ready", "bucket", cfg.S3BucketName)
 
 	// ── Redis Client ──────────────────────────────────────────────────────────
+	// NewClient already retries internally (30 × 5 s back-off) and exits with
+	// a structured error if Redis never becomes reachable.
 	redisClient, err := redisadapter.NewClient(cfg.RedisAddr(), cfg.RedisPassword)
 	if err != nil {
 		slog.Error("Redis client init failed", "error", err)
 		os.Exit(1)
 	}
-	// Health check via shared automation package
-	redisHealth := sharedautomation.CheckRedis(ctx, redisClient)
-	if redisHealth.Status != "UP" {
-		slog.Error("Redis health check failed", "message", redisHealth.Message)
-		os.Exit(1)
-	}
 	cacheAdapter := redisadapter.NewCacheAdapter(redisClient)
-	slog.Info("Redis ready", "addr", cfg.RedisAddr())
+
+	// ── Kafka Connection Verification (Wait for Kafka to be fully ready) ──────
+	// A plain TCP dial succeeds as soon as the port is bound, before Kafka has
+	// finished initialising (controller election, coordinator registration).
+	// Requesting the cluster controller forces a full metadata round-trip which
+	// guarantees the broker is truly ready to serve produce/consume requests.
+	const (
+		kafkaMaxAttempts = 30
+		kafkaRetryDelay  = 5 * time.Second
+		kafkaDialTimeout = 5 * time.Second
+	)
+	if len(cfg.KafkaBrokers) > 0 {
+		var kafkaErr error
+		for i := 0; i < kafkaMaxAttempts; i++ {
+			dialer := &kafkago.Dialer{Timeout: kafkaDialTimeout}
+			conn, dialErr := dialer.DialContext(ctx, "tcp", cfg.KafkaBrokers[0])
+			if dialErr == nil {
+				_, kafkaErr = conn.Controller() // full metadata round-trip
+				conn.Close()
+				if kafkaErr == nil {
+					break
+				}
+			} else {
+				kafkaErr = dialErr
+			}
+			slog.Warn("Kafka not ready, retrying...",
+				"broker", cfg.KafkaBrokers[0],
+				"attempt", i+1,
+				"maxAttempts", kafkaMaxAttempts,
+				"error", kafkaErr,
+				"retryIn", kafkaRetryDelay,
+			)
+			time.Sleep(kafkaRetryDelay)
+		}
+		if kafkaErr != nil {
+			slog.Error("Kafka not ready after retries, exiting", "broker", cfg.KafkaBrokers[0], "error", kafkaErr)
+			os.Exit(1)
+		}
+		slog.Info("Kafka ready", "broker", cfg.KafkaBrokers[0])
+	}
 
 	// ── Rate Limiter (shared package) ─────────────────────────────────────────
 	uploadRateLimiter := sharedratelimiter.NewRateLimiter(redisClient, cfg.RateLimitUploadPerMinute, time.Minute)
@@ -163,12 +222,16 @@ func main() {
 		mediaRepo, versionRepo, storage, downloadRateLimiter, cfg.S3PresignedURLExpiry,
 	)
 
-	// ── gRPC Server ───────────────────────────────────────────────────────────
-	grpcHandler := grpctransport.NewHandler(
+	// ── GraphQL Federation Subgraph Server ───────────────────────────────────
+	gqlHandler := gqltransport.NewHandler(
 		createSessionUC, completeUploadUC, abortUploadUC, getUploadStatusUC,
 		getMediaUC, listMediaUC, deleteMediaUC, getDownloadURLUC, quotaRepo,
 	)
-	grpcServer := grpctransport.NewServer(grpcHandler, uploadRateLimiter, cfg.GRPCPort)
+	gqlServer, err := gqltransport.NewServer(gqlHandler, cfg.GraphQLPort)
+	if err != nil {
+		slog.Error("Failed to build GraphQL server", "error", err)
+		os.Exit(1)
+	}
 
 	// ── Background Workers ────────────────────────────────────────────────────
 	outboxPublisher := outbox.NewPublisher(outboxRepo, producer, 5*time.Second)
@@ -321,14 +384,14 @@ func main() {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		if err := grpcServer.Serve(ctx); err != nil {
-			slog.Error("gRPC server error", "error", err)
+		if err := gqlServer.Serve(ctx); err != nil {
+			slog.Error("GraphQL server error", "error", err)
 			cancel()
 		}
 	}()
 
 	slog.Info("media-service: ready",
-		"grpcPort", cfg.GRPCPort,
+		"graphqlPort", cfg.GraphQLPort,
 		"wsPort", cfg.WSPort,
 		"metricsPort", cfg.MetricsPort,
 		"env", cfg.Environment,

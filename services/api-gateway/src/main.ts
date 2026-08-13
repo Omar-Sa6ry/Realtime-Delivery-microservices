@@ -6,7 +6,10 @@ import { StructuredLogger } from '@delivery/common';
 import { waitForService } from './utils/waitService.util';
 
 async function bootstrap() {
-  await Promise.all([waitForService('http://user-srv:4001/user/graphql')]);
+  await Promise.all([
+    waitForService('http://media-srv:4005/media/graphql'),
+    waitForService('http://user-srv:4001/user/graphql'),
+  ]);
 
   const logger = new StructuredLogger();
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

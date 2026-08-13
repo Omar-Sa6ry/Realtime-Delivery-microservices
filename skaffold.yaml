@@ -5,6 +5,9 @@ manifests:
   rawYaml:
     - ./k8s/*
 
+deploy:
+  statusCheckDeadlineSeconds: 1800
+
 build:
   local:
     push: false
@@ -18,9 +21,9 @@ build:
       sync:
         manual:
           - src: "services/api-gateway/src/**/*.ts"
-            dest: /usr/src/app
+            dest: /usr/src/app/services/api-gateway/src
           - src: "protos/**/*.proto"
-            dest: /usr/src/app
+            dest: /usr/src/app/protos
 
     - image: delivery/user
       context: .
@@ -29,11 +32,11 @@ build:
       sync:
         manual:
           - src: 'services/user-service/src/**/*.ts'
-            dest: /usr/src/app
+            dest: /usr/src/app/services/user-service/src
           - src: "protos/**/*.proto"
-            dest: /usr/src/app
+            dest: /usr/src/app/protos
           - src: 'packages/ts/dist/**/*.js'
-            dest: /usr/src/app
+            dest: /usr/src/app/packages/ts/dist
 
     - image: delivery/media
       context: .

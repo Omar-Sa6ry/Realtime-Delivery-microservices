@@ -1,20 +1,4 @@
-PHONY: proto build tidy run help
-
-# ── Generate proto ─────────────────────────────────────────────────────────────
-# Run once to generate gRPC Go code from the proto definition.
-# Requires: protoc, protoc-gen-go, protoc-gen-go-grpc
-# Install deps: make proto-deps
-proto-deps:
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-
-proto:
-	protoc \
-		--go_out=. \
-		--go_opt=paths=source_relative \
-		--go-grpc_out=. \
-		--go-grpc_opt=paths=source_relative \
-		proto/media/v1/media.proto
+.PHONY: build tidy run help
 
 # ── Dependencies ───────────────────────────────────────────────────────────────
 tidy:
@@ -46,8 +30,6 @@ docker-build:
 
 # ── Help ───────────────────────────────────────────────────────────────────────
 help:
-	@echo "make proto-deps  Install protoc plugins"
-	@echo "make proto       Generate gRPC Go code"
 	@echo "make tidy        Download and tidy dependencies"
 	@echo "make build       Compile the binary"
 	@echo "make run         Run the service locally"

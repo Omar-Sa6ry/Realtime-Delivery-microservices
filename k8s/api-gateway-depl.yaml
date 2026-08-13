@@ -26,6 +26,8 @@ spec:
               value: "redis-srv"
             - name: REDIS_PORT
               value: "6379"
+            - name: REDIS_DB
+              value: "0"
             - name: RATE_LIMIT_LIMIT
               value: "100"
             - name: RATE_LIMIT_WINDOW_MS

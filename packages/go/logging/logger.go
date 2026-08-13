@@ -54,8 +54,12 @@ func NewDevHandler(w io.Writer) *DevHandler {
 	return &DevHandler{w: w}
 }
 
-func (h *DevHandler) Enabled(_ context.Context, _ slog.Level) bool {
-	return true
+func (h *DevHandler) Enabled(_ context.Context, level slog.Level) bool {
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "debug" || logLevel == "DEBUG" {
+		return true
+	}
+	return level >= slog.LevelInfo
 }
 
 func (h *DevHandler) Handle(ctx context.Context, r slog.Record) error {

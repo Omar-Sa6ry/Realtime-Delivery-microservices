@@ -111,7 +111,7 @@ services:
     env_file:
       - .env
     ports:
-      - "4002:4002"
+      - "4005:4005"
       - "4003:4003"
       - "9102:9102"
     networks:
@@ -119,7 +119,7 @@ services:
         aliases:
           - media-srv
     environment:
-      PORT_MEDIA: "4002"
+      PORT_MEDIA_GRAPHQL: "4005"
       PORT_MEDIA_WS: "4003"
       PORT_MEDIA_METRICS: "9102"
       AWS_REGION: "us-east-1"
@@ -184,10 +184,12 @@ services:
       RATE_LIMIT_LIMIT: ${RATE_LIMIT_LIMIT:-100}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       USER_SERVICE_URL: "http://user-srv:4001/user/graphql"
+      MEDIA_SUBGRAPH_URL: "http://media-srv:4005/media/graphql"
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - redis-srv
       - user-service
+      - media-service
     volumes:
       - ./services/api-gateway/src:/usr/src/app/services/api-gateway/src
       - ./packages/ts:/usr/src/app/packages/ts

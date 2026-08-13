@@ -69,6 +69,9 @@ import { BullModule } from '@nestjs/bullmq';
         database: config.get<string>('DB_NAME', 'delivery_user_db'),
         entities: [User, Address, Outbox],
         synchronize: true, // For development mode
+        // Survive concurrent boot: retry for ~3 minutes before giving up.
+        retryAttempts: 60,
+        retryDelay: 3000,
       }),
     }),
 

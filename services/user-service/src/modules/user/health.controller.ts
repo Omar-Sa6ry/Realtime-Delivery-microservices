@@ -1,4 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { HealthService } from '@delivery/common';
 import { DataSource } from 'typeorm';
 import { RedisService } from '@bts-soft/core';
@@ -12,14 +13,14 @@ export class HealthController {
   ) {}
 
   @Get('health')
-  async getHealth() {
+  async getHealth(@Res() res: Response) {
     const dbHealth = await this.healthService.checkDatabase(this.dataSource);
     const redisHealth = await this.healthService.checkRedis(this.redisService);
     const system = this.healthService.getSystemStats();
 
     const isHealthy = dbHealth.status === 'UP' && redisHealth.status === 'UP';
 
-    return {
+    res.status(isHealthy ? 200 : 503).json({
       status: isHealthy ? 'UP' : 'DOWN',
       timestamp: new Date().toISOString(),
       checks: {
@@ -27,6 +28,6 @@ export class HealthController {
         redis: redisHealth,
       },
       system,
-    };
+    });
   }
 }

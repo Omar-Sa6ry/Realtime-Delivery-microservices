@@ -135,6 +135,25 @@ spec:
           limits:
             cpu: "500m"
             memory: "512Mi"
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: graphql
+          periodSeconds: 10
+          failureThreshold: 60
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: graphql
+          periodSeconds: 10
+          failureThreshold: 12
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: graphql
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          failureThreshold: 6
         # Since we use alpine with ffmpeg, we have a writeable tmp directory
         securityContext:
           allowPrivilegeEscalation: false

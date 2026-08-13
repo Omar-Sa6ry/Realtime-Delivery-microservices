@@ -74,29 +74,28 @@ func main() {
 
 	// Retry loop for DynamoDB table provisioning (waits for LocalStack to be fully ready).
 	// Uses a 5-second timeout per attempt and 5-second back-off between attempts.
-	const (
-		dbMaxAttempts = 30
-		dbRetryDelay  = 5 * time.Second
-	)
+	// The loop runs until the table exists or the root context is cancelled so the
+	// service no longer crash-loops when LocalStack boots after the media pod
+	// during a concurrent `skaffold dev` deploy.
+	const dbRetryDelay = 5 * time.Second
 	var provisionErr error
-	for i := 0; i < dbMaxAttempts; i++ {
+	for {
 		provCtx, provCancel := context.WithTimeout(ctx, 5*time.Second)
 		provisionErr = dynamodb.EnsureTableExists(provCtx, dbClient, cfg.DynamoDBTableName)
 		provCancel()
 		if provisionErr == nil {
 			break
 		}
-		slog.Warn("DynamoDB not ready, retrying...",
-			"attempt", i+1,
-			"maxAttempts", dbMaxAttempts,
+		slog.Warn("DynamoDB not ready, retrying until available...",
 			"error", provisionErr,
 			"retryIn", dbRetryDelay,
 		)
-		time.Sleep(dbRetryDelay)
-	}
-	if provisionErr != nil {
-		slog.Error("DynamoDB table provisioning failed after retries", "error", provisionErr)
-		os.Exit(1)
+		select {
+		case <-ctx.Done():
+			slog.Error("Shutdown requested while waiting for DynamoDB", "error", ctx.Err())
+			os.Exit(1)
+		case <-time.After(dbRetryDelay):
+		}
 	}
 	slog.Info("DynamoDB ready", "endpoint", cfg.DynamoDBEndpoint, "table", cfg.DynamoDBTableName)
 
@@ -132,13 +131,12 @@ func main() {
 	// Requesting the cluster controller forces a full metadata round-trip which
 	// guarantees the broker is truly ready to serve produce/consume requests.
 	const (
-		kafkaMaxAttempts = 30
 		kafkaRetryDelay  = 5 * time.Second
 		kafkaDialTimeout = 5 * time.Second
 	)
 	if len(cfg.KafkaBrokers) > 0 {
 		var kafkaErr error
-		for i := 0; i < kafkaMaxAttempts; i++ {
+		for {
 			dialer := &kafkago.Dialer{Timeout: kafkaDialTimeout}
 			conn, dialErr := dialer.DialContext(ctx, "tcp", cfg.KafkaBrokers[0])
 			if dialErr == nil {
@@ -150,18 +148,19 @@ func main() {
 			} else {
 				kafkaErr = dialErr
 			}
-			slog.Warn("Kafka not ready, retrying...",
+			// Keep retrying until Kafka is truly ready so a slow boot during a
+			// concurrent `skaffold dev` deploy does not crash-loop this pod.
+			slog.Warn("Kafka not ready, retrying until available...",
 				"broker", cfg.KafkaBrokers[0],
-				"attempt", i+1,
-				"maxAttempts", kafkaMaxAttempts,
 				"error", kafkaErr,
 				"retryIn", kafkaRetryDelay,
 			)
-			time.Sleep(kafkaRetryDelay)
-		}
-		if kafkaErr != nil {
-			slog.Error("Kafka not ready after retries, exiting", "broker", cfg.KafkaBrokers[0], "error", kafkaErr)
-			os.Exit(1)
+			select {
+			case <-ctx.Done():
+				slog.Error("Shutdown requested while waiting for Kafka", "error", ctx.Err())
+				os.Exit(1)
+			case <-time.After(kafkaRetryDelay):
+			}
 		}
 		slog.Info("Kafka ready", "broker", cfg.KafkaBrokers[0])
 	}

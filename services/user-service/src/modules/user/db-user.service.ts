@@ -10,6 +10,7 @@ import { Role } from '@delivery/common';
 import { IdGenerator } from '@bts-soft/core';
 import { I18nService } from 'nestjs-i18n';
 import { UpdateProfileInput, ChangePasswordInput } from './dto/user.types';
+import { MediaGrpcService } from '../media/grpc-media.service';
 
 @Injectable()
 export class DbUserService {
@@ -21,6 +22,7 @@ export class DbUserService {
     private readonly passwordHasher: BcryptPasswordHasher,
     private readonly dataSource: DataSource,
     private readonly outboxWorkerService: OutboxWorkerService,
+    private readonly mediaGrpcService: MediaGrpcService,
     private readonly i18n: I18nService,
   ) {}
 
@@ -51,9 +53,24 @@ export class DbUserService {
       throw new BadRequestException(this.i18n.t('user.NOT_FOUND'));
     }
 
-    const { firstName, lastName } = input;
+    const { firstName, lastName, imageUrl, avatarMediaId } = input;
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
+
+    if (avatarMediaId) {
+      const resolved = await this.mediaGrpcService.resolveMediaUrl({
+        mediaId: avatarMediaId,
+        requesterId: userId,
+        versionType: 'original',
+        expirySeconds: 3600,
+      });
+      user.imageUrl = resolved.url;
+    } else if (imageUrl) {
+      if (!isHttpUrl(imageUrl)) {
+        throw new BadRequestException(this.i18n.t('user.INVALID_IMAGE_URL'));
+      }
+      user.imageUrl = imageUrl;
+    }
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -77,6 +94,7 @@ export class DbUserService {
         firstName: savedUser.firstName,
         lastName: savedUser.lastName,
         role: savedUser.role,
+        imageUrl: savedUser.imageUrl || null,
       };
       outbox.processed = false;
 
@@ -229,5 +247,14 @@ export class DbUserService {
       : 100;
 
     return { totalUsers, usersThisMonth, percentageIncrease };
+  }
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
   }
 }

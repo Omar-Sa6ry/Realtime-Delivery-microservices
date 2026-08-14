@@ -6,6 +6,7 @@ import {
   PhoneField,
   TextField,
 } from '@bts-soft/core';
+import { IsOptional, IsString } from 'class-validator';
 import { GeneralResponse } from '../../../common/graphql/general-response.type';
 
 import { UserType } from '../../user/dto/user.types';
@@ -41,6 +42,11 @@ export class RegisterInput {
 
   @PhoneField('EG', false, true, false)
   phoneNumber?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 }
 
 @InputType()

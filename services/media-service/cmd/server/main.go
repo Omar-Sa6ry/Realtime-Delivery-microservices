@@ -26,6 +26,8 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/scheduler"
 	gqltransport "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/graphql"
+	grpctransport "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/grpc"
+	pb "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/grpc/pb"
 	wstransport "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/websocket"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/validation"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/workers"
@@ -38,6 +40,7 @@ import (
 	scanWorker "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/workers/scan"
 	videoWorker "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/workers/video"
 	kafkago "github.com/segmentio/kafka-go"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -232,6 +235,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	// ── Internal gRPC Server (user-service ↔ media-service) ─────────────────
+	grpcServer := grpc.NewServer(grpctransport.NewServerOptions()...)
+	pb.RegisterMediaServiceServer(grpcServer, grpctransport.NewServer(getDownloadURLUC, getMediaUC))
+
+	grpcLis, err := grpctransport.NewListener(":" + cfg.GRPCPort)
+	if err != nil {
+		slog.Error("Failed to bind gRPC listener", "error", err)
+		os.Exit(1)
+	}
+	go func() {
+		slog.Info("Internal gRPC server starting", "port", cfg.GRPCPort)
+		if err := grpcServer.Serve(grpcLis); err != nil {
+			slog.Error("gRPC server error", "error", err)
+			cancel()
+		}
+	}()
+
 	// ── Background Workers ────────────────────────────────────────────────────
 	outboxPublisher := outbox.NewPublisher(outboxRepo, producer, 5*time.Second)
 	reconciler := reconciliation.NewWorker(
@@ -392,6 +412,7 @@ func main() {
 	slog.Info("media-service: ready",
 		"graphqlPort", cfg.GraphQLPort,
 		"wsPort", cfg.WSPort,
+		"grpcPort", cfg.GRPCPort,
 		"metricsPort", cfg.MetricsPort,
 		"env", cfg.Environment,
 	)
@@ -399,6 +420,9 @@ func main() {
 	<-sigCh
 	slog.Info("media-service: shutdown signal received, draining...")
 	cancel()
+
+	// Gracefully stop the internal gRPC server
+	grpcServer.GracefulStop()
 
 	// Wait for worker pools to drain
 	scanPool.Shutdown()

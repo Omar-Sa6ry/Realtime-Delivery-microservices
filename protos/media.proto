@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package media;
+
+option go_package = "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/grpc/pb";
+
+service MediaService {
+  // Resolve a stable, short-lived display URL for a media item (e.g. an avatar).
+  rpc ResolveMediaUrl (ResolveMediaUrlRequest) returns (ResolveMediaUrlResponse);
+
+  // Fetch media metadata + status (ownership-verified).
+  rpc GetMedia (GetMediaRequest) returns (GetMediaResponse);
+}
+
+message ResolveMediaUrlRequest {
+  string media_id = 1;
+  string requester_id = 2;   // must equal media.OwnerID
+  string version_type = 3;   // "" | "original" | "thumbnail" | "medium" | ...
+  int32  expiry_seconds = 4; // server caps at 86400
+}
+
+message ResolveMediaUrlResponse {
+  string url = 1;
+  int64  expires_at_seconds = 2;
+  string content_type = 3;
+  string media_id = 4;
+  string status = 5;
+}
+
+message GetMediaRequest {
+  string media_id = 1;
+  string requester_id = 2;   // must equal media.OwnerID
+}
+
+message GetMediaResponse {
+  string media_id = 1;
+  string owner_id = 2;
+  string file_name = 3;
+  string content_type = 4;
+  string media_type = 5;
+  int64  size = 6;
+  string status = 7;
+  string object_key = 8;
+  int64  created_at_seconds = 9;
+  int64  updated_at_seconds = 10;
+}

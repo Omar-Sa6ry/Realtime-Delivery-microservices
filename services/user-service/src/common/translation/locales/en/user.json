@@ -50,5 +50,6 @@
   "ADDRESS_ADDED": "Address added successfully",
   "ADDRESS_DELETED": "Address deleted successfully",
   "ADDRESSES_RETRIEVED": "Addresses retrieved successfully",
-  "DEFAULT_ADDRESS_UPDATED": "Default address updated successfully"
+  "DEFAULT_ADDRESS_UPDATED": "Default address updated successfully",
+  "INVALID_IMAGE_URL": "Image URL is invalid"
 }

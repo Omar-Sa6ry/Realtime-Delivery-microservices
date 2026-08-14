@@ -1,7 +1,7 @@
 import { ObjectType, Field, InputType } from '@nestjs/graphql';
 import { PasswordField, PhoneField, TextField } from '@bts-soft/core';
 import { GeneralResponse } from '../../../common/graphql/general-response.type';
-import { IsBoolean, IsOptional, IsNumber } from 'class-validator';
+import { IsBoolean, IsOptional, IsNumber, IsString } from 'class-validator';
 
 @ObjectType()
 export class UserType {
@@ -29,6 +29,9 @@ export class UserType {
   @Field(() => Date)
   createdAt: Date;
 
+  @Field(() => String, { nullable: true })
+  imageUrl?: string;
+
   @Field(() => [AddressType])
   addresses: AddressType[];
 }
@@ -52,6 +55,16 @@ export class UpdateProfileInput {
 
   @TextField('lastName', 2, 100, true, true, true)
   lastName?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  avatarMediaId?: string;
 }
 
 @ObjectType()

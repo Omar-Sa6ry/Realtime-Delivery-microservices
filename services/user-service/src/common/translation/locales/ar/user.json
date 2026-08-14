@@ -49,5 +49,6 @@
   "ADDRESS_ADDED": "تمت إضافة العنوان بنجاح",
   "ADDRESS_DELETED": "تم حذف العنوان بنجاح",
   "ADDRESSES_RETRIEVED": "تم استرجاع العناوين بنجاح",
-  "DEFAULT_ADDRESS_UPDATED": "تم تحديث العنوان الافتراضي بنجاح"
+  "DEFAULT_ADDRESS_UPDATED": "تم تحديث العنوان الافتراضي بنجاح",
+  "INVALID_IMAGE_URL": "رابط الصورة غير صالح"
 }

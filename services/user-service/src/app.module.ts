@@ -19,6 +19,7 @@ import { GraphqlResponseInterceptor } from './common/interceptors/graphql-respon
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
+import { MediaModule } from './modules/media/media.module';
 import { User } from './common/database/entities/user.entity';
 import { Address } from './common/database/entities/address.entity';
 import { Outbox } from './common/database/entities/outbox.entity';
@@ -105,6 +106,7 @@ import { BullModule } from '@nestjs/bullmq';
     CommonModule,
     AuthModule,
     UserModule,
+    MediaModule,
     LoggingModule,
     MetricsModule,
     AutomationModule,

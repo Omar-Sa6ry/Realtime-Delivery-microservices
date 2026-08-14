@@ -41,6 +41,15 @@ export class User {
   @Column({ name: 'reset_token_expiry', type: 'timestamptz', nullable: true })
   resetTokenExpiry?: Date;
 
+  @Column({
+    name: 'image_url',
+    type: 'varchar',
+    length: 1024,
+    nullable: true,
+    default: null,
+  })
+  imageUrl?: string;
+
   @OneToMany(() => Address, (address) => address.user, {
     cascade: true,
     eager: true,

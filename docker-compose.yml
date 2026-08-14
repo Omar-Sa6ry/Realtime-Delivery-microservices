@@ -94,6 +94,7 @@ services:
       REDIS_HOST: "redis-srv"
       REDIS_PORT: ${REDIS_PORT:-6379}
       NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
+      MEDIA_SERVICE_GRPC_URL: ${MEDIA_SERVICE_GRPC_URL:-media-srv:50052}
     depends_on:
       - user-db-srv
       - redis-srv
@@ -114,16 +115,22 @@ services:
       - "4005:4005"
       - "4003:4003"
       - "9102:9102"
+      - "50052:50052"
     networks:
       default:
         aliases:
           - media-srv
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       PORT_MEDIA_GRAPHQL: "4005"
       PORT_MEDIA_WS: "4003"
       PORT_MEDIA_METRICS: "9102"
+      PORT_MEDIA_GRPC: "50052"
       AWS_REGION: "us-east-1"
-      AWS_ENDPOINT: "http://localstack-srv:4566"
+      # Use host.docker.internal so S3 presigned URLs are reachable from the
+      # browser (LocalStack is published on the host at 4566).
+      AWS_ENDPOINT: "http://host.docker.internal:4566"
       DYNAMODB_ENDPOINT: "http://localstack-srv:4566"
       DYNAMODB_TABLE_NAME: "media-service"
       REDIS_HOST: "redis-srv"

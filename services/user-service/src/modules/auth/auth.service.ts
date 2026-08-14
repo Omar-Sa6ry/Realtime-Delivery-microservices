@@ -41,7 +41,7 @@ export class AuthService {
 
   async register(input: RegisterInput): Promise<AuthPayloadType> {
     const email = input.email.toLowerCase().trim();
-    const { password, firstName, lastName, phoneNumber } = input;
+    const { password, firstName, lastName, phoneNumber, imageUrl } = input;
 
     const [existingPhone, existingEmail] = await Promise.all([
       phoneNumber ? this.userRepo.findOne({ where: { phoneNumber } }) : Promise.resolve(null),
@@ -63,6 +63,7 @@ export class AuthService {
       lastName,
       role,
       phoneNumber,
+      imageUrl,
     );
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -87,6 +88,7 @@ export class AuthService {
         firstName: savedUser.firstName,
         lastName: savedUser.lastName,
         role: savedUser.role,
+        imageUrl: savedUser.imageUrl,
       };
       outbox.processed = false;
 
@@ -137,6 +139,7 @@ export class AuthService {
         role: savedUser.role,
         isActive: savedUser.isActive,
         createdAt: savedUser.createdAt,
+        imageUrl: savedUser.imageUrl,
         addresses: savedUser.addresses || [],
       },
       accessToken: tokens.accessToken,

@@ -12,6 +12,7 @@ export class UserFactory {
     lastName: string,
     role: Role,
     phoneNumber?: string,
+    imageUrl?: string,
   ): User {
     const user = new User();
     user.id = IdGenerator.generate('snowflake');
@@ -22,6 +23,7 @@ export class UserFactory {
     user.phoneNumber = phoneNumber ? phoneNumber.trim() : '';
     user.role = role;
     user.isActive = true;
+    user.imageUrl = imageUrl;
     user.addresses = [];
     return user;
   }

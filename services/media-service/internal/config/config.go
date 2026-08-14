@@ -16,6 +16,7 @@ type Config struct {
 	GraphQLPort  string // GraphQL federation subgraph port (default :4005)
 	MetricsPort  string
 	WSPort       string // WebSocket server port (default :4003)
+	GRPCPort     string // internal gRPC server port (default :50052)
 	Environment  string
 
 	// AWS
@@ -86,6 +87,7 @@ func Load() (*Config, error) {
 	c.GraphQLPort = getEnvOrDefault("PORT_MEDIA_GRAPHQL", "4005")
 	c.MetricsPort = getEnvOrDefault("PORT_MEDIA_METRICS", "9102")
 	c.WSPort = getEnvOrDefault("PORT_MEDIA_WS", "4003")
+	c.GRPCPort = getEnvOrDefault("PORT_MEDIA_GRPC", "50052")
 	c.Environment = getEnvOrDefault("NODE_ENV", "development")
 
 	// AWS

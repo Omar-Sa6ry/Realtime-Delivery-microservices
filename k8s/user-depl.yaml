@@ -13,15 +13,9 @@ spec:
         app: user
     spec:
       initContainers:
-        - name: wait-for-db
+        - name: wait-for-deps
           image: busybox:1.36
-          command: ['sh', '-c', 'until nc -z user-db-srv 5432; do echo "Waiting for user-db..."; sleep 3; done; echo "user-db TCP ready"']
-        - name: wait-for-redis
-          image: busybox:1.36
-          command: ['sh', '-c', 'until nc -z redis-srv 6379; do echo "Waiting for redis..."; sleep 3; done; echo "redis TCP ready"']
-        - name: wait-for-nats
-          image: busybox:1.36
-          command: ['sh', '-c', 'until nc -z nats-srv 4222; do echo "Waiting for nats..."; sleep 3; done; echo "nats TCP ready"']
+          command: ['sh', '-c', 'until nc -z user-db-srv 5432 && nc -z redis-srv 6379 && nc -z nats-srv 4222; do echo "Waiting for db, redis, and nats..."; sleep 2; done; echo "Dependencies ready"']
       containers:
         - name: user
           image: delivery/user 
@@ -39,14 +33,14 @@ spec:
             httpGet:
               path: /user/health
               port: 4001
-            initialDelaySeconds: 10
+            initialDelaySeconds: 2
             periodSeconds: 5
             failureThreshold: 60
           livenessProbe:
             httpGet:
               path: /user/health
               port: 4001
-            initialDelaySeconds: 60
+            initialDelaySeconds: 5
             periodSeconds: 20
             failureThreshold: 6
           env:

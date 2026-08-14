@@ -1,4 +1,4 @@
-﻿apiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: localstack-depl
@@ -44,13 +44,13 @@ spec:
         readinessProbe:
           tcpSocket:
             port: 4566
-          initialDelaySeconds: 20
+          initialDelaySeconds: 2
           periodSeconds: 5
           failureThreshold: 12
         livenessProbe:
           tcpSocket:
             port: 4566
-          initialDelaySeconds: 120
+          initialDelaySeconds: 5
           periodSeconds: 15
 ---
 apiVersion: v1

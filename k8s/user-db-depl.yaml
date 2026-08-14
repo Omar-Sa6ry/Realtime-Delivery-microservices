@@ -37,6 +37,24 @@ spec:
               value: trust
           ports:
             - containerPort: 5432
+          startupProbe:
+            exec:
+              command: ['pg_isready', '-U', 'postgres', '-d', 'delivery_user_db']
+            initialDelaySeconds: 3
+            periodSeconds: 4
+            failureThreshold: 20
+          readinessProbe:
+            exec:
+              command: ['pg_isready', '-U', 'postgres', '-d', 'delivery_user_db']
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            exec:
+              command: ['pg_isready', '-U', 'postgres', '-d', 'delivery_user_db']
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data

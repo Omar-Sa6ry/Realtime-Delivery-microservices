@@ -1,4 +1,4 @@
-﻿apiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kafka-depl
@@ -18,13 +18,6 @@ spec:
         app: kafka
     spec:
       containers:
-      # Single-node KRaft Kafka (no ZooKeeper).
-      # - confluentinc/cp-*:7.5.0 hangs forever on its `dub path writable`
-      #   check under the WSL2/Docker filesystem of this dev machine.
-      # - bitnami/* images are no longer published on Docker Hub (empty repo),
-      #   so the previously-workable bitnami tags no longer resolve.
-      # The official apache/kafka image is actively published and runs KRaft
-      # combined (broker+controller) mode which self-manages its metadata.
       - name: kafka
         image: apache/kafka:3.8.0
         imagePullPolicy: IfNotPresent
@@ -76,13 +69,13 @@ spec:
         readinessProbe:
           tcpSocket:
             port: 9092
-          initialDelaySeconds: 30
+          initialDelaySeconds: 5
           periodSeconds: 10
           failureThreshold: 12
         livenessProbe:
           tcpSocket:
             port: 9092
-          initialDelaySeconds: 240
+          initialDelaySeconds: 10
           periodSeconds: 20
 ---
 apiVersion: v1

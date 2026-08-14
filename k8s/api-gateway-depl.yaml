@@ -13,9 +13,9 @@ spec:
         app: api-gateway
     spec:
       initContainers:
-        - name: wait-for-redis
+        - name: wait-for-deps
           image: busybox:1.36
-          command: ['sh', '-c', 'until nc -z redis-srv 6379; do echo "Waiting for redis..."; sleep 3; done; echo "redis TCP ready"']
+          command: ['sh', '-c', 'until nc -z redis-srv 6379; do echo "Waiting for redis..."; sleep 2; done; echo "redis TCP ready"']
       containers:
         - name: api-gateway
           image: delivery/api-gateway
@@ -32,14 +32,14 @@ spec:
             httpGet:
               path: /health
               port: 4000
-            initialDelaySeconds: 10
+            initialDelaySeconds: 2
             periodSeconds: 5
             failureThreshold: 60
           livenessProbe:
             httpGet:
               path: /health
               port: 4000
-            initialDelaySeconds: 60
+            initialDelaySeconds: 5
             periodSeconds: 20
             failureThreshold: 6
           env:

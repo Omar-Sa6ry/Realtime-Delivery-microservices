@@ -104,14 +104,9 @@ spec:
     spec:
       serviceAccountName: media-service-sa
       initContainers:
-      - name: wait-for-kafka
+      - name: wait-for-deps
         image: busybox:1.36
-        # Block until Kafka's port is open (TCP-level). The in-code retry loop then
-        # waits for the broker to be fully initialised before consuming messages.
-        command: ['sh', '-c', 'until nc -z kafka-srv 9092; do echo "Waiting for Kafka..."; sleep 3; done; echo "Kafka TCP ready"']
-      - name: wait-for-localstack
-        image: busybox:1.36
-        command: ['sh', '-c', 'until nc -z localstack-srv 4566; do echo "Waiting for LocalStack..."; sleep 3; done; echo "LocalStack TCP ready"']
+        command: ['sh', '-c', 'until nc -z kafka-srv 9092 && nc -z localstack-srv 4566; do echo "Waiting for Kafka and LocalStack..."; sleep 2; done; echo "Dependencies ready"']
       containers:
       - name: media-service
         image: delivery/media
@@ -151,7 +146,7 @@ spec:
           httpGet:
             path: /healthz
             port: graphql
-          initialDelaySeconds: 60
+          initialDelaySeconds: 5
           periodSeconds: 20
           failureThreshold: 6
         # Since we use alpine with ffmpeg, we have a writeable tmp directory

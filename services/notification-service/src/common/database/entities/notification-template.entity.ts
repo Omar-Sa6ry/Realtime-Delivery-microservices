@@ -1,18 +1,19 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   Unique,
 } from 'typeorm';
 import { NotificationType, NotificationChannel } from '@delivery/common';
+import { IdGenerator } from '@bts-soft/common';
 
 @Entity('notification_templates')
 @Unique(['type', 'channel', 'locale'])
 export class NotificationTemplate {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryColumn({ type: 'varchar', length: 64 })
+  id: string = IdGenerator.generate('snowflake');
 
   @Column({ type: 'enum', enum: NotificationType })
   type: NotificationType;

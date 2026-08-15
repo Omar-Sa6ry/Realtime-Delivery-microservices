@@ -65,13 +65,13 @@ spec:
           tcpSocket:
             port: 9092
           periodSeconds: 10
-          failureThreshold: 60
+          failureThreshold: 120
         readinessProbe:
           tcpSocket:
             port: 9092
           initialDelaySeconds: 5
           periodSeconds: 10
-          failureThreshold: 12
+          failureThreshold: 36
         livenessProbe:
           tcpSocket:
             port: 9092
@@ -91,3 +91,4 @@ spec:
     port: 9092
     targetPort: 9092
     protocol: TCP
+

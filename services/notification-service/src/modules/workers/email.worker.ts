@@ -7,6 +7,7 @@ import { Notification } from '../../common/database/entities/notification.entity
 import { NotificationDelivery } from '../../common/database/entities/notification-delivery.entity';
 import { NotificationService, ChannelType } from '@bts-soft/notifications';
 import { DeliveryChannelStatus } from '@delivery/common';
+import { buildChannelMessage } from './channel-message.helper';
 
 @Processor('notification-email')
 @Injectable()
@@ -38,14 +39,10 @@ export class EmailWorker extends WorkerHost {
       if (!notification) throw new Error('Notification not found');
 
       // The @bts-soft/notifications uses NotificationMessage interface
-      const message = {
-        title: notification.title,
-        body: notification.body,
-        recipientId: notification.userId,
-        type: notification.type,
-      };
-
-      await this.notificationService.send(ChannelType.EMAIL as any, message);
+      await this.notificationService.send(
+        ChannelType.EMAIL,
+        buildChannelMessage(notification, `email:${notification.id}:${delivery.id}`),
+      );
 
       delivery.status = DeliveryChannelStatus.SENT;
       delivery.sentAt = new Date();

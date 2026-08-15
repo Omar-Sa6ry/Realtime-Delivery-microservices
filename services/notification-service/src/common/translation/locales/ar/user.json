@@ -1,0 +1,6 @@
+{
+  "NO_TOKEN": "لا يوجد توكن",
+  "INVALID_TOKEN": "توكن غير صالح أو منتهي",
+  "INSUFFICIENT_PERMISSIONS": "الصلاحيات غير كافية",
+  "USER_NOT_FOUND": "المستخدم غير موجود"
+}

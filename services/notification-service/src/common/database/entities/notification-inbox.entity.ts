@@ -1,16 +1,17 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   Column,
   CreateDateColumn,
   Unique,
 } from 'typeorm';
+import { IdGenerator } from '@bts-soft/common';
 
 @Entity('notification_inbox')
 @Unique(['eventId', 'consumer'])
 export class NotificationInbox {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryColumn({ type: 'varchar', length: 64 })
+  id: string = IdGenerator.generate('snowflake');
 
   @Column()
   eventId: string;

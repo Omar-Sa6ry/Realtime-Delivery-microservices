@@ -18,11 +18,11 @@ export class GrpcController {
 
   @GrpcMethod('NotificationService', 'SendNotification')
   async sendNotification(data: SendNotificationRequest) {
-    let parsedData = {};
+    let parsedData: Record<string, unknown> = {};
     if (data.data) {
       try {
-        parsedData = JSON.parse(data.data);
-      } catch (e) {
+        parsedData = JSON.parse(data.data) as Record<string, unknown>;
+      } catch {
         // ignore JSON parse error
       }
     }

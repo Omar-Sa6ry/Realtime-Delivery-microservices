@@ -33,6 +33,22 @@ services:
     volumes:
       - user_db_data:/var/lib/postgresql/data
 
+  notification-db-srv:
+    image: postgres:15
+    pull_policy: missing
+    container_name: notification-db-srv
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${NOTIFICATION_DB_NAME:-delivery_notification_db}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5434:5432"
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+
   kafka-srv:
     image: apache/kafka:3.8.0
     pull_policy: missing
@@ -68,4 +84,5 @@ services:
 
 volumes:
   user_db_data:
+  notification_db_data:
 

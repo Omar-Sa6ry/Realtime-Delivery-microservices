@@ -31,13 +31,13 @@ spec:
               path: /user/health
               port: 4001
             periodSeconds: 5
-            failureThreshold: 60
+            failureThreshold: 240
           readinessProbe:
             httpGet:
               path: /user/health
               port: 4001
             periodSeconds: 3
-            failureThreshold: 60
+            failureThreshold: 120
           livenessProbe:
             httpGet:
               path: /user/health
@@ -112,3 +112,5 @@ spec:
       protocol: TCP
       port: 50051
       targetPort: 50051
+
+

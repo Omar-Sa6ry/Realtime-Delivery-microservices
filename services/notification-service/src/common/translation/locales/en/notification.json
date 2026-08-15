@@ -1,0 +1,10 @@
+{
+  "LIST_RETRIEVED": "Notifications retrieved successfully",
+  "GET_RETRIEVED": "Notification retrieved successfully",
+  "UNREAD_COUNT": "Unread notification count retrieved successfully",
+  "MARKED_READ": "Notification marked as read successfully",
+  "ALL_MARKED_READ": "All notifications marked as read successfully",
+  "DELETED": "Notification deleted successfully",
+  "NOT_FOUND": "Notification not found",
+  "RATE_LIMITED": "Too many requests, please try again later."
+}

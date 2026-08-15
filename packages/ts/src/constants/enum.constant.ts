@@ -3,7 +3,6 @@ import { registerEnumType } from "@nestjs/graphql";
 export enum Role {
   ADMIN = "admin",
   USER = "user",
-  CUSTOMER = "customer",
   DRIVER = "driver",
 }
 export const AllRoles: Role[] = Object.values(Role);

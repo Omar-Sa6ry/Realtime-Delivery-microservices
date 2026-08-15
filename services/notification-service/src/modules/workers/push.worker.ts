@@ -7,6 +7,7 @@ import { Notification } from '../../common/database/entities/notification.entity
 import { NotificationDelivery } from '../../common/database/entities/notification-delivery.entity';
 import { NotificationService, ChannelType } from '@bts-soft/notifications';
 import { DeliveryChannelStatus } from '@delivery/common';
+import { buildChannelMessage } from './channel-message.helper';
 
 @Processor('notification-push')
 @Injectable()
@@ -37,14 +38,10 @@ export class PushWorker extends WorkerHost {
       const notification = await this.notificationRepository.findOne({ where: { id: notificationId } });
       if (!notification) throw new Error('Notification not found');
 
-      const message = {
-        title: notification.title,
-        body: notification.body,
-        recipientId: notification.userId,
-        type: notification.type,
-      };
-
-      await this.notificationService.send(ChannelType.FIREBASE_FCM as any, message);
+      await this.notificationService.send(
+        ChannelType.FIREBASE_FCM,
+        buildChannelMessage(notification, `push:${notification.id}:${delivery.id}`),
+      );
 
       delivery.status = DeliveryChannelStatus.SENT;
       delivery.sentAt = new Date();

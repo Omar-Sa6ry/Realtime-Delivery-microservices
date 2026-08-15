@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotificationInbox } from '../../common/database/entities/notification-inbox.entity';
 import { EventHandlerFactory } from './event-handlers/event-handler.factory';
+import { KafkaEventPayload } from './event-handlers/event-handler.interface';
 import { DeliveryKafkaTopics, PaymentKafkaTopics } from '@delivery/common';
 
 @Injectable()
@@ -47,7 +48,7 @@ export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
         try {
           if (!message.value) return;
 
-          const payload = JSON.parse(message.value.toString());
+          const payload: KafkaEventPayload = JSON.parse(message.value.toString());
           const eventId = payload.eventId || payload.id; // Ensure eventId exists
           const eventType = payload.eventType || topic;
 

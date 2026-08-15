@@ -1,9 +1,15 @@
 import { Resolver, Query } from '@nestjs/graphql';
+import { BooleanResponse } from './common/graphql/general-response.type';
 
 @Resolver()
 export class AppResolver {
-  @Query(() => String)
-  ping(): string {
-    return 'Notification service is running';
+  @Query(() => BooleanResponse)
+  ping(): BooleanResponse {
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'Notification service is running',
+      data: true,
+    };
   }
 }

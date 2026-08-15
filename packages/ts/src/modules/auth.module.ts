@@ -24,13 +24,22 @@ export class AuthCommonModule {
       providers: [
         RoleGuard,
         ...(options.providers || []),
-        options.userService,
-        {
-          provide: 'USER_SERVICE',
-          useExisting: options.userService,
-        },
+        ...(typeof options.userService === 'function'
+          ? [
+              options.userService,
+              {
+                provide: 'USER_SERVICE',
+                useExisting: options.userService,
+              },
+            ]
+          : [
+              {
+                provide: 'USER_SERVICE',
+                useValue: options.userService,
+              },
+            ]),
       ],
-      exports: ['USER_SERVICE', JwtModule, RoleGuard, options.userService],
+      exports: ['USER_SERVICE', JwtModule, RoleGuard],
     };
   }
 }

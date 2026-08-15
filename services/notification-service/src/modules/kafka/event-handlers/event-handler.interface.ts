@@ -1,3 +1,13 @@
+export interface KafkaEventPayload {
+  eventId?: string;
+  id?: string;
+  eventType?: string;
+  userId?: string;
+  type?: string;
+  data?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export interface IEventHandler {
-  handle(payload: any): Promise<void>;
+  handle(payload: KafkaEventPayload): Promise<void>;
 }

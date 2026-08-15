@@ -31,13 +31,13 @@ spec:
               path: /notification/health
               port: 4004
             periodSeconds: 5
-            failureThreshold: 60
+            failureThreshold: 240
           readinessProbe:
             httpGet:
               path: /notification/health
               port: 4004
             periodSeconds: 3
-            failureThreshold: 60
+            failureThreshold: 120
           livenessProbe:
             httpGet:
               path: /notification/health
@@ -185,3 +185,5 @@ spec:
       protocol: TCP
       port: 50053
       targetPort: 50053
+
+

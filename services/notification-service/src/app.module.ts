@@ -1,27 +1,46 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloFederationDriver, ApolloFederationDriverConfig } from '@nestjs/apollo';
 import { JwtModule } from '@nestjs/jwt';
 import { RedisModule } from '@bts-soft/cache';
-import { NotificationModule as BtsNotificationModule } from '@bts-soft/notifications';
+import { NotificationModule as BtsNotificationModule, HttpExceptionFilter } from '@bts-soft/core';
 import { StringValue } from 'ms';
+import { join } from 'path';
 import { AppResolver } from './app.resolver';
 import { CommonModule } from './common/common.module';
+import { TranslationModule } from './common/translation/translation.module';
+import { GraphqlResponseInterceptor } from './common/interceptors/graphql-response.interceptor';
 import { KafkaModule } from './modules/kafka/kafka.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { WorkersModule } from './modules/workers/workers.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
 import { GrpcModule } from './modules/grpc/grpc.module';
-import { AuthCommonModule, LoggingModule, MetricsModule, AutomationModule } from '@delivery/common';
+import { AuthModule } from './modules/auth/auth.module';
+import { LoggingModule, MetricsModule, AutomationModule, MetricsInterceptor } from '@delivery/common';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['../../.env'],
+    }),
+
+    TranslationModule,
+
+    RedisModule,
+
+    JwtModule.registerAsync({
+      global: true,
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET') || 'default_secret',
+        signOptions: { expiresIn: config.get<string>('JWT_EXPIRE', '1d') as StringValue },
+      }),
+      inject: [ConfigService],
     }),
 
     TypeOrmModule.forRootAsync({
@@ -31,15 +50,13 @@ import { AuthCommonModule, LoggingModule, MetricsModule, AutomationModule } from
         host: config.get<string>('DB_HOST', 'localhost'),
         port: config.get<number>('DB_PORT', 5432),
         username: config.get<string>('DB_USERNAME', 'postgres'),
-        password: config.get<string>('POSTGRES_PASSWORD', 'O9M1a8r5+=2004'),
+        password: config.get<string>('POSTGRES_PASSWORD'),
         database: config.get<string>('DB_NAME', 'delivery_notification_db'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true, // Auto-create tables (use migrations in prod)
       }),
       inject: [ConfigService],
     }),
-
-    RedisModule,
 
     BullModule.forRootAsync({
       imports: [ConfigModule],
@@ -58,26 +75,24 @@ import { AuthCommonModule, LoggingModule, MetricsModule, AutomationModule } from
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       path: '/notification/graphql',
-      autoSchemaFile: { federation: 2 },
-    }),
-
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get('JWT_SECRET', 'default_secret'),
-        signOptions: { expiresIn: config.get('JWT_EXPIRE', '1d') as StringValue },
+      autoSchemaFile: {
+        path: join(process.cwd(), 'src/schema.gql'),
+        federation: 2,
+      },
+      context: ({ req }) => ({
+        req,
+        user: req.user,
+        language: req.headers['accept-language'] || 'en',
       }),
-      inject: [ConfigService],
-    }),
-
-    AuthCommonModule.register({
-      userService: { findById: async () => ({ id: 'mock', role: 'admin' }) }, // Temporary mock
+      playground: true,
+      debug: false,
     }),
 
     LoggingModule,
     MetricsModule,
     AutomationModule,
 
+    AuthModule,
     CommonModule,
     KafkaModule,
     NotificationModule,
@@ -85,6 +100,20 @@ import { AuthCommonModule, LoggingModule, MetricsModule, AutomationModule } from
     OutboxModule,
     GrpcModule,
   ],
-  providers: [AppResolver],
+  providers: [
+    AppResolver,
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: GraphqlResponseInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MetricsInterceptor,
+    },
+  ],
 })
 export class AppModule {}

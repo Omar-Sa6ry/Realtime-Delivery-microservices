@@ -34,6 +34,22 @@ services:
     volumes:
       - user_db_data:/var/lib/postgresql/data
 
+  notification-db-srv:
+    image: postgres:15
+    pull_policy: missing
+    container_name: notification-db-srv
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${NOTIFICATION_DB_NAME:-delivery_notification_db}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5434:5432"
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+
   zookeeper-srv:
     image: bitnami/zookeeper:3.9
     container_name: zookeeper-srv
@@ -169,6 +185,92 @@ services:
       - ./services/media-service/internal:/workspace/services/media-service/internal
       - ./packages/go:/workspace/packages/go
 
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    container_name: notification-service
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "4004:4004"
+      - "50053:50053"
+    networks:
+      default:
+        aliases:
+          - notification-srv
+    environment:
+      PORT_NOTIFICATION: ${PORT_NOTIFICATION:-4004}
+      PORT_GRPC: ${PORT_GRPC:-50053}
+      DB_HOST: "notification-db-srv"
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${NOTIFICATION_DB_NAME:-delivery_notification_db}
+      DB_USERNAME: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      NODE_ENV: ${NODE_ENV:-development}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE: ${JWT_EXPIRE:-36000s}
+      REDIS_HOST: "redis-srv"
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_DB: ${REDIS_DB:-0}
+      NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka-srv:9092}
+      KAFKA_GROUP_ID: ${KAFKA_GROUP_ID:-notification-service}
+      EMAIL_SERVICE: ${EMAIL_SERVICE}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_SECURE: ${EMAIL_SECURE}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS}
+      EMAIL_SENDER: ${EMAIL_SENDER}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      AWS_SES_ACCESS_KEY_ID: ${AWS_SES_ACCESS_KEY_ID}
+      AWS_SES_SECRET_ACCESS_KEY: ${AWS_SES_SECRET_ACCESS_KEY}
+      AWS_SES_REGION: ${AWS_SES_REGION}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER}
+      TWILIO_WHATSAPP_NUMBER: ${TWILIO_WHATSAPP_NUMBER}
+      TWILIO_SMS_NUMBER: ${TWILIO_SMS_NUMBER}
+      SMSMISR_USERNAME: ${SMSMISR_USERNAME}
+      SMSMISR_PASSWORD: ${SMSMISR_PASSWORD}
+      SMSMISR_SENDER: ${SMSMISR_SENDER}
+      SMS_PROVIDER: ${SMS_PROVIDER}
+      SMSMISR_ENVIRONMENT: ${SMSMISR_ENVIRONMENT}
+      VONAGE_API_KEY: ${VONAGE_API_KEY}
+      VONAGE_API_SECRET: ${VONAGE_API_SECRET}
+      VONAGE_SENDER: ${VONAGE_SENDER}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      ENABLE_TELEGRAM_BOT: ${ENABLE_TELEGRAM_BOT}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
+      SLACK_DEFAULT_CHANNEL: ${SLACK_DEFAULT_CHANNEL}
+      ONESIGNAL_APP_ID: ${ONESIGNAL_APP_ID}
+      ONESIGNAL_REST_API_KEY: ${ONESIGNAL_REST_API_KEY}
+      WEB_PUSH_PUBLIC_KEY: ${WEB_PUSH_PUBLIC_KEY}
+      WEB_PUSH_PRIVATE_KEY: ${WEB_PUSH_PRIVATE_KEY}
+      WEB_PUSH_SUBJECT: ${WEB_PUSH_SUBJECT}
+      IN_APP_PROVIDER: ${IN_APP_PROVIDER}
+      PUSHER_APP_ID: ${PUSHER_APP_ID}
+      PUSHER_KEY: ${PUSHER_KEY}
+      PUSHER_SECRET: ${PUSHER_SECRET}
+      PUSHER_CLUSTER: ${PUSHER_CLUSTER}
+      FIREBASE_PROJECT_ID: ${PROJECT_ID}
+      FIREBASE_CLIENT_EMAIL: ${CLIENT_EMAIL}
+      FIREBASE_PRIVATE_KEY: ${PRIVATE_KEY}
+    depends_on:
+      - notification-db-srv
+      - redis-srv
+      - nats-srv
+      - kafka-srv
+    volumes:
+      - ./services/notification-service/src:/usr/src/app/services/notification-service/src
+      - ./packages/ts:/usr/src/app/packages/ts
+      - ./protos:/usr/src/app/protos
+
   api-gateway:
     build:
       context: .
@@ -192,15 +294,18 @@ services:
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       USER_SERVICE_URL: "http://user-srv:4001/user/graphql"
       MEDIA_SUBGRAPH_URL: "http://media-srv:4005/media/graphql"
+      NOTIFICATION_SUBGRAPH_URL: "http://notification-srv:4004/notification/graphql"
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - redis-srv
       - user-service
       - media-service
+      - notification-service
     volumes:
       - ./services/api-gateway/src:/usr/src/app/services/api-gateway/src
       - ./packages/ts:/usr/src/app/packages/ts
 
 volumes:
   user_db_data:
+  notification_db_data:
 

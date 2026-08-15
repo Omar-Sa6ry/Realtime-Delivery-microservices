@@ -136,13 +136,13 @@ spec:
             path: /healthz
             port: graphql
           periodSeconds: 5
-          failureThreshold: 60
+          failureThreshold: 240
         readinessProbe:
           httpGet:
             path: /healthz
             port: graphql
           periodSeconds: 5
-          failureThreshold: 12
+          failureThreshold: 120
         livenessProbe:
           httpGet:
             path: /healthz
@@ -192,3 +192,5 @@ kind: ServiceAccount
 metadata:
   name: media-service-sa
   namespace: default
+
+

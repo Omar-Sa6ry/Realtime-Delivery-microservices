@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { RedisModule } from '@bts-soft/cache';
+import { RedisModule, RedisService } from '@bts-soft/cache';
 import { HealthController } from './health.controller';
 import { Notification } from './database/entities/notification.entity';
 import { NotificationDelivery } from './database/entities/notification-delivery.entity';
@@ -9,6 +9,7 @@ import { NotificationTemplate } from './database/entities/notification-template.
 import { NotificationInbox } from './database/entities/notification-inbox.entity';
 import { NotificationOutbox } from './database/entities/notification-outbox.entity';
 
+@Global()
 @Module({
   controllers: [HealthController],
   imports: [
@@ -22,6 +23,16 @@ import { NotificationOutbox } from './database/entities/notification-outbox.enti
       NotificationOutbox,
     ]),
   ],
-  exports: [TypeOrmModule],
+  providers: [
+    {
+      provide: 'SHARED_REDIS_SERVICE',
+      useExisting: RedisService,
+    },
+  ],
+  exports: [
+    TypeOrmModule,
+    RedisModule,
+    'SHARED_REDIS_SERVICE',
+  ],
 })
 export class CommonModule {}

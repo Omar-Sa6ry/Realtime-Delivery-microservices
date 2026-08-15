@@ -1,6 +1,6 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
@@ -8,12 +8,13 @@ import {
   Index,
 } from 'typeorm';
 import { NotificationType, NotificationStatus, NotificationPriority } from '@delivery/common';
+import { IdGenerator } from '@bts-soft/common';
 import { NotificationDelivery } from './notification-delivery.entity';
 
 @Entity('notifications')
 export class Notification {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryColumn({ type: 'varchar', length: 64 })
+  id: string = IdGenerator.generate('snowflake');
 
   @Column()
   @Index()
@@ -29,7 +30,7 @@ export class Notification {
   body: string;
 
   @Column({ type: 'jsonb', nullable: true })
-  data: Record<string, any>;
+  data: Record<string, unknown> | null;
 
   @Column({
     type: 'enum',
@@ -46,13 +47,13 @@ export class Notification {
   status: NotificationStatus;
 
   @Column({ nullable: true })
-  scheduledAt: Date;
+  scheduledAt: Date | null;
 
   @Column({ nullable: true })
-  expiresAt: Date;
+  expiresAt: Date | null;
 
   @Column({ nullable: true })
-  readAt: Date;
+  readAt: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

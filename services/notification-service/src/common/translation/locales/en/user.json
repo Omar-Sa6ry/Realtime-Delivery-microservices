@@ -1,0 +1,6 @@
+{
+  "NO_TOKEN": "No token provided",
+  "INVALID_TOKEN": "Invalid or expired token",
+  "INSUFFICIENT_PERMISSIONS": "Insufficient permissions",
+  "USER_NOT_FOUND": "User not found"
+}

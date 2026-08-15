@@ -1,5 +1,12 @@
 import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
-import { NotificationType, NotificationStatus, NotificationPriority } from '@delivery/common';
+import {
+  NotificationType,
+  NotificationStatus,
+  NotificationPriority,
+  NotificationChannel,
+  DeliveryChannelStatus,
+} from '@delivery/common';
+import { GeneralResponse } from '../../../common/graphql/general-response.type';
 
 @ObjectType()
 export class NotificationDeliveryType {
@@ -7,10 +14,10 @@ export class NotificationDeliveryType {
   id: string;
 
   @Field()
-  channel: string;
+  channel: NotificationChannel;
 
   @Field()
-  status: string;
+  status: DeliveryChannelStatus;
 
   @Field({ nullable: true })
   sentAt?: Date;
@@ -25,7 +32,7 @@ export class NotificationTypeObj {
   id: string;
 
   @Field()
-  type: string;
+  type: NotificationType;
 
   @Field()
   title: string;
@@ -34,10 +41,10 @@ export class NotificationTypeObj {
   body: string;
 
   @Field()
-  status: string;
+  status: NotificationStatus;
 
   @Field()
-  priority: string;
+  priority: NotificationPriority;
 
   @Field({ nullable: true })
   readAt?: Date;
@@ -57,3 +64,9 @@ export class NotificationConnection {
   @Field(() => Int)
   totalCount: number;
 }
+
+@ObjectType()
+export class NotificationResponse extends GeneralResponse(NotificationTypeObj) {}
+
+@ObjectType()
+export class PaginatedNotificationResponse extends GeneralResponse(NotificationConnection) {}

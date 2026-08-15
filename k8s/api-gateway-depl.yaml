@@ -30,13 +30,13 @@ spec:
               path: /health
               port: 4000
             periodSeconds: 5
-            failureThreshold: 60
+            failureThreshold: 240
           readinessProbe:
             httpGet:
               path: /health
               port: 4000
             periodSeconds: 3
-            failureThreshold: 60
+            failureThreshold: 120
           livenessProbe:
             httpGet:
               path: /health
@@ -79,3 +79,5 @@ spec:
       protocol: TCP
       port: 4000
       targetPort: 4000
+
+

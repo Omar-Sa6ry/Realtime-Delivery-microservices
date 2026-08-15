@@ -1,84 +1,125 @@
 import { Resolver, Query, Mutation, Args, ID, Int } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
-import { Notification } from '../../common/database/entities/notification.entity';
-import { Auth, CurrentUser } from '@delivery/common';
-import { NotificationConnection, NotificationTypeObj } from './dtos/notification.dto';
+import { I18nService } from 'nestjs-i18n';
+import {
+  Auth,
+  RedisRateLimit,
+  RateLimiterAlgorithm,
+  CurrentUser,
+  Permission,
+} from '@delivery/common';
+import type { IUser } from '@delivery/common';
+import { NotificationService } from './notification.service';
+import {
+  NotificationTypeObj,
+  NotificationConnection,
+  NotificationResponse,
+  PaginatedNotificationResponse,
+} from './dtos/notification.dto';
+import { IntResponse, BooleanResponse } from '../../common/graphql/general-response.type';
+
+const FIXED_WINDOW_RATE_LIMIT = { algorithm: RateLimiterAlgorithm.FIXED_WINDOW_COUNTER };
 
 @Resolver(() => NotificationTypeObj)
 export class NotificationResolver {
   constructor(
-    @InjectRepository(Notification)
-    private notificationRepository: Repository<Notification>,
+    private readonly notificationService: NotificationService,
+    private readonly i18n: I18nService,
   ) {}
 
-  @Query(() => NotificationConnection)
-  @Auth(['READ_NOTIFICATION'])
+  @Query(() => PaginatedNotificationResponse)
+  @RedisRateLimit({ ...FIXED_WINDOW_RATE_LIMIT, limit: 100, windowMs: 60000 })
+  @Auth([Permission.READ_NOTIFICATION])
   async myNotifications(
-    @CurrentUser() user: any,
+    @CurrentUser() user: IUser,
     @Args('page', { type: () => Int, nullable: true, defaultValue: 1 }) page: number,
     @Args('limit', { type: () => Int, nullable: true, defaultValue: 20 }) limit: number,
-  ): Promise<NotificationConnection> {
-    const [items, totalCount] = await this.notificationRepository.findAndCount({
-      where: { userId: user.id },
-      relations: { deliveries: true },
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+  ): Promise<PaginatedNotificationResponse> {
+    const result = await this.notificationService.findAllForUser(user.id, page, limit);
 
-    return { items: items as any, totalCount };
+    const notificationConnection: NotificationConnection = {
+      items: result.items as NotificationTypeObj[],
+      totalCount: result.totalCount,
+    };
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: await this.i18n.t('notification.LIST_RETRIEVED'),
+      data: notificationConnection,
+    } as PaginatedNotificationResponse;
   }
 
-  @Query(() => NotificationTypeObj, { nullable: true })
-  @Auth(['READ_NOTIFICATION'])
+  @Query(() => NotificationResponse)
+  @RedisRateLimit({ ...FIXED_WINDOW_RATE_LIMIT, limit: 100, windowMs: 60000 })
+  @Auth([Permission.READ_NOTIFICATION])
   async notification(
-    @CurrentUser() user: any,
+    @CurrentUser() user: IUser,
     @Args('id', { type: () => ID }) id: string,
-  ) {
-    return this.notificationRepository.findOne({
-      where: { id, userId: user.id },
-      relations: { deliveries: true },
-    });
+  ): Promise<NotificationResponse> {
+    const notification = await this.notificationService.findByIdForUser(id, user.id);
+    return {
+      success: true,
+      statusCode: 200,
+      message: await this.i18n.t('notification.GET_RETRIEVED'),
+      data: notification || undefined,
+    } as NotificationResponse;
   }
 
-  @Query(() => Int)
-  @Auth(['READ_NOTIFICATION'])
-  async unreadNotificationCount(@CurrentUser() user: any): Promise<number> {
-    return this.notificationRepository.count({
-      where: { userId: user.id, readAt: IsNull() },
-    });
+  @Query(() => IntResponse)
+  @RedisRateLimit({ ...FIXED_WINDOW_RATE_LIMIT, limit: 100, windowMs: 60000 })
+  @Auth([Permission.READ_NOTIFICATION])
+  async unreadNotificationCount(@CurrentUser() user: IUser): Promise<IntResponse> {
+    const count = await this.notificationService.unreadCountForUser(user.id);
+    return {
+      success: true,
+      statusCode: 200,
+      message: await this.i18n.t('notification.UNREAD_COUNT'),
+      data: count,
+    } as IntResponse;
   }
 
-  @Mutation(() => NotificationTypeObj)
-  @Auth(['UPDATE_NOTIFICATION'])
+  @Mutation(() => NotificationResponse)
+  @RedisRateLimit({ ...FIXED_WINDOW_RATE_LIMIT, limit: 60, windowMs: 60000 })
+  @Auth([Permission.UPDATE_NOTIFICATION])
   async markNotificationAsRead(
-    @CurrentUser() user: any,
+    @CurrentUser() user: IUser,
     @Args('id', { type: () => ID }) id: string,
-  ) {
-    const notification = await this.notificationRepository.findOne({ where: { id, userId: user.id } });
-    if (!notification) throw new Error('Notification not found');
-
-    notification.readAt = new Date();
-    await this.notificationRepository.save(notification);
-    return notification;
+  ): Promise<NotificationResponse> {
+    const notification = await this.notificationService.markAsRead(id, user.id);
+    return {
+      success: true,
+      statusCode: 200,
+      message: await this.i18n.t('notification.MARKED_READ'),
+      data: notification,
+    } as NotificationResponse;
   }
 
-  @Mutation(() => Boolean)
-  @Auth(['UPDATE_NOTIFICATION'])
-  async markAllNotificationsAsRead(@CurrentUser() user: any): Promise<boolean> {
-    await this.notificationRepository.update({ userId: user.id, readAt: IsNull() }, { readAt: new Date() });
-    return true;
+  @Mutation(() => BooleanResponse)
+  @RedisRateLimit({ ...FIXED_WINDOW_RATE_LIMIT, limit: 60, windowMs: 60000 })
+  @Auth([Permission.UPDATE_NOTIFICATION])
+  async markAllNotificationsAsRead(@CurrentUser() user: IUser): Promise<BooleanResponse> {
+    await this.notificationService.markAllAsRead(user.id);
+    return {
+      success: true,
+      statusCode: 200,
+      message: await this.i18n.t('notification.ALL_MARKED_READ'),
+      data: true,
+    };
   }
 
-  @Mutation(() => Boolean)
-  @Auth(['DELETE_NOTIFICATION'])
+  @Mutation(() => BooleanResponse)
+  @RedisRateLimit({ ...FIXED_WINDOW_RATE_LIMIT, limit: 50, windowMs: 60000 })
+  @Auth([Permission.DELETE_NOTIFICATION])
   async deleteNotification(
-    @CurrentUser() user: any,
+    @CurrentUser() user: IUser,
     @Args('id', { type: () => ID }) id: string,
-  ): Promise<boolean> {
-    const result = await this.notificationRepository.delete({ id, userId: user.id });
-    return (result.affected ?? 0) > 0;
+  ): Promise<BooleanResponse> {
+    await this.notificationService.delete(id, user.id);
+    return {
+      success: true,
+      statusCode: 200,
+      message: await this.i18n.t('notification.DELETED'),
+      data: true,
+    };
   }
 }

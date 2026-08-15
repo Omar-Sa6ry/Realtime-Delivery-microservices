@@ -14,6 +14,23 @@ spec:
       labels:
         app: notification-db
     spec:
+      initContainers:
+        # Self-healing first boot: if the volume holds an incomplete Postgres
+        # data dir (PG_VERSION present but pg_control missing), wipe it so the
+        # real container performs a clean initialization.
+        - name: clean-incomplete-data
+          image: busybox:1.36
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              if [ -d /var/lib/postgresql/data ] && [ -f /var/lib/postgresql/data/PG_VERSION ] && [ ! -f /var/lib/postgresql/data/global/pg_control ]; then
+                echo "Postgres data dir is incomplete; wiping for a fresh init";
+                find /var/lib/postgresql/data -mindepth 1 -delete;
+              fi
+              exit 0
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
       containers:
         - name: notification-db
           image: postgres:16
@@ -43,14 +60,14 @@ spec:
             initialDelaySeconds: 3
             periodSeconds: 4
             timeoutSeconds: 5
-            failureThreshold: 30
+            failureThreshold: 150
           readinessProbe:
             exec:
               command: ['pg_isready', '-U', 'postgres', '-d', 'delivery_notification_db']
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 5
-            failureThreshold: 10
+            failureThreshold: 60
           livenessProbe:
             exec:
               command: ['pg_isready', '-U', 'postgres', '-d', 'delivery_notification_db']
@@ -90,3 +107,5 @@ spec:
       protocol: TCP
       port: 5432
       targetPort: 5432
+
+

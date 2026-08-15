@@ -35,21 +35,6 @@ export const rolePermissionsMap: Record<Role, Permission[]> = {
     Permission.MANAGE_NOTIFICATION_PREFERENCES,
   ],
   
-  [Role.CUSTOMER]: [
-    // User
-    Permission.UPDATE_USER,
-    Permission.RESET_PASSWORD,
-    Permission.CHANGE_PASSWORD,
-    Permission.FORGOT_PASSWORD,
-    Permission.LOGOUT,
-    Permission.RECHARGE_WALLET,
-    
-    // Notification
-    Permission.READ_NOTIFICATION,
-    Permission.UPDATE_NOTIFICATION,
-    Permission.MANAGE_NOTIFICATION_PREFERENCES,
-  ],
-  
   [Role.DRIVER]: [
     // User
     Permission.UPDATE_USER,

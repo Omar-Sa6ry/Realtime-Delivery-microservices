@@ -1,11 +1,12 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+import { IdGenerator } from '@bts-soft/common';
 
 export enum OutboxStatus {
   PENDING = 'PENDING',
@@ -15,8 +16,8 @@ export enum OutboxStatus {
 
 @Entity('notification_outbox')
 export class NotificationOutbox {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryColumn({ type: 'varchar', length: 64 })
+  id: string = IdGenerator.generate('snowflake');
 
   @Column()
   eventType: string;
@@ -25,7 +26,7 @@ export class NotificationOutbox {
   aggregateId: string;
 
   @Column({ type: 'jsonb' })
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
 
   @Column({ type: 'enum', enum: OutboxStatus, default: OutboxStatus.PENDING })
   @Index()
@@ -35,10 +36,10 @@ export class NotificationOutbox {
   attemptCount: number;
 
   @Column({ nullable: true })
-  nextAttemptAt: Date;
+  nextAttemptAt: Date | null;
 
   @Column({ nullable: true })
-  publishedAt: Date;
+  publishedAt: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

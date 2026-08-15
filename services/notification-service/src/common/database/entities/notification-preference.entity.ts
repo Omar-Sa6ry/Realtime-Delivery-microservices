@@ -1,6 +1,6 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
@@ -8,12 +8,13 @@ import {
   Unique,
 } from 'typeorm';
 import { NotificationType, NotificationChannel } from '@delivery/common';
+import { IdGenerator } from '@bts-soft/common';
 
 @Entity('notification_preferences')
 @Unique(['userId', 'type', 'channel'])
 export class NotificationPreference {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryColumn({ type: 'varchar', length: 64 })
+  id: string = IdGenerator.generate('snowflake');
 
   @Column()
   @Index()

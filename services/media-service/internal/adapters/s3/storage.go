@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -26,12 +27,15 @@ func NewStorageAdapter(client *Client) *StorageAdapter {
 
 // CreateMultipartUpload initiates an S3 multipart upload.
 func (a *StorageAdapter) CreateMultipartUpload(ctx context.Context, objectKey, contentType string) (string, error) {
-	out, err := a.client.s3Client.CreateMultipartUpload(ctx, &s3.CreateMultipartUploadInput{
-		Bucket:               aws.String(a.client.bucketName),
-		Key:                  aws.String(objectKey),
-		ContentType:          aws.String(contentType),
-		ServerSideEncryption: types.ServerSideEncryptionAwsKms,
-	})
+	input := &s3.CreateMultipartUploadInput{
+		Bucket:      aws.String(a.client.bucketName),
+		Key:         aws.String(objectKey),
+		ContentType: aws.String(contentType),
+	}
+	if a.client.sseKMS {
+		input.ServerSideEncryption = types.ServerSideEncryptionAwsKms
+	}
+	out, err := a.client.s3Client.CreateMultipartUpload(ctx, input)
 	if err != nil {
 		return "", fmt.Errorf("S3 CreateMultipartUpload %q: %w", objectKey, err)
 	}
@@ -61,7 +65,7 @@ func (a *StorageAdapter) GeneratePresignedParts(
 		}
 		parts = append(parts, ports.PresignedPart{
 			PartNumber:   i,
-			PresignedURL: req.URL,
+			PresignedURL: a.client.presignableURL(req.URL),
 		})
 	}
 	return parts, nil
@@ -79,11 +83,14 @@ func (a *StorageAdapter) GeneratePresignedGET(ctx context.Context, objectKey str
 	if err != nil {
 		return "", fmt.Errorf("presign GET for %q: %w", objectKey, err)
 	}
-	return req.URL, nil
+	return a.client.presignableURL(req.URL), nil
 }
 
 // CompleteMultipartUpload finalises the multipart upload.
 func (a *StorageAdapter) CompleteMultipartUpload(ctx context.Context, objectKey, s3UploadID string, parts []domain.UploadPart) error {
+	sort.Slice(parts, func(i, j int) bool {
+		return parts[i].PartNumber < parts[j].PartNumber
+	})
 	completedParts := make([]types.CompletedPart, len(parts))
 	for i, p := range parts {
 		completedParts[i] = types.CompletedPart{

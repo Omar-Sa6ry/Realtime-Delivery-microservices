@@ -46,6 +46,9 @@ data:
   S3_MULTIPART_MIN_PART_SIZE: "5242880"  # 5 MB
   S3_LIFECYCLE_ABORT_DAYS: "7"
   S3_BUCKET_NAME: "delivery-micro"
+  # Externally-reachable host for presigned URLs (browser → localhost:4566 tunnel).
+  # Empty/absent in production so real AWS hosts are used.
+  S3_PUBLIC_ENDPOINT: "http://localhost:4566"
 
 
   # Worker pool sizes
@@ -116,6 +119,8 @@ spec:
           containerPort: 4005
         - name: ws
           containerPort: 4003
+        - name: grpc
+          containerPort: 50052
         - name: metrics
           containerPort: 9102
         envFrom:
@@ -174,6 +179,10 @@ spec:
   - name: ws
     port: 4003
     targetPort: 4003
+    protocol: TCP
+  - name: grpc
+    port: 50052
+    targetPort: 50052
     protocol: TCP
   - name: metrics
     port: 9102

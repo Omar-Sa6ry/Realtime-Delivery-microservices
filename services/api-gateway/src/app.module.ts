@@ -25,6 +25,7 @@ import {
   CorrelationIdMiddleware,
   CORRELATION_ID_HEADER,
 } from './common/middlewares/correlation-id.middleware';
+import { JwtAuthMiddleware } from './common/middlewares/jwt-auth.middleware';
 import { ApolloGatewayDriver, ApolloGatewayDriverConfig } from '@nestjs/apollo';
 import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
 
@@ -166,6 +167,8 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+    consumer
+      .apply(CorrelationIdMiddleware, JwtAuthMiddleware)
+      .forRoutes('*');
   }
 }

@@ -25,10 +25,12 @@ type Config struct {
 	AWSSecretAccessKey string
 
 	// S3
-	S3BucketName          string
-	S3PresignedURLExpiry  time.Duration
+	S3BucketName           string
+	S3Endpoint             string // empty = real AWS; set for localstack/local
+	S3PublicEndpoint       string // optional externally-reachable endpoint for presigned URLs (dev)
+	S3PresignedURLExpiry   time.Duration
 	S3MultipartMinPartSize int64
-	S3LifecycleAbortDays  int
+	S3LifecycleAbortDays   int
 
 	// DynamoDB
 	DynamoDBTableName  string
@@ -97,6 +99,13 @@ func Load() (*Config, error) {
 
 	// S3
 	c.S3BucketName = requireEnv("S3_BUCKET_NAME")
+	// Default to the in-cluster LocalStack endpoint. Override with a real AWS
+	// endpoint (no value or empty string) for production deployments.
+	c.S3Endpoint = getEnvOrDefault("AWS_ENDPOINT", "http://localstack-srv:4566")
+	// When set, presigned URLs returned to clients are rewritten to use this
+	// externally-reachable endpoint (e.g. http://localhost:4566 in local dev).
+	// Empty means presigned URLs keep the client endpoint host.
+	c.S3PublicEndpoint = os.Getenv("S3_PUBLIC_ENDPOINT")
 	expirySec, err := getEnvInt("S3_PRESIGNED_URL_EXPIRY", 3600)
 	if err != nil {
 		return nil, fmt.Errorf("S3_PRESIGNED_URL_EXPIRY: %w", err)

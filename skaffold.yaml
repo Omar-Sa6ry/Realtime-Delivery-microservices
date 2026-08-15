@@ -11,6 +11,7 @@ deploy:
 build:
   local:
     push: false
+    useBuildkit: true
 
   artifacts:
 

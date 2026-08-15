@@ -110,12 +110,22 @@ func main() {
 	versionRepo := dynamodb.NewVersionRepository(dbClient, cfg.DynamoDBTableName)
 
 	// ── S3 Client & Storage Adapter ───────────────────────────────────────────
-	s3Client, err := s3adapter.NewClient(ctx, cfg.AWSRegion, cfg.AWSAccessKeyID, cfg.AWSSecretAccessKey, cfg.S3BucketName)
+	s3Client, err := s3adapter.NewClient(ctx, cfg.AWSRegion, cfg.AWSAccessKeyID, cfg.AWSSecretAccessKey, cfg.S3BucketName, cfg.S3Endpoint, cfg.S3PublicEndpoint)
 	if err != nil {
 		slog.Error("S3 client init failed", "error", err)
 		os.Exit(1)
 	}
 	storage := s3adapter.NewStorageAdapter(s3Client)
+	if err := s3Client.EnsureBucketExists(ctx); err != nil {
+		slog.Error("S3 bucket ensure failed", "error", err)
+		os.Exit(1)
+	}
+	if err := s3Client.EnsureBucketPolicy(ctx); err != nil {
+		slog.Warn("S3 bucket policy ensure failed", "error", err)
+	}
+	if err := s3Client.EnsureBucketCORS(ctx); err != nil {
+		slog.Warn("S3 bucket CORS ensure failed", "error", err)
+	}
 	slog.Info("S3 ready", "bucket", cfg.S3BucketName)
 
 	// ── Redis Client ──────────────────────────────────────────────────────────

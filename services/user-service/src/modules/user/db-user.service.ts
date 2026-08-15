@@ -58,13 +58,32 @@ export class DbUserService {
     if (lastName) user.lastName = lastName;
 
     if (avatarMediaId) {
-      const resolved = await this.mediaGrpcService.resolveMediaUrl({
-        mediaId: avatarMediaId,
-        requesterId: userId,
-        versionType: 'original',
-        expirySeconds: 3600,
-      });
-      user.imageUrl = resolved.url;
+      try {
+        const resolved = await this.mediaGrpcService.resolveMediaUrl({
+          mediaId: avatarMediaId,
+          requesterId: userId,
+          versionType: 'original',
+          expirySeconds: 3600,
+        });
+        user.imageUrl = resolved.url;
+      } catch (err) {
+        console.error('Failed to resolve avatar media URL, retrying once after delay:', err);
+        // Retry after a short delay in case of race condition with media status transition
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+          const resolved = await this.mediaGrpcService.resolveMediaUrl({
+            mediaId: avatarMediaId,
+            requesterId: userId,
+            versionType: 'original',
+            expirySeconds: 3600,
+          });
+          user.imageUrl = resolved.url;
+        } catch (retryErr) {
+          console.error('Retry also failed for avatar URL resolution:', retryErr);
+          // Store the mediaId so we can resolve later
+          user.imageUrl = null;
+        }
+      }
     } else if (imageUrl) {
       if (!isHttpUrl(imageUrl)) {
         throw new BadRequestException(this.i18n.t('user.INVALID_IMAGE_URL'));

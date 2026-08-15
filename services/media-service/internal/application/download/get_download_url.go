@@ -77,8 +77,8 @@ func (uc *GetDownloadUrlUseCase) Execute(ctx context.Context, in GetDownloadUrlI
 	if m.Status == domain.MediaStatusQuarantined {
 		return nil, domain.ErrMediaQuarantined
 	}
-	if m.Status != domain.MediaStatusReady && m.Status != domain.MediaStatusUploaded {
-		return nil, fmt.Errorf("media is not yet available for download (status: %s)", m.Status)
+	if m.Status == domain.MediaStatusFailed || m.Status == domain.MediaStatusDeleted || m.Status == domain.MediaStatusAborted {
+		return nil, fmt.Errorf("media is not available for download (status: %s)", m.Status)
 	}
 
 	// 3. Determine the object key based on the requested version

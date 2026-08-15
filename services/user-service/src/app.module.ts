@@ -66,7 +66,7 @@ import { BullModule } from '@nestjs/bullmq';
         username:
           config.get<string>('POSTGRES_USER') ||
           config.get<string>('DB_USERNAME', 'postgres'),
-        password: config.get<string>('POSTGRES_PASSWORD') || 'O9M1a8r5+=2004',
+        password: config.get<string>('POSTGRES_PASSWORD'),
         database: config.get<string>('DB_NAME', 'delivery_user_db'),
         entities: [User, Address, Outbox],
         synchronize: true, // For development mode

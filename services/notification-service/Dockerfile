@@ -1,0 +1,29 @@
+FROM node:24.11.0
+
+WORKDIR /usr/src/app
+
+COPY packages/ts ./packages/ts
+WORKDIR /usr/src/app/packages/ts
+RUN npm install --legacy-peer-deps
+RUN npm run build
+
+WORKDIR /usr/src/app
+COPY services/notification-service/package.json ./services/notification-service/
+
+WORKDIR /usr/src/app/services/notification-service
+RUN npm install --legacy-peer-deps
+
+# Clean up duplicate modules from packages/ts to resolve NestJS DI token duplication
+RUN rm -rf /usr/src/app/packages/ts/node_modules/nestjs-i18n \
+           /usr/src/app/packages/ts/node_modules/@nestjs \
+           /usr/src/app/packages/ts/node_modules/@grpc \
+           /usr/src/app/packages/ts/node_modules/express
+
+# Symlink the notification-service node_modules up so packages/ts resolves them to the same instance
+RUN ln -s /usr/src/app/services/notification-service/node_modules /usr/src/app/node_modules
+
+WORKDIR /usr/src/app
+COPY . .
+
+WORKDIR /usr/src/app/services/notification-service
+CMD ["npm", "run", "start:dev"]

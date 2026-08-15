@@ -1,70 +1,90 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bullmq';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloFederationDriver, ApolloFederationDriverConfig } from '@nestjs/apollo';
+import { JwtModule } from '@nestjs/jwt';
+import { RedisModule } from '@bts-soft/cache';
+import { NotificationModule as BtsNotificationModule } from '@bts-soft/notifications';
+import { StringValue } from 'ms';
 import { AppResolver } from './app.resolver';
+import { CommonModule } from './common/common.module';
+import { KafkaModule } from './modules/kafka/kafka.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { WorkersModule } from './modules/workers/workers.module';
+import { OutboxModule } from './modules/outbox/outbox.module';
+import { GrpcModule } from './modules/grpc/grpc.module';
+import { AuthCommonModule, LoggingModule, MetricsModule, AutomationModule } from '@delivery/common';
 
 @Module({
-  imports: [  ConfigModule.forRoot({
+  imports: [
+    ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [
-        join(process.cwd(), '.env'),
-        join(process.cwd(), '../../.env'),
-      ],
+      envFilePath: ['../../.env'],
     }),
 
-    TranslationModule,
-    RedisModule,
-    
     TypeOrmModule.forRootAsync({
-        imports: [ConfigModule],
-        inject: [ConfigService],
-        useFactory: (config: ConfigService) => ({
-          type: 'postgres',
-          host:
-            config.get<string>('DB_HOST', 'localhost') === 'user-db-srv' &&
-            process.env.NODE_ENV !== 'production' &&
-            !process.env.KUBERNETES_SERVICE_HOST
-              ? 'localhost'
-              : config.get<string>('DB_HOST', 'localhost'),
-          port: Number(config.get<number>('DB_PORT', 5433)) || 5433,
-          username:
-            config.get<string>('POSTGRES_USER') ||
-            config.get<string>('DB_USERNAME', 'postgres'),
-          password: config.get<string>('POSTGRES_PASSWORD'),
-          database: config.get<string>('DB_NAME', 'delivery_notification_db'),
-          entities: [],
-          synchronize: true, // For development mode
-          // Survive concurrent boot: retry for ~3 minutes before giving up.
-          retryAttempts: 60,
-          retryDelay: 3000,
-        }),
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get<string>('DB_HOST', 'localhost'),
+        port: config.get<number>('DB_PORT', 5432),
+        username: config.get<string>('DB_USERNAME', 'postgres'),
+        password: config.get<string>('POSTGRES_PASSWORD', 'O9M1a8r5+=2004'),
+        database: config.get<string>('DB_NAME', 'delivery_notification_db'),
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        synchronize: true, // Auto-create tables (use migrations in prod)
       }),
-  
-      BullModule.forRootAsync({
-        imports: [ConfigModule],
-        inject: [ConfigService],
-        useFactory: (config: ConfigService) => ({
-          connection: {
-            host: config.get<string>('REDIS_HOST', 'localhost'),
-            port: Number(config.get<number>('REDIS_PORT', 6379)) || 6379,
-          },
-        }),
-      }),
-  
-      GraphQLModule.forRoot<ApolloFederationDriverConfig>({
-        driver: ApolloFederationDriver,
-        path: '/user/graphql',
-        autoSchemaFile: {
-          path: join(process.cwd(), 'src/schema.gql'),
-          federation: 2,
+      inject: [ConfigService],
+    }),
+
+    RedisModule,
+
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get('REDIS_HOST', 'localhost'),
+          port: config.get('REDIS_PORT', 6379),
+          db: config.get('REDIS_DB', 0),
         },
-        context: ({ req }) => ({
-          req,
-          user: req.user,
-          language: req.headers['accept-language'] || 'en',
-        }),
-        playground: true,
-        debug: false,
       }),
+      inject: [ConfigService],
+    }),
+
+    BtsNotificationModule,
+
+    GraphQLModule.forRoot<ApolloFederationDriverConfig>({
+      driver: ApolloFederationDriver,
+      path: '/notification/graphql',
+      autoSchemaFile: { federation: 2 },
+    }),
+
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get('JWT_SECRET', 'default_secret'),
+        signOptions: { expiresIn: config.get('JWT_EXPIRE', '1d') as StringValue },
+      }),
+      inject: [ConfigService],
+    }),
+
+    AuthCommonModule.register({
+      userService: { findById: async () => ({ id: 'mock', role: 'admin' }) }, // Temporary mock
+    }),
+
+    LoggingModule,
+    MetricsModule,
+    AutomationModule,
+
+    CommonModule,
+    KafkaModule,
+    NotificationModule,
+    WorkersModule,
+    OutboxModule,
+    GrpcModule,
   ],
   providers: [AppResolver],
 })
-export class AppModule { }
+export class AppModule {}

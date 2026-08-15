@@ -44,6 +44,17 @@ build:
       docker:
         dockerfile: services/media-service/Dockerfile
 
+    - image: delivery/notification
+      context: .
+      docker:
+        dockerfile: services/notification-service/Dockerfile
+      sync:
+        manual:
+          - src: "services/notification-service/src/**/*.ts"
+            dest: /usr/src/app/services/notification-service/src
+          - src: "protos/**/*.proto"
+            dest: /usr/src/app/protos
+
 portForward:
   - resourceType: service
     resourceName: api-gateway-srv

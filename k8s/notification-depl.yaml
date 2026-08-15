@@ -24,32 +24,32 @@ spec:
               cpu: "1000m"
               memory: "1Gi"
           ports:
-            - containerPort: 4001 
-            - containerPort: 50051
+            - containerPort: 4004 
+            - containerPort: 50053
           startupProbe:
             httpGet:
               path: /notification/health
-              port: 4001
+              port: 4004
             periodSeconds: 5
             failureThreshold: 60
           readinessProbe:
             httpGet:
               path: /notification/health
-              port: 4001
+              port: 4004
             periodSeconds: 3
             failureThreshold: 60
           livenessProbe:
             httpGet:
               path: /notification/health
-              port: 4001
+              port: 4004
             initialDelaySeconds: 5
             periodSeconds: 20
             failureThreshold: 6
           env:
             - name: NODE_OPTIONS
               value: "--max-old-space-size=768"
-            - name: PORT_USER
-              value: '4001'
+            - name: PORT_NOTIFICATION
+              value: '4004'
               
             - name: DB_HOST
               value: 'notification-db-srv'
@@ -69,19 +69,19 @@ spec:
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: secrets
+                  name: notification-secrets
                   key: JWT_SECRET
 
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: secrets
+                  name: notification-secrets
                   key: POSTGRES_USER
 
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: secrets
+                  name: notification-secrets
                   key: POSTGRES_PASSWORD
           
             - name: REDIS_HOST
@@ -95,6 +95,79 @@ spec:
 
             - name: NATS_URL
               value: 'nats://nats-srv:4222'
+              
+            - name: KAFKA_BROKERS
+              value: 'kafka-srv:9092'
+              
+            - name: KAFKA_GROUP_ID
+              value: 'notification-service'
+              
+            - name: EMAIL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: EMAIL_USER
+            - name: EMAIL_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: EMAIL_PASS
+            - name: EMAIL_SENDER
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: EMAIL_SENDER
+            - name: FIREBASE_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: FIREBASE_PROJECT_ID
+            - name: FIREBASE_CLIENT_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: FIREBASE_CLIENT_EMAIL
+            - name: FIREBASE_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: FIREBASE_PRIVATE_KEY
+            - name: TWILIO_ACCOUNT_SID
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: TWILIO_ACCOUNT_SID
+            - name: TWILIO_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: TWILIO_AUTH_TOKEN
+            - name: TWILIO_FROM_NUMBER
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: TWILIO_FROM_NUMBER
+            - name: ONESIGNAL_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: ONESIGNAL_APP_ID
+            - name: ONESIGNAL_REST_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: ONESIGNAL_REST_API_KEY
+            - name: WEB_PUSH_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: WEB_PUSH_PUBLIC_KEY
+            - name: WEB_PUSH_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: WEB_PUSH_PRIVATE_KEY
+
 ---
 apiVersion: v1
 kind: Service
@@ -106,9 +179,9 @@ spec:
   ports:
     - name: http
       protocol: TCP
-      port: 4001
-      targetPort: 4001
+      port: 4004
+      targetPort: 4004
     - name: grpc
       protocol: TCP
-      port: 50051
-      targetPort: 50051
+      port: 50053
+      targetPort: 50053

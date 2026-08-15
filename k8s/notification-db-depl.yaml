@@ -18,16 +18,16 @@ spec:
         - name: notification-db
           image: postgres:16
           env:
-            - name: POSTGRES_NOTIFICATION
+            - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: secrets
-                  key: POSTGRES_NOTIFICATION
+                  name: notification-secrets
+                  key: POSTGRES_USER
 
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: secrets
+                  name: notification-secrets
                   key: POSTGRES_PASSWORD
 
             - name: POSTGRES_DB

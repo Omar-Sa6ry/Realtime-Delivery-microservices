@@ -106,10 +106,6 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: media-service-sa
-      initContainers:
-      - name: wait-for-deps
-        image: busybox:1.36
-        command: ['sh', '-c', 'until nc -z kafka-srv 9092 && nc -z localstack-srv 4566; do echo "Waiting for Kafka and LocalStack..."; sleep 2; done; echo "Dependencies ready"']
       containers:
       - name: media-service
         image: delivery/media
@@ -139,13 +135,13 @@ spec:
           httpGet:
             path: /healthz
             port: graphql
-          periodSeconds: 10
+          periodSeconds: 5
           failureThreshold: 60
         readinessProbe:
           httpGet:
             path: /healthz
             port: graphql
-          periodSeconds: 10
+          periodSeconds: 5
           failureThreshold: 12
         livenessProbe:
           httpGet:

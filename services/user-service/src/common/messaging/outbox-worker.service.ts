@@ -30,7 +30,13 @@ export class OutboxWorkerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
-    await this.client.connect();
+    try {
+      await this.client.connect();
+    } catch (err) {
+      this.logger.warn(
+        `NATS not ready at boot (${err instanceof Error ? err.message : String(err)}); will retry via reconciliation.`,
+      );
+    }
     // Run reconciliation fallback check every 60 seconds (safe with SKIP LOCKED in multi-node clusters)
     this.timer = setInterval(() => this.reconcileOutbox(), 60000);
   }

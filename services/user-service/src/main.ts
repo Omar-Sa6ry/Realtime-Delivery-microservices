@@ -36,6 +36,8 @@ async function bootstrap() {
     options: {
       servers: [process.env.NATS_URL || 'nats://localhost:4222'],
       queue: 'user-service',
+      timeout: 5000,
+      reconnectTimeWait: 2000,
     },
   });
 
@@ -58,4 +60,7 @@ async function bootstrap() {
   console.log(`User Service is running on http://0.0.0.0:${port}`);
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Bootstrap failed, retrying in 10s...', err.message);
+  setTimeout(() => bootstrap(), 10000);
+});

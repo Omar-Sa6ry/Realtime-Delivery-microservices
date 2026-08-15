@@ -12,14 +12,17 @@ spec:
       labels:
         app: user
     spec:
-      initContainers:
-        - name: wait-for-deps
-          image: busybox:1.36
-          command: ['sh', '-c', 'until nc -z user-db-srv 5432 && nc -z redis-srv 6379 && nc -z nats-srv 4222; do echo "Waiting for db, redis, and nats..."; sleep 2; done; echo "Dependencies ready"']
       containers:
         - name: user
           image: delivery/user 
           imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
           ports:
             - containerPort: 4001 
             - containerPort: 50051
@@ -27,14 +30,13 @@ spec:
             httpGet:
               path: /user/health
               port: 4001
-            periodSeconds: 10
+            periodSeconds: 5
             failureThreshold: 60
           readinessProbe:
             httpGet:
               path: /user/health
               port: 4001
-            initialDelaySeconds: 2
-            periodSeconds: 5
+            periodSeconds: 3
             failureThreshold: 60
           livenessProbe:
             httpGet:
@@ -44,6 +46,8 @@ spec:
             periodSeconds: 20
             failureThreshold: 6
           env:
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=768"
             - name: PORT_USER
               value: '4001'
               

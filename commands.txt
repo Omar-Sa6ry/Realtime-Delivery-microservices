@@ -8,6 +8,7 @@ minikube addons enable ingress
 kubectl apply -f  k8s
 & minikube -p minikube docker-env | Invoke-Expression
 
+skaffold delete
 skaffold dev --cache-artifacts=true --build-concurrency=0
 
 minikube tunnel

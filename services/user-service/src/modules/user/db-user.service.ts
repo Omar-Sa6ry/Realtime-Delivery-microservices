@@ -81,7 +81,7 @@ export class DbUserService {
         } catch (retryErr) {
           console.error('Retry also failed for avatar URL resolution:', retryErr);
           // Store the mediaId so we can resolve later
-          user.imageUrl = null;
+          user.imageUrl = undefined;
         }
       }
     } else if (imageUrl) {

@@ -6,7 +6,7 @@ manifests:
     - ./k8s/*
 
 deploy:
-  statusCheckDeadlineSeconds: 1800
+  statusCheckDeadlineSeconds: 300
 
 build:
   local:

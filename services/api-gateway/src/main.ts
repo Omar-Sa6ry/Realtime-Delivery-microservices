@@ -9,6 +9,7 @@ async function bootstrap() {
   await Promise.all([
     waitForService('http://media-srv:4005/media/graphql'),
     waitForService('http://user-srv:4001/user/graphql'),
+    waitForService('http://notification-srv:4004/notification/graphql'),
   ]);
 
   const logger = new StructuredLogger();

@@ -85,6 +85,12 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
                 'http://media-srv:4005/media/graphql',
             },
             {
+              name: 'notification',
+              url:
+                process.env.NOTIFICATION_SERVICE_URL ||
+                'http://notification-srv:4004/notification/graphql',
+            },
+            {
               name: 'user',
               url:
                 process.env.USER_SERVICE_URL ||

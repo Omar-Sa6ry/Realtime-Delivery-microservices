@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification
+  template:
+    metadata:
+      labels:
+        app: notification
+    spec:
+      containers:
+        - name: notification
+          image: delivery/notification 
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          ports:
+            - containerPort: 4001 
+            - containerPort: 50051
+          startupProbe:
+            httpGet:
+              path: /notification/health
+              port: 4001
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /notification/health
+              port: 4001
+            periodSeconds: 3
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /notification/health
+              port: 4001
+            initialDelaySeconds: 5
+            periodSeconds: 20
+            failureThreshold: 6
+          env:
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=768"
+            - name: PORT_USER
+              value: '4001'
+              
+            - name: DB_HOST
+              value: 'notification-db-srv'
+
+            - name: DB_PORT
+              value: '5432'
+
+            - name: DB_NAME
+              value: 'delivery_notification_db'
+
+            - name: NODE_ENV
+              value: 'development'
+
+            - name: JWT_EXPIRE
+              value: '36000s'
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: JWT_SECRET
+
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_PASSWORD
+          
+            - name: REDIS_HOST
+              value: 'redis-srv'
+
+            - name: REDIS_PORT
+              value: '6379'
+
+            - name: REDIS_DB
+              value: '0'
+
+            - name: NATS_URL
+              value: 'nats://nats-srv:4222'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-srv
+spec:
+  selector:
+    app: notification
+  ports:
+    - name: http
+      protocol: TCP
+      port: 4001
+      targetPort: 4001
+    - name: grpc
+      protocol: TCP
+      port: 50051
+      targetPort: 50051

@@ -25,7 +25,8 @@ npm run start:dev
 powershell -Command "[Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('AIzaSyA5U03P6n8HMwsp9B35jOrDz7-HAtJ1MLc'))"
 
 #---nest---
-npx -y @nestjs/cli new api-gateway --package-manager npm --skip-git
+npx -y @nestjs/cli new name-service --package-manager npm --skip-git
+npm i @apollo/subgraph @apollo/server @as-integrations/express5 @nestjs/bullmq @nestjs/apollo class-transformer  class-validator @nestjs/config graphql bullmq nestjs-i18n kafkajs handlebars nats @nestjs/microservices @nestjs/jwt @nestjs/graphql pg typeorm @nestjs/typeorm @grpc/grpc-js @grpc/proto-loader @bts-soft/core --legacy-peer-deps
 
 #----go---
 go mod init github.com/Omar-Sa6ry/realtime-delivery-microservices/services/delivery-service

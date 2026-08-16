@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  redis-srv:
+    image: redis:alpine
+    pull_policy: missing
+    container_name: redis-srv
+    ports:
+      - "6379:6379"
+
+  nats-srv:
+    image: nats-streaming:0.17.0
+    pull_policy: missing
+    container_name: nats-srv
+    command: ["-p", "4222", "-m", "8222", "-hbi", "5s", "-hbt", "5s", "-hbf", "2", "-SD", "-cid", "ticketing"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  kafka-srv:
+    image: bitnami/kafka:3.6
+    pull_policy: missing
+    container_name: kafka-srv
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-srv:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-srv:9092
+    depends_on:
+      - zookeeper-srv
+
+  zookeeper-srv:
+    image: bitnami/zookeeper:3.9
+    pull_policy: missing
+    container_name: zookeeper-srv
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+  realtime-service:
+    build:
+      context: ../..
+      dockerfile: services/realtime-service/Dockerfile
+    container_name: realtime-service
+    env_file:
+      - ../../.env
+    ports:
+      - "4004:4004"
+      - "50053:50053"
+    environment:
+      PORT_realtime: ${PORT_realtime:-4004}
+      PORT_GRPC: ${PORT_GRPC:-50053}
+      DB_HOST: "realtime-db-srv"
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${realtime_DB_NAME:-delivery_realtime_db}
+      DB_USERNAME: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      NODE_ENV: ${NODE_ENV:-development}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE: ${JWT_EXPIRE:-36000s}
+      REDIS_HOST: "redis-srv"
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_DB: ${REDIS_DB:-0}
+      NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka-srv:9092}
+      KAFKA_GROUP_ID: ${KAFKA_GROUP_ID:-realtime-service}
+      EMAIL_SERVICE: ${EMAIL_SERVICE}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_SECURE: ${EMAIL_SECURE}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS}
+      EMAIL_SENDER: ${EMAIL_SENDER}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      AWS_SES_ACCESS_KEY_ID: ${AWS_SES_ACCESS_KEY_ID}
+      AWS_SES_SECRET_ACCESS_KEY: ${AWS_SES_SECRET_ACCESS_KEY}
+      AWS_SES_REGION: ${AWS_SES_REGION}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER}
+      TWILIO_WHATSAPP_NUMBER: ${TWILIO_WHATSAPP_NUMBER}
+      TWILIO_SMS_NUMBER: ${TWILIO_SMS_NUMBER}
+      SMSMISR_USERNAME: ${SMSMISR_USERNAME}
+      SMSMISR_PASSWORD: ${SMSMISR_PASSWORD}
+      SMSMISR_SENDER: ${SMSMISR_SENDER}
+      SMS_PROVIDER: ${SMS_PROVIDER}
+      SMSMISR_ENVIRONMENT: ${SMSMISR_ENVIRONMENT}
+      VONAGE_API_KEY: ${VONAGE_API_KEY}
+      VONAGE_API_SECRET: ${VONAGE_API_SECRET}
+      VONAGE_SENDER: ${VONAGE_SENDER}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      ENABLE_TELEGRAM_BOT: ${ENABLE_TELEGRAM_BOT}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
+      SLACK_DEFAULT_CHANNEL: ${SLACK_DEFAULT_CHANNEL}
+      ONESIGNAL_APP_ID: ${ONESIGNAL_APP_ID}
+      ONESIGNAL_REST_API_KEY: ${ONESIGNAL_REST_API_KEY}
+      WEB_PUSH_PUBLIC_KEY: ${WEB_PUSH_PUBLIC_KEY}
+      WEB_PUSH_PRIVATE_KEY: ${WEB_PUSH_PRIVATE_KEY}
+      WEB_PUSH_SUBJECT: ${WEB_PUSH_SUBJECT}
+      IN_APP_PROVIDER: ${IN_APP_PROVIDER}
+      PUSHER_APP_ID: ${PUSHER_APP_ID}
+      PUSHER_KEY: ${PUSHER_KEY}
+      PUSHER_SECRET: ${PUSHER_SECRET}
+      PUSHER_CLUSTER: ${PUSHER_CLUSTER}
+      FIREBASE_PROJECT_ID: ${PROJECT_ID}
+      FIREBASE_CLIENT_EMAIL: ${CLIENT_EMAIL}
+      FIREBASE_PRIVATE_KEY: ${PRIVATE_KEY}
+    depends_on:
+      - realtime-db-srv
+      - redis-srv
+      - nats-srv
+      - kafka-srv
+    volumes:
+      - ./src:/usr/src/app/services/realtime-service/src
+      - ../../packages/ts:/usr/src/app/packages/ts
+      - ../../protos:/usr/src/app/protos

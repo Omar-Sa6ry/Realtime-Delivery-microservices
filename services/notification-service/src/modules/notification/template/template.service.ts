@@ -21,6 +21,25 @@ interface RawTemplate {
 
 const TEMPLATE_CACHE_TTL_SECONDS = 3600;
 
+const DEFAULT_TEMPLATES: RawTemplate[] = [
+  {
+    type: NotificationType.PASSWORD_RESET_REQUESTED,
+    channel: NotificationChannel.IN_APP,
+    locale: 'en',
+    titleTemplate: 'Password Reset Requested',
+    bodyTemplate:
+      'A password reset was requested for your account. {{firstName}}, check your email for the reset code. It expires in 15 minutes.',
+  },
+  {
+    type: NotificationType.PASSWORD_RESET_REQUESTED,
+    channel: NotificationChannel.IN_APP,
+    locale: 'ar',
+    titleTemplate: 'تم طلب إعادة تعيين كلمة المرور',
+    bodyTemplate:
+      'تم طلب إعادة تعيين كلمة المرور لحسابك. يا {{firstName}}، راجع بريدك الإلكتروني لمعرفة رمز إعادة التعيين. صلاحية الرمز 15 دقيقة.',
+  },
+];
+
 @Injectable()
 export class TemplateService implements OnModuleInit {
   private readonly logger = new Logger(TemplateService.name);
@@ -33,7 +52,27 @@ export class TemplateService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    await this.seedDefaultTemplates();
     await this.loadTemplates();
+  }
+
+  private async seedDefaultTemplates() {
+    for (const raw of DEFAULT_TEMPLATES) {
+      const existing = await this.templateRepository.findOne({
+        where: { type: raw.type, channel: raw.channel, locale: raw.locale },
+      });
+      if (existing) continue;
+
+      const entity = this.templateRepository.create({
+        type: raw.type,
+        channel: raw.channel,
+        locale: raw.locale,
+        titleTemplate: raw.titleTemplate,
+        bodyTemplate: raw.bodyTemplate,
+      });
+      await this.templateRepository.save(entity);
+    }
+    this.logger.log(`Seeded ${DEFAULT_TEMPLATES.length} default templates`);
   }
 
   async loadTemplates() {

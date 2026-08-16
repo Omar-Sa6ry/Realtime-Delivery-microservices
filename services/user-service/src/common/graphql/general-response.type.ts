@@ -1,4 +1,4 @@
-import { ObjectType, Field } from '@nestjs/graphql';
+import { ObjectType, Field, Directive } from '@nestjs/graphql';
 import { Type } from '@nestjs/common';
 import { GraphqlBaseResponse } from '@bts-soft/core';
 
@@ -14,6 +14,7 @@ export function GeneralResponse<T>(classRef: Type<T>): Type<any> {
   return GeneralResponseClass as Type<any>;
 }
 
+@Directive('@shareable')
 @ObjectType()
 export class BooleanResponse extends GraphqlBaseResponse {
   @Field(() => Boolean, { nullable: true })

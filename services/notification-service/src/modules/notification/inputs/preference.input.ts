@@ -1,13 +1,20 @@
 import { InputType, Field } from '@nestjs/graphql';
+import { NotificationType, NotificationChannel } from '@delivery/common';
 
 @InputType()
-export class NotificationPreferenceInput {
-  @Field()
-  type: string;
-
-  @Field()
-  channel: string;
+export class ChannelPreferenceInput {
+  @Field(() => NotificationChannel)
+  channel: NotificationChannel;
 
   @Field()
   enabled: boolean;
+}
+
+@InputType()
+export class NotificationPreferenceInput {
+  @Field(() => NotificationType)
+  type: NotificationType;
+
+  @Field(() => [ChannelPreferenceInput])
+  channels: ChannelPreferenceInput[];
 }

@@ -6,7 +6,7 @@ import { Repository } from 'typeorm';
 import { NotificationInbox } from '../../common/database/entities/notification-inbox.entity';
 import { EventHandlerFactory } from './event-handlers/event-handler.factory';
 import { KafkaEventPayload } from './event-handlers/event-handler.interface';
-import { DeliveryKafkaTopics, PaymentKafkaTopics, KafkaService } from '@delivery/common';
+import { DeliveryKafkaTopics, PaymentKafkaTopics, MediaKafkaTopics, UserKafkaTopics, KafkaService } from '@delivery/common';
 
 @Injectable()
 export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
@@ -41,6 +41,8 @@ export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
         const topics = [
           ...Object.values(DeliveryKafkaTopics),
           ...Object.values(PaymentKafkaTopics),
+          ...Object.values(MediaKafkaTopics),
+          ...Object.values(UserKafkaTopics),
         ];
 
         for (const topic of topics) {

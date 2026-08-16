@@ -31,6 +31,29 @@ const (
 	PaymentTopicRefunded  = "payment.refunded"
 )
 
+// MediaKafkaTopics defines the Kafka topics emitted by the media domain.
+const (
+	MediaTopicUploadCreated       = "media.upload.created"
+	MediaTopicUploadCompleted     = "media.upload.completed"
+	MediaTopicUploadAborted       = "media.upload.aborted"
+	MediaTopicScanStarted         = "media.scan.started"
+	MediaTopicScanCompleted       = "media.scan.completed"
+	MediaTopicScanFailed          = "media.scan.failed"
+	MediaTopicProcessingStarted   = "media.processing.started"
+	MediaTopicProcessingCompleted = "media.processing.completed"
+	MediaTopicProcessingFailed    = "media.processing.failed"
+	MediaTopicReady               = "media.ready"
+	MediaTopicDeleteRequested     = "media.delete.requested"
+	MediaTopicDeleted             = "media.deleted"
+	MediaTopicDeleteFailed        = "media.delete.failed"
+)
+
+// UserKafkaTopics defines the Kafka topics emitted by the user domain.
+const (
+	UserTopicCreated                = "user.created"
+	UserTopicPasswordResetRequested = "user.password_reset_requested"
+)
+
 // NotificationNatsSubjects defines the NATS subjects used by the notification domain.
 // The user-specific subject is suffixed with .{userId}.
 const (

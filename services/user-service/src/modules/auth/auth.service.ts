@@ -12,7 +12,7 @@ import { JwtTokenProvider } from '../../common/security/jwt-token.provider';
 import { RedisSessionRepository } from '../../common/database/repositories/redis-session.repository';
 import { OutboxWorkerService } from '../../common/messaging/outbox-worker.service';
 import { NotificationService, ChannelType } from '@bts-soft/core';
-import { Role, rolePermissionsMap } from '@delivery/common';
+import { Role, rolePermissionsMap, KafkaService, UserKafkaTopics } from '@delivery/common';
 import { UserFactory } from './user.factory';
 import { I18nService } from 'nestjs-i18n';
 import {
@@ -35,6 +35,7 @@ export class AuthService {
     private readonly dataSource: DataSource,
     private readonly outboxWorkerService: OutboxWorkerService,
     private readonly notificationService: NotificationService,
+    private readonly kafkaService: KafkaService,
     private readonly userFactory: UserFactory,
     private readonly i18n: I18nService,
   ) {}
@@ -105,6 +106,18 @@ export class AuthService {
 
     // Enqueue event to Redis BullMQ
     await this.outboxWorkerService.enqueueEvent(outboxId);
+
+    // Publish user.created event for the notification service (event-driven).
+    // Fire-and-forget; consumer dedupes via the inbox pattern.
+    this.kafkaService
+      .emit(UserKafkaTopics.USER_CREATED, UserKafkaTopics.USER_CREATED, {
+        userId: savedUser.id,
+        email: savedUser.email,
+        firstName: savedUser.firstName,
+        lastName: savedUser.lastName,
+        role: savedUser.role,
+      })
+      .catch((err) => console.error('Failed to publish user.created event:', err));
 
     const sessionId = crypto.randomUUID();
     const permissions = rolePermissionsMap[savedUser.role] || [];
@@ -223,6 +236,19 @@ export class AuthService {
       body: 'Hi {{name}}, your password reset code is {{token}}.',
       context: { name: user.firstName, token },
     }).catch(err => console.error('Failed to send reset password email:', err));
+
+    // Publish audit event (no token in payload) so notification-service keeps an in-app record
+    this.kafkaService
+      .emit(
+        UserKafkaTopics.PASSWORD_RESET_REQUESTED,
+        UserKafkaTopics.PASSWORD_RESET_REQUESTED,
+        {
+          userId: user.id,
+          email: user.email,
+          firstName: user.firstName,
+        },
+      )
+      .catch(err => console.error('Failed to publish password_reset event:', err));
   }
 
   async resetPassword(input: ResetPasswordInput): Promise<void> {

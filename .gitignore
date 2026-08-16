@@ -28,5 +28,7 @@ k8s/notification-secrets.yaml
 
 frontend/
 
+NOTIFICATION_SERVICE_GUIDE.md
+KAFKA_GUIDE.md
 system_artichiture.md
 notes.txt

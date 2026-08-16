@@ -29,3 +29,8 @@ export enum MediaKafkaTopics {
   MEDIA_DELETED = 'media.deleted',
   DELETE_FAILED = 'media.delete.failed',
 }
+
+export enum UserKafkaTopics {
+  USER_CREATED = 'user.created',
+  PASSWORD_RESET_REQUESTED = 'user.password_reset_requested',
+}

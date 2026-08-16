@@ -31,4 +31,38 @@ export class PreferenceService {
 
     return enabledChannels;
   }
+
+  async upsertPreferences(
+    userId: string,
+    type: NotificationType,
+    channels: { channel: NotificationChannel; enabled: boolean }[],
+  ): Promise<NotificationPreference[]> {
+    const results: NotificationPreference[] = [];
+    for (const c of channels) {
+      let preference = await this.preferenceRepository.findOne({
+        where: { userId, type, channel: c.channel },
+      });
+
+      if (!preference) {
+        preference = this.preferenceRepository.create({
+          userId,
+          type,
+          channel: c.channel,
+          enabled: c.enabled,
+        });
+      } else {
+        preference.enabled = c.enabled;
+      }
+
+      results.push(await this.preferenceRepository.save(preference));
+    }
+    return results;
+  }
+
+  async findForUser(userId: string, type?: NotificationType): Promise<NotificationPreference[]> {
+    return this.preferenceRepository.find({
+      where: type ? { userId, type } : { userId },
+      order: { type: 'ASC', channel: 'ASC' },
+    });
+  }
 }

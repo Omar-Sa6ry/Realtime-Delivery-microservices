@@ -6,7 +6,7 @@ import { Repository } from 'typeorm';
 import { Notification } from '../../common/database/entities/notification.entity';
 import { NotificationDelivery } from '../../common/database/entities/notification-delivery.entity';
 import { NotificationService, ChannelType } from '@bts-soft/notifications';
-import { DeliveryChannelStatus } from '@delivery/common';
+import { DeliveryStateService } from './delivery-state.service';
 import { buildChannelMessage } from './channel-message.helper';
 
 @Processor('notification-inapp')
@@ -19,6 +19,7 @@ export class InAppWorker extends WorkerHost {
     private notificationRepository: Repository<Notification>,
     @InjectRepository(NotificationDelivery)
     private deliveryRepository: Repository<NotificationDelivery>,
+    private deliveryState: DeliveryStateService,
     private notificationService: NotificationService,
   ) {
     super();
@@ -26,36 +27,29 @@ export class InAppWorker extends WorkerHost {
 
   async process(job: Job<{ notificationId: string; deliveryId: string }>) {
     const { notificationId, deliveryId } = job.data;
-    
+
     const delivery = await this.deliveryRepository.findOne({ where: { id: deliveryId } });
     if (!delivery) return;
 
-    delivery.status = DeliveryChannelStatus.PROCESSING;
-    delivery.attemptCount += 1;
-    await this.deliveryRepository.save(delivery);
+    const notification = await this.notificationRepository.findOne({ where: { id: notificationId } });
+    if (!notification) return;
+
+    await this.deliveryState.beginProcessing(delivery);
 
     try {
-      const notification = await this.notificationRepository.findOne({ where: { id: notificationId } });
-      if (!notification) throw new Error('Notification not found');
-
       await this.notificationService.send(
         ChannelType.IN_APP,
         buildChannelMessage(notification, `in-app:${notification.id}:${delivery.id}`),
       );
 
-      delivery.status = DeliveryChannelStatus.SENT;
-      delivery.sentAt = new Date();
-      await this.deliveryRepository.save(delivery);
-      
+      await this.deliveryState.complete(delivery, notification, { delivered: true });
+
       this.logger.debug(`InApp sent successfully for notification ${notificationId}`);
     } catch (error) {
-      delivery.status = DeliveryChannelStatus.FAILED;
-      delivery.lastError = error.message;
-      delivery.failedAt = new Date();
-      await this.deliveryRepository.save(delivery);
-      
+      await this.deliveryState.fail(delivery, notification, error);
+
       this.logger.error(`InApp failed for notification ${notificationId}: ${error.message}`);
-      throw error;
+      throw error; // Let BullMQ handle retry
     }
   }
 }

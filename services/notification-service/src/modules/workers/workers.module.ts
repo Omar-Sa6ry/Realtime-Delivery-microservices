@@ -7,10 +7,15 @@ import { SmsWorker } from './sms.worker';
 import { PushWorker } from './push.worker';
 import { InAppWorker } from './inapp.worker';
 import { RealtimeWorker } from './realtime.worker';
+import { ScheduledWorker } from './scheduled.worker';
+import { RetryWorker } from './retry.worker';
+import { DeliveryStateService } from './delivery-state.service';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Notification, NotificationDelivery]),
+    NotificationModule,
   ],
   providers: [
     EmailWorker,
@@ -18,6 +23,9 @@ import { RealtimeWorker } from './realtime.worker';
     PushWorker,
     InAppWorker,
     RealtimeWorker,
+    ScheduledWorker,
+    RetryWorker,
+    DeliveryStateService,
   ],
 })
 export class WorkersModule {}

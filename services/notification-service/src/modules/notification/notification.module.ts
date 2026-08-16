@@ -27,6 +27,8 @@ import { NotificationResolver } from './notification.resolver';
       { name: 'notification-push' },
       { name: 'notification-inapp' },
       { name: 'notification-realtime' },
+      { name: 'notification-scheduled' },
+      { name: 'notification-retry' },
     ),
   ],
   providers: [
@@ -36,6 +38,12 @@ import { NotificationResolver } from './notification.resolver';
     PreferenceService,
     NotificationResolver,
   ],
-  exports: [NotificationService, NotificationDispatcherService, TemplateService, PreferenceService],
+  exports: [
+    NotificationService,
+    NotificationDispatcherService,
+    TemplateService,
+    PreferenceService,
+    BullModule,
+  ],
 })
 export class NotificationModule {}

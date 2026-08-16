@@ -8,13 +8,18 @@ import {
   Permission,
 } from '@delivery/common';
 import type { IUser } from '@delivery/common';
+import { NotificationType } from '@delivery/common';
 import { NotificationService } from './notification.service';
+import { PreferenceService } from './preference/preference.service';
 import {
   NotificationTypeObj,
   NotificationConnection,
   NotificationResponse,
   PaginatedNotificationResponse,
 } from './dtos/notification.dto';
+import { NotificationPreferenceResponse } from './dtos/preference.dto';
+import { NotificationPreferenceInput } from './inputs/preference.input';
+import { NotificationPreference } from '../../common/database/entities/notification-preference.entity';
 import { IntResponse, BooleanResponse } from '../../common/graphql/general-response.type';
 
 const FIXED_WINDOW_RATE_LIMIT = { algorithm: RateLimiterAlgorithm.FIXED_WINDOW_COUNTER };
@@ -23,6 +28,7 @@ const FIXED_WINDOW_RATE_LIMIT = { algorithm: RateLimiterAlgorithm.FIXED_WINDOW_C
 export class NotificationResolver {
   constructor(
     private readonly notificationService: NotificationService,
+    private readonly preferenceService: PreferenceService,
     private readonly i18n: I18nService,
   ) {}
 
@@ -121,5 +127,41 @@ export class NotificationResolver {
       message: await this.i18n.t('notification.DELETED'),
       data: true,
     };
+  }
+
+  @Query(() => NotificationPreferenceResponse)
+  @RedisRateLimit({ ...FIXED_WINDOW_RATE_LIMIT, limit: 100, windowMs: 60000 })
+  @Auth([Permission.READ_NOTIFICATION])
+  async myNotificationPreferences(
+    @CurrentUser() user: IUser,
+    @Args('type', { type: () => String, nullable: true }) type?: string,
+  ): Promise<NotificationPreferenceResponse> {
+    const items = await this.preferenceService.findForUser(user.id, type as NotificationType);
+    return {
+      success: true,
+      statusCode: 200,
+      message: await this.i18n.t('notification.PREFERENCES_RETRIEVED'),
+      items,
+    } as NotificationPreferenceResponse;
+  }
+
+  @Mutation(() => NotificationPreferenceResponse)
+  @RedisRateLimit({ ...FIXED_WINDOW_RATE_LIMIT, limit: 60, windowMs: 60000 })
+  @Auth([Permission.UPDATE_NOTIFICATION])
+  async updateNotificationPreferences(
+    @CurrentUser() user: IUser,
+    @Args('preferences', { type: () => [NotificationPreferenceInput] }) preferences: NotificationPreferenceInput[],
+  ): Promise<NotificationPreferenceResponse> {
+    const saved: NotificationPreference[] = [];
+    for (const preference of preferences) {
+      const rows = await this.preferenceService.upsertPreferences(user.id, preference.type, preference.channels);
+      saved.push(...rows);
+    }
+    return {
+      success: true,
+      statusCode: 200,
+      message: await this.i18n.t('notification.PREFERENCES_UPDATED'),
+      items: saved,
+    } as NotificationPreferenceResponse;
   }
 }

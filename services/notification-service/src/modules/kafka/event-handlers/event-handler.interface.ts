@@ -5,6 +5,7 @@ export interface KafkaEventPayload {
   userId?: string;
   type?: string;
   data?: Record<string, unknown>;
+  payload?: Record<string, unknown>;
   [key: string]: unknown;
 }
 

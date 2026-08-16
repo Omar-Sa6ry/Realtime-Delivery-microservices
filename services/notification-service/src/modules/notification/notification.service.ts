@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, IsNull } from 'typeorm';
 import { Notification } from '../../common/database/entities/notification.entity';
 import { NotificationDelivery } from '../../common/database/entities/notification-delivery.entity';
-import { NotificationOutbox } from '../../common/database/entities/notification-outbox.entity';
 import { NotificationDispatcherService } from './notification-dispatcher.service';
 import { NotificationType, NotificationPriority, NotificationChannel } from '@delivery/common';
 import { TemplateService } from './template/template.service';
@@ -17,6 +16,12 @@ export interface CreateNotificationParams {
   body?: string;
   data?: Record<string, unknown>;
   priority?: NotificationPriority;
+  scheduledAt?: Date;
+  /**
+   * Channels that must be delivered regardless of user preferences.
+   * Security/audit notifications set this so a record is always created.
+   */
+  requiredChannels?: NotificationChannel[];
 }
 
 export interface PaginatedNotifications {
@@ -39,10 +44,13 @@ export class NotificationService {
   ) {}
 
   async createAndDispatch(params: CreateNotificationParams): Promise<string | null> {
-    const { userId, type, data, priority } = params;
+    const { userId, type, data, priority, scheduledAt, requiredChannels } = params;
 
     // 1. Resolve Preferences
-    const channels = await this.preferenceService.getEnabledChannels(userId, type);
+    const channels =
+      requiredChannels && requiredChannels.length > 0
+        ? requiredChannels
+        : await this.preferenceService.getEnabledChannels(userId, type);
     if (channels.length === 0) {
       this.logger.debug(`No channels enabled for user ${userId} for event ${type}`);
       return null;
@@ -69,6 +77,7 @@ export class NotificationService {
         body: notificationBody,
         data: data ?? null,
         priority: priority || NotificationPriority.NORMAL,
+        scheduledAt: scheduledAt ?? null,
       });
       await queryRunner.manager.save(notification);
 
@@ -78,34 +87,22 @@ export class NotificationService {
         const delivery = queryRunner.manager.create(NotificationDelivery, {
           notificationId: notification.id,
           channel,
+          scheduledAt: scheduledAt ?? null,
         });
         deliveries.push(delivery);
       }
       await queryRunner.manager.save(deliveries);
 
-      // Create Outbox for Realtime (if Realtime is enabled)
-      if (channels.includes(NotificationChannel.REALTIME)) {
-        const outbox = queryRunner.manager.create(NotificationOutbox, {
-          eventType: 'NOTIFICATION_CREATED',
-          aggregateId: notification.id,
-          payload: {
-            userId,
-            notificationId: notification.id,
-            type,
-            title: notificationTitle,
-            body: notificationBody,
-            data: data ?? null,
-            priority: priority || NotificationPriority.NORMAL,
-          },
-        });
-        await queryRunner.manager.save(outbox);
-      }
-
       await queryRunner.commitTransaction();
       this.logger.debug(`Saved notification ${notification.id} for user ${userId}`);
 
-      // 4. Dispatch Jobs
-      await this.dispatcherService.dispatch(notification, deliveries);
+      // 4. Dispatch (now or later per scheduledAt)
+      const isScheduled = !!scheduledAt && scheduledAt.getTime() > Date.now();
+      if (isScheduled) {
+        await this.dispatcherService.schedule(notification, scheduledAt);
+      } else {
+        await this.dispatcherService.dispatch(notification, deliveries);
+      }
 
       return notification.id;
     } catch (error) {

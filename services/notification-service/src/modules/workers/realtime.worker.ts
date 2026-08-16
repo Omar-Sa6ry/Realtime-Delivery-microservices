@@ -5,7 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '../../common/database/entities/notification.entity';
 import { NotificationDelivery } from '../../common/database/entities/notification-delivery.entity';
-import { DeliveryChannelStatus } from '@delivery/common';
+import { DeliveryStateService } from './delivery-state.service';
 
 @Processor('notification-realtime')
 @Injectable()
@@ -17,35 +17,37 @@ export class RealtimeWorker extends WorkerHost {
     private notificationRepository: Repository<Notification>,
     @InjectRepository(NotificationDelivery)
     private deliveryRepository: Repository<NotificationDelivery>,
+    private deliveryState: DeliveryStateService,
   ) {
     super();
   }
 
   async process(job: Job<{ notificationId: string; deliveryId: string }>) {
     const { notificationId, deliveryId } = job.data;
-    
+
     const delivery = await this.deliveryRepository.findOne({ where: { id: deliveryId } });
     if (!delivery) return;
 
-    delivery.status = DeliveryChannelStatus.PROCESSING;
-    delivery.attemptCount += 1;
-    await this.deliveryRepository.save(delivery);
+    const notification = await this.notificationRepository.findOne({
+      where: { id: notificationId },
+    });
+    if (!notification) return;
+
+    if (notification.expiresAt && notification.expiresAt < new Date()) {
+      await this.deliveryState.expire(notification);
+      return;
+    }
+
+    await this.deliveryState.beginProcessing(delivery);
 
     try {
-      const notification = await this.notificationRepository.findOne({ where: { id: notificationId } });
-      if (!notification) throw new Error('Notification not found');
+      // Delivery is dispatched to clients through the NATS outbox.
+      await this.deliveryState.complete(delivery, notification, { delivered: true });
 
-      delivery.status = DeliveryChannelStatus.SENT;
-      delivery.sentAt = new Date();
-      await this.deliveryRepository.save(delivery);
-      
       this.logger.debug(`Realtime dispatched via outbox for notification ${notificationId}`);
     } catch (error) {
-      delivery.status = DeliveryChannelStatus.FAILED;
-      delivery.lastError = error.message;
-      delivery.failedAt = new Date();
-      await this.deliveryRepository.save(delivery);
-      
+      await this.deliveryState.fail(delivery, notification, error);
+
       this.logger.error(`Realtime failed for notification ${notificationId}: ${error.message}`);
       throw error;
     }

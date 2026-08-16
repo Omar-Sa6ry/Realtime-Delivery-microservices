@@ -96,6 +96,12 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
                 process.env.USER_SERVICE_URL ||
                 'http://user-srv:4001/user/graphql',
             },
+            {
+              name: 'realtime',
+              url:
+                process.env.REALTIME_SERVICE_URL ||
+                'http://realtime-srv:4006/realtime/graphql',
+            },
           ],
           pollIntervalInMs: 5000,
         }),

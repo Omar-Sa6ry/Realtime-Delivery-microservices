@@ -15,16 +15,32 @@ build:
 
   artifacts:
 
-    - image: delivery/api-gateway
+    - image: delivery/notification
       context: .
       docker:
-        dockerfile: services/api-gateway/Dockerfile
+        dockerfile: services/notification-service/Dockerfile
       sync:
         manual:
-          - src: "services/api-gateway/src/**/*.ts"
-            dest: /usr/src/app/services/api-gateway/src
+          - src: "services/notification-service/src/**/*.ts"
+            dest: /usr/src/app/services/notification-service/src
           - src: "protos/**/*.proto"
             dest: /usr/src/app/protos
+
+    - image: delivery/realtime
+      context: .
+      docker:
+        dockerfile: services/realtime-service/Dockerfile
+      sync:
+        manual:
+          - src: "services/realtime-service/src/**/*.ts"
+            dest: /usr/src/app/services/realtime-service/src
+          - src: "protos/**/*.proto"
+            dest: /usr/src/app/protos
+
+    - image: delivery/media
+      context: .
+      docker:
+        dockerfile: services/media-service/Dockerfile
 
     - image: delivery/user
       context: .
@@ -39,21 +55,17 @@ build:
           - src: 'packages/ts/dist/**/*.js'
             dest: /usr/src/app/packages/ts/dist
 
-    - image: delivery/media
+    - image: delivery/api-gateway
       context: .
       docker:
-        dockerfile: services/media-service/Dockerfile
-
-    - image: delivery/notification
-      context: .
-      docker:
-        dockerfile: services/notification-service/Dockerfile
+        dockerfile: services/api-gateway/Dockerfile
       sync:
         manual:
-          - src: "services/notification-service/src/**/*.ts"
-            dest: /usr/src/app/services/notification-service/src
+          - src: "services/api-gateway/src/**/*.ts"
+            dest: /usr/src/app/services/api-gateway/src
           - src: "protos/**/*.proto"
             dest: /usr/src/app/protos
+
 
 portForward:
   - resourceType: service

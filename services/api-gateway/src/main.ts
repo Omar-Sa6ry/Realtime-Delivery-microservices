@@ -53,11 +53,11 @@ async function bootstrap() {
     `API Gateway is running on: https://delivary.test/graphql or http://localhost:${port}/graphql`,
   );
 
-  // Informational: log when all subgraphs are reachable.
   Promise.all([
     waitForService('http://media-srv:4005/media/graphql'),
     waitForService('http://user-srv:4001/user/graphql'),
     waitForService('http://notification-srv:4004/notification/graphql'),
+    waitForService('http://realtime-srv:4006/realtime/graphql'),
   ])
     .then(() => logger.log('All subgraphs are reachable.'))
     .catch((err: Error) =>

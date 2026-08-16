@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: realtime-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: realtime
+  template:
+    metadata:
+      labels:
+        app: realtime
+    spec:
+      containers:
+        - name: realtime
+          image: delivery/realtime
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          ports:
+            - containerPort: 4006
+          startupProbe:
+            httpGet:
+              path: /realtime/health
+              port: 4006
+            initialDelaySeconds: 180
+            periodSeconds: 5
+            failureThreshold: 240
+          readinessProbe:
+            httpGet:
+              path: /realtime/ready
+              port: 4006
+            periodSeconds: 3
+            failureThreshold: 120
+          livenessProbe:
+            httpGet:
+              path: /realtime/health
+              port: 4006
+            initialDelaySeconds: 5
+            periodSeconds: 20
+            failureThreshold: 6
+          env:
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=768"
+            - name: PORT_REALTIME
+              value: '4006'
+
+            - name: NODE_ENV
+              value: 'development'
+
+            - name: JWT_EXPIRE
+              value: '36000s'
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: realtime-secrets
+                  key: JWT_SECRET
+
+            - name: REDIS_HOST
+              value: 'redis-srv'
+
+            - name: REDIS_PORT
+              value: '6379'
+
+            - name: REDIS_DB
+              value: '0'
+
+            - name: NATS_URL
+              value: 'nats://nats-srv:4222'
+
+            - name: KAFKA_BROKERS
+              value: 'kafka-srv:9092'
+
+            - name: KAFKA_GROUP_ID
+              value: 'realtime-service'
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: realtime-srv
+spec:
+  selector:
+    app: realtime
+  ports:
+    - name: http
+      protocol: TCP
+      port: 4006
+      targetPort: 4006

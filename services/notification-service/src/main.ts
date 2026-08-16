@@ -40,14 +40,20 @@ async function bootstrap() {
     },
   });
 
-  await app.startAllMicroservices();
-
   const port = configService.get<string>('PORT_NOTIFICATION', '4004');
   await app.listen(port, '0.0.0.0');
 
   const logger = new StructuredLogger();
   logger.log(`Notification Service is running on http://localhost:${port}/notification/graphql`);
-  logger.log(`gRPC Server is running on port ${configService.get('PORT_GRPC', '50053')}`);
+
+  // Start gRPC transport in the background after HTTP is live.
+  app.startAllMicroservices()
+    .then(() =>
+      logger.log(`gRPC Server is running on port ${configService.get('PORT_GRPC', '50053')}`),
+    )
+    .catch((err: Error) =>
+      logger.error(`Microservice startup error: ${err.message}`),
+    );
 }
 
 bootstrap().catch((err) => {

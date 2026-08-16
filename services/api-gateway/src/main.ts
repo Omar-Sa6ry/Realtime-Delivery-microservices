@@ -1,3 +1,4 @@
+import * as http from 'http';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
@@ -5,14 +6,23 @@ import helmet from 'helmet';
 import { StructuredLogger } from '@delivery/common';
 import { waitForService } from './utils/waitService.util';
 
-async function bootstrap() {
-  await Promise.all([
-    waitForService('http://media-srv:4005/media/graphql'),
-    waitForService('http://user-srv:4001/user/graphql'),
-    waitForService('http://notification-srv:4004/notification/graphql'),
-  ]);
+const LIVENESS_PORT = Number(process.env.PORT_LIVENESS ?? 4099);
+const livenessServer = http.createServer((_req, res) => {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ status: 'alive', service: 'api-gateway' }));
+});
 
+livenessServer.on('error', (err) =>
+  console.error('[liveness] Server error:', (err as NodeJS.ErrnoException).message),
+);
+
+livenessServer.listen(LIVENESS_PORT, '0.0.0.0', () =>
+  console.log(`[liveness] Health server listening on port ${LIVENESS_PORT}`),
+);
+
+async function bootstrap() {
   const logger = new StructuredLogger();
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger,
   });
@@ -37,14 +47,30 @@ async function bootstrap() {
     credentials: true,
   });
 
-  const port = process.env.PORT_GATEWAY || 4000;
+  const port = process.env.PORT_GATEWAY ?? 4000;
   await app.listen(port, '0.0.0.0');
   console.log(
     `API Gateway is running on: https://delivary.test/graphql or http://localhost:${port}/graphql`,
   );
+
+  // Informational: log when all subgraphs are reachable.
+  Promise.all([
+    waitForService('http://media-srv:4005/media/graphql'),
+    waitForService('http://user-srv:4001/user/graphql'),
+    waitForService('http://notification-srv:4004/notification/graphql'),
+  ])
+    .then(() => logger.log('All subgraphs are reachable.'))
+    .catch((err: Error) =>
+      logger.warn(`Subgraph wait error: ${err.message}`),
+    );
 }
 
-bootstrap().catch((err) => {
-  console.error('Bootstrap failed, retrying in 10s...', err.message);
-  setTimeout(() => bootstrap(), 10000);
-});
+function runBootstrap() {
+  bootstrap().catch((err) => {
+    console.error('Bootstrap failed, retrying in 10s...', err.message);
+    setTimeout(() => runBootstrap(), 10000);
+  });
+}
+
+runBootstrap();
+

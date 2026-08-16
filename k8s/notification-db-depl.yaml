@@ -34,7 +34,17 @@ spec:
       containers:
         - name: notification-db
           image: postgres:16
+          args: ["-c", "shared_buffers=64MB", "-c", "max_connections=50"]
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
           env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
@@ -80,8 +90,7 @@ spec:
               mountPath: /var/lib/postgresql/data
       volumes:
         - name: postgres-storage
-          persistentVolumeClaim:
-            claimName: notification-db-pvc
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

@@ -54,10 +54,14 @@ async function bootstrap() {
     },
   });
 
-  await app.startAllMicroservices();
   const port = process.env.PORT_USER ?? 4001;
   await app.listen(port, '0.0.0.0');
   console.log(`User Service is running on http://0.0.0.0:${port}`);
+
+  // Start NATS + gRPC transports in the background after HTTP is live.
+  app.startAllMicroservices().catch((err: Error) =>
+    logger.error(`Microservice startup error: ${err.message}`),
+  );
 }
 
 bootstrap().catch((err) => {

@@ -35,10 +35,10 @@ export class NotificationDelivery {
   })
   status: DeliveryChannelStatus;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   provider: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   providerMessageId: string | null;
 
   @Column({ default: 0 })
@@ -47,16 +47,16 @@ export class NotificationDelivery {
   @Column({ type: 'text', nullable: true })
   lastError: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   scheduledAt: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   sentAt: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   deliveredAt: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   failedAt: Date | null;
 
   @CreateDateColumn()

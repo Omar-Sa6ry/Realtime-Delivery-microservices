@@ -25,23 +25,28 @@ spec:
               memory: "1Gi"
           ports:
             - containerPort: 4000
+              name: http
+            - containerPort: 4099
+              name: liveness
           startupProbe:
             httpGet:
-              path: /health
-              port: 4000
+              path: /
+              port: 4099
+            initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 240
           readinessProbe:
             httpGet:
               path: /health
               port: 4000
-            periodSeconds: 3
+            initialDelaySeconds: 45
+            periodSeconds: 10
             failureThreshold: 120
           livenessProbe:
             httpGet:
-              path: /health
-              port: 4000
-            initialDelaySeconds: 5
+              path: /
+              port: 4099
+            initialDelaySeconds: 10
             periodSeconds: 20
             failureThreshold: 6
           env:
@@ -49,6 +54,8 @@ spec:
               value: "--max-old-space-size=768"
             - name: PORT_GATEWAY
               value: "4000"
+            - name: PORT_LIVENESS
+              value: "4099"
             - name: NODE_ENV
               value: "development"
             - name: REDIS_HOST

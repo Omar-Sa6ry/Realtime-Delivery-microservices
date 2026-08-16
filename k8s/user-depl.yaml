@@ -30,11 +30,12 @@ spec:
             httpGet:
               path: /user/health
               port: 4001
+            initialDelaySeconds: 180
             periodSeconds: 5
             failureThreshold: 240
           readinessProbe:
             httpGet:
-              path: /user/health
+              path: /user/ready
               port: 4001
             periodSeconds: 3
             failureThreshold: 120

@@ -46,13 +46,13 @@ export class Notification {
   })
   status: NotificationStatus;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   scheduledAt: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   readAt: Date | null;
 
   @CreateDateColumn()

@@ -35,10 +35,10 @@ export class NotificationOutbox {
   @Column({ default: 0 })
   attemptCount: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   nextAttemptAt: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   publishedAt: Date | null;
 
   @CreateDateColumn()

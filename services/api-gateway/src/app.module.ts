@@ -97,6 +97,7 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
                 'http://user-srv:4001/user/graphql',
             },
           ],
+          pollIntervalInMs: 5000,
         }),
         buildService: ({ url }) => {
           return new RemoteGraphQLDataSource({

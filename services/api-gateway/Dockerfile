@@ -28,4 +28,6 @@ WORKDIR /usr/src/app
 COPY . .
 
 WORKDIR /usr/src/app/services/api-gateway
-CMD ["npm", "run", "start:dev"]
+RUN npm run build
+
+CMD ["npm", "run", "start:prod"]

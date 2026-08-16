@@ -29,64 +29,77 @@ export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  async onModuleInit() {
-    await this.consumer.connect();
-    this.logger.log('Kafka Consumer connected');
+  onModuleInit() {
+    this.connectWithRetry();
+  }
 
-    // Subscribe to topics
-    const topics = [
-      ...Object.values(DeliveryKafkaTopics),
-      ...Object.values(PaymentKafkaTopics),
-    ];
+  private async connectWithRetry() {
+    let connected = false;
+    while (!connected) {
+      try {
+        await this.consumer.connect();
+        connected = true;
+        this.logger.log('Kafka Consumer connected');
 
-    for (const topic of topics) {
-      await this.consumer.subscribe({ topic, fromBeginning: false });
-    }
+        // Subscribe to topics
+        const topics = [
+          ...Object.values(DeliveryKafkaTopics),
+          ...Object.values(PaymentKafkaTopics),
+        ];
 
-    await this.consumer.run({
-      eachMessage: async ({ topic, partition, message }) => {
-        try {
-          if (!message.value) return;
-
-          const payload: KafkaEventPayload = JSON.parse(message.value.toString());
-          const eventId = payload.eventId || payload.id; // Ensure eventId exists
-          const eventType = payload.eventType || topic;
-
-          if (!eventId) {
-            this.logger.warn(`Received message without eventId on topic ${topic}`);
-            return;
-          }
-
-          // Idempotency Check (Inbox Pattern)
-          const existing = await this.inboxRepository.findOne({
-            where: { eventId, consumer: 'notification-service' },
-          });
-
-          if (existing) {
-            this.logger.log(`Event ${eventId} already processed, skipping`);
-            return;
-          }
-
-          const handler = this.eventHandlerFactory.getHandler(eventType);
-          if (handler) {
-            await handler.handle(payload);
-          } else {
-            this.logger.debug(`No handler for event type: ${eventType}`);
-          }
-
-          // Save to Inbox
-          await this.inboxRepository.save({
-            eventId,
-            eventType,
-            consumer: 'notification-service',
-            processedAt: new Date(),
-          });
-          
-        } catch (error) {
-          this.logger.error(`Error processing message from topic ${topic}: ${error.message}`, error.stack);
+        for (const topic of topics) {
+          await this.consumer.subscribe({ topic, fromBeginning: false });
         }
-      },
-    });
+
+        await this.consumer.run({
+          eachMessage: async ({ topic, partition, message }) => {
+            try {
+              if (!message.value) return;
+
+              const payload: KafkaEventPayload = JSON.parse(message.value.toString());
+              const eventId = payload.eventId || payload.id; // Ensure eventId exists
+              const eventType = payload.eventType || topic;
+
+              if (!eventId) {
+                this.logger.warn(`Received message without eventId on topic ${topic}`);
+                return;
+              }
+
+              // Idempotency Check (Inbox Pattern)
+              const existing = await this.inboxRepository.findOne({
+                where: { eventId, consumer: 'notification-service' },
+              });
+
+              if (existing) {
+                this.logger.log(`Event ${eventId} already processed, skipping`);
+                return;
+              }
+
+              const handler = this.eventHandlerFactory.getHandler(eventType);
+              if (handler) {
+                await handler.handle(payload);
+              } else {
+                this.logger.debug(`No handler for event type: ${eventType}`);
+              }
+
+              // Save to Inbox
+              await this.inboxRepository.save({
+                eventId,
+                eventType,
+                consumer: 'notification-service',
+                processedAt: new Date(),
+              });
+              
+            } catch (error) {
+              this.logger.error(`Error processing message from topic ${topic}: ${error.message}`, error.stack);
+            }
+          },
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to connect to Kafka, retrying in 5s... ${err.message}`);
+        await new Promise(res => setTimeout(res, 5000));
+      }
+    }
   }
 
   async onModuleDestroy() {

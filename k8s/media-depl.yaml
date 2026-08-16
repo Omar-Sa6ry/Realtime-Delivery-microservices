@@ -135,6 +135,7 @@ spec:
           httpGet:
             path: /healthz
             port: graphql
+          initialDelaySeconds: 120
           periodSeconds: 5
           failureThreshold: 240
         readinessProbe:

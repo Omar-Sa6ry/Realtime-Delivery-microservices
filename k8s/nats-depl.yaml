@@ -4,6 +4,8 @@ metadata:
   name: nats-depl
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: nats
@@ -29,8 +31,9 @@ spec:
               '2',
               '-SD',
               '-cid',
-              'ticketing',
+              'delivery',
             ]
+
           startupProbe:
             tcpSocket:
               port: 4222

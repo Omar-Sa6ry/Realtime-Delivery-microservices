@@ -26,4 +26,6 @@ WORKDIR /usr/src/app
 COPY . .
 
 WORKDIR /usr/src/app/services/user-service
-CMD ["npm", "run", "start:dev"]
+RUN npm run build
+
+CMD ["npm", "run", "start:prod"]

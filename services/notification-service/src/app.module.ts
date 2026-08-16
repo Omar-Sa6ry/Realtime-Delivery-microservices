@@ -54,6 +54,8 @@ import { LoggingModule, MetricsModule, AutomationModule, MetricsInterceptor } fr
         database: config.get<string>('DB_NAME', 'delivery_notification_db'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true, // Auto-create tables (use migrations in prod)
+        retryAttempts: 60,
+        retryDelay: 3000,
       }),
       inject: [ConfigService],
     }),

@@ -19,10 +19,10 @@ type NestJSRequest struct {
 
 // NestJSResponse represents the JSON packet NestJS responds with
 type NestJSResponse struct {
-	Response json.RawMessage `json:"response,omitempty"`
-	Error    interface{}     `json:"err,omitempty"`
-	ID       string          `json:"id"`
-	IsDisposed bool          `json:"isDisposed,omitempty"`
+	Response   json.RawMessage `json:"response,omitempty"`
+	Error      interface{}     `json:"err,omitempty"`
+	ID         string          `json:"id"`
+	IsDisposed bool            `json:"isDisposed,omitempty"`
 }
 
 // NatsClient wraps the standard NATS connection and adds helper utilities

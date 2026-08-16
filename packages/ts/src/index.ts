@@ -32,6 +32,11 @@ export * from "./nats/events";
 export * from "./nats/nats.module";
 export * from "./nats/nats.service";
 
+// Kafka
+export * from "./kafka/kafka.topics";
+export * from "./kafka/kafka.module";
+export * from "./kafka/kafka.service";
+
 // Events (Kafka / media service)
 export * from "./events/media.events";
 

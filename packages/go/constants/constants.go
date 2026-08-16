@@ -2,16 +2,16 @@ package constants
 
 // Delivery Status Constants (State Machine)
 const (
-	DeliveryStatusPending          = "PENDING"
-	DeliveryStatusSearchingDriver  = "SEARCHING_DRIVER"
-	DeliveryStatusDriverAssigned   = "DRIVER_ASSIGNED"
-	DeliveryStatusDriverAccepted   = "DRIVER_ACCEPTED"
-	DeliveryStatusPickupStarted    = "PICKUP_STARTED"
-	DeliveryStatusPickedUp         = "PICKED_UP"
-	DeliveryStatusInTransit        = "IN_TRANSIT"
-	DeliveryStatusDelivered        = "DELIVERED"
-	DeliveryStatusCancelled        = "CANCELLED"
-	DeliveryStatusFailed           = "FAILED"
+	DeliveryStatusPending         = "PENDING"
+	DeliveryStatusSearchingDriver = "SEARCHING_DRIVER"
+	DeliveryStatusDriverAssigned  = "DRIVER_ASSIGNED"
+	DeliveryStatusDriverAccepted  = "DRIVER_ACCEPTED"
+	DeliveryStatusPickupStarted   = "PICKUP_STARTED"
+	DeliveryStatusPickedUp        = "PICKED_UP"
+	DeliveryStatusInTransit       = "IN_TRANSIT"
+	DeliveryStatusDelivered       = "DELIVERED"
+	DeliveryStatusCancelled       = "CANCELLED"
+	DeliveryStatusFailed          = "FAILED"
 )
 
 // Header Keys
@@ -34,9 +34,15 @@ const (
 type Role string
 
 const (
-	RoleAdmin Role = "admin"
-	RoleUser  Role = "user"
+	RoleAdmin  Role = "admin"
+	RoleUser   Role = "user"
+	RoleDriver Role = "driver"
 )
+
+// AllRoles returns every defined role value
+func AllRoles() []Role {
+	return []Role{RoleAdmin, RoleUser, RoleDriver}
+}
 
 // Permissions
 type Permission string
@@ -54,6 +60,12 @@ const (
 	PermissionForgotPassword Permission = "FORGOT_PASSWORD"
 	PermissionRechargeWallet Permission = "RECHARGE_WALLET"
 	PermissionLogout         Permission = "LOGOUT"
+
+	// Notification permissions
+	PermissionReadNotification              Permission = "READ_NOTIFICATION"
+	PermissionUpdateNotification            Permission = "UPDATE_NOTIFICATION"
+	PermissionDeleteNotification            Permission = "DELETE_NOTIFICATION"
+	PermissionManageNotificationPreferences Permission = "MANAGE_NOTIFICATION_PREFERENCES"
 )
 
 // RolePermissionsMap maps roles to their list of permissions
@@ -68,6 +80,10 @@ var RolePermissionsMap = map[Role][]Permission{
 		PermissionLogout,
 		PermissionViewUser,
 		PermissionRechargeWallet,
+		PermissionReadNotification,
+		PermissionUpdateNotification,
+		PermissionDeleteNotification,
+		PermissionManageNotificationPreferences,
 	},
 	RoleUser: {
 		PermissionUpdateUser,
@@ -76,6 +92,19 @@ var RolePermissionsMap = map[Role][]Permission{
 		PermissionForgotPassword,
 		PermissionLogout,
 		PermissionRechargeWallet,
+		PermissionReadNotification,
+		PermissionUpdateNotification,
+		PermissionManageNotificationPreferences,
+	},
+	RoleDriver: {
+		PermissionUpdateUser,
+		PermissionResetPassword,
+		PermissionChangePassword,
+		PermissionForgotPassword,
+		PermissionLogout,
+		PermissionReadNotification,
+		PermissionUpdateNotification,
+		PermissionManageNotificationPreferences,
 	},
 }
 
@@ -88,6 +117,70 @@ const (
 	PaymentMethodCash   PaymentMethod = "CASH"
 )
 
+// NotificationType defines the domain event that triggered a notification.
+type NotificationType string
+
+const (
+	NotificationTypeDeliveryCreated   NotificationType = "DELIVERY_CREATED"
+	NotificationTypeDriverAssigned    NotificationType = "DRIVER_ASSIGNED"
+	NotificationTypeDriverAccepted    NotificationType = "DRIVER_ACCEPTED"
+	NotificationTypeDeliveryPickedUp  NotificationType = "DELIVERY_PICKED_UP"
+	NotificationTypeDeliveryInTransit NotificationType = "DELIVERY_IN_TRANSIT"
+	NotificationTypeDeliveryCompleted NotificationType = "DELIVERY_COMPLETED"
+	NotificationTypeDeliveryCancelled NotificationType = "DELIVERY_CANCELLED"
+	NotificationTypePaymentCompleted  NotificationType = "PAYMENT_COMPLETED"
+	NotificationTypePaymentFailed     NotificationType = "PAYMENT_FAILED"
+	NotificationTypePaymentRefunded   NotificationType = "PAYMENT_REFUNDED"
+)
+
+// NotificationStatus defines the lifecycle state of a notification.
+type NotificationStatus string
+
+const (
+	NotificationStatusCreated    NotificationStatus = "CREATED"
+	NotificationStatusQueued     NotificationStatus = "QUEUED"
+	NotificationStatusProcessing NotificationStatus = "PROCESSING"
+	NotificationStatusSent       NotificationStatus = "SENT"
+	NotificationStatusDelivered  NotificationStatus = "DELIVERED"
+	NotificationStatusFailed     NotificationStatus = "FAILED"
+	NotificationStatusCancelled  NotificationStatus = "CANCELLED"
+	NotificationStatusExpired    NotificationStatus = "EXPIRED"
+)
+
+// DeliveryChannelStatus defines the per-channel delivery lifecycle.
+type DeliveryChannelStatus string
+
+const (
+	DeliveryChannelStatusPending    DeliveryChannelStatus = "PENDING"
+	DeliveryChannelStatusQueued     DeliveryChannelStatus = "QUEUED"
+	DeliveryChannelStatusProcessing DeliveryChannelStatus = "PROCESSING"
+	DeliveryChannelStatusRetrying   DeliveryChannelStatus = "RETRYING"
+	DeliveryChannelStatusSent       DeliveryChannelStatus = "SENT"
+	DeliveryChannelStatusDelivered  DeliveryChannelStatus = "DELIVERED"
+	DeliveryChannelStatusFailed     DeliveryChannelStatus = "FAILED"
+)
+
+// NotificationChannel defines the target delivery channel.
+type NotificationChannel string
+
+const (
+	NotificationChannelEmail    NotificationChannel = "EMAIL"
+	NotificationChannelSMS      NotificationChannel = "SMS"
+	NotificationChannelPush     NotificationChannel = "PUSH"
+	NotificationChannelInApp    NotificationChannel = "IN_APP"
+	NotificationChannelRealtime NotificationChannel = "REALTIME"
+)
+
+// NotificationPriority defines the urgency level of a notification.
+type NotificationPriority string
+
+const (
+	NotificationPriorityLow      NotificationPriority = "LOW"
+	NotificationPriorityNormal   NotificationPriority = "NORMAL"
+	NotificationPriorityHigh     NotificationPriority = "HIGH"
+	NotificationPriorityCritical NotificationPriority = "CRITICAL"
+)
+
 // Pagination defaults
 const (
 	DefaultLimit = 10
@@ -96,7 +189,7 @@ const (
 
 // Message and Error Constants
 const (
-	CurrentUserMsg        = "User not found in request"
-	PasswordValidator     = "Password should be from 6 to 16 digits"
-	ExceptionFilterMsg    = "An error occurred"
+	CurrentUserMsg     = "User not found in request"
+	PasswordValidator  = "Password should be from 6 to 16 digits"
+	ExceptionFilterMsg = "An error occurred"
 )

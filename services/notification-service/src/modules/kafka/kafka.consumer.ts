@@ -1,12 +1,12 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Kafka, Consumer } from 'kafkajs';
+import { Consumer } from 'kafkajs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotificationInbox } from '../../common/database/entities/notification-inbox.entity';
 import { EventHandlerFactory } from './event-handlers/event-handler.factory';
 import { KafkaEventPayload } from './event-handlers/event-handler.interface';
-import { DeliveryKafkaTopics, PaymentKafkaTopics } from '@delivery/common';
+import { DeliveryKafkaTopics, PaymentKafkaTopics, KafkaService } from '@delivery/common';
 
 @Injectable()
 export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
@@ -18,15 +18,11 @@ export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
     @InjectRepository(NotificationInbox)
     private inboxRepository: Repository<NotificationInbox>,
     private eventHandlerFactory: EventHandlerFactory,
+    private kafkaService: KafkaService,
   ) {
-    const kafka = new Kafka({
-      clientId: 'notification-service',
-      brokers: [this.configService.get<string>('KAFKA_BROKERS', 'kafka-srv:9092')],
-    });
-
-    this.consumer = kafka.consumer({ 
-      groupId: this.configService.get<string>('KAFKA_GROUP_ID', 'notification-service'),
-    });
+    this.consumer = this.kafkaService.consumer(
+      this.configService.get<string>('KAFKA_GROUP_ID', 'notification-service'),
+    );
   }
 
   onModuleInit() {

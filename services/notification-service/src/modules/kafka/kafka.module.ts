@@ -12,4 +12,4 @@ import { NotificationInbox } from '../../common/database/entities/notification-i
   ],
   providers: [KafkaConsumer, EventHandlerFactory],
 })
-export class KafkaModule {}
+export class KafkaConsumerModule {}

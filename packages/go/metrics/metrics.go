@@ -69,7 +69,7 @@ func HTTPHandler() http.Handler {
 func StartMetricsServer(port string) error {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", HTTPHandler())
-	
+
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
 		Handler: mux,

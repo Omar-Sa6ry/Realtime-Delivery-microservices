@@ -21,7 +21,7 @@ func UnaryServerMetricsInterceptor() grpc.UnaryServerInterceptor {
 		resp, err := handler(ctx, req)
 
 		duration := time.Since(startTime).Seconds()
-		
+
 		st, ok := status.FromError(err)
 		statusCode := "UNKNOWN"
 		if ok {

@@ -14,7 +14,8 @@ import { AppResolver } from './app.resolver';
 import { CommonModule } from './common/common.module';
 import { TranslationModule } from './common/translation/translation.module';
 import { GraphqlResponseInterceptor } from './common/interceptors/graphql-response.interceptor';
-import { KafkaModule } from './modules/kafka/kafka.module';
+import { KafkaModule } from '@delivery/common';
+import { KafkaConsumerModule } from './modules/kafka/kafka.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { WorkersModule } from './modules/workers/workers.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
@@ -94,9 +95,19 @@ import { LoggingModule, MetricsModule, AutomationModule, MetricsInterceptor } fr
     MetricsModule,
     AutomationModule,
 
+    KafkaModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        clientId: 'notification-service',
+        brokers: (config.get<string>('KAFKA_BROKERS', 'kafka-srv:9092') || '')
+          .split(',').map(b => b.trim()).filter(Boolean),
+      }),
+      inject: [ConfigService],
+    }),
+
     AuthModule,
     CommonModule,
-    KafkaModule,
+    KafkaConsumerModule,
     NotificationModule,
     WorkersModule,
     OutboxModule,

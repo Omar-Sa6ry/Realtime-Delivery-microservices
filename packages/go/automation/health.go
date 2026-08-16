@@ -33,10 +33,10 @@ type SystemStats struct {
 
 // MemoryStats holds details about Go runtime memory allocation in MB
 type MemoryStats struct {
-	HeapAllocMB      uint64 `json:"heapAllocMB"`
-	TotalAllocMB     uint64 `json:"totalAllocMB"`
-	SysMB            uint64 `json:"sysMB"`
-	NumGC            uint32 `json:"numGC"`
+	HeapAllocMB  uint64 `json:"heapAllocMB"`
+	TotalAllocMB uint64 `json:"totalAllocMB"`
+	SysMB        uint64 `json:"sysMB"`
+	NumGC        uint32 `json:"numGC"`
 }
 
 // CheckDatabase checks database connectivity by pinging the *sql.DB connection

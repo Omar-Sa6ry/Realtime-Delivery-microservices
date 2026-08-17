@@ -73,6 +73,14 @@ spec:
                 secretKeyRef:
                   name: secrets
                   key: JWT_SECRET
+            - name: MEDIA_SUBGRAPH_URL
+              value: "http://media-srv:4005/media/graphql"
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification-srv:4004/notification/graphql"
+            - name: USER_SERVICE_URL
+              value: "http://user-srv:4001/user/graphql"
+            - name: REALTIME_SERVICE_URL
+              value: "http://realtime-srv:4006/realtime/graphql"
 ---
 apiVersion: v1
 kind: Service

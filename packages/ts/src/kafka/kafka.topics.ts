@@ -34,3 +34,8 @@ export enum UserKafkaTopics {
   USER_CREATED = 'user.created',
   PASSWORD_RESET_REQUESTED = 'user.password_reset_requested',
 }
+
+export enum RealtimeKafkaTopics {
+  DLQ_DELIVERY = 'realtime.delivery.dlq',
+  DLQ_PAYMENT = 'realtime.payment.dlq',
+}

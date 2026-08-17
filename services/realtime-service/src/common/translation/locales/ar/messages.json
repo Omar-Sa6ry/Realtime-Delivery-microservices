@@ -1,0 +1,16 @@
+{
+  "ws": {
+    "connected": "تم الاتصال بنجاح",
+    "unauthenticated": "مطلوب تسجيل الدخول",
+    "unauthorized": "غير مصرح لك بتنفيذ هذا الإجراء",
+    "invalidMessage": "صيغة الرسالة غير صحيحة",
+    "invalidDeliveryId": "معرّف التوصيلة غير صحيح",
+    "notFound": "التوصيلة غير موجودة",
+    "notParticipant": "لست مشاركاً في هذه التوصيلة",
+    "notAssignedDriver": "لست السائق المعين لهذه التوصيلة",
+    "rateLimited": "طلبات كثيرة جداً، يرجى التهدئة",
+    "staleCommand": "تمت معالجة هذا الأمر مسبقاً",
+    "serviceUnavailable": "الخدمة غير متاحة مؤقتاً، يرجى المحاولة لاحقاً",
+    "internalError": "خطأ داخلي في الخادم"
+  }
+}

@@ -32,6 +32,16 @@ export * from "./nats/events";
 export * from "./nats/nats.module";
 export * from "./nats/nats.service";
 
+// WebSocket (shared protocol definitions)
+export * from "./websocket/realtime-message";
+export * from "./websocket/ws-errors";
+export * from "./websocket/ws-constants";
+export * from "./websocket/ws-adapter";
+export * from "./websocket/ws-guard-chain";
+export * from "./websocket/ws-jwt.strategy";
+export * from "./websocket/ws-auth.guard";
+export * from "./websocket/ws-exception.filter";
+
 // Kafka
 export * from "./kafka/kafka.topics";
 export * from "./kafka/kafka.module";

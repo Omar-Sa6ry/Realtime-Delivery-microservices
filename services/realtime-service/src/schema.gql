@@ -1,0 +1,50 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type BooleanResponse {
+  message: String
+  success: Boolean
+  timeStamp: String
+  statusCode: Int
+  data: Boolean
+}
+
+type ConnectionStatusData {
+  isConnected: Boolean!
+  lastSeen: String
+  connectionCount: Int!
+}
+
+type ConnectionsByRole {
+  customers: Int!
+  drivers: Int!
+  admins: Int!
+}
+
+type ConnectionsCountData {
+  total: Int!
+  byRole: ConnectionsByRole!
+}
+
+type ConnectionStatusResponse {
+  message: String
+  success: Boolean
+  timeStamp: String
+  statusCode: Int
+  data: ConnectionStatusData
+}
+
+type ConnectionsCountResponse {
+  message: String
+  success: Boolean
+  timeStamp: String
+  statusCode: Int
+  data: ConnectionsCountData
+}
+
+type Query {
+  pingForRealtime: BooleanResponse!
+  getConnectionStatus(userId: String!): ConnectionStatusResponse!
+  getActiveConnections: ConnectionsCountResponse!
+}

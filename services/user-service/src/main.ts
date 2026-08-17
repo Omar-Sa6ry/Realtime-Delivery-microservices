@@ -13,6 +13,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { 
     rawBody: true,
     logger,
+    abortOnError: false,
   });
   app.enableCors();
 
@@ -63,6 +64,16 @@ async function bootstrap() {
     logger.error(`Microservice startup error: ${err.message}`),
   );
 }
+
+// Keep the process alive while infrastructure (Redis, DB, NATS) is still
+// starting: library-level errors (e.g. ioredis connection) must not kill the
+// pod — the bootstrap retry loop recovers once dependencies are reachable.
+process.on('uncaughtException', (err) => {
+  console.error('[process] Uncaught exception (continuing):', err?.message ?? err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[process] Unhandled rejection (continuing):', reason);
+});
 
 bootstrap().catch((err) => {
   console.error('Bootstrap failed, retrying in 10s...', err.message);

@@ -1,0 +1,57 @@
+export enum ClientMessageType {
+  PING = "PING",
+  SUBSCRIBE_DELIVERY = "SUBSCRIBE_DELIVERY",
+  UNSUBSCRIBE_DELIVERY = "UNSUBSCRIBE_DELIVERY",
+  LOCATION_UPDATE = "LOCATION_UPDATE",
+  ACCEPT_ASSIGNMENT = "ACCEPT_ASSIGNMENT",
+  REJECT_ASSIGNMENT = "REJECT_ASSIGNMENT",
+  COMPLETE_DELIVERY = "COMPLETE_DELIVERY",
+  ACK = "ACK",
+}
+
+export enum ServerMessageType {
+  CONNECTED = "CONNECTED",
+  SUBSCRIBED = "SUBSCRIBED",
+  UNSUBSCRIBED = "UNSUBSCRIBED",
+  PONG = "PONG",
+  ACK = "ACK",
+  DELIVERY_LOCATION_UPDATED = "DELIVERY_LOCATION_UPDATED",
+  DELIVERY_STATUS_UPDATED = "DELIVERY_STATUS_UPDATED",
+  DRIVER_ASSIGNED = "DRIVER_ASSIGNED",
+  DRIVER_PRESENCE_UPDATED = "DRIVER_PRESENCE_UPDATED",
+  DELIVERY_COMPLETED = "DELIVERY_COMPLETED",
+  DELIVERY_CANCELLED = "DELIVERY_CANCELLED",
+  PAYMENT_STATUS_CHANGED = "PAYMENT_STATUS_CHANGED",
+  NOTIFICATION_RECEIVED = "NOTIFICATION_RECEIVED",
+  LOCATION_UPDATE_REJECTED = "LOCATION_UPDATE_REJECTED",
+  ERROR = "ERROR",
+}
+
+export enum MessagePriority {
+  CRITICAL = "CRITICAL",
+  NORMAL = "NORMAL",
+  HIGH_FREQUENCY_LOSSY = "HIGH_FREQUENCY_LOSSY",
+}
+
+export interface RealtimeMessage<T = unknown> {
+  messageId: string;
+  type: string;
+  version: number;
+  timestamp: string;
+  priority: MessagePriority;
+  data: T;
+}
+
+export interface ClientMessage<T = unknown> {
+  requestId?: string;
+  type: ClientMessageType;
+  data: T;
+}
+
+export interface ServerMessage<T = unknown> {
+  requestId?: string;
+  type: ServerMessageType;
+  data: T;
+}
+
+export const REALTIME_MESSAGE_VERSION = 1;

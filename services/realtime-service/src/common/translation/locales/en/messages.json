@@ -1,0 +1,16 @@
+{
+  "ws": {
+    "connected": "Connected successfully",
+    "unauthenticated": "Authentication required",
+    "unauthorized": "You are not authorized to perform this action",
+    "invalidMessage": "Invalid message format",
+    "invalidDeliveryId": "Invalid delivery identifier",
+    "notFound": "Delivery not found",
+    "notParticipant": "You are not a participant of this delivery",
+    "notAssignedDriver": "You are not the assigned driver for this delivery",
+    "rateLimited": "Too many requests, please slow down",
+    "staleCommand": "This command has already been processed",
+    "serviceUnavailable": "Service temporarily unavailable, please retry",
+    "internalError": "Internal server error"
+  }
+}

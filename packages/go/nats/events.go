@@ -59,3 +59,20 @@ const (
 const (
 	NotificationSubjectUser = "notification.user"
 )
+
+// RealtimeNatsSubjects defines the Core NATS subjects used by the realtime domain.
+const (
+	RealtimeLocationDriverUpdated  = "realtime.location.driver.updated"
+	RealtimeDeliveryLocationUpd    = "realtime.delivery.location.updated"
+	RealtimeDeliveryStatusUpdated  = "realtime.delivery.status.updated"
+	RealtimeDriverAssignmentUpd    = "realtime.driver.assignment.updated"
+	RealtimeDriverPresenceUpdated  = "realtime.driver.presence.updated"
+	RealtimeCommandDriver          = "realtime.command.driver"
+	RealtimeCommandDelivery        = "realtime.command.delivery"
+)
+
+// RealtimeKafkaTopics defines the Kafka DLQ topics used by the realtime domain.
+const (
+	RealtimeTopicDLQDelivery = "realtime.delivery.dlq"
+	RealtimeTopicDLQPayment  = "realtime.payment.dlq"
+)

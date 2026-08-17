@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package delivery;
+
+service DeliveryService {
+  rpc IsParticipant (ParticipantRequest) returns (ParticipantResponse);
+}
+
+message ParticipantRequest {
+  string userId = 1;
+  string deliveryId = 2;
+}
+
+message ParticipantResponse {
+  bool isParticipant = 1;
+}

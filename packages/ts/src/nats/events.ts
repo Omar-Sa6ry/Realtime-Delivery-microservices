@@ -17,3 +17,14 @@ export { DeliveryKafkaTopics, PaymentKafkaTopics } from "../kafka/kafka.topics";
 export enum NotificationNatsSubjects {
   NOTIFICATION_USER = 'notification.user', // + .{userId}
 }
+
+export enum RealtimeNatsSubjects {
+  // Fan-out subjects (Realtime node → other nodes)
+  LOCATION_DRIVER_UPDATED = 'realtime.location.driver.updated',
+  DELIVERY_LOCATION_UPDATED = 'realtime.delivery.location.updated',
+  DELIVERY_STATUS_UPDATED = 'realtime.delivery.status.updated',
+  DRIVER_ASSIGNMENT_UPDATED = 'realtime.driver.assignment.updated',
+  DRIVER_PRESENCE_UPDATED = 'realtime.driver.presence.updated',
+  COMMAND_DRIVER = 'realtime.command.driver',
+  COMMAND_DELIVERY = 'realtime.command.delivery',
+}

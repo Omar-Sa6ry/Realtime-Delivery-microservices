@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package driver;
+
+service DriverService {
+  rpc IsAssignedDriver (DriverAssignmentRequest) returns (DriverAssignmentResponse);
+}
+
+message DriverAssignmentRequest {
+  string driverId = 1;
+  string deliveryId = 2;
+}
+
+message DriverAssignmentResponse {
+  bool isAssigned = 1;
+}

@@ -13,7 +13,10 @@ const livenessServer = http.createServer((_req, res) => {
 });
 
 livenessServer.on('error', (err) =>
-  console.error('[liveness] Server error:', (err as NodeJS.ErrnoException).message),
+  console.error(
+    '[liveness] Server error:',
+    (err as NodeJS.ErrnoException).message,
+  ),
 );
 
 livenessServer.listen(LIVENESS_PORT, '0.0.0.0', () =>
@@ -49,20 +52,20 @@ async function bootstrap() {
 
   const port = process.env.PORT_GATEWAY ?? 4000;
   await app.listen(port, '0.0.0.0');
-  console.log(
-    `API Gateway is running on: https://delivary.test/graphql or http://localhost:${port}/graphql`,
-  );
 
-  Promise.all([
+  await Promise.all([
+    waitForService('http://realtime-srv:4006/realtime/graphql'),
+    waitForService('http://notification-srv:4004/notification/graphql'),
     waitForService('http://media-srv:4005/media/graphql'),
     waitForService('http://user-srv:4001/user/graphql'),
-    waitForService('http://notification-srv:4004/notification/graphql'),
-    waitForService('http://realtime-srv:4006/realtime/graphql'),
   ])
-    .then(() => logger.log('All subgraphs are reachable.'))
-    .catch((err: Error) =>
-      logger.warn(`Subgraph wait error: ${err.message}`),
-    );
+    .then(() => {
+      logger.log('All subgraphs are reachable.');
+      logger.log(
+        `API Gateway is running on: https://delivary.test/graphql or http://localhost:${port}/graphql`,
+      );
+    })
+    .catch((err: Error) => logger.warn(`Subgraph wait error: ${err.message}`));
 }
 
 function runBootstrap() {
@@ -73,4 +76,3 @@ function runBootstrap() {
 }
 
 runBootstrap();
-

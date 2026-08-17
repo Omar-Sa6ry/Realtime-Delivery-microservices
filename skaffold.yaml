@@ -25,6 +25,8 @@ build:
             dest: /usr/src/app/services/notification-service/src
           - src: "protos/**/*.proto"
             dest: /usr/src/app/protos
+          - src: 'packages/ts/dist/**/*.js'
+            dest: /usr/src/app/packages/ts/dist
 
     - image: delivery/realtime
       context: .
@@ -36,6 +38,8 @@ build:
             dest: /usr/src/app/services/realtime-service/src
           - src: "protos/**/*.proto"
             dest: /usr/src/app/protos
+          - src: 'packages/ts/dist/**/*.js'
+            dest: /usr/src/app/packages/ts/dist
 
     - image: delivery/media
       context: .
@@ -65,6 +69,8 @@ build:
             dest: /usr/src/app/services/api-gateway/src
           - src: "protos/**/*.proto"
             dest: /usr/src/app/protos
+          - src: 'packages/ts/dist/**/*.js'
+            dest: /usr/src/app/packages/ts/dist
 
 
 portForward:

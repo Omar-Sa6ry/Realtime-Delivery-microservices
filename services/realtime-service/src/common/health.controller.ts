@@ -2,9 +2,9 @@ import { Controller, Get, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { HealthService, MetricsService } from '@delivery/common';
 import { RedisService } from '@bts-soft/cache';
-import { RealtimeNatsService } from '../modules/nats/nats.service';
-import { KafkaConsumer } from '../modules/kafka/kafka.consumer';
-import { ConnectionService } from '../modules/connection/connection.service';
+import { RealtimeNatsService } from '../modules/infrastructure/nats/nats.service';
+import { KafkaConsumer } from '../modules/infrastructure/kafka/kafka.consumer';
+import { ConnectionService } from '../modules/gateway/connection/connection.service';
 
 @Controller('realtime')
 export class HealthController {

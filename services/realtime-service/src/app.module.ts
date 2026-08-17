@@ -14,20 +14,19 @@ import {
   HttpExceptionFilter,
 } from '@bts-soft/core';
 import { GraphqlResponseInterceptor } from './common/interceptors/graphql-response.interceptor';
-import { WebSocketModule } from './modules/websocket/websocket.module';
-import { ConnectionModule } from './modules/connection/connection.module';
-import { SubscriptionModule } from './modules/subscription/subscription.module';
-import { PresenceModule } from './modules/presence/presence.module';
-import { LocationModule } from './modules/location/location.module';
-import { HeartbeatModule } from './modules/heartbeat/heartbeat.module';
-import { RateLimitModule } from './modules/rate-limit/rate-limit.module';
-import { AuthorizationModule } from './modules/authorization/authorization.module';
-import { EventsModule } from './modules/events/events.module';
-import { NatsModule } from './modules/nats/nats.module';
-import { KafkaConsumerModule } from './modules/kafka/kafka.module';
-import { GrpcModule } from './modules/grpc/grpc.module';
-import { CommandModule } from './modules/command/command.module';
-import { AuthModule } from './modules/auth/auth.module';
+import { WebSocketModule } from './modules/gateway/websocket/websocket.module';
+import { ConnectionModule } from './modules/gateway/connection/connection.module';
+import { SubscriptionModule } from './modules/features/subscription/subscription.module';
+import { PresenceModule } from './modules/features/presence/presence.module';
+import { LocationModule } from './modules/features/location/location.module';
+import { HeartbeatModule } from './modules/gateway/heartbeat/heartbeat.module';
+import { AuthorizationModule } from './modules/gateway/authorization/authorization.module';
+import { EventsModule } from './modules/features/events/events.module';
+import { NatsModule } from './modules/infrastructure/nats/nats.module';
+import { KafkaConsumerModule } from './modules/infrastructure/kafka/kafka.module';
+import { GrpcModule } from './modules/infrastructure/grpc/grpc.module';
+import { CommandModule } from './modules/features/command/command.module';
+import { AuthModule } from './modules/gateway/auth/auth.module';
 import {
   LoggingModule,
   MetricsModule,
@@ -35,11 +34,13 @@ import {
   MetricsInterceptor,
 } from '@delivery/common';
 import { CommonModule } from './common/common.module';
+import realtimeConfig from './common/config/realtime.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      load: [realtimeConfig],
       envFilePath: ['../../.env'],
     }),
 
@@ -88,7 +89,6 @@ import { CommonModule } from './common/common.module';
     PresenceModule,
     LocationModule,
     HeartbeatModule,
-    RateLimitModule,
     AuthorizationModule,
     CommandModule,
     WebSocketModule,

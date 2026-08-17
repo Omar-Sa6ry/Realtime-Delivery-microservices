@@ -4,8 +4,8 @@ import { HealthService, MetricsModule } from '@delivery/common';
 import { TranslationModule } from './translation/translation.module';
 import { HealthController } from './health.controller';
 import { RealtimeMetricsService } from './metrics/realtime-metrics.service';
-import { NatsModule } from '../modules/nats/nats.module';
-import { KafkaConsumerModule } from '../modules/kafka/kafka.module';
+import { NatsModule } from '../modules/infrastructure/nats/nats.module';
+import { KafkaConsumerModule } from '../modules/infrastructure/kafka/kafka.module';
 
 @Global()
 @Module({

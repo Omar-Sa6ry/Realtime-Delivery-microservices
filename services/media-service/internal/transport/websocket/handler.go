@@ -1,13 +1,12 @@
 package websocket
 
 import (
-	"encoding/base64"
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
+	sharedws "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/websocket"
 	"github.com/gorilla/websocket"
 )
 
@@ -81,72 +80,14 @@ func NewServer(addr string, hub *Hub) *http.Server {
 
 // extractUserID extracts the user ID from the JWT in the Authorization header or token query param.
 func extractUserID(r *http.Request) (string, bool) {
-	token := ""
-
-	if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") {
-		token = strings.TrimPrefix(auth, "Bearer ")
-	}
-	if token == "" {
-		token = r.URL.Query().Get("token")
-	}
+	token := sharedws.ExtractToken(r)
 	if token == "" {
 		return "", false
 	}
 
-	userID := subFromJWT(token)
+	userID := sharedws.SubFromJWT(token)
 	if userID == "" {
 		return "", false
 	}
 	return userID, true
-}
-
-// subFromJWT extracts the `sub` or `userId` claim from a JWT without signature verification.
-// Full verification is performed by the API Gateway before traffic reaches this service.
-func subFromJWT(token string) string {
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		return ""
-	}
-
-	// JWT payload is base64url-encoded without padding.
-	payload := parts[1]
-	switch len(payload) % 4 {
-	case 2:
-		payload += "=="
-	case 3:
-		payload += "="
-	}
-
-	decoded, err := base64.URLEncoding.DecodeString(
-		strings.NewReplacer("-", "+", "_", "/").Replace(payload),
-	)
-	if err != nil {
-		decoded, err = base64.StdEncoding.DecodeString(payload)
-		if err != nil {
-			return ""
-		}
-	}
-
-	s := string(decoded)
-	for _, field := range []string{"sub", "userId", "user_id"} {
-		if v := jsonStringField(s, field); v != "" {
-			return v
-		}
-	}
-	return ""
-}
-
-// jsonStringField extracts a string JSON field without a full unmarshal.
-func jsonStringField(s, field string) string {
-	needle := `"` + field + `":"`
-	idx := strings.Index(s, needle)
-	if idx < 0 {
-		return ""
-	}
-	start := idx + len(needle)
-	end := strings.Index(s[start:], `"`)
-	if end < 0 {
-		return ""
-	}
-	return s[start : start+end]
 }

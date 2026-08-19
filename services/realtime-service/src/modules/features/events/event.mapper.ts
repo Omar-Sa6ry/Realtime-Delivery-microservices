@@ -24,11 +24,6 @@ const PRIORITY_FALLBACK: Record<ServerMessageType, MessagePriority> = {
   [ServerMessageType.ERROR]: MessagePriority.CRITICAL,
 };
 
-/**
- * Factory-pattern mapper: converts internal domain events
- * (NATS / Kafka) into client-facing events. Internal infrastructure
- * fields (eventId, producer, traceId, ...) are NEVER exposed.
- */
 @Injectable()
 export class EventMapper {
   private readonly mappings: Record<

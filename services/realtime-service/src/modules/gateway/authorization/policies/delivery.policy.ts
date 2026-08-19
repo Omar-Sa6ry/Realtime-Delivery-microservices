@@ -3,10 +3,7 @@ import { GrpcClient } from '../../../infrastructure/grpc/grpc.client';
 import { RedisService } from '@bts-soft/cache';
 import { redisKeys, TTL } from '../../../../common/common-types/constants';
 
-/**
- * Delivery authorization policy — resolves participant status through the
- * delivery domain service over gRPC (circuit-broken + cached 30s).
- */
+
 @Injectable()
 export class DeliveryPolicy {
   private readonly logger = new Logger(DeliveryPolicy.name);

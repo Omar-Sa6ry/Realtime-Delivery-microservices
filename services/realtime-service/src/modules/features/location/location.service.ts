@@ -81,9 +81,20 @@ export class LocationService {
     }
 
     // 4. Store latest-value-wins snapshot
+    const driverId = socket.data.userId;
+
+    await this.redis
+      .geoAdd(
+        redisKeys.driverLocationsIndex(),
+        result.lng!,
+        result.lat!,
+        driverId,
+      )
+      .catch((err) => this.logger.warn(`Failed to update geo index: ${err.message}`));
+
     await this.redis
       .set(
-        redisKeys.driverLocation(socket.data.userId),
+        redisKeys.driverLocation(driverId),
         {
           lat: result.lat,
           lng: result.lng,

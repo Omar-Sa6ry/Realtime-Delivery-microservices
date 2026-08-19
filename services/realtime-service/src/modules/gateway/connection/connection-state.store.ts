@@ -89,4 +89,12 @@ export class ConnectionStateStore {
       return null;
     }
   }
+
+  async removeDriverGeoLocation(driverId: string): Promise<void> {
+    try {
+      await this.redis.geoRemove(redisKeys.driverLocationsIndex(), driverId);
+    } catch (err) {
+      this.logger.error(`Failed to remove driver geo location for ${driverId}: ${err.message}`);
+    }
+  }
 }

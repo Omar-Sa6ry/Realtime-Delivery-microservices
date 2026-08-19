@@ -5,9 +5,6 @@ import {
 } from '@delivery/common';
 import { RealtimeNatsSubjects } from '@delivery/common';
 
-/**
- * Internal domain event envelope — the canonical shape carried on NATS and Kafka.
- */
 export interface RealtimeEventEnvelope<T = unknown> {
   eventId: string;
   eventType: string;
@@ -16,16 +13,11 @@ export interface RealtimeEventEnvelope<T = unknown> {
   payload: T;
 }
 
-/**
- * Client-facing event emitted to subscribers.
- */
 export interface ClientEvent {
   type: ServerMessageType;
   priority: MessagePriority;
   data: Record<string, unknown>;
 }
-
-/** Delivery domain event payloads (mirrors delivery-service Kafka events). */
 
 export interface DeliveryCreatedPayload {
   deliveryId: string;
@@ -87,17 +79,18 @@ export type DomainEventPayload =
   | DriverPresencePayload
   | Record<string, unknown>;
 
-export const eventToNatsSubject: Partial<Record<string, RealtimeNatsSubjects>> = {
-  'delivery.created': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
-  'delivery.driver.assigned': RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
-  'delivery.driver.accepted': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
-  'delivery.picked_up': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
-  'delivery.in_transit': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
-  'delivery.completed': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
-  'delivery.cancelled': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
-  'payment.completed': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
-  'payment.failed': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
-};
+export const eventToNatsSubject: Partial<Record<string, RealtimeNatsSubjects>> =
+  {
+    'delivery.created': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
+    'delivery.driver.assigned': RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
+    'delivery.driver.accepted': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
+    'delivery.picked_up': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
+    'delivery.in_transit': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
+    'delivery.completed': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
+    'delivery.cancelled': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
+    'payment.completed': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
+    'payment.failed': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
+  };
 
 export const eventPriorityByType: Partial<Record<string, Priority>> = {
   'delivery.driver.assigned': Priority.CRITICAL,

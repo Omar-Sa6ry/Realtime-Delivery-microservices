@@ -17,12 +17,6 @@ interface ServiceClient {
   service: any; // grpc service definition
 }
 
-/**
- * gRPC client wrapper for the Delivery / Driver domain services.
- * Implements the Circuit Breaker pattern: failures trip the circuit open
- * for a cool-down window; a single probe in HALF_OPEN decides recovery.
- * All calls are fail-closed (deny) while the circuit is open.
- */
 @Injectable()
 export class GrpcClient {
   private readonly logger = new Logger(GrpcClient.name);
@@ -46,7 +40,10 @@ export class GrpcClient {
     this.driverServiceUrl = cfg.authzDriverServiceUrl;
   }
 
-  async callDelivery(method: string, args: Record<string, unknown>): Promise<any> {
+  async callDelivery(
+    method: string,
+    args: Record<string, unknown>,
+  ): Promise<any> {
     if (!this.deliveryService) {
       this.logger.warn('Delivery gRPC client not configured');
       return null;
@@ -63,7 +60,10 @@ export class GrpcClient {
     return this.invoke(this.delivery, method, args, 'delivery');
   }
 
-  async callDriver(method: string, args: Record<string, unknown>): Promise<any> {
+  async callDriver(
+    method: string,
+    args: Record<string, unknown>,
+  ): Promise<any> {
     if (!this.driverServiceUrl) {
       this.logger.warn('Driver gRPC client not configured');
       return null;
@@ -90,9 +90,14 @@ export class GrpcClient {
 
   // ===== internals =====
 
-  private canAttempt(state: CircuitState, name: 'delivery' | 'driver'): boolean {
-    if (state === CircuitState.CLOSED || state === CircuitState.HALF_OPEN) return true;
-    const openedAt = name === 'delivery' ? this.deliveryOpenedAt : this.driverOpenedAt;
+  private canAttempt(
+    state: CircuitState,
+    name: 'delivery' | 'driver',
+  ): boolean {
+    if (state === CircuitState.CLOSED || state === CircuitState.HALF_OPEN)
+      return true;
+    const openedAt =
+      name === 'delivery' ? this.deliveryOpenedAt : this.driverOpenedAt;
     if (Date.now() - openedAt > TIMINGS.CIRCUIT_RESET_MS) {
       this.logger.log(`Circuit breaker ${name}: half-open after cool-down`);
       this.setState(name, CircuitState.HALF_OPEN);
@@ -115,16 +120,23 @@ export class GrpcClient {
         return;
       }
       const deadline = new Date(Date.now() + TIMINGS.GRPC_TIMEOUT_MS);
-      fn.call(svc.client, args, { deadline }, (err: grpc.ServiceError | null, resp: any) => {
-        if (err) {
-          this.onError(name);
-          this.logger.warn(`gRPC ${name}.${method} error: ${err.code} ${err.details}`);
-          resolve(null);
-          return;
-        }
-        this.onSuccess(name);
-        resolve(resp);
-      });
+      fn.call(
+        svc.client,
+        args,
+        { deadline },
+        (err: grpc.ServiceError | null, resp: any) => {
+          if (err) {
+            this.onError(name);
+            this.logger.warn(
+              `gRPC ${name}.${method} error: ${err.code} ${err.details}`,
+            );
+            resolve(null);
+            return;
+          }
+          this.onSuccess(name);
+          resolve(resp);
+        },
+      );
     });
   }
 
@@ -138,10 +150,13 @@ export class GrpcClient {
   }
 
   private onError(name: 'delivery' | 'driver'): void {
-    const failures = name === 'delivery' ? ++this.deliveryFailures : ++this.driverFailures;
+    const failures =
+      name === 'delivery' ? ++this.deliveryFailures : ++this.driverFailures;
     if (failures >= TIMINGS.CIRCUIT_FAILURE_THRESHOLD) {
       this.setState(name, CircuitState.OPEN);
-      this.logger.warn(`Circuit breaker ${name}: OPEN after ${failures} failures`);
+      this.logger.warn(
+        `Circuit breaker ${name}: OPEN after ${failures} failures`,
+      );
     }
   }
 

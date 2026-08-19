@@ -25,7 +25,6 @@ export const buildServerMessage = <T>(
   priority,
 });
 
-/** Per-message-type shape validation (used by the guard chain). */
 export const VALIDATION: Partial<
   Record<ClientMessageType, (data: any) => void>
 > = {
@@ -57,7 +56,6 @@ export const VALIDATION: Partial<
   },
 };
 
-/** Rate-limit actions applied per message type. */
 export const RATE_ACTIONS: Partial<
   Record<ClientMessageType, 'subscribe' | 'command'>
 > = {

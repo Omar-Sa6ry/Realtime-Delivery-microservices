@@ -61,8 +61,6 @@ export class RealtimeNatsService implements OnModuleInit, OnModuleDestroy {
   }
 
   getLocalConnectionCount(): number {
-    // Provided by the NATS server on a connected client is not trivial;
-    // this returns the client's current cached connections (0 when not connected).
     return this.isConnected() ? 1 : 0;
   }
 

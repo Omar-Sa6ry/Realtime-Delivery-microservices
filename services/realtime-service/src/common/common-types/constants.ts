@@ -1,14 +1,14 @@
 import { WS_DEFAULTS } from '@delivery/common';
 
-// ===== Redis key builders (schema matches the system architecture spec) =====
-
 export const redisKeys = {
   connection: (socketId: string) => `ws:connection:${socketId}`,
   userSockets: (userId: string) => `ws:user:${userId}:sockets`,
   roleSockets: (role: string) => `ws:role:${role}:sockets`,
   nodeConnections: (nodeId: string) => `ws:node:${nodeId}:connections`,
-  deliverySubscribers: (deliveryId: string) => `ws:delivery:${deliveryId}:subscribers`,
-  socketSubscriptions: (socketId: string) => `ws:socket:${socketId}:subscriptions`,
+  deliverySubscribers: (deliveryId: string) =>
+    `ws:delivery:${deliveryId}:subscribers`,
+  socketSubscriptions: (socketId: string) =>
+    `ws:socket:${socketId}:subscriptions`,
   presence: (userId: string) => `ws:presence:${userId}`,
   rate: (userId: string, action: string) => `ws:rate:${userId}:${action}`,
   locationBucket: (driverId: string) => `ws:rate:${driverId}:location`,
@@ -17,6 +17,7 @@ export const redisKeys = {
   authzCache: (userId: string, deliveryId: string) =>
     `realtime:authz:${userId}:${deliveryId}`,
   driverLocation: (driverId: string) => `driver:location:${driverId}`,
+  driverLocationsIndex: () => `drivers:locations`,
 } as const;
 
 // ===== TTLs (seconds) =====
@@ -31,8 +32,6 @@ export const TTL = {
   AUTHZ_CACHE: 30,
 } as const;
 
-// ===== Timeouts / limits =====
-
 export const TIMINGS = {
   STALE_CONNECTION_MS: WS_DEFAULTS.HEARTBEAT_TIMEOUT_MS,
   SLOW_CONSUMER_THRESHOLD_MS: WS_DEFAULTS.SLOW_CONSUMER_THRESHOLD_MS,
@@ -44,8 +43,6 @@ export const TIMINGS = {
   STALE_CRON_MS: 20_000,
   LOCATION_MAX_AGE_MS: 60_000,
 } as const;
-
-// ===== Rate limits =====
 
 export const RATE_LIMITS = {
   CONNECT_PER_MINUTE: 10,
@@ -59,8 +56,11 @@ export const RATE_LIMITS = {
 
 import { MessagePriority, ServerMessageType } from '@delivery/common';
 
-export const SERVER_MESSAGE_PRIORITY: Partial<Record<ServerMessageType, MessagePriority>> = {
-  [ServerMessageType.DELIVERY_LOCATION_UPDATED]: MessagePriority.HIGH_FREQUENCY_LOSSY,
+export const SERVER_MESSAGE_PRIORITY: Partial<
+  Record<ServerMessageType, MessagePriority>
+> = {
+  [ServerMessageType.DELIVERY_LOCATION_UPDATED]:
+    MessagePriority.HIGH_FREQUENCY_LOSSY,
   [ServerMessageType.DRIVER_ASSIGNED]: MessagePriority.CRITICAL,
   [ServerMessageType.DELIVERY_COMPLETED]: MessagePriority.CRITICAL,
   [ServerMessageType.DELIVERY_CANCELLED]: MessagePriority.CRITICAL,

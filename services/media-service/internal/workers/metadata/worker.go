@@ -67,7 +67,6 @@ type Worker struct {
 	versionRepo ports.VersionRepository
 	storage     ports.ObjectStorage
 	publisher   ports.EventPublisher
-	notifier    ports.Notifier
 }
 
 // NewWorker creates a new metadata extraction worker.
@@ -76,14 +75,12 @@ func NewWorker(
 	versionRepo ports.VersionRepository,
 	storage ports.ObjectStorage,
 	publisher ports.EventPublisher,
-	notifier ports.Notifier,
 ) *Worker {
 	return &Worker{
 		mediaRepo:   mediaRepo,
 		versionRepo: versionRepo,
 		storage:     storage,
 		publisher:   publisher,
-		notifier:    notifier,
 	}
 }
 
@@ -138,15 +135,6 @@ func (w *Worker) extract(ctx context.Context, payload scanCompletedPayload, trac
 		DurationMS:  meta.DurationMS,
 		Checksum:    meta.Format,
 		CreatedAt:   time.Now().UTC(),
-	})
-
-	// Notify client
-	_ = w.notifier.Notify(ctx, payload.UserID, ports.MediaEvent{
-		EventType: ports.EventProcessingProgress,
-		MediaID:   payload.MediaID,
-		Progress:  100,
-		TraceID:   traceID,
-		Timestamp: time.Now().UTC(),
 	})
 
 	// Publish processing.completed

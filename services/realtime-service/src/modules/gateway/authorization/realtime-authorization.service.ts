@@ -4,15 +4,9 @@ import { WsErrorCode, WsException } from '@delivery/common';
 import { DeliveryPolicy } from './policies/delivery.policy';
 import { DriverPolicy } from './policies/driver.policy';
 
-export type WsCommandType = 'ACCEPT_ASSIGNMENT' | 'REJECT_ASSIGNMENT' | 'COMPLETE_DELIVERY';
+export type WsCommandType =
+  'ACCEPT_ASSIGNMENT' | 'REJECT_ASSIGNMENT' | 'COMPLETE_DELIVERY';
 
-/**
- * WebSocket authorization facade.
- *  - ADMIN bypasses policy checks
- *  - USER must be a participant (delivery policy)
- *  - DRIVER must be the assigned driver (driver policy)
- * Positive decisions are cached in Redis by the policies (30s TTL).
- */
 @Injectable()
 export class RealtimeAuthorizationService {
   private readonly logger = new Logger(RealtimeAuthorizationService.name);
@@ -22,7 +16,10 @@ export class RealtimeAuthorizationService {
     private readonly driverPolicy: DriverPolicy,
   ) {}
 
-  async canSubscribeToDelivery(user: IJwtPayload, deliveryId: string): Promise<boolean> {
+  async canSubscribeToDelivery(
+    user: IJwtPayload,
+    deliveryId: string,
+  ): Promise<boolean> {
     if (user.role === Role.ADMIN) return true;
     const userId = this.uid(user);
     if (!userId) return false;
@@ -32,7 +29,10 @@ export class RealtimeAuthorizationService {
     return this.deliveryPolicy.isParticipant(userId, deliveryId);
   }
 
-  async canSendLocationUpdate(driverId: string, deliveryId: string): Promise<boolean> {
+  async canSendLocationUpdate(
+    driverId: string,
+    deliveryId: string,
+  ): Promise<boolean> {
     return this.driverPolicy.isAssignedDriver(driverId, deliveryId);
   }
 
@@ -56,8 +56,10 @@ export class RealtimeAuthorizationService {
     return user.userId || user.sub || user.id || '';
   }
 
-  /** Throws a translated WsException when the user cannot subscribe. */
-  async assertCanSubscribe(user: IJwtPayload, deliveryId: string): Promise<void> {
+  async assertCanSubscribe(
+    user: IJwtPayload,
+    deliveryId: string,
+  ): Promise<void> {
     if (!(await this.canSubscribeToDelivery(user, deliveryId))) {
       throw new WsException(WsErrorCode.FORBIDDEN);
     }

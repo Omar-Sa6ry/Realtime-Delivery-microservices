@@ -56,7 +56,6 @@ type Worker struct {
 	versionRepo ports.VersionRepository
 	storage     ports.ObjectStorage
 	publisher   ports.EventPublisher
-	notifier    ports.Notifier
 }
 
 // NewWorker creates a new compression worker.
@@ -65,14 +64,12 @@ func NewWorker(
 	versionRepo ports.VersionRepository,
 	storage ports.ObjectStorage,
 	publisher ports.EventPublisher,
-	notifier ports.Notifier,
 ) *Worker {
 	return &Worker{
 		mediaRepo:   mediaRepo,
 		versionRepo: versionRepo,
 		storage:     storage,
 		publisher:   publisher,
-		notifier:    notifier,
 	}
 }
 
@@ -102,16 +99,6 @@ func (w *Worker) compress(ctx context.Context, payload scanCompletedPayload, tra
 	start := time.Now()
 	slog.Info("Compression worker: starting", "mediaId", payload.MediaID, "contentType", payload.ContentType)
 
-	// Notify client: compression started
-	_ = w.notifier.Notify(ctx, payload.UserID, ports.MediaEvent{
-		EventType: ports.EventProcessingStarted,
-		MediaID:   payload.MediaID,
-		Status:    string(domain.MediaStatusProcessing),
-		Progress:  5,
-		TraceID:   traceID,
-		Timestamp: time.Now().UTC(),
-	})
-
 	// Download original from S3
 	body, err := w.storage.GetObject(ctx, payload.ObjectKey)
 	if err != nil {
@@ -123,14 +110,6 @@ func (w *Worker) compress(ctx context.Context, payload scanCompletedPayload, tra
 	if err != nil {
 		return fmt.Errorf("read original bytes: %w", err)
 	}
-
-	_ = w.notifier.Notify(ctx, payload.UserID, ports.MediaEvent{
-		EventType: ports.EventProcessingProgress,
-		MediaID:   payload.MediaID,
-		Progress:  40,
-		TraceID:   traceID,
-		Timestamp: time.Now().UTC(),
-	})
 
 	// Gzip compress
 	var buf bytes.Buffer
@@ -189,15 +168,6 @@ func (w *Worker) compress(ctx context.Context, payload scanCompletedPayload, tra
 			"newSize":     len(compressed),
 		})
 	_ = w.publisher.Publish(ctx, kafkaadapter.TopicProcessingCompleted, payload.MediaID, eventData, traceID)
-
-	// Notify client: compression done
-	_ = w.notifier.Notify(ctx, payload.UserID, ports.MediaEvent{
-		EventType: ports.EventProcessingCompleted,
-		MediaID:   payload.MediaID,
-		Progress:  100,
-		TraceID:   traceID,
-		Timestamp: time.Now().UTC(),
-	})
 
 	slog.Info("Compression worker: done",
 		"mediaId", payload.MediaID,

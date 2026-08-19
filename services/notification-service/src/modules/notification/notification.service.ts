@@ -17,10 +17,6 @@ export interface CreateNotificationParams {
   data?: Record<string, unknown>;
   priority?: NotificationPriority;
   scheduledAt?: Date;
-  /**
-   * Channels that must be delivered regardless of user preferences.
-   * Security/audit notifications set this so a record is always created.
-   */
   requiredChannels?: NotificationChannel[];
 }
 

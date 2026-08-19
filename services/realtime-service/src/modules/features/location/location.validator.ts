@@ -5,13 +5,6 @@ import { TIMINGS } from '../../../common/common-types/constants';
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/**
- * Validates LOCATION_UPDATE payloads:
- *  - lat: -90..90, lng: -180..180
- *  - finite numbers (no NaN / Infinity)
- *  - timestamp: valid ISO, not stale (> 60s) and not in the future (> 5s)
- *  - deliveryId: valid UUID
- */
 @Injectable()
 export class LocationValidator {
   validate(payload: LocationUpdatePayload): LocationUpdateResult {
@@ -24,16 +17,29 @@ export class LocationValidator {
 
     const lat = payload?.lat;
     const lng = payload?.lng;
-    if (typeof lat !== 'number' || !Number.isFinite(lat) || lat < -90 || lat > 90) {
+    if (
+      typeof lat !== 'number' ||
+      !Number.isFinite(lat) ||
+      lat < -90 ||
+      lat > 90
+    ) {
       errors.push('lat must be a finite number between -90 and 90');
     }
-    if (typeof lng !== 'number' || !Number.isFinite(lng) || lng < -180 || lng > 180) {
+    if (
+      typeof lng !== 'number' ||
+      !Number.isFinite(lng) ||
+      lng < -180 ||
+      lng > 180
+    ) {
       errors.push('lng must be a finite number between -180 and 180');
     }
 
     for (const field of ['accuracy', 'speed', 'heading'] as const) {
       const value = payload?.[field];
-      if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value < 0)) {
+      if (
+        value !== undefined &&
+        (typeof value !== 'number' || !Number.isFinite(value) || value < 0)
+      ) {
         errors.push(`${field} must be a non-negative finite number`);
       }
     }

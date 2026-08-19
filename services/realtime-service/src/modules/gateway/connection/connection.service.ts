@@ -18,11 +18,11 @@ export class ConnectionService {
     private readonly metrics: RealtimeMetricsService,
   ) {}
 
-  /**
-   * Register a new socket: attach identity, keep in the local Map,
-   * persist metadata in Redis and flip presence to ONLINE.
-   */
-  async register(socket: WebSocket, nodeId: string, payload: IJwtPayload): Promise<ConnectionContext> {
+  async register(
+    socket: WebSocket,
+    nodeId: string,
+    payload: IJwtPayload,
+  ): Promise<ConnectionContext> {
     const context = this.registry.buildContext(nodeId, payload);
     this.registry.attach(socket, context);
     await this.stateStore.register(context);
@@ -32,12 +32,20 @@ export class ConnectionService {
     return context;
   }
 
-  /** Unregister a socket on disconnect: local + Redis cleanup + OFFLINE presence. */
   async unregister(socket: WebSocket & { data: SocketData }): Promise<void> {
     const ctx = this.toContext(socket);
     if (ctx) {
       await this.stateStore.unregister(ctx);
-      await this.presence.setOffline(ctx.userId);
+
+      const remainingSockets = await this.stateStore.userConnectionCount(
+        ctx.userId,
+      );
+      if (remainingSockets === 0) {
+        await this.presence.setOffline(ctx.userId);
+        if (ctx.userRole === Role.DRIVER) {
+          await this.stateStore.removeDriverGeoLocation(ctx.userId);
+        }
+      }
     }
     this.registry.remove(socket.data.socketId);
     this.metrics.connectionCounter.inc({ result: 'closed' });
@@ -56,11 +64,16 @@ export class ConnectionService {
     return this.getLocalSockets().filter((s) => s.data.userRole === role);
   }
 
+  getLocalSocketsByUser(
+    userId: string,
+  ): Array<WebSocket & { data: SocketData }> {
+    return this.getLocalSockets().filter((s) => s.data.userId === userId);
+  }
+
   getLocalSocketCount(): number {
     return this.registry.size;
   }
 
-  /** GraphQL federation query: connection status for a user (distributed via Redis). */
   async getUserConnectionStatus(userId: string) {
     const [connectionCount, presence] = await Promise.all([
       this.stateStore.userConnectionCount(userId),
@@ -68,12 +81,13 @@ export class ConnectionService {
     ]);
     return {
       isConnected: connectionCount > 0,
-      lastSeen: presence?.lastSeen ? new Date(presence.lastSeen).toISOString() : null,
+      lastSeen: presence?.lastSeen
+        ? new Date(presence.lastSeen).toISOString()
+        : null,
       connectionCount,
     };
   }
 
-  /** GraphQL federation query: active connection totals by role. */
   async getActiveConnectionCounts() {
     const byRole = await this.stateStore.userConnectionCountsByRole();
     return {
@@ -86,7 +100,9 @@ export class ConnectionService {
     };
   }
 
-  private toContext(socket: WebSocket & { data: SocketData }): ConnectionContext | null {
+  private toContext(
+    socket: WebSocket & { data: SocketData },
+  ): ConnectionContext | null {
     const d = socket.data;
     return {
       socketId: d.socketId,

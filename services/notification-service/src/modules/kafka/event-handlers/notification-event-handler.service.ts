@@ -15,10 +15,6 @@ import { IEventHandler, KafkaEventPayload } from './event-handler.interface';
 interface HandlerMapping {
   type: NotificationType;
   priority?: NotificationPriority;
-  /**
-   * Channels that MUST be delivered regardless of user preferences.
-   * Used for security/audit events that must always leave a record.
-   */
   requiredChannels?: NotificationChannel[];
 }
 

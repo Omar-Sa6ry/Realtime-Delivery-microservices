@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { RealtimeNatsSubjects, ServerMessageType, MessagePriority } from '@delivery/common';
+import { RealtimeNatsSubjects, ServerMessageType, MessagePriority, NotificationNatsSubjects } from '@delivery/common';
 import { Subscription } from 'nats';
 import { SubscriptionStore } from '../../features/subscription/subscription.store';
 import { ConnectionService } from '../../gateway/connection/connection.service';
@@ -20,6 +20,7 @@ interface NatsFanoutMessage {
  *  realtime.delivery.status.updated     -> delivery subscribers (NORMAL)
  *  realtime.driver.assignment.updated   -> delivery subscribers (CRITICAL)
  *  realtime.driver.presence.updated     -> admin sockets
+ *  notification.user.*                  -> user sockets (NORMAL)
  */
 @Injectable()
 export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
@@ -43,6 +44,7 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
       RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
       RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
       RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED,
+      `${NotificationNatsSubjects.NOTIFICATION_USER}.*`,
     ];
 
     for (const subject of subjects) {
@@ -77,11 +79,30 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    if (subject === RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED) {
+    if (subject.startsWith(`${NotificationNatsSubjects.NOTIFICATION_USER}.`)) {
+      const userId = subject.split('.').pop();
+      if (userId) {
+        await this.fanoutToUser(userId, message);
+      }
+    } else if (subject === RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED) {
       await this.fanoutToAdmins(message);
     } else {
       await this.fanoutToDeliverySubscribers(message);
     }
+  }
+
+  private async fanoutToUser(userId: string, message: NatsFanoutMessage): Promise<void> {
+    const sockets = this.connectionService.getLocalSocketsByUser(userId);
+    if (sockets.length === 0) return;
+
+    this.writer.sendMany(
+      sockets,
+      {
+        type: ServerMessageType.NOTIFICATION_RECEIVED,
+        data: message.data,
+      },
+      message.priority || MessagePriority.NORMAL,
+    );
   }
 
   private async fanoutToDeliverySubscribers(message: NatsFanoutMessage): Promise<void> {

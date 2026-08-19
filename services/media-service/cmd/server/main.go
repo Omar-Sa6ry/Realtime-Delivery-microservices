@@ -18,7 +18,6 @@ import (
 	kafkaadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/kafka"
 	redisadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/redis"
 	s3adapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/s3"
-	wsadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/ws"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/application/download"
 	appMedia "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/application/media"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/application/upload"
@@ -28,7 +27,6 @@ import (
 	gqltransport "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/graphql"
 	grpctransport "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/grpc"
 	pb "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/grpc/pb"
-	wstransport "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/websocket"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/validation"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/workers"
 	compressionWorker "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/workers/compression"
@@ -201,19 +199,6 @@ func main() {
 	compressPool    := workers.NewWorkerPool("compression-worker", cfg.CompressionWorkers)
 	metaPool        := workers.NewWorkerPool("metadata-worker",    cfg.MetadataWorkers)
 
-	// ── WebSocket Hub + Notifier ───────────────────────────────────────
-	wsHub     := wstransport.NewHub(redisClient)
-	notifier  := wsadapter.NewPubSubNotifier(redisClient)
-	wsServer  := wstransport.NewServer(":"+cfg.WSPort, wsHub)
-
-	go func() {
-		slog.Info("WebSocket server starting", "port", cfg.WSPort)
-		if err := wsServer.ListenAndServe(); err != nil {
-			slog.Error("WebSocket server error", "error", err)
-			cancel()
-		}
-	}()
-
 	// ── Application Use Cases ─────────────────────────────────────────────────
 	createSessionUC := upload.NewCreateSessionUseCase(
 		mediaRepo, uploadRepo, quotaRepo, storage, cacheAdapter,
@@ -272,8 +257,8 @@ func main() {
 	vidWorker   := videoWorker.NewWorker(mediaRepo, versionRepo, storage, producer)
 	scnWorker   := scanWorker.NewWorker(mediaRepo, storage, producer)
 	delWorker   := deleteWorker.NewWorker(mediaRepo, versionRepo, quotaRepo, storage, producer)
-	cmpWorker   := compressionWorker.NewWorker(mediaRepo, versionRepo, storage, producer, notifier)
-	metaWorker  := metadataWorker.NewWorker(mediaRepo, versionRepo, storage, producer, notifier)
+	cmpWorker   := compressionWorker.NewWorker(mediaRepo, versionRepo, storage, producer)
+	metaWorker  := metadataWorker.NewWorker(mediaRepo, versionRepo, storage, producer)
 
 	// Start outbox publisher in background
 	go outboxPublisher.Run(ctx)
@@ -421,7 +406,6 @@ func main() {
 
 	slog.Info("media-service: ready",
 		"graphqlPort", cfg.GraphQLPort,
-		"wsPort", cfg.WSPort,
 		"grpcPort", cfg.GRPCPort,
 		"metricsPort", cfg.MetricsPort,
 		"env", cfg.Environment,
@@ -441,10 +425,6 @@ func main() {
 	deletePool.Shutdown()
 	compressPool.Shutdown()
 	metaPool.Shutdown()
-
-	// Shutdown WebSocket server
-	_ = wsServer.Shutdown(ctx)
-	_ = notifier.Close()
 
 	slog.Info("media-service: shutdown complete")
 }

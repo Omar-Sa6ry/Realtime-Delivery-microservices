@@ -11,8 +11,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// magicByteSignatures maps content types to their file signature bytes.
-// Checked against the first N bytes of the object body.
 var magicByteSignatures = map[string][][]byte{
 	"image/jpeg": {
 		{0xFF, 0xD8, 0xFF},
@@ -40,18 +38,14 @@ var magicByteSignatures = map[string][][]byte{
 	},
 }
 
-// MagicBytesValidator validates file signatures against declared content types.
 type MagicBytesValidator struct {
 	storage ports.ObjectStorage
 }
 
-// NewMagicBytesValidator creates a MagicBytesValidator backed by the given storage.
 func NewMagicBytesValidator(storage ports.ObjectStorage) *MagicBytesValidator {
 	return &MagicBytesValidator{storage: storage}
 }
 
-// ValidateObject streams the first 16 bytes of an S3 object and checks the signature.
-// If no signature is registered for the content type, validation passes.
 func (v *MagicBytesValidator) ValidateObject(ctx context.Context, objectKey, contentType string) error {
 	sigs, ok := magicByteSignatures[contentType]
 	if !ok {
@@ -88,19 +82,14 @@ func (v *MagicBytesValidator) ValidateObject(ctx context.Context, objectKey, con
 	return domain.ErrInvalidMagicBytes
 }
 
-// ChecksumValidator verifies SHA-256 checksums of S3 objects.
 type ChecksumValidator struct {
 	storage ports.ObjectStorage
 }
 
-// NewChecksumValidator creates a ChecksumValidator backed by the given storage.
 func NewChecksumValidator(storage ports.ObjectStorage) *ChecksumValidator {
 	return &ChecksumValidator{storage: storage}
 }
 
-// Validate streams the object and computes its SHA-256.
-// Returns ErrChecksumMismatch if the computed hash does not equal expectedHex.
-// expectedHex is the lowercase hex-encoded SHA-256 provided by the client.
 func (v *ChecksumValidator) Validate(ctx context.Context, objectKey, expectedHex string) error {
 	if expectedHex == "" {
 		return nil // checksum is optional — skip if not provided
@@ -124,7 +113,6 @@ func (v *ChecksumValidator) Validate(ctx context.Context, objectKey, expectedHex
 	return nil
 }
 
-// ComputeChecksum computes the SHA-256 of an S3 object and returns the hex string.
 func ComputeChecksum(r io.Reader) (string, error) {
 	h := sha256.New()
 	if _, err := io.Copy(h, r); err != nil {

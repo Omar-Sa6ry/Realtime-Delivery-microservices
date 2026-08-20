@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-// NewClient creates an AWS DynamoDB client.
 // If endpoint is non-empty it overrides the AWS endpoint (for DynamoDB Local / LocalStack).
 func NewClient(ctx context.Context, region, endpoint, accessKeyID, secretKey string) (*dynamodb.Client, error) {
 	optFns := []func(*awsconfig.LoadOptions) error{

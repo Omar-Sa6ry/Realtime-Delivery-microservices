@@ -17,18 +17,14 @@ const (
 	processingPrefix     = "media:processing:progress"
 )
 
-// CacheAdapter implements ports.Cache using Redis.
 type CacheAdapter struct {
 	client *goredis.Client
 }
 
-// NewCacheAdapter creates a new CacheAdapter backed by the given Redis client.
 func NewCacheAdapter(client *goredis.Client) *CacheAdapter {
 	return &CacheAdapter{client: client}
 }
 
-// CheckAndStoreIdempotency atomically checks and stores an idempotency key.
-// Uses SET NX (set-if-not-exists) for atomicity — no WATCH/MULTI needed.
 func (c *CacheAdapter) CheckAndStoreIdempotency(ctx context.Context, userID, key string, response []byte, ttl time.Duration) (*ports.IdempotencyResult, error) {
 	redisKey := fmt.Sprintf("%s:%s:%s", idempotencyKeyPrefix, userID, key)
 
@@ -48,11 +44,9 @@ func (c *CacheAdapter) CheckAndStoreIdempotency(ctx context.Context, userID, key
 	}
 
 	if ok {
-		// Key was freshly created — this is a new request.
 		return &ports.IdempotencyResult{Exists: false}, nil
 	}
 
-	// Key already existed — this is a duplicate request; retrieve the cached response.
 	raw, err := c.client.Get(ctx, redisKey).Bytes()
 	if err != nil {
 		// Key might have expired between SetNX check and Get — treat as new request.
@@ -70,8 +64,6 @@ func (c *CacheAdapter) CheckAndStoreIdempotency(ctx context.Context, userID, key
 	return &ports.IdempotencyResult{Exists: true, CachedResponse: s.Response}, nil
 }
 
-// AcquireLock uses SET NX PX to acquire a named distributed lock.
-// The token is a unique value that prevents a different caller from releasing the lock.
 func (c *CacheAdapter) AcquireLock(ctx context.Context, resource string, ttl time.Duration) (ports.LockToken, bool, error) {
 	key := fmt.Sprintf("%s:%s", lockKeyPrefix, resource)
 	token := ports.LockToken(fmt.Sprintf("%d", time.Now().UnixNano()))
@@ -83,8 +75,6 @@ func (c *CacheAdapter) AcquireLock(ctx context.Context, resource string, ttl tim
 	return token, ok, nil
 }
 
-// ReleaseLock uses a Lua script to atomically check the token and delete the key.
-// This prevents a lock holder from releasing another holder's lock.
 var releaseLockScript = goredis.NewScript(`
 if redis.call("GET", KEYS[1]) == ARGV[1] then
     return redis.call("DEL", KEYS[1])
@@ -102,8 +92,6 @@ func (c *CacheAdapter) ReleaseLock(ctx context.Context, resource string, token p
 	return nil
 }
 
-// SetUploadProgress stores upload progress percentage for a session with TTL.
-// Uses Redis TTL instead of a cron job for automatic cleanup.
 func (c *CacheAdapter) SetUploadProgress(ctx context.Context, uploadID string, percent int, ttl time.Duration) error {
 	key := fmt.Sprintf("%s:%s", uploadProgressPrefix, uploadID)
 	return c.client.Set(ctx, key, percent, ttl).Err()

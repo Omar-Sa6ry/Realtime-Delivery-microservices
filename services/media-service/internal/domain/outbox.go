@@ -11,10 +11,6 @@ const (
 	OutboxStatusFailed    OutboxStatus = "FAILED"
 )
 
-// OutboxEvent stores a domain event that must be durably published to Kafka.
-// It is written in the same DynamoDB transaction as the state change, guaranteeing
-// at-least-once delivery even if Kafka is temporarily unavailable.
-// Published events are automatically expired by DynamoDB TTL after 30 days.
 type OutboxEvent struct {
 	EventID     string       `json:"eventId"`
 	AggregateID string       `json:"aggregateId"` // typically mediaId

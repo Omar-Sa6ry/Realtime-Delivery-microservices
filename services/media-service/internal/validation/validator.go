@@ -16,8 +16,6 @@ type UploadRequest struct {
 	Checksum    string // optional SHA-256 hex
 }
 
-// Validator orchestrates all pre-upload validation checks.
-// It is the single entry point for upload validation — callers do not invoke individual validators.
 type Validator struct {
 	fileTypeValidator *FileTypeValidator
 	magicBytes        *MagicBytesValidator
@@ -41,8 +39,6 @@ func NewValidator(
 	}
 }
 
-// ValidateUploadRequest validates the client's upload request before creating a session.
-// This is server-side validation — client-side validation is just a UX optimisation.
 func (v *Validator) ValidateUploadRequest(req UploadRequest) error {
 	// 1. File size bounds
 	if req.Size <= 0 {
@@ -65,8 +61,6 @@ func (v *Validator) ValidateUploadRequest(req UploadRequest) error {
 	return nil
 }
 
-// ValidatePostUpload validates an uploaded S3 object after it has been assembled.
-// Runs magic bytes check and optional checksum verification.
 func (v *Validator) ValidatePostUpload(ctx context.Context, objectKey, contentType, expectedChecksum string) error {
 	// 1. Magic bytes — verify the file signature matches the declared type
 	if err := v.magicBytes.ValidateObject(ctx, objectKey, contentType); err != nil {

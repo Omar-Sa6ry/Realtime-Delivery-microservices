@@ -24,19 +24,15 @@ var allowedExtensions = map[string][]string{
 	"application/octet-stream":      {}, // allowed but no extension constraint
 }
 
-// FileTypeValidator validates file extension against the declared content type.
 type FileTypeValidator struct {
 	allowedTypes map[string]struct{}
 }
 
-// NewFileTypeValidator creates a validator with the given content type whitelist.
 func NewFileTypeValidator(allowedTypes map[string]struct{}) *FileTypeValidator {
 	return &FileTypeValidator{allowedTypes: allowedTypes}
 }
 
-// ValidateContentType checks that the content type is in the allowed set.
 func (v *FileTypeValidator) ValidateContentType(contentType string) error {
-	// Normalise — strip parameters (e.g. "text/plain; charset=utf-8" -> "text/plain")
 	ct := strings.ToLower(strings.Split(contentType, ";")[0])
 	ct = strings.TrimSpace(ct)
 
@@ -46,7 +42,6 @@ func (v *FileTypeValidator) ValidateContentType(contentType string) error {
 	return nil
 }
 
-// ValidateExtension checks that the file extension matches the declared content type.
 func (v *FileTypeValidator) ValidateExtension(fileName, contentType string) error {
 	ext := strings.ToLower(filepath.Ext(fileName))
 	if ext == "" {
@@ -72,8 +67,6 @@ func (v *FileTypeValidator) ValidateExtension(fileName, contentType string) erro
 	return fmt.Errorf("extension %q is not valid for content type %q", ext, ct)
 }
 
-// NormalizeFileName sanitises a filename for safe use as an S3 object key component.
-// It strips path traversal sequences, control characters, and limits length.
 func NormalizeFileName(name string) string {
 	name = filepath.Base(name)
 	name = strings.Map(func(r rune) rune {

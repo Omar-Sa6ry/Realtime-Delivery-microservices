@@ -1,8 +1,5 @@
 package kafka
 
-// Topic names for the media service event bus.
-// All topics are prefixed by KAFKA_TOPIC_PREFIX from config.
-// Events follow the pattern: {prefix}.{aggregate}.{verb}
 const (
 	TopicUploadCreated       = "media.upload.created"
 	TopicUploadCompleted     = "media.upload.completed"
@@ -24,7 +21,6 @@ const (
 )
 
 // ConsumerGroups defines independent consumer group IDs per worker type.
-// Each group maintains its own offset, enabling independent scaling.
 const (
 	GroupScanner            = "media-scanner"
 	GroupImageWorker        = "media-image-worker"

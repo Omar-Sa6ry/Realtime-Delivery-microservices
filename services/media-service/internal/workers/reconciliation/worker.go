@@ -9,8 +9,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// Worker is the reconciliation worker that detects and repairs stuck operations.
-// It runs on a schedule and is safe to run on multiple replicas (distributed lock prevents double-run).
 type Worker struct {
 	uploadRepo             ports.UploadRepository
 	mediaRepo              ports.MediaRepository
@@ -22,7 +20,6 @@ type Worker struct {
 	stuckProcessingTimeout time.Duration
 }
 
-// NewWorker creates a new reconciliation worker.
 func NewWorker(
 	uploadRepo ports.UploadRepository,
 	mediaRepo ports.MediaRepository,
@@ -44,7 +41,6 @@ func NewWorker(
 	}
 }
 
-// Run executes the full reconciliation cycle. Called by the scheduler.
 func (w *Worker) Run(ctx context.Context) {
 	// Acquire a distributed lock so only one replica runs reconciliation at a time.
 	token, acquired, err := w.cache.AcquireLock(ctx, "reconciliation:run", 5*time.Minute)
@@ -64,8 +60,6 @@ func (w *Worker) Run(ctx context.Context) {
 	slog.Info("Reconciliation: cycle complete")
 }
 
-// reconcileExpiredUploads aborts upload sessions that have passed their TTL.
-// These arise when clients crash or disconnect during upload.
 func (w *Worker) reconcileExpiredUploads(ctx context.Context) {
 	expiredBefore := time.Now().Add(-w.stuckUploadTimeout)
 	sessions, err := w.uploadRepo.ListExpired(ctx, expiredBefore)
@@ -102,7 +96,6 @@ func (w *Worker) reconcileExpiredUploads(ctx context.Context) {
 	}
 }
 
-// reconcileOutboxFailures retries FAILED outbox events.
 func (w *Worker) reconcileOutboxFailures(ctx context.Context) {
 	events, err := w.outboxRepo.ListPending(ctx, 20)
 	if err != nil {

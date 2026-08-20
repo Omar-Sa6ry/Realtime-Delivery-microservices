@@ -10,9 +10,6 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// UnaryInterceptor extracts identity + correlation headers from gRPC metadata into
-// the request context so that logging/metrics and use-cases keep the same contract
-// as the GraphQL path (which reads x-user-id from HTTP headers).
 func UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	requestID := ""
 	userID := ""
@@ -41,7 +38,6 @@ func UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServ
 	return handler(ctx, req)
 }
 
-// NewListener binds a plain TCP listener for the gRPC server on addr.
 func NewListener(addr string) (net.Listener, error) {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -50,7 +46,6 @@ func NewListener(addr string) (net.Listener, error) {
 	return lis, nil
 }
 
-// NewServerOptions returns the shared gRPC server options (unary interceptor enabled).
 func NewServerOptions() []grpc.ServerOption {
 	return []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(UnaryInterceptor),

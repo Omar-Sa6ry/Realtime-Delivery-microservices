@@ -10,14 +10,11 @@ import (
 	kafkago "github.com/segmentio/kafka-go"
 )
 
-// Producer wraps a kafka-go Writer with structured event publishing.
-// It implements the ports.EventPublisher interface.
 type Producer struct {
 	writer *kafkago.Writer
 }
 
 // NewProducer creates a new Kafka producer.
-// brokers is the list of Kafka broker addresses (host:port).
 func NewProducer(brokers []string) *Producer {
 	writer := &kafkago.Writer{
 		Addr:         kafkago.TCP(brokers...),
@@ -48,10 +45,6 @@ type EventEnvelope struct {
 	Payload   json.RawMessage `json:"payload"`
 }
 
-// Publish sends a structured event to a Kafka topic.
-// The topic parameter should come from the topics.go constants.
-// The key is used for partitioning — typically the mediaId for ordering guarantees.
-// traceID is propagated as a Kafka message header for distributed tracing.
 func (p *Producer) Publish(ctx context.Context, topic, key string, payload []byte, traceID string) error {
 	msg := kafkago.Message{
 		Topic: topic,
@@ -71,12 +64,10 @@ func (p *Producer) Publish(ctx context.Context, topic, key string, payload []byt
 	return nil
 }
 
-// Close flushes pending messages and closes the underlying writer.
 func (p *Producer) Close() error {
 	return p.writer.Close()
 }
 
-// MarshalEnvelope serialises an EventEnvelope to JSON bytes ready for publishing.
 func MarshalEnvelope(eventID, eventType, traceID string, payload interface{}) ([]byte, error) {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {

@@ -11,7 +11,6 @@ import (
 
 // NewClient creates and validates a Redis client connection with exponential back-off retry.
 // It uses DB=0 (the single shared database) and retries up to 30 times with 5-second
-// intervals, making the service resilient to slow Redis startup in Kubernetes.
 func NewClient(addr, password string) (*goredis.Client, error) {
 	const (
 		maxAttempts = 30

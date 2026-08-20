@@ -42,22 +42,18 @@ import (
 )
 
 func main() {
-	// ── Structured Logger (shared package) ────────────────────────────────────
 	logger := sharedlogging.InitLogger()
 	logger.Info("media-service: starting", "version", "1.0.0")
 
-	// ── Configuration ─────────────────────────────────────────────────────────
 	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
 	}
 
-	// ── Root Context with Cancellation ────────────────────────────────────────
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// ── Prometheus Metrics (shared + media-specific) ───────────────────────────
 	observability.RegisterMediaMetrics()
 	go func() {
 		if err := sharedmetrics.StartMetricsServer(cfg.MetricsPort); err != nil {
@@ -65,7 +61,6 @@ func main() {
 		}
 	}()
 
-	// ── DynamoDB Client & Table Provisioning ──────────────────────────────────
 	slog.Info("DynamoDB config", "endpoint", cfg.DynamoDBEndpoint, "table", cfg.DynamoDBTableName, "region", cfg.AWSRegion)
 	dbClient, err := dynamodb.NewClient(ctx, cfg.AWSRegion, cfg.DynamoDBEndpoint, cfg.AWSAccessKeyID, cfg.AWSSecretAccessKey)
 	if err != nil {
@@ -73,11 +68,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Retry loop for DynamoDB table provisioning (waits for LocalStack to be fully ready).
-	// Uses a 5-second timeout per attempt and 5-second back-off between attempts.
-	// The loop runs until the table exists or the root context is cancelled so the
-	// service no longer crash-loops when LocalStack boots after the media pod
-	// during a concurrent `skaffold dev` deploy.
 	const dbRetryDelay = 5 * time.Second
 	var provisionErr error
 	for {
@@ -100,14 +90,12 @@ func main() {
 	}
 	slog.Info("DynamoDB ready", "endpoint", cfg.DynamoDBEndpoint, "table", cfg.DynamoDBTableName)
 
-	// ── Repositories ──────────────────────────────────────────────────────────
 	mediaRepo := dynamodb.NewMediaRepository(dbClient, cfg.DynamoDBTableName)
 	uploadRepo := dynamodb.NewUploadRepository(dbClient, cfg.DynamoDBTableName)
 	outboxRepo := dynamodb.NewOutboxRepository(dbClient, cfg.DynamoDBTableName)
 	quotaRepo := dynamodb.NewQuotaRepository(dbClient, cfg.DynamoDBTableName, cfg.StorageQuotaBytes, cfg.MaxConcurrentUploads)
 	versionRepo := dynamodb.NewVersionRepository(dbClient, cfg.DynamoDBTableName)
 
-	// ── S3 Client & Storage Adapter ───────────────────────────────────────────
 	s3Client, err := s3adapter.NewClient(ctx, cfg.AWSRegion, cfg.AWSAccessKeyID, cfg.AWSSecretAccessKey, cfg.S3BucketName, cfg.S3Endpoint, cfg.S3PublicEndpoint)
 	if err != nil {
 		slog.Error("S3 client init failed", "error", err)
@@ -126,9 +114,6 @@ func main() {
 	}
 	slog.Info("S3 ready", "bucket", cfg.S3BucketName)
 
-	// ── Redis Client ──────────────────────────────────────────────────────────
-	// NewClient already retries internally (30 × 5 s back-off) and exits with
-	// a structured error if Redis never becomes reachable.
 	redisClient, err := redisadapter.NewClient(cfg.RedisAddr(), cfg.RedisPassword)
 	if err != nil {
 		slog.Error("Redis client init failed", "error", err)
@@ -136,11 +121,6 @@ func main() {
 	}
 	cacheAdapter := redisadapter.NewCacheAdapter(redisClient)
 
-	// ── Kafka Connection Verification (Wait for Kafka to be fully ready) ──────
-	// A plain TCP dial succeeds as soon as the port is bound, before Kafka has
-	// finished initialising (controller election, coordinator registration).
-	// Requesting the cluster controller forces a full metadata round-trip which
-	// guarantees the broker is truly ready to serve produce/consume requests.
 	const (
 		kafkaRetryDelay  = 5 * time.Second
 		kafkaDialTimeout = 5 * time.Second
@@ -160,7 +140,6 @@ func main() {
 				kafkaErr = dialErr
 			}
 			// Keep retrying until Kafka is truly ready so a slow boot during a
-			// concurrent `skaffold dev` deploy does not crash-loop this pod.
 			slog.Warn("Kafka not ready, retrying until available...",
 				"broker", cfg.KafkaBrokers[0],
 				"error", kafkaErr,
@@ -176,11 +155,9 @@ func main() {
 		slog.Info("Kafka ready", "broker", cfg.KafkaBrokers[0])
 	}
 
-	// ── Rate Limiter (shared package) ─────────────────────────────────────────
 	uploadRateLimiter := sharedratelimiter.NewRateLimiter(redisClient, cfg.RateLimitUploadPerMinute, time.Minute)
 	downloadRateLimiter := sharedratelimiter.NewRateLimiter(redisClient, cfg.RateLimitDownloadPerMinute, time.Minute)
 
-	// ── Kafka Producer ────────────────────────────────────────────────────────
 	producer := kafkaadapter.NewProducer(cfg.KafkaBrokers)
 	defer func() {
 		if err := producer.Close(); err != nil {
@@ -188,10 +165,8 @@ func main() {
 		}
 	}()
 
-	// ── Validator ─────────────────────────────────────────────────────────────
 	validator := validation.NewValidator(cfg.AllowedContentTypes, storage, cfg.MaxFileSizeBytes)
 
-	// ── Worker Pools ──────────────────────────────────────────────────────────
 	scanPool        := workers.NewWorkerPool("scan-worker",        cfg.ScanWorkers)
 	imagePool       := workers.NewWorkerPool("image-worker",       cfg.ImageWorkers)
 	videoPool       := workers.NewWorkerPool("video-worker",       cfg.VideoWorkers)
@@ -199,7 +174,6 @@ func main() {
 	compressPool    := workers.NewWorkerPool("compression-worker", cfg.CompressionWorkers)
 	metaPool        := workers.NewWorkerPool("metadata-worker",    cfg.MetadataWorkers)
 
-	// ── Application Use Cases ─────────────────────────────────────────────────
 	createSessionUC := upload.NewCreateSessionUseCase(
 		mediaRepo, uploadRepo, quotaRepo, storage, cacheAdapter,
 		validator, uploadRateLimiter,
@@ -219,7 +193,7 @@ func main() {
 		mediaRepo, versionRepo, storage, downloadRateLimiter, cfg.S3PresignedURLExpiry,
 	)
 
-	// ── GraphQL Federation Subgraph Server ───────────────────────────────────
+	// ── GraphQL Federation Subgraph Server
 	gqlHandler := gqltransport.NewHandler(
 		createSessionUC, completeUploadUC, abortUploadUC, getUploadStatusUC,
 		getMediaUC, listMediaUC, deleteMediaUC, getDownloadURLUC, quotaRepo,
@@ -230,7 +204,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// ── Internal gRPC Server (user-service ↔ media-service) ─────────────────
 	grpcServer := grpc.NewServer(grpctransport.NewServerOptions()...)
 	pb.RegisterMediaServiceServer(grpcServer, grpctransport.NewServer(getDownloadURLUC, getMediaUC))
 
@@ -247,7 +220,6 @@ func main() {
 		}
 	}()
 
-	// ── Background Workers ────────────────────────────────────────────────────
 	outboxPublisher := outbox.NewPublisher(outboxRepo, producer, 5*time.Second)
 	reconciler := reconciliation.NewWorker(
 		uploadRepo, mediaRepo, outboxRepo, storage, cacheAdapter, producer,
@@ -263,7 +235,7 @@ func main() {
 	// Start outbox publisher in background
 	go outboxPublisher.Run(ctx)
 
-	// ── Scan consumer: media.upload.completed → scan worker ───────────────────
+	// Scan consumer: media.upload.completed → scan worker
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
@@ -281,7 +253,7 @@ func main() {
 		}
 	}()
 
-	// ── Image consumer: media.scan.completed → image worker ───────────────────
+	// ── Image consumer: media.scan.completed → image worker 
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
@@ -299,7 +271,7 @@ func main() {
 		}
 	}()
 
-	// ── Video consumer: media.scan.completed → video worker ───────────────────
+	// ── Video consumer: media.scan.completed → video worker 
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
@@ -317,7 +289,7 @@ func main() {
 		}
 	}()
 
-	// ── Compression consumer: media.scan.completed → compression worker ───────
+	// ── Compression consumer: media.scan.completed → compression worker
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
@@ -335,7 +307,7 @@ func main() {
 		}
 	}()
 
-	// ── Metadata consumer: media.scan.completed → metadata worker ──────────
+	// ── Metadata consumer: media.scan.completed → metadata worker 
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
@@ -353,7 +325,7 @@ func main() {
 		}
 	}()
 
-	// ── Delete consumer: media.delete.requested → delete worker ──────────────
+	// ── Delete consumer: media.delete.requested → delete worker 
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
@@ -371,14 +343,14 @@ func main() {
 		}
 	}()
 
-	// ── Scheduler ─────────────────────────────────────────────────────────────
+	// ── Scheduler 
 	sched := scheduler.NewScheduler(ctx)
 	reconcileExpr := fmt.Sprintf("@every %ds", int(cfg.ReconcileInterval.Seconds()))
 	sched.Add("reconciliation", reconcileExpr, reconciler.Run)
 	sched.Start()
 	defer sched.Stop()
 
-	// ── System Stats Logging ──────────────────────────────────────────────────
+	// ── System Stats Logging ──
 	go func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
@@ -393,7 +365,7 @@ func main() {
 		}
 	}()
 
-	// ── Signal Handling & Graceful Shutdown ────────────────────────────────────
+	// ── Signal Handling & Graceful Shutdown ───
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 

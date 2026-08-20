@@ -15,17 +15,14 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// StorageAdapter implements ports.ObjectStorage using the AWS S3 SDK.
 type StorageAdapter struct {
 	client *Client
 }
 
-// NewStorageAdapter wraps the base S3 Client in a StorageAdapter.
 func NewStorageAdapter(client *Client) *StorageAdapter {
 	return &StorageAdapter{client: client}
 }
 
-// CreateMultipartUpload initiates an S3 multipart upload.
 func (a *StorageAdapter) CreateMultipartUpload(ctx context.Context, objectKey, contentType string) (string, error) {
 	input := &s3.CreateMultipartUploadInput{
 		Bucket:      aws.String(a.client.bucketName),
@@ -42,7 +39,6 @@ func (a *StorageAdapter) CreateMultipartUpload(ctx context.Context, objectKey, c
 	return aws.ToString(out.UploadId), nil
 }
 
-// GeneratePresignedParts creates one presigned PUT URL per part.
 func (a *StorageAdapter) GeneratePresignedParts(
 	ctx context.Context,
 	objectKey, s3UploadID string,
@@ -71,8 +67,6 @@ func (a *StorageAdapter) GeneratePresignedParts(
 	return parts, nil
 }
 
-// GeneratePresignedGET generates a time-limited GET URL.
-// SECURITY: This URL must NEVER be logged.
 func (a *StorageAdapter) GeneratePresignedGET(ctx context.Context, objectKey string, expiry time.Duration) (string, error) {
 	req, err := a.client.presigner.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(a.client.bucketName),
@@ -86,7 +80,6 @@ func (a *StorageAdapter) GeneratePresignedGET(ctx context.Context, objectKey str
 	return a.client.presignableURL(req.URL), nil
 }
 
-// CompleteMultipartUpload finalises the multipart upload.
 func (a *StorageAdapter) CompleteMultipartUpload(ctx context.Context, objectKey, s3UploadID string, parts []domain.UploadPart) error {
 	sort.Slice(parts, func(i, j int) bool {
 		return parts[i].PartNumber < parts[j].PartNumber
@@ -110,7 +103,6 @@ func (a *StorageAdapter) CompleteMultipartUpload(ctx context.Context, objectKey,
 	return nil
 }
 
-// AbortMultipartUpload cancels an in-progress upload and frees S3 storage.
 func (a *StorageAdapter) AbortMultipartUpload(ctx context.Context, objectKey, s3UploadID string) error {
 	_, err := a.client.s3Client.AbortMultipartUpload(ctx, &s3.AbortMultipartUploadInput{
 		Bucket:   aws.String(a.client.bucketName),
@@ -123,7 +115,6 @@ func (a *StorageAdapter) AbortMultipartUpload(ctx context.Context, objectKey, s3
 	return nil
 }
 
-// HeadObject retrieves object metadata without downloading the body.
 func (a *StorageAdapter) HeadObject(ctx context.Context, objectKey string) (*ports.ObjectInfo, error) {
 	out, err := a.client.s3Client.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(a.client.bucketName),
@@ -140,7 +131,6 @@ func (a *StorageAdapter) HeadObject(ctx context.Context, objectKey string) (*por
 	}, nil
 }
 
-// DeleteObject permanently removes a single S3 object.
 func (a *StorageAdapter) DeleteObject(ctx context.Context, objectKey string) error {
 	_, err := a.client.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(a.client.bucketName),
@@ -152,7 +142,6 @@ func (a *StorageAdapter) DeleteObject(ctx context.Context, objectKey string) err
 	return nil
 }
 
-// DeleteObjects removes up to 1000 objects in a single batch request.
 func (a *StorageAdapter) DeleteObjects(ctx context.Context, objectKeys []string) error {
 	if len(objectKeys) == 0 {
 		return nil
@@ -171,8 +160,6 @@ func (a *StorageAdapter) DeleteObjects(ctx context.Context, objectKeys []string)
 	return nil
 }
 
-// GetObject returns a streaming reader for the object body.
-// Used only for post-upload validation — never for client downloads.
 func (a *StorageAdapter) GetObject(ctx context.Context, objectKey string) (io.ReadCloser, error) {
 	out, err := a.client.s3Client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(a.client.bucketName),
@@ -184,8 +171,6 @@ func (a *StorageAdapter) GetObject(ctx context.Context, objectKey string) (io.Re
 	return out.Body, nil
 }
 
-// PutObject uploads small objects (processed versions < 100MB) directly without multipart.
-// This is the correct approach for resized images and short-form processed videos.
 func (a *StorageAdapter) PutObject(ctx context.Context, objectKey, contentType string, data []byte) error {
 	_, err := a.client.s3Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(a.client.bucketName),
@@ -199,7 +184,6 @@ func (a *StorageAdapter) PutObject(ctx context.Context, objectKey, contentType s
 	return nil
 }
 
-// ListObjectsWithPrefix returns all object keys under a given prefix.
 func (a *StorageAdapter) ListObjectsWithPrefix(ctx context.Context, prefix string) ([]string, error) {
 	var keys []string
 	paginator := s3.NewListObjectsV2Paginator(a.client.s3Client, &s3.ListObjectsV2Input{

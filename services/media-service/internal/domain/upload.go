@@ -19,8 +19,6 @@ type UploadPart struct {
 	ETag       string `json:"eTag"`
 }
 
-// UploadSession tracks the state of a Direct-to-S3 multipart upload.
-// The session stores everything needed to resume, abort, or complete the upload.
 type UploadSession struct {
 	UploadID       string       `json:"uploadId"`
 	MediaID        string       `json:"mediaId"`

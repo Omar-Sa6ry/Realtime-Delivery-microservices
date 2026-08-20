@@ -19,9 +19,6 @@ const (
 	VersionTypeHLS         VersionType = "hls"         // HLS adaptive streaming master playlist
 )
 
-
-// MediaVersion stores metadata for a specific processed rendition of a media item.
-// All versions are stored in S3. This entity captures the metadata only.
 type MediaVersion struct {
 	VersionID   string      `json:"versionId"`
 	MediaID     string      `json:"mediaId"`

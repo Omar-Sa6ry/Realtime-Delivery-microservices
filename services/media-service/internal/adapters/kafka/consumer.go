@@ -12,9 +12,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
 )
 
-// MessageHandler is the function signature for processing a single Kafka message.
-// If it returns a transient error, the consumer will retry.
-// If it returns a permanent error (wrapped with ErrPermanent), the message is sent to the DLQ.
 type MessageHandler func(ctx context.Context, msg kafkago.Message) error
 
 // ErrPermanent wraps an error to signal that it should NOT be retried and must go to the DLQ.
@@ -75,11 +72,6 @@ func NewConsumer(cfg ConsumerConfig) *Consumer {
 	}
 }
 
-// Run starts consuming messages from the topic, invoking handler for each message.
-// Offset is committed only after the handler returns nil.
-// Transient errors trigger exponential backoff retries up to maxRetries.
-// Permanent errors (ErrPermanent) and exhausted retries route to the DLQ.
-// Run blocks until ctx is cancelled.
 func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 	slog.Info("Kafka consumer started", "topic", c.reader.Config().Topic, "group", c.reader.Config().GroupID)
 	for {
@@ -104,7 +96,6 @@ func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 	}
 }
 
-// processWithRetry invokes the handler with exponential backoff on transient errors.
 func (c *Consumer) processWithRetry(ctx context.Context, msg kafkago.Message, handler MessageHandler) error {
 	var lastErr error
 	delay := c.retryDelay
@@ -138,7 +129,6 @@ func (c *Consumer) processWithRetry(ctx context.Context, msg kafkago.Message, ha
 	return fmt.Errorf("exhausted %d retries: %w", c.maxRetries, lastErr)
 }
 
-// routeToDLQ sends a failed message to the Dead Letter Queue topic and increments the DLQ metric.
 func (c *Consumer) routeToDLQ(ctx context.Context, msg kafkago.Message, reason error) {
 	topic := c.reader.Config().Topic
 	slog.Error("Routing Kafka message to DLQ",
@@ -147,7 +137,6 @@ func (c *Consumer) routeToDLQ(ctx context.Context, msg kafkago.Message, reason e
 		"reason", reason.Error(),
 	)
 
-	// Increment DLQ metric for alerting/dashboards
 	observability.DeadLetterQueueTotal.WithLabelValues(topic).Inc()
 
 	if c.dlqProducer == nil {

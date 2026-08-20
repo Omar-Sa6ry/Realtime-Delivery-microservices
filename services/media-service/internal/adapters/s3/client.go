@@ -14,22 +14,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
-// Client wraps the AWS S3 SDK client and presigner.
 type Client struct {
 	s3Client   *s3.Client
 	presigner  *s3.PresignClient
 	bucketName string
-	// publicEndpoint, when set, is used as the host for presigned URLs so
-	// external clients can reach the store (e.g. LocalStack via a port-forward).
 	publicEndpoint string
-	// sseKMS enables SSE-KMS on new objects. Disabled for LocalStack /
-	// S3-compatible stores that do not provision a KMS service.
 	sseKMS bool
 }
 
-// NewClient creates an S3 client with server-side encryption enabled by default.
-// If endpoint is non-empty it overrides the AWS endpoint (for LocalStack / S3-compatible stores).
-// If publicEndpoint is non-empty, presigned URLs are rewritten to use it.
 func NewClient(ctx context.Context, region, accessKeyID, secretKey, bucketName, endpoint, publicEndpoint string) (*Client, error) {
 	optFns := []func(*awsconfig.LoadOptions) error{
 		awsconfig.WithRegion(region),
@@ -50,7 +42,6 @@ func NewClient(ctx context.Context, region, accessKeyID, secretKey, bucketName, 
 	if endpoint != "" {
 		s3Options = append(s3Options, func(o *s3.Options) {
 			o.BaseEndpoint = aws.String(endpoint)
-			// LocalStack / S3-compatible stores expect path-style bucket addressing.
 			o.UsePathStyle = true
 		})
 	}
@@ -62,12 +53,10 @@ func NewClient(ctx context.Context, region, accessKeyID, secretKey, bucketName, 
 		presigner:      s3.NewPresignClient(s3c),
 		bucketName:     bucketName,
 		publicEndpoint: strings.TrimSuffix(publicEndpoint, "/"),
-		// Real AWS is assumed when no custom endpoint is provided.
 		sseKMS: endpoint == "",
 	}, nil
 }
 
-// PresignURLResult rewrites a presigned URL host when a public endpoint is set.
 func (c *Client) presignableURL(raw string) string {
 	if c.publicEndpoint == "" {
 		return raw
@@ -85,7 +74,6 @@ func (c *Client) presignableURL(raw string) string {
 	return u.String()
 }
 
-// EnsureBucketExists creates the S3 bucket if it does not exist (idempotent).
 func (c *Client) EnsureBucketExists(ctx context.Context) error {
 	_, err := c.s3Client.CreateBucket(ctx, &s3.CreateBucketInput{
 		Bucket: aws.String(c.bucketName),
@@ -101,8 +89,6 @@ func (c *Client) EnsureBucketExists(ctx context.Context) error {
 	return nil
 }
 
-// EnsureBucketPolicy applies block-public-access settings to the bucket.
-// This is called once on startup to enforce S3 security posture.
 func (c *Client) EnsureBucketPolicy(ctx context.Context) error {
 	_, err := c.s3Client.PutPublicAccessBlock(ctx, &s3.PutPublicAccessBlockInput{
 		Bucket: aws.String(c.bucketName),
@@ -119,8 +105,6 @@ func (c *Client) EnsureBucketPolicy(ctx context.Context) error {
 	return nil
 }
 
-// EnsureBucketCORS configures CORS on the bucket so browsers can upload
-// directly to presigned URLs. Called once on startup.
 func (c *Client) EnsureBucketCORS(ctx context.Context) error {
 	_, err := c.s3Client.PutBucketCors(ctx, &s3.PutBucketCorsInput{
 		Bucket: aws.String(c.bucketName),

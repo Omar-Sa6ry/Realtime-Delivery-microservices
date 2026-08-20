@@ -8,9 +8,6 @@ import (
 	"time"
 )
 
-// Config holds all configuration for the media-service.
-// Values are loaded from environment variables; no defaults are hard-coded
-// for sensitive fields. Non-sensitive fields carry reasonable defaults.
 type Config struct {
 	// Server
 	GraphQLPort  string // GraphQL federation subgraph port (default :4005)
@@ -99,12 +96,7 @@ func Load() (*Config, error) {
 
 	// S3
 	c.S3BucketName = requireEnv("S3_BUCKET_NAME")
-	// Default to the in-cluster LocalStack endpoint. Override with a real AWS
-	// endpoint (no value or empty string) for production deployments.
 	c.S3Endpoint = getEnvOrDefault("AWS_ENDPOINT", "http://localstack-srv:4566")
-	// When set, presigned URLs returned to clients are rewritten to use this
-	// externally-reachable endpoint (e.g. http://localhost:4566 in local dev).
-	// Empty means presigned URLs keep the client endpoint host.
 	c.S3PublicEndpoint = os.Getenv("S3_PUBLIC_ENDPOINT")
 	expirySec, err := getEnvInt("S3_PRESIGNED_URL_EXPIRY", 3600)
 	if err != nil {
@@ -124,8 +116,6 @@ func Load() (*Config, error) {
 
 	// DynamoDB
 	c.DynamoDBTableName = getEnvOrDefault("DYNAMODB_TABLE_NAME", "media-service")
-	// Default to the in-cluster LocalStack endpoint. Override with a real AWS
-	// endpoint (no value or empty string) for production deployments.
 	c.DynamoDBEndpoint = getEnvOrDefault("DYNAMODB_ENDPOINT", "http://localstack-srv:4566")
 
 	// Redis

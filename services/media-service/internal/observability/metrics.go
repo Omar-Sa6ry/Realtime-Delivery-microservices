@@ -7,9 +7,6 @@ import (
 	sharedmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
 )
 
-// MediaMetrics holds all media-service-specific Prometheus metrics.
-// The shared metrics package provides generic request/error counters;
-// these are domain-specific upload, processing, and quota metrics.
 var (
 	UploadStartedTotal   *prometheus.CounterVec
 	UploadCompletedTotal *prometheus.CounterVec
@@ -33,8 +30,6 @@ var (
 	once sync.Once
 )
 
-// RegisterMediaMetrics registers all media-service Prometheus metrics.
-// It must be called once during application startup, after sharedmetrics.RegisterMetrics().
 func RegisterMediaMetrics() {
 	once.Do(func() {
 		// Ensure shared metrics are registered first.

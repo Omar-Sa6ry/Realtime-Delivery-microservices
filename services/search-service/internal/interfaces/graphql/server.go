@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/auth"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/reindex"
 	appSearch "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/search"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/domain/search"
@@ -54,6 +55,13 @@ func (s *Server) Handler() http.HandlerFunc {
 		}
 
 		ctx := r.Context()
+		if contains(req.Query, "searchUsers") {
+			if _, err := auth.RequirePermission(r.Header.Get("Authorization"), auth.PermissionViewUser); err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(errorResponseWithStatus(http.StatusUnauthorized, err))
+				return
+			}
+		}
 		res := s.executeGraphQL(ctx, req.Query, req.Variables)
 
 		w.Header().Set("Content-Type", "application/json")
@@ -80,7 +88,18 @@ func (s *Server) executeGraphQL(ctx context.Context, query string, vars map[stri
 	data := make(map[string]interface{})
 
 	// Handle standard query routing
-	if contains(query, "searchDeliveries") {
+	if contains(query, "searchUsers") {
+		var input search.UserSearchQuery
+		if raw, ok := vars["input"].(map[string]interface{}); ok {
+			b, _ := json.Marshal(raw)
+			_ = json.Unmarshal(b, &input)
+		}
+		res, err := s.searchService.SearchUsers(ctx, input)
+		if err != nil {
+			return errorResponse(err)
+		}
+		data["searchUsers"] = GraphQLGeneralResponse{Success: true, StatusCode: 200, Message: "Users fetched successfully", Items: res.Items, PageInfo: res.PageInfo}
+	} else if contains(query, "searchDeliveries") {
 		var input search.DeliverySearchQuery
 		if raw, ok := vars["input"].(map[string]interface{}); ok {
 			b, _ := json.Marshal(raw)
@@ -213,6 +232,10 @@ func (s *Server) executeGraphQL(ctx context.Context, query string, vars map[stri
 	return GraphQLResponseBody{Data: data}
 }
 
+func errorResponseWithStatus(status int, err error) GraphQLResponseBody {
+	return GraphQLResponseBody{Errors: []map[string]interface{}{{"message": err.Error(), "statusCode": status}}}
+}
+
 func errorResponse(err error) GraphQLResponseBody {
 	return GraphQLResponseBody{
 		Errors: []map[string]interface{}{
@@ -248,6 +271,24 @@ type GeoAddress {
   city: String!
   country: String!
   location: GeoPoint!
+}
+
+type UserDocument {
+  id: String!
+  first_name: String!
+  last_name: String!
+  email: String!
+  role: String!
+  is_active: Boolean!
+  created_at: String!
+}
+
+type UserSearchResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  items: [UserDocument!]
+  pageInfo: PageInfo
 }
 
 type DeliveryDocument {
@@ -337,6 +378,13 @@ input GeoSearchInput {
   pagination: PaginationInput
 }
 
+input UserSearchInput {
+  query: String
+  role: String
+  isActive: Boolean
+  pagination: PaginationInput
+}
+
 input DeliverySearchInput {
   query: String
   status: String
@@ -367,6 +415,7 @@ input AutocompleteInput {
 }
 
 type Query {
+  searchUsers(input: UserSearchInput!): UserSearchResponse!
   searchDeliveries(input: DeliverySearchInput!): DeliverySearchResponse!
   searchDrivers(input: DriverSearchInput!): DriverSearchResponse!
   searchMedia(input: MediaSearchInput!): MediaSearchResponse!

@@ -2,8 +2,6 @@ import { Resolver, Query, Mutation, Args, Context } from '@nestjs/graphql';
 import {
   UserType,
   UserResponse,
-  PaginatedUsers,
-  PaginatedUsersResponse,
   ChangePasswordInput,
   UpdateProfileInput,
   AddAddressInput,
@@ -80,22 +78,6 @@ export class UserResolver {
       message: await this.i18n.t('user.PROFILE_UPDATED'),
       data: user,
     } as UserResponse;
-  }
-
-  @Query(() => PaginatedUsersResponse)
-  @Auth([Permission.VIEW_USER])
-  @Auth()
-  async users(
-    @Args('page', { defaultValue: 1 }) page: number,
-    @Args('limit', { defaultValue: 10 }) limit: number,
-  ): Promise<PaginatedUsersResponse> {
-    const result = await this.userService.findUsers(page, limit);
-    return {
-      success: true,
-      statusCode: 200,
-      message: await this.i18n.t('user.USERS_RETRIEVED'),
-      data: result,
-    } as PaginatedUsersResponse;
   }
 
   @Mutation(() => BooleanResponse)

@@ -14,6 +14,9 @@ type SearchRepository interface {
 	// SearchMedia executes a search against the media index.
 	SearchMedia(ctx context.Context, q MediaSearchQuery) (SearchResult[MediaDocument], error)
 
+	// SearchUsers executes the single user search operation against the users index.
+	SearchUsers(ctx context.Context, q UserSearchQuery) (SearchResult[UserDocument], error)
+
 	// Autocomplete returns prefix-matched suggestions for a given index.
 	Autocomplete(ctx context.Context, q AutocompleteQuery) (AutocompleteResult, error)
 

@@ -33,26 +33,6 @@ query {
   }
 }
 
-# Get a paginated list of users (Admin only) (admin)
-query {
-  users(page: 1, limit: 10) {
-    statusCode
-    message
-    success
-    data {
-      total
-      items {
-        id
-        firstName
-        lastName
-        email
-        role
-        createdAt
-      }
-    }
-  }
-}
-
 # Update the profile of the currently logged-in user (requires Bearer token) (user)
 mutation {
   updateProfile(

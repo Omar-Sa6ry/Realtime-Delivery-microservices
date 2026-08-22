@@ -46,10 +46,6 @@ export class UserService {
     return this.dbUserService.findByEmail(email);
   }
 
-  async findUsers(page: number, limit: number): Promise<{ items: User[]; total: number }> {
-    return this.dbUserService.findUsers(page, limit);
-  }
-
   async updateProfile(
     userId: string,
     input: UpdateProfileInput,

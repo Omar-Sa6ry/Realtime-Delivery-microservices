@@ -23,7 +23,7 @@ func NewRepository(client *Client) *Repository {
 	return &Repository{client: client}
 }
 
-//  Query Operations 
+//  Query Operations
 
 func (r *Repository) SearchDeliveries(ctx context.Context, q search.DeliverySearchQuery) (search.SearchResult[search.DeliveryDocument], error) {
 	queryDsl := buildDeliveryQuery(q)
@@ -40,12 +40,16 @@ func (r *Repository) SearchMedia(ctx context.Context, q search.MediaSearchQuery)
 	return executeSearch[search.MediaDocument](ctx, r.client, "media", queryDsl, q.Pagination)
 }
 
+func (r *Repository) SearchUsers(ctx context.Context, q search.UserSearchQuery) (search.SearchResult[search.UserDocument], error) {
+	return executeSearch[search.UserDocument](ctx, r.client, "users", buildUserQuery(q), q.Pagination)
+}
+
 func (r *Repository) Autocomplete(ctx context.Context, q search.AutocompleteQuery) (search.AutocompleteResult, error) {
 	limit := q.Limit
 	if limit <= 0 {
 		limit = 10
 	}
-	
+
 	queryDsl := map[string]interface{}{
 		"size": limit,
 		"query": map[string]interface{}{
@@ -188,7 +192,7 @@ func (r *Repository) NearbyDrivers(ctx context.Context, q search.GeoSearchQuery)
 	return executeSearch[search.DriverDocument](ctx, r.client, "drivers", queryDsl, q.Pagination)
 }
 
-//  Indexing Operations 
+//  Indexing Operations
 
 func (r *Repository) UpsertDelivery(ctx context.Context, doc search.DeliveryDocument) error {
 	doc.IndexedAt = time.Now().UTC()
@@ -265,7 +269,7 @@ func (r *Repository) BulkUpsertMedia(ctx context.Context, docs []search.MediaDoc
 	return r.executeBulk(ctx, &buf)
 }
 
-//  Helpers 
+//  Helpers
 
 func (r *Repository) upsertDoc(ctx context.Context, index, id string, doc interface{}, incomingVersion int64) error {
 	// Version check guard
@@ -745,6 +749,30 @@ func buildDriverQuery(q search.DriverSearchQuery) map[string]interface{} {
 	}
 
 	return queryDsl
+}
+
+func buildUserQuery(q search.UserSearchQuery) map[string]interface{} {
+	must := []map[string]interface{}{}
+	filter := []map[string]interface{}{}
+	if strings.TrimSpace(q.Query) != "" {
+		must = append(must, map[string]interface{}{"multi_match": map[string]interface{}{
+			"query": q.Query, "fields": []string{"first_name^3", "last_name^3", "email^2", "id"}, "fuzziness": "AUTO",
+		}})
+	}
+	if q.Role != "" {
+		filter = append(filter, map[string]interface{}{"term": map[string]interface{}{"role": q.Role}})
+	}
+	if q.IsActive != nil {
+		filter = append(filter, map[string]interface{}{"term": map[string]interface{}{"is_active": *q.IsActive}})
+	}
+	boolQuery := map[string]interface{}{"must": map[string]interface{}{"match_all": map[string]interface{}{}}}
+	if len(must) > 0 {
+		boolQuery["must"] = must
+	}
+	if len(filter) > 0 {
+		boolQuery["filter"] = filter
+	}
+	return map[string]interface{}{"query": map[string]interface{}{"bool": boolQuery}, "sort": []map[string]interface{}{{"created_at": map[string]interface{}{"order": "desc"}}, {"_id": map[string]interface{}{"order": "asc"}}}}
 }
 
 func buildMediaQuery(q search.MediaSearchQuery) map[string]interface{} {

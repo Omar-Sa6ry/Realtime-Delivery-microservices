@@ -1,65 +1,99 @@
-# Search for users (requires authentication) (user)
+# Search users (Admin only; requires Bearer token with VIEW_USER permission)
 query {
   searchUsers(
-    query: "john"
-    page: 1
-    limit: 10
+    input: {
+      query: "john"
+      pagination: { limit: 10 }
+    }
   ) {
+    success
     statusCode
     message
-    success
-    data {
+    items {
+      id
+      first_name
+      last_name
+      email
+      role
+      is_active
+      created_at
+    }
+    pageInfo {
+      hasNextPage
+      cursor
       total
-      items {
-        id
-        firstName
-        lastName
-        email
-      }
     }
   }
 }
 
-# Search for media files (requires authentication) (user)
+# Search deliveries (search-service)
+query {
+  searchDeliveries(
+    input: {
+      query: "downtown"
+      pagination: { limit: 10 }
+    }
+  ) {
+    success
+    statusCode
+    message
+    items {
+      delivery_id
+      customer_id
+      status
+    }
+    pageInfo {
+      hasNextPage
+      cursor
+      total
+    }
+  }
+}
+
+# Search drivers (search-service)
+query {
+  searchDrivers(
+    input: {
+      query: "Ahmed"
+      pagination: { limit: 10 }
+    }
+  ) {
+    success
+    statusCode
+    message
+    items {
+      driver_id
+      name
+      status
+    }
+    pageInfo {
+      hasNextPage
+      cursor
+      total
+    }
+  }
+}
+
+# Search media (search-service)
 query {
   searchMedia(
-    query: "sample"
-    mediaType: "video"
-    page: 1
-    limit: 10
-  ) {
-    statusCode
-    message
-    success
-    data {
-      total
-      items {
-        mediaId
-        fileName
-        contentType
-      }
+    input: {
+      query: "sample"
+      pagination: { limit: 10 }
     }
-  }
-}
-
-# Search for notifications (requires authentication) (user)
-query {
-  searchNotifications(
-    query: "urgent"
-    page: 1
-    limit: 10
   ) {
+    success
     statusCode
     message
-    success
-    data {
+    items {
+      media_id
+      file_name
+      mime_type
+    }
+    pageInfo {
+      hasNextPage
+      cursor
       total
-      items {
-        id
-        type
-        title
-        read
-      }
     }
   }
 }

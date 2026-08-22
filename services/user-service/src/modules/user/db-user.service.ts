@@ -34,16 +34,6 @@ export class DbUserService {
     return this.userRepo.findOne({ where: { email: email.toLowerCase().trim() } });
   }
 
-  async findUsers(page: number, limit: number): Promise<{ items: User[]; total: number }> {
-    const [items, total] = await this.userRepo.findAndCount({
-      where: { role: Role.USER },
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
-    return { items, total };
-  }
-
   async updateProfile(
     userId: string,
     input: UpdateProfileInput,

@@ -39,6 +39,11 @@ func (im *IndexManager) EnsureIndices(ctx context.Context) error {
 			Version: "media-v1",
 			Mapping: mediaMapping,
 		},
+		{
+			Alias:   "users",
+			Version: "users-v1",
+			Mapping: usersMapping,
+		},
 	}
 
 	for _, idx := range indices {
@@ -189,6 +194,28 @@ const driversMapping = `{
       "source_version": { "type": "long" }
     }
   }
+}`
+
+const usersMapping = `{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "analysis": {
+      "analyzer": {
+        "user_autocomplete": { "type": "custom", "tokenizer": "standard", "filter": ["lowercase", "user_edge"] }
+      },
+      "filter": { "user_edge": { "type": "edge_ngram", "min_gram": 2, "max_gram": 20 } }
+    }
+  },
+  "mappings": { "properties": {
+    "id": { "type": "keyword" },
+    "first_name": { "type": "text", "analyzer": "user_autocomplete", "search_analyzer": "standard" },
+    "last_name": { "type": "text", "analyzer": "user_autocomplete", "search_analyzer": "standard" },
+    "email": { "type": "keyword" },
+    "role": { "type": "keyword" },
+    "is_active": { "type": "boolean" },
+    "created_at": { "type": "date" }
+  } }
 }`
 
 const mediaMapping = `{

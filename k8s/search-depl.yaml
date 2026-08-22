@@ -87,6 +87,16 @@ spec:
               value: "search-service"
             - name: NATS_URL
               value: "nats://nats-srv:4222"
+
+            - name: JWT_EXPIRE
+              value: '36000s'
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: search-secrets
+                  key: JWT_SECRET
+
 ---
 apiVersion: v1
 kind: Service

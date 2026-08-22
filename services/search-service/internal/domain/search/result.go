@@ -82,7 +82,18 @@ type MediaDocument struct {
 	SourceVersion int64     `json:"source_version"`
 }
 
-//  Search Queries
+// UserDocument is the OpenSearch projection used by the single user-search endpoint.
+type UserDocument struct {
+	ID        string    `json:"id"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// Search Queries
 
 type DeliverySearchSort struct {
 	Field string    `json:"field"` // created_at | updated_at | status
@@ -91,16 +102,16 @@ type DeliverySearchSort struct {
 
 // DeliverySearchQuery carries all parameters for a delivery search operation.
 type DeliverySearchQuery struct {
-	Query      string             `json:"query,omitempty"`
-	Status     string             `json:"status,omitempty"`
-	City       string             `json:"city,omitempty"`
-	DriverID   string             `json:"driverId,omitempty"`
-	CustomerID string             `json:"customerId,omitempty"` // enforced for non-admin
-	FromDate   *time.Time         `json:"fromDate,omitempty"`
-	ToDate     *time.Time         `json:"toDate,omitempty"`
-	Geo        *GeoDistanceFilter `json:"geo,omitempty"`
+	Query      string               `json:"query,omitempty"`
+	Status     string               `json:"status,omitempty"`
+	City       string               `json:"city,omitempty"`
+	DriverID   string               `json:"driverId,omitempty"`
+	CustomerID string               `json:"customerId,omitempty"` // enforced for non-admin
+	FromDate   *time.Time           `json:"fromDate,omitempty"`
+	ToDate     *time.Time           `json:"toDate,omitempty"`
+	Geo        *GeoDistanceFilter   `json:"geo,omitempty"`
 	Sort       []DeliverySearchSort `json:"sort,omitempty"`
-	Pagination PaginationInput    `json:"pagination"`
+	Pagination PaginationInput      `json:"pagination"`
 
 	// Authorization context — always set by application layer, never by client.
 	UserID   string `json:"-"`
@@ -114,13 +125,13 @@ type DriverSearchSort struct {
 
 // DriverSearchQuery carries all parameters for a driver search operation.
 type DriverSearchQuery struct {
-	Query       string           `json:"query,omitempty"`
-	Status      string           `json:"status,omitempty"`
-	VehicleType string           `json:"vehicleType,omitempty"`
-	MinRating   float64          `json:"minRating,omitempty"`
+	Query       string             `json:"query,omitempty"`
+	Status      string             `json:"status,omitempty"`
+	VehicleType string             `json:"vehicleType,omitempty"`
+	MinRating   float64            `json:"minRating,omitempty"`
 	Geo         *GeoDistanceFilter `json:"geo,omitempty"`
 	Sort        []DriverSearchSort `json:"sort,omitempty"`
-	Pagination  PaginationInput  `json:"pagination"`
+	Pagination  PaginationInput    `json:"pagination"`
 
 	// Authorization context.
 	UserID   string `json:"-"`
@@ -162,6 +173,13 @@ type AutocompleteQuery struct {
 	Prefix string `json:"prefix"`
 	Index  string `json:"index"` // deliveries | drivers | media
 	Limit  int    `json:"limit"`
+}
+
+type UserSearchQuery struct {
+	Query      string          `json:"query,omitempty"`
+	Role       string          `json:"role,omitempty"`
+	IsActive   *bool           `json:"isActive,omitempty"`
+	Pagination PaginationInput `json:"pagination"`
 }
 
 //  Search Results ──

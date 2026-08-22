@@ -1,10 +1,11 @@
 import * as http from 'http';
+
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import { StructuredLogger } from '@delivery/common';
-import { waitForService } from './utils/waitService.util';
+import { waitForRedis, waitForService } from './utils/waitService.util';
 
 const LIVENESS_PORT = Number(process.env.PORT_LIVENESS ?? 4099);
 const livenessServer = http.createServer((_req, res) => {
@@ -25,6 +26,7 @@ livenessServer.listen(LIVENESS_PORT, '0.0.0.0', () =>
 
 async function bootstrap() {
   const logger = new StructuredLogger();
+  await waitForRedis();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger,

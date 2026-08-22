@@ -68,6 +68,20 @@ func (s *Service) SearchMedia(ctx context.Context, q search.MediaSearchQuery) (s
 	return res, nil
 }
 
+func (s *Service) SearchUsers(ctx context.Context, q search.UserSearchQuery) (search.SearchResult[search.UserDocument], error) {
+	cacheKey := s.cache.GenerateKey("users", q)
+	var cached search.SearchResult[search.UserDocument]
+	if s.cache.Get(ctx, cacheKey, &cached) {
+		return cached, nil
+	}
+	res, err := s.repo.SearchUsers(ctx, q)
+	if err != nil {
+		return search.SearchResult[search.UserDocument]{}, err
+	}
+	_ = s.cache.Set(ctx, cacheKey, res, 60*time.Second)
+	return res, nil
+}
+
 func (s *Service) Autocomplete(ctx context.Context, q search.AutocompleteQuery) (search.AutocompleteResult, error) {
 	cacheKey := s.cache.GenerateKey("suggest", q)
 	var cached search.AutocompleteResult

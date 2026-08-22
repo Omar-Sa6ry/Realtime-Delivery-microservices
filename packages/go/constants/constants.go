@@ -193,3 +193,71 @@ const (
 	PasswordValidator  = "Password should be from 6 to 16 digits"
 	ExceptionFilterMsg = "An error occurred"
 )
+
+type SearchIndex string
+
+const (
+	SearchIndexDeliveries SearchIndex = "deliveries"
+	SearchIndexDrivers    SearchIndex = "drivers"
+	SearchIndexMedia      SearchIndex = "media"
+)
+
+// SearchKafkaTopics are the Kafka topics consumed by the Search Service consumer group.
+const (
+	// Delivery topics
+	SearchTopicDeliveryCreated        = "delivery.created"
+	SearchTopicDeliveryDriverAssigned = "delivery.driver.assigned"
+	SearchTopicDeliveryDriverAccepted = "delivery.driver.accepted"
+	SearchTopicDeliveryPickedUp       = "delivery.picked_up"
+	SearchTopicDeliveryInTransit      = "delivery.in_transit"
+	SearchTopicDeliveryCompleted      = "delivery.completed"
+	SearchTopicDeliveryCancelled      = "delivery.cancelled"
+	SearchTopicDeliveryDeleted        = "delivery.deleted"
+
+	// Driver topics
+	SearchTopicDriverCreated = "driver.created"
+	SearchTopicDriverUpdated = "driver.updated"
+	SearchTopicDriverDeleted = "driver.deleted"
+
+	// Media topics (only index once media is READY)
+	SearchTopicMediaReady   = "media.ready"
+	SearchTopicMediaDeleted = "media.deleted"
+
+	// Search DLQ
+	SearchTopicDLQ = "search.dlq"
+
+	// Analytics / observability
+	SearchTopicQueryCompleted   = "search.query.completed"
+	SearchTopicReindexCompleted = "search.reindex.completed"
+)
+
+const SearchConsumerGroupID = "search-service"
+
+// DriverStatus defines the driver availability states.
+type DriverStatus string
+
+const (
+	DriverStatusAvailable DriverStatus = "AVAILABLE"
+	DriverStatusBusy      DriverStatus = "BUSY"
+	DriverStatusOffline   DriverStatus = "OFFLINE"
+)
+
+type VehicleType string
+
+const (
+	VehicleTypeCar        VehicleType = "CAR"
+	VehicleTypeMotorcycle VehicleType = "MOTORCYCLE"
+	VehicleTypeTruck      VehicleType = "TRUCK"
+	VehicleTypeBicycle    VehicleType = "BICYCLE"
+)
+
+// Search capability limits — tune by load testing.
+const (
+	SearchMaxPageSize      = 100
+	SearchDefaultPageSize  = 10
+	SearchMaxQueryLength   = 500
+	SearchMaxFuzziness     = 2
+	SearchCacheTTLSeconds  = 120
+	SearchSuggestCacheTTL  = 300
+)
+

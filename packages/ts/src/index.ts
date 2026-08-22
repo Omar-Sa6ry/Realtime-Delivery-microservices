@@ -47,8 +47,10 @@ export * from "./kafka/kafka.topics";
 export * from "./kafka/kafka.module";
 export * from "./kafka/kafka.service";
 
-// Events (Kafka / media service)
-export * from "./events/media.events";
+// Events (Kafka / domain events)
+export * from './events/media.events';
+export * from './events/delivery.events';
+export * from './events/driver.events';
 
 // Logging
 export * from "./logging/logger.context";

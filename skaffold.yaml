@@ -41,10 +41,27 @@ build:
           - src: 'packages/ts/dist/**/*.js'
             dest: /usr/src/app/packages/ts/dist
 
+    - image: delivery/search
+      context: .
+      docker:
+        dockerfile: services/search-service/Dockerfile
+      sync:
+        manual:
+          - src: "services/search-service/**/*.go"
+            dest: /app/services/search-service
+          - src: "packages/go/**/*.go"
+            dest: /app/packages/go
+
     - image: delivery/media
       context: .
       docker:
         dockerfile: services/media-service/Dockerfile
+      sync:
+        manual:
+          - src: "services/media-service/**/*.go"
+            dest: /app/services/media-service
+          - src: "packages/go/**/*.go"
+            dest: /app/packages/go
 
     - image: delivery/user
       context: .
@@ -58,6 +75,7 @@ build:
             dest: /usr/src/app/protos
           - src: 'packages/ts/dist/**/*.js'
             dest: /usr/src/app/packages/ts/dist
+
 
     - image: delivery/api-gateway
       context: .
@@ -83,4 +101,3 @@ portForward:
     resourceName: localstack-srv
     port: 4566
     localPort: 4566
-

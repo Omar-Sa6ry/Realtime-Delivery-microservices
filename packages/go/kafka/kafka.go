@@ -5,19 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/events"
 	kafkago "github.com/segmentio/kafka-go"
 )
 
-// EventEnvelope is the canonical envelope for every Kafka event in the platform.
-// It matches the Go events.EventEnvelope and the TypeScript KafkaEventEnvelope.
 type EventEnvelope = events.EventEnvelope
 
-// MarshalEnvelope serialises a payload into a standard Kafka event envelope.
 func MarshalEnvelope(eventID, eventType, traceID string, payload interface{}) ([]byte, error) {
-	return events.MarshalEnvelope(eventID, events.MediaEventType(eventType), traceID, payload)
+	return events.MarshalEnvelope(eventID, eventType, traceID, payload)
 }
 
 // UnmarshalEnvelope parses a raw Kafka message into an EventEnvelope.
@@ -50,9 +48,6 @@ func NewProducer(brokers []string) *Producer {
 	return &Producer{writer: writer}
 }
 
-// Publish sends a raw JSON payload to the given topic.
-// The topic should come from the shared topic constants (events / nats packages).
-// key is used for partitioning, traceID is propagated as a Kafka message header.
 func (p *Producer) Publish(ctx context.Context, topic, key string, payload []byte, traceID string) error {
 	msg := kafkago.Message{
 		Topic: topic,
@@ -101,8 +96,6 @@ type ConsumerConfig struct {
 	DLQ        *Producer // may be nil — failed messages are just logged
 }
 
-// Consumer wraps a kafka-go Reader with controlled, graceful consumption
-// (explicit offset commit + exponential backoff on transient errors + DLQ routing).
 type Consumer struct {
 	reader      *kafkago.Reader
 	maxRetries  int
@@ -125,7 +118,16 @@ func NewConsumer(cfg ConsumerConfig) *Consumer {
 			slog.Debug(fmt.Sprintf(msg, args...), "component", "kafka-consumer", "topic", cfg.Topic)
 		}),
 		ErrorLogger: kafkago.LoggerFunc(func(msg string, args ...interface{}) {
-			slog.Error(fmt.Sprintf(msg, args...), "component", "kafka-consumer", "topic", cfg.Topic)
+			formatted := fmt.Sprintf(msg, args...)
+			if strings.Contains(formatted, "Rebalance In Progress") || 
+			   strings.Contains(formatted, "i/o timeout") || 
+			   strings.Contains(formatted, "Not Coordinator For Group") ||
+			   strings.Contains(formatted, "Group Coordinator Not Available") ||
+			   strings.Contains(formatted, "Not Leader For Partition") {
+				slog.Debug(formatted, "component", "kafka-consumer", "topic", cfg.Topic)
+			} else {
+				slog.Error(formatted, "component", "kafka-consumer", "topic", cfg.Topic)
+			}
 		}),
 	})
 
@@ -142,8 +144,7 @@ func NewConsumer(cfg ConsumerConfig) *Consumer {
 	}
 }
 
-// Run starts consuming messages, invoking handler for each message.
-// Offsets are committed only after the handler returns nil (at-least-once).
+// Run starts consuming messages, invoking handler for each message. (at-least-once).
 // Transient errors retry with exponential backoff; exhausted retries and
 // permanent errors are routed to the DLQ. Run blocks until ctx is cancelled.
 func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
@@ -154,6 +155,18 @@ func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				slog.Info("Kafka consumer stopped", "topic", c.reader.Config().Topic)
 				return nil
+			}
+			if strings.Contains(err.Error(), "Rebalance In Progress") || 
+			   strings.Contains(err.Error(), "Not Coordinator For Group") ||
+			   strings.Contains(err.Error(), "Group Coordinator Not Available") ||
+			   strings.Contains(err.Error(), "Not Leader For Partition") {
+				slog.Debug("Kafka consumer transient coordinator/rebalance/leader state, waiting...", "topic", c.reader.Config().Topic)
+				select {
+				case <-ctx.Done():
+					return nil
+				case <-time.After(500 * time.Millisecond):
+				}
+				continue
 			}
 			slog.Error("Failed to fetch Kafka message", "error", err, "topic", c.reader.Config().Topic)
 			continue

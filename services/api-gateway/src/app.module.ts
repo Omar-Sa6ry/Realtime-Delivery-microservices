@@ -91,16 +91,22 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
                 'http://notification-srv:4004/notification/graphql',
             },
             {
-              name: 'user',
-              url:
-                process.env.USER_SERVICE_URL ||
-                'http://user-srv:4001/user/graphql',
-            },
-            {
               name: 'realtime',
               url:
                 process.env.REALTIME_SERVICE_URL ||
                 'http://realtime-srv:4006/realtime/graphql',
+            },
+            {
+              name: 'search',
+              url:
+                process.env.SEARCH_SERVICE_URL ||
+                'http://search-srv:4007/search/graphql',
+            },
+            {
+              name: 'user',
+              url:
+                process.env.USER_SERVICE_URL ||
+                'http://user-srv:4001/user/graphql',
             },
           ],
           pollIntervalInMs: 5000,
@@ -180,8 +186,6 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(CorrelationIdMiddleware, JwtAuthMiddleware)
-      .forRoutes('*');
+    consumer.apply(CorrelationIdMiddleware, JwtAuthMiddleware).forRoutes('*');
   }
 }

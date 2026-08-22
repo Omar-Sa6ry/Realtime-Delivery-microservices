@@ -310,6 +310,50 @@ services:
       - ./packages/ts:/usr/src/app/packages/ts
       - ./protos:/usr/src/app/protos
 
+  opensearch-srv:
+    image: opensearchproject/opensearch:2.18.0
+    container_name: opensearch-srv
+    environment:
+      - discovery.type=single-node
+      - plugins.security.disabled=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+
+  search-service:
+    build:
+      context: .
+      dockerfile: services/search-service/Dockerfile
+    container_name: search-service
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "4007:4007"
+      - "9103:9103"
+    networks:
+      default:
+        aliases:
+          - search-srv
+    environment:
+      PORT_SEARCH_GRAPHQL: "4007"
+      PORT_SEARCH_METRICS: "9103"
+      OPENSEARCH_URL: "http://opensearch-srv:9200"
+      REDIS_HOST: "redis-srv"
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      KAFKA_BROKERS: "kafka-srv:9092"
+      NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
+    depends_on:
+      - redis-srv
+      - opensearch-srv
+      - kafka-srv
+    volumes:
+      - ./services/search-service:/app/services/search-service
+      - ./packages/go:/app/packages/go
+
   api-gateway:
     build:
       context: .
@@ -335,6 +379,7 @@ services:
       MEDIA_SUBGRAPH_URL: "http://media-srv:4005/media/graphql"
       NOTIFICATION_SERVICE_URL: "http://notification-srv:4004/notification/graphql"
       REALTIME_SERVICE_URL: "http://realtime-srv:4006/realtime/graphql"
+      SEARCH_SERVICE_URL: "http://search-srv:4007/search/graphql"
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - redis-srv
@@ -342,6 +387,7 @@ services:
       - media-service
       - notification-service
       - realtime-service
+      - search-service
     volumes:
       - ./services/api-gateway/src:/usr/src/app/services/api-gateway/src
       - ./packages/ts:/usr/src/app/packages/ts
@@ -349,4 +395,6 @@ services:
 volumes:
   user_db_data:
   notification_db_data:
+  opensearch_data:
+
 

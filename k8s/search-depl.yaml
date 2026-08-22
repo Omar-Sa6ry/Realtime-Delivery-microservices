@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: search
+  template:
+    metadata:
+      labels:
+        app: search
+    spec:
+      containers:
+        - name: search
+          image: delivery/search
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          ports:
+            - containerPort: 4007
+              name: http
+            - containerPort: 9103
+              name: metrics
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: 4007
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 20
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 4007
+            periodSeconds: 5
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 4007
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            failureThreshold: 3
+          env:
+            - name: NODE_ENV
+              value: "development"
+            - name: PORT_SEARCH_GRAPHQL
+              value: "4007"
+            - name: PORT_SEARCH_METRICS
+              value: "9103"
+            - name: OPENSEARCH_URL
+              value: "http://opensearch-srv:9200"
+            - name: OPENSEARCH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: search-secrets
+                  key: OPENSEARCH_USERNAME
+            - name: OPENSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: search-secrets
+                  key: OPENSEARCH_PASSWORD
+            - name: REDIS_HOST
+              value: "redis-srv"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: KAFKA_BROKERS
+              value: "kafka-srv:9092"
+            - name: KAFKA_GROUP_ID_SEARCH
+              value: "search-service"
+            - name: NATS_URL
+              value: "nats://nats-srv:4222"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-srv
+spec:
+  selector:
+    app: search
+  ports:
+    - name: http
+      port: 4007
+      targetPort: 4007
+    - name: metrics
+      port: 9103
+      targetPort: 9103

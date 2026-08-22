@@ -54,13 +54,10 @@ const (
 	UserTopicPasswordResetRequested = "user.password_reset_requested"
 )
 
-// NotificationNatsSubjects defines the NATS subjects used by the notification domain.
-// The user-specific subject is suffixed with .{userId}.
 const (
 	NotificationSubjectUser = "notification.user"
 )
 
-// RealtimeNatsSubjects defines the Core NATS subjects used by the realtime domain.
 const (
 	RealtimeLocationDriverUpdated  = "realtime.location.driver.updated"
 	RealtimeDeliveryLocationUpd    = "realtime.delivery.location.updated"
@@ -76,3 +73,25 @@ const (
 	RealtimeTopicDLQDelivery = "realtime.delivery.dlq"
 	RealtimeTopicDLQPayment  = "realtime.payment.dlq"
 )
+
+const (
+	DriverTopicCreated = "driver.created"
+	DriverTopicUpdated = "driver.updated"
+	DriverTopicDeleted = "driver.deleted"
+)
+
+// Consumed by Analytics Service → ClickHouse for search observability.
+const (
+	SearchTopicQueryCompleted   = "search.query.completed"
+	SearchTopicReindexStarted   = "search.reindex.started"
+	SearchTopicReindexCompleted = "search.reindex.completed"
+	SearchTopicReindexFailed    = "search.reindex.failed"
+	SearchTopicDLQ              = "search.dlq"
+)
+
+const (
+	SearchSubjectQueryStarted   = "search.query.started"
+	SearchSubjectQueryCompleted = "search.query.completed"
+	SearchSubjectReindexProgress = "search.reindex.progress"
+)
+

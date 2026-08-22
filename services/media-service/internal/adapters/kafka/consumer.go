@@ -51,7 +51,11 @@ func NewConsumer(cfg ConsumerConfig) *Consumer {
 		}),
 		ErrorLogger: kafkago.LoggerFunc(func(msg string, args ...interface{}) {
 			formatted := fmt.Sprintf(msg, args...)
-			if strings.Contains(formatted, "i/o timeout") {
+			if strings.Contains(formatted, "Rebalance In Progress") || 
+			   strings.Contains(formatted, "i/o timeout") ||
+			   strings.Contains(formatted, "Not Coordinator For Group") ||
+			   strings.Contains(formatted, "Group Coordinator Not Available") ||
+			   strings.Contains(formatted, "Not Leader For Partition") {
 				slog.Debug(formatted, "component", "kafka-consumer", "topic", cfg.Topic)
 			} else {
 				slog.Error(formatted, "component", "kafka-consumer", "topic", cfg.Topic)
@@ -80,6 +84,18 @@ func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				slog.Info("Kafka consumer stopped", "topic", c.reader.Config().Topic)
 				return nil
+			}
+			if strings.Contains(err.Error(), "Rebalance In Progress") || 
+			   strings.Contains(err.Error(), "Not Coordinator For Group") ||
+			   strings.Contains(err.Error(), "Group Coordinator Not Available") ||
+			   strings.Contains(err.Error(), "Not Leader For Partition") {
+				slog.Debug("Kafka consumer transient coordinator/rebalance/leader state, waiting...", "topic", c.reader.Config().Topic)
+				select {
+				case <-ctx.Done():
+					return nil
+				case <-time.After(500 * time.Millisecond):
+				}
+				continue
 			}
 			slog.Error("Failed to fetch Kafka message", "error", err, "topic", c.reader.Config().Topic)
 			continue

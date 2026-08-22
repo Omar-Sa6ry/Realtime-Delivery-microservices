@@ -82,18 +82,15 @@ type MediaScanCompletedPayload struct {
 	Threat   string `json:"threat,omitempty"`
 }
 
-// EventEnvelope is the generic Kafka/NATS event wrapper — matches the TypeScript MediaEventEnvelope.
-// All media events are wrapped in this structure before publishing.
 type EventEnvelope struct {
 	EventID   string          `json:"eventId"`
-	EventType MediaEventType  `json:"eventType"`
+	EventType string          `json:"eventType"` // e.g. "delivery.created", "media.ready"
 	TraceID   string          `json:"traceId,omitempty"`
 	Timestamp int64           `json:"timestamp"` // unix milliseconds
 	Payload   json.RawMessage `json:"payload"`
 }
 
-// NewEventEnvelope builds an EventEnvelope from a typed payload and records the current time.
-func NewEventEnvelope(eventID string, eventType MediaEventType, traceID string, payload interface{}) (*EventEnvelope, error) {
+func NewEventEnvelope(eventID string, eventType string, traceID string, payload interface{}) (*EventEnvelope, error) {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("marshal event payload: %w", err)
@@ -107,13 +104,22 @@ func NewEventEnvelope(eventID string, eventType MediaEventType, traceID string, 
 	}, nil
 }
 
-// MarshalEnvelope serialises an EventEnvelope to JSON bytes ready for publishing.
-func MarshalEnvelope(eventID string, eventType MediaEventType, traceID string, payload interface{}) ([]byte, error) {
+func NewMediaEventEnvelope(eventID string, eventType MediaEventType, traceID string, payload interface{}) (*EventEnvelope, error) {
+	return NewEventEnvelope(eventID, string(eventType), traceID, payload)
+}
+
+// Accepts any string event type for cross-domain use.
+func MarshalEnvelope(eventID string, eventType string, traceID string, payload interface{}) ([]byte, error) {
 	env, err := NewEventEnvelope(eventID, eventType, traceID, payload)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(env)
+}
+
+// MarshalMediaEnvelope is a backward-compatible wrapper for media events.
+func MarshalMediaEnvelope(eventID string, eventType MediaEventType, traceID string, payload interface{}) ([]byte, error) {
+	return MarshalEnvelope(eventID, string(eventType), traceID, payload)
 }
 
 // UnmarshalEnvelope parses a raw Kafka/NATS message into an EventEnvelope.

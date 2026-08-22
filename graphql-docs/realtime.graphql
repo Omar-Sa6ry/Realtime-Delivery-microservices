@@ -1,0 +1,40 @@
+# Check if realtime service is reachable (requires authentication) (user)
+query {
+  pingForRealtime {
+    statusCode
+    message
+    success
+    data
+  }
+}
+
+# Get connection status for a specific user (requires authentication) (user)
+query {
+  getConnectionStatus(userId: "user-001") {
+    statusCode
+    message
+    success
+    data {
+      isConnected
+      lastSeen
+      connectionCount
+    }
+  }
+}
+
+# Get active connections count by role (requires authentication) (user)
+query {
+  getActiveConnections {
+    statusCode
+    message
+    success
+    data {
+      total
+      byRole {
+        customers
+        drivers
+        admins
+      }
+    }
+  }
+}

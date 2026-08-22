@@ -1,0 +1,84 @@
+# Get notifications for the current user (requires Bearer token) (user)
+query {
+  myNotifications {
+    statusCode
+    message
+    success
+    data {
+      id
+      type
+      title
+      message
+      read
+      createdAt
+    }
+  }
+}
+
+# Get a specific notification by ID (requires Bearer token) (user)
+query {
+  notification(id: "notif-001") {
+    statusCode
+    message
+    success
+    data {
+      id
+      type
+      title
+      message
+      read
+      createdAt
+    }
+  }
+}
+
+# Mark a notification as read (requires Bearer token) (user)
+mutation {
+  markNotificationRead(id: "notif-001") {
+    statusCode
+    message
+    success
+  }
+}
+
+# Mark all notifications as read (requires Bearer token) (user)
+mutation {
+  markAllNotificationsRead {
+    statusCode
+    message
+    success
+  }
+}
+
+# Delete a notification (requires Bearer token) (user)
+mutation {
+  deleteNotification(id: "notif-001") {
+    statusCode
+    message
+    success
+  }
+}
+
+# Create a new notification (Admin only) (admin)
+mutation {
+  createNotification(
+    input: {
+      type: "system"
+      title: "System Update"
+      message: "There is a system update available"
+      userId: "user-001"
+    }
+  ) {
+    statusCode
+    message
+    success
+    data {
+      id
+      type
+      title
+      message
+      read
+      createdAt
+    }
+  }
+}

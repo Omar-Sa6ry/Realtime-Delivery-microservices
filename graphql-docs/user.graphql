@@ -1,4 +1,4 @@
-# Get the profile of the currently logged-in user (requires Bearer token)
+# Get the profile of the currently logged-in user (requires Bearer token) (user)
 query {
   myProfile {
     statusCode
@@ -16,7 +16,7 @@ query {
   }
 }
 
-# Get a specific user by their ID (Admin only)
+# Get a specific user by their ID (Admin only) (admin)
 query {
   user(id: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
     statusCode
@@ -33,7 +33,7 @@ query {
   }
 }
 
-# Get a paginated list of users (Admin only)
+# Get a paginated list of users (Admin only) (admin)
 query {
   users(page: 1, limit: 10) {
     statusCode
@@ -53,7 +53,7 @@ query {
   }
 }
 
-# Update the profile of the currently logged-in user (requires Bearer token)
+# Update the profile of the currently logged-in user (requires Bearer token) (user)
 mutation {
   updateProfile(
     input: {
@@ -76,7 +76,7 @@ mutation {
   }
 }
 
-# Promote a user to Admin (Admin only)
+# Promote a user to Admin (Admin only) (admin)
 mutation {
   promoteUserToAdmin(id: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
     statusCode
@@ -85,7 +85,7 @@ mutation {
   }
 }
 
-# Toggle user active status (Admin only)
+# Toggle user active status (Admin only) (admin)
 mutation {
   toggleUserActive(id: "01KPJSGYC1XNRH3DP7Y1D20CDP", isActive: false) {
     statusCode
@@ -94,7 +94,7 @@ mutation {
   }
 }
 
-# Delete a user (Admin only)
+# Delete a user (Admin only) (admin)
 mutation {
   deleteUser(id: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
     statusCode
@@ -103,7 +103,7 @@ mutation {
   }
 }
 
-# Add a new address to user profile (requires Bearer token)
+# Add a new address to user profile (requires Bearer token) (user)
 mutation {
   addAddress(
     input: {
@@ -130,7 +130,7 @@ mutation {
   }
 }
 
-# Delete an address from user profile (requires Bearer token)
+# Delete an address from user profile (requires Bearer token) (user)
 mutation {
   deleteAddress(addressId: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
     statusCode
@@ -139,7 +139,7 @@ mutation {
   }
 }
 
-# Set an address as default (requires Bearer token)
+# Set an address as default (requires Bearer token) (user)
 mutation {
   setDefaultAddress(addressId: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
     statusCode
@@ -148,7 +148,7 @@ mutation {
   }
 }
 
-# Retrieve currently logged-in user's addresses (requires Bearer token)
+# Retrieve currently logged-in user's addresses (requires Bearer token) (user)
 query {
   myAddresses {
     statusCode

@@ -1,0 +1,150 @@
+# Get a specific media file by ID
+query {
+  media(mediaId: "media-001") {
+    statusCode
+    message
+    success
+    data {
+      mediaId
+      fileName
+      contentType
+      mediaType
+      size
+      status
+      createdAt
+    }
+  }
+}
+
+# Get paginated list of media files (requires authentication) (user)
+query {
+  listMedia(ownerId: "user-001", limit: 10) {
+    statusCode
+    message
+    success
+    data {
+      total
+      items {
+        mediaId
+        fileName
+        contentType
+        mediaType
+        size
+        status
+        createdAt
+      }
+    }
+  }
+}
+
+# Get upload status
+query {
+  uploadStatus(uploadId: "upload-001") {
+    statusCode
+    message
+    success
+    data {
+      uploadId
+      status
+      totalParts
+      completedParts
+      missingParts
+      expiresAt
+    }
+  }
+}
+
+# Get presigned download URL
+query {
+  downloadUrl(mediaId: "media-001", versionType: "original", expirySeconds: 3600) {
+    statusCode
+    message
+    success
+    data {
+      url
+      expiresAt
+      contentType
+    }
+  }
+}
+
+# Get user quota
+query {
+  quota {
+    statusCode
+    message
+    success
+    data {
+      usedBytes
+      quotaBytes
+      remainingBytes
+      activeUploads
+      maxConcurrentUploads
+    }
+  }
+}
+
+# Create upload session
+mutation {
+  createUploadSession(
+    input: {
+      fileName: "sample.mp4"
+      contentType: "video/mp4"
+      size: 104857600
+    }
+  ) {
+    statusCode
+    message
+    success
+    data {
+      mediaId
+      uploadId
+      s3UploadId
+      presignedParts {
+        partNumber
+        presignedUrl
+      }
+      partSize
+      totalParts
+      expiresAt
+    }
+  }
+}
+
+# Complete upload session
+mutation {
+  completeUpload(
+    input: {
+      uploadId: "upload-001"
+      parts: [
+        { partNumber: 1, eTag: "etag-001" }
+      ]
+    }
+  ) {
+    statusCode
+    message
+    success
+    data {
+      mediaId
+      status
+    }
+  }
+}
+
+# Abort upload session
+mutation {
+  abortUpload(uploadId: "upload-001") {
+    statusCode
+    message
+    success
+  }
+}
+
+# Delete media file
+mutation {
+  deleteMedia(mediaId: "media-001", idempotencyKey: "del-001") {
+    statusCode
+    message
+    success
+  }
+}

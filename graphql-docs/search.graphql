@@ -1,0 +1,65 @@
+# Search for users (requires authentication) (user)
+query {
+  searchUsers(
+    query: "john"
+    page: 1
+    limit: 10
+  ) {
+    statusCode
+    message
+    success
+    data {
+      total
+      items {
+        id
+        firstName
+        lastName
+        email
+      }
+    }
+  }
+}
+
+# Search for media files (requires authentication) (user)
+query {
+  searchMedia(
+    query: "sample"
+    mediaType: "video"
+    page: 1
+    limit: 10
+  ) {
+    statusCode
+    message
+    success
+    data {
+      total
+      items {
+        mediaId
+        fileName
+        contentType
+      }
+    }
+  }
+}
+
+# Search for notifications (requires authentication) (user)
+query {
+  searchNotifications(
+    query: "urgent"
+    page: 1
+    limit: 10
+  ) {
+    statusCode
+    message
+    success
+    data {
+      total
+      items {
+        id
+        type
+        title
+        read
+      }
+    }
+  }
+}

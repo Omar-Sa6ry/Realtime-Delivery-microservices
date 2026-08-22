@@ -49,6 +49,10 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # Copy the binary
 COPY --from=builder /workspace/bin/media-service /media-service
 
+# The service only needs a writable /tmp directory for transient media work.
+# Running unprivileged limits the blast radius of parser/codec vulnerabilities.
+USER 10001:10001
+
 # GraphQL federation subgraph port and metrics port
 EXPOSE 4005 9102
 

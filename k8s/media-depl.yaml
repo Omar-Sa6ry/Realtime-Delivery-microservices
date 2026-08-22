@@ -151,11 +151,114 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 20
           failureThreshold: 6
-        # Since we use alpine with ffmpeg, we have a writeable tmp directory
+        # FFmpeg and temporary media operations use the dedicated writable /tmp volume.
         securityContext:
           allowPrivilegeEscalation: false
-          runAsNonRoot: false
-      terminationGracePeriodSeconds: 30
+          runAsNonRoot: true
+          runAsUser: 10001
+          runAsGroup: 10001
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 2Gi
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 60
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: media-service-pdb
+  namespace: default
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: media-service
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: media-service
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: media-service
+  minReplicas: 1
+  maxReplicas: 10
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 25
+        periodSeconds: 60
+      selectPolicy: Max
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 75
+
+---
+apiVersion: policy/v1
+kind: NetworkPolicy
+metadata:
+  name: media-service-egress
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: media-service
+  policyTypes: [Egress]
+  egress:
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 4005
+    - protocol: TCP
+      port: 50052
+    - protocol: TCP
+      port: 6379
+    - protocol: TCP
+      port: 9092
+    - protocol: TCP
+      port: 4566
+    - protocol: TCP
+      port: 3310
+    - protocol: TCP
+      port: 443
 
 ---
 apiVersion: v1

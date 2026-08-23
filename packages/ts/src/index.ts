@@ -15,6 +15,11 @@ export * from "./guard/redis-rate-limiter.guard";
 
 // Filters
 export * from "./filters/grpc-exception.filter";
+export * from "./filters/graphql-exception.filter";
+
+// Interceptors
+export * from "./interceptors/response-formatter";
+export * from "./interceptors/graphql-response.interceptor";
 
 // Interfaces
 export * from "./interfaces/user.interface";

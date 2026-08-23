@@ -4,7 +4,6 @@ import { ValidationPipe } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { StructuredLogger } from '@delivery/common';
-import { setupInterceptors } from '@bts-soft/core';
 import { join } from 'path';
 import { I18nValidationException } from 'nestjs-i18n';
 
@@ -15,7 +14,6 @@ async function bootstrap() {
   });
 
   app.enableCors();
-  setupInterceptors(app);
 
   app.useGlobalPipes(
     new ValidationPipe({

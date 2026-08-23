@@ -2,7 +2,6 @@ import { join } from 'path';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import { setupInterceptors } from '@bts-soft/core';
 import { I18nValidationException } from 'nestjs-i18n';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { graphqlUploadExpress } from 'graphql-upload-minimal';
@@ -18,7 +17,6 @@ async function bootstrap() {
   app.enableCors();
 
   app.use(graphqlUploadExpress({ maxFileSize: 100_000_000, maxFiles: 5 }));
-  setupInterceptors(app as any);
 
   app.useGlobalPipes(
     new ValidationPipe({

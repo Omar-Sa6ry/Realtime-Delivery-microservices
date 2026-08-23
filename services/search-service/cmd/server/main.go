@@ -47,7 +47,7 @@ func main() {
 	}
 	cancelInit()
 
-	searchRepo := opensearch.NewRepository(osClient)
+	searchRepo := opensearch.NewRepository(osClient, indexManager)
 
 	// 2. Initialize Redis Cache
 	cache := redis.NewCache(cfg)

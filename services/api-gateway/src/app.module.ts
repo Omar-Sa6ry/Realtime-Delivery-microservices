@@ -51,17 +51,31 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
         playground: true,
         introspection: true,
         formatError: (error: any) => {
-          const subgraphError = error.extensions?.response?.body?.errors?.[0];
+          // Handle subgraph errors (new format: extensions directly on error)
+          const subgraphError = error.extensions;
 
-          if (subgraphError) {
+          if (subgraphError && subgraphError.success === false && subgraphError.statusCode) {
             return {
               success: false,
-              statusCode: subgraphError.statusCode || 400,
-              message: subgraphError.message,
+              statusCode: subgraphError.statusCode,
+              message: error.message,
               timeStamp: subgraphError.timeStamp || new Date().toISOString(),
+              error: subgraphError.error,
             } as any;
           }
 
+          // Handle legacy subgraph error format (if any)
+          const legacySubgraphError = error.extensions?.response?.body?.errors?.[0];
+          if (legacySubgraphError) {
+            return {
+              success: false,
+              statusCode: legacySubgraphError.statusCode || 400,
+              message: legacySubgraphError.message,
+              timeStamp: legacySubgraphError.timeStamp || new Date().toISOString(),
+            } as any;
+          }
+
+          // Handle gateway-level errors
           const originalError = error.extensions?.originalError as any;
           const msg = originalError?.message || error.message;
           const code =

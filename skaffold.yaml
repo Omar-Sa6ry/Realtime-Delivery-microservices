@@ -45,23 +45,11 @@ build:
       context: .
       docker:
         dockerfile: services/search-service/Dockerfile
-      sync:
-        manual:
-          - src: "services/search-service/**/*.go"
-            dest: /app/services/search-service
-          - src: "packages/go/**/*.go"
-            dest: /app/packages/go
 
     - image: delivery/media
       context: .
       docker:
         dockerfile: services/media-service/Dockerfile
-      sync:
-        manual:
-          - src: "services/media-service/**/*.go"
-            dest: /app/services/media-service
-          - src: "packages/go/**/*.go"
-            dest: /app/packages/go
 
     - image: delivery/user
       context: .

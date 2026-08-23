@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -46,10 +47,15 @@ func (im *IndexManager) EnsureIndices(ctx context.Context) error {
 		},
 	}
 
+	var errs []error
 	for _, idx := range indices {
 		if err := im.createIndexIfNotExists(ctx, idx.Version, idx.Alias, idx.Mapping); err != nil {
-			return fmt.Errorf("failed to ensure index %s: %w", idx.Alias, err)
+			slog.Warn("Failed to ensure index", "alias", idx.Alias, "error", err)
+			errs = append(errs, fmt.Errorf("failed to ensure index %s: %w", idx.Alias, err))
 		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("ensure indices completed with %d error(s)", len(errs))
 	}
 	return nil
 }
@@ -66,7 +72,7 @@ func (im *IndexManager) createIndexIfNotExists(ctx context.Context, concreteName
 
 	if res.StatusCode == http.StatusOK {
 		slog.Info("Index already exists", "index", concreteName)
-		return nil
+		return im.ensureAlias(ctx, concreteName, aliasName)
 	}
 
 	createReq := opensearchapi.IndicesCreateReq{
@@ -80,9 +86,19 @@ func (im *IndexManager) createIndexIfNotExists(ctx context.Context, concreteName
 	defer createRes.Body.Close()
 
 	if createRes.StatusCode >= 400 {
-		return fmt.Errorf("create index status %d", createRes.StatusCode)
+		bodyBytes, _ := io.ReadAll(createRes.Body)
+		return fmt.Errorf("create index %s status %d: %s", concreteName, createRes.StatusCode, string(bodyBytes))
 	}
 
+	if err := im.ensureAlias(ctx, concreteName, aliasName); err != nil {
+		return err
+	}
+
+	slog.Info("Successfully created index with alias", "index", concreteName, "alias", aliasName)
+	return nil
+}
+
+func (im *IndexManager) ensureAlias(ctx context.Context, concreteName, aliasName string) error {
 	aliasReq := opensearchapi.AliasesReq{
 		Body: bytes.NewReader([]byte(fmt.Sprintf(`{"actions":[{"add":{"index":"%s","alias":"%s"}}]}`, concreteName, aliasName))),
 	}
@@ -92,7 +108,10 @@ func (im *IndexManager) createIndexIfNotExists(ctx context.Context, concreteName
 	}
 	defer aliasRes.Body.Close()
 
-	slog.Info("Successfully created index with alias", "index", concreteName, "alias", aliasName)
+	if aliasRes.StatusCode >= http.StatusBadRequest {
+		bodyBytes, _ := io.ReadAll(aliasRes.Body)
+		return fmt.Errorf("create alias %s for index %s status %d: %s", aliasName, concreteName, aliasRes.StatusCode, string(bodyBytes))
+	}
 	return nil
 }
 

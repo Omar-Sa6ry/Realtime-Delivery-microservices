@@ -50,6 +50,10 @@ func (cm *ConsumerManager) Start(ctx context.Context) error {
 		// Media
 		"media.ready",
 		"media.deleted",
+		// User
+		"user.created",
+		"user.updated",
+		"user.deleted",
 	}
 
 	var wg sync.WaitGroup
@@ -202,6 +206,54 @@ func (cm *ConsumerManager) handleMessage(ctx context.Context, topic string, msg 
 			return fmt.Errorf("%w: %v", pkgKafka.ErrPermanent, err)
 		}
 		return cm.indexingService.DeleteMedia(ctx, p.MediaID)
+
+	// User
+	case string(events.UserCreated):
+		var p events.UserCreatedPayload
+		if err := json.Unmarshal(env.Payload, &p); err != nil {
+			return fmt.Errorf("%w: invalid user.created payload: %v", pkgKafka.ErrPermanent, err)
+		}
+		createdAt := p.CreatedAt
+		if createdAt.IsZero() {
+			createdAt = time.Now().UTC()
+		}
+		doc := search.UserDocument{
+			ID:        p.UserID,
+			FirstName: p.FirstName,
+			LastName:  p.LastName,
+			Email:     p.Email,
+			Role:      p.Role,
+			IsActive:  true,
+			CreatedAt: createdAt,
+		}
+		return cm.indexingService.UpsertUser(ctx, doc)
+
+	case string(events.UserUpdated):
+		var p events.UserUpdatedPayload
+		if err := json.Unmarshal(env.Payload, &p); err != nil {
+			return fmt.Errorf("%w: invalid user.updated payload: %v", pkgKafka.ErrPermanent, err)
+		}
+		updatedAt := p.UpdatedAt
+		if updatedAt.IsZero() {
+			updatedAt = time.Now().UTC()
+		}
+		doc := search.UserDocument{
+			ID:        p.UserID,
+			FirstName: p.FirstName,
+			LastName:  p.LastName,
+			Email:     p.Email,
+			Role:      p.Role,
+			IsActive:  p.IsActive,
+			CreatedAt: updatedAt,
+		}
+		return cm.indexingService.UpsertUser(ctx, doc)
+
+	case string(events.UserDeleted):
+		var p events.UserDeletedPayload
+		if err := json.Unmarshal(env.Payload, &p); err != nil {
+			return fmt.Errorf("%w: %v", pkgKafka.ErrPermanent, err)
+		}
+		return cm.indexingService.DeleteUser(ctx, p.UserID)
 	}
 
 	return nil

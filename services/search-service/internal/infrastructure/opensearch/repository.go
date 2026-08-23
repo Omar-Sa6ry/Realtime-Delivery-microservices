@@ -16,32 +16,36 @@ import (
 )
 
 type Repository struct {
-	client *Client
+	client       *Client
+	indexManager *IndexManager
 }
 
-func NewRepository(client *Client) *Repository {
-	return &Repository{client: client}
+func NewRepository(client *Client, indexManager *IndexManager) *Repository {
+	return &Repository{
+		client:       client,
+		indexManager: indexManager,
+	}
 }
 
 //  Query Operations
 
 func (r *Repository) SearchDeliveries(ctx context.Context, q search.DeliverySearchQuery) (search.SearchResult[search.DeliveryDocument], error) {
 	queryDsl := buildDeliveryQuery(q)
-	return executeSearch[search.DeliveryDocument](ctx, r.client, "deliveries", queryDsl, q.Pagination)
+	return executeSearch[search.DeliveryDocument](ctx, r, "deliveries", queryDsl, q.Pagination)
 }
 
 func (r *Repository) SearchDrivers(ctx context.Context, q search.DriverSearchQuery) (search.SearchResult[search.DriverDocument], error) {
 	queryDsl := buildDriverQuery(q)
-	return executeSearch[search.DriverDocument](ctx, r.client, "drivers", queryDsl, q.Pagination)
+	return executeSearch[search.DriverDocument](ctx, r, "drivers", queryDsl, q.Pagination)
 }
 
 func (r *Repository) SearchMedia(ctx context.Context, q search.MediaSearchQuery) (search.SearchResult[search.MediaDocument], error) {
 	queryDsl := buildMediaQuery(q)
-	return executeSearch[search.MediaDocument](ctx, r.client, "media", queryDsl, q.Pagination)
+	return executeSearch[search.MediaDocument](ctx, r, "media", queryDsl, q.Pagination)
 }
 
 func (r *Repository) SearchUsers(ctx context.Context, q search.UserSearchQuery) (search.SearchResult[search.UserDocument], error) {
-	return executeSearch[search.UserDocument](ctx, r.client, "users", buildUserQuery(q), q.Pagination)
+	return executeSearch[search.UserDocument](ctx, r, "users", buildUserQuery(q), q.Pagination)
 }
 
 func (r *Repository) Autocomplete(ctx context.Context, q search.AutocompleteQuery) (search.AutocompleteResult, error) {
@@ -83,6 +87,14 @@ func (r *Repository) Autocomplete(ctx context.Context, q search.AutocompleteQuer
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(res.Body)
+		bodyStr := string(respBody)
+		if res.StatusCode == http.StatusNotFound || strings.Contains(bodyStr, "index_not_found_exception") {
+			if r != nil && r.indexManager != nil {
+				_ = r.indexManager.EnsureIndices(ctx)
+			}
+			return search.AutocompleteResult{Suggestions: []string{}}, nil
+		}
 		return search.AutocompleteResult{}, fmt.Errorf("opensearch returned status: %d", res.StatusCode)
 	}
 
@@ -149,7 +161,7 @@ func (r *Repository) NearbyDeliveries(ctx context.Context, q search.GeoSearchQue
 			},
 		},
 	}
-	return executeSearch[search.DeliveryDocument](ctx, r.client, "deliveries", queryDsl, q.Pagination)
+	return executeSearch[search.DeliveryDocument](ctx, r, "deliveries", queryDsl, q.Pagination)
 }
 
 func (r *Repository) NearbyDrivers(ctx context.Context, q search.GeoSearchQuery) (search.SearchResult[search.DriverDocument], error) {
@@ -189,7 +201,7 @@ func (r *Repository) NearbyDrivers(ctx context.Context, q search.GeoSearchQuery)
 			},
 		},
 	}
-	return executeSearch[search.DriverDocument](ctx, r.client, "drivers", queryDsl, q.Pagination)
+	return executeSearch[search.DriverDocument](ctx, r, "drivers", queryDsl, q.Pagination)
 }
 
 //  Indexing Operations
@@ -219,6 +231,14 @@ func (r *Repository) UpsertMedia(ctx context.Context, doc search.MediaDocument) 
 
 func (r *Repository) DeleteMedia(ctx context.Context, id string) error {
 	return r.deleteDoc(ctx, "media", id)
+}
+
+func (r *Repository) UpsertUser(ctx context.Context, doc search.UserDocument) error {
+	return r.upsertDoc(ctx, "users", doc.ID, doc, 1)
+}
+
+func (r *Repository) DeleteUser(ctx context.Context, id string) error {
+	return r.deleteDoc(ctx, "users", id)
 }
 
 func (r *Repository) BulkUpsertDeliveries(ctx context.Context, docs []search.DeliveryDocument) error {
@@ -490,7 +510,7 @@ func (r *Repository) ClusterHealth(ctx context.Context) (string, error) {
 	return health.Status, nil
 }
 
-func executeSearch[T any](ctx context.Context, client *Client, index string, queryDsl map[string]interface{}, p search.PaginationInput) (search.SearchResult[T], error) {
+func executeSearch[T any](ctx context.Context, r *Repository, index string, queryDsl map[string]interface{}, p search.PaginationInput) (search.SearchResult[T], error) {
 	limit := p.Limit
 	if limit <= 0 {
 		limit = 10
@@ -522,7 +542,7 @@ func executeSearch[T any](ctx context.Context, client *Client, index string, que
 		Body:    bytes.NewReader(b),
 	}
 
-	res, err := client.Do(ctx, req, nil)
+	res, err := r.client.Do(ctx, req, nil)
 	if err != nil {
 		return search.SearchResult[T]{}, fmt.Errorf("%w: %v", search.ErrSearchUnavailable, err)
 	}
@@ -530,7 +550,21 @@ func executeSearch[T any](ctx context.Context, client *Client, index string, que
 
 	if res.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(res.Body)
-		return search.SearchResult[T]{}, fmt.Errorf("search error (%d): %s", res.StatusCode, string(respBody))
+		bodyStr := string(respBody)
+		if res.StatusCode == http.StatusNotFound || strings.Contains(bodyStr, "index_not_found_exception") {
+			if r != nil && r.indexManager != nil {
+				_ = r.indexManager.EnsureIndices(ctx)
+			}
+			return search.SearchResult[T]{
+				Items: []T{},
+				PageInfo: search.PageInfo{
+					HasNextPage: false,
+					Cursor:      "",
+					Total:       0,
+				},
+			}, nil
+		}
+		return search.SearchResult[T]{}, fmt.Errorf("search error (%d): %s", res.StatusCode, bodyStr)
 	}
 
 	var osResponse struct {

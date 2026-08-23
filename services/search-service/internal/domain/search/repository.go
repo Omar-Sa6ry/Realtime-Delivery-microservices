@@ -46,6 +46,12 @@ type SearchRepository interface {
 	// DeleteMedia removes a media document from the search index.
 	DeleteMedia(ctx context.Context, id string) error
 
+	// UpsertUser creates or updates a user search document (idempotent).
+	UpsertUser(ctx context.Context, doc UserDocument) error
+
+	// DeleteUser removes a user document from the search index.
+	DeleteUser(ctx context.Context, id string) error
+
 	// BulkUpsertDeliveries indexes a batch of delivery documents atomically.
 	BulkUpsertDeliveries(ctx context.Context, docs []DeliveryDocument) error
 

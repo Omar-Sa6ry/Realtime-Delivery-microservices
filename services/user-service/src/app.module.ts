@@ -9,13 +9,8 @@ import {
 } from '@nestjs/apollo';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
-import {
-  HttpExceptionFilter,
-  RedisModule,
-  NotificationModule,
-} from '@bts-soft/core';
+import { RedisModule, NotificationModule } from '@bts-soft/core';
 import { TranslationModule } from './common/translation/translation.module';
-import { GraphqlResponseInterceptor } from './common/interceptors/graphql-response.interceptor';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
@@ -24,7 +19,14 @@ import { User } from './common/database/entities/user.entity';
 import { Address } from './common/database/entities/address.entity';
 import { Outbox } from './common/database/entities/outbox.entity';
 import { UserService } from './modules/user/user.service';
-import { LoggingModule, MetricsModule, AutomationModule, MetricsInterceptor } from '@delivery/common';
+import {
+  LoggingModule,
+  MetricsModule,
+  AutomationModule,
+  MetricsInterceptor,
+  GraphQLExceptionFilter,
+  GraphQLResponseInterceptor,
+} from '@delivery/common';
 import { BullModule } from '@nestjs/bullmq';
 
 @Module({
@@ -114,11 +116,11 @@ import { BullModule } from '@nestjs/bullmq';
   providers: [
     {
       provide: APP_FILTER,
-      useClass: HttpExceptionFilter,
+      useClass: GraphQLExceptionFilter,
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: GraphqlResponseInterceptor,
+      useClass: GraphQLResponseInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,

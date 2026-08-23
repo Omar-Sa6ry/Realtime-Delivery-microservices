@@ -116,6 +116,7 @@ export class AuthService {
         firstName: savedUser.firstName,
         lastName: savedUser.lastName,
         role: savedUser.role,
+        createdAt: savedUser.createdAt,
       })
       .catch((err) => console.error('Failed to publish user.created event:', err));
 

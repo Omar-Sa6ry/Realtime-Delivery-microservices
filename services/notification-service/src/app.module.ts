@@ -7,20 +7,26 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloFederationDriver, ApolloFederationDriverConfig } from '@nestjs/apollo';
 import { JwtModule } from '@nestjs/jwt';
 import { RedisModule } from '@bts-soft/cache';
-import { NotificationModule as BtsNotificationModule, HttpExceptionFilter } from '@bts-soft/core';
+import { NotificationModule as BtsNotificationModule } from '@bts-soft/core';
 import { StringValue } from 'ms';
 import { join } from 'path';
 import { AppResolver } from './app.resolver';
 import { CommonModule } from './common/common.module';
 import { TranslationModule } from './common/translation/translation.module';
-import { GraphqlResponseInterceptor } from './common/interceptors/graphql-response.interceptor';
 import { KafkaConsumerModule } from './modules/kafka/kafka.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { WorkersModule } from './modules/workers/workers.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
 import { GrpcModule } from './modules/grpc/grpc.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { LoggingModule, MetricsModule, AutomationModule, MetricsInterceptor } from '@delivery/common';
+import {
+  LoggingModule,
+  MetricsModule,
+  AutomationModule,
+  MetricsInterceptor,
+  GraphQLExceptionFilter,
+  GraphQLResponseInterceptor,
+} from '@delivery/common';
 
 @Module({
   imports: [
@@ -106,11 +112,11 @@ import { LoggingModule, MetricsModule, AutomationModule, MetricsInterceptor } fr
     AppResolver,
     {
       provide: APP_FILTER,
-      useClass: HttpExceptionFilter,
+      useClass: GraphQLExceptionFilter,
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: GraphqlResponseInterceptor,
+      useClass: GraphQLResponseInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,

@@ -10,10 +10,6 @@ import {
 import { JwtModule } from '@nestjs/jwt';
 import { StringValue } from 'ms';
 import { RedisModule } from '@bts-soft/cache';
-import {
-  HttpExceptionFilter,
-} from '@bts-soft/core';
-import { GraphqlResponseInterceptor } from './common/interceptors/graphql-response.interceptor';
 import { WebSocketModule } from './modules/gateway/websocket/websocket.module';
 import { ConnectionModule } from './modules/gateway/connection/connection.module';
 import { SubscriptionModule } from './modules/features/subscription/subscription.module';
@@ -32,6 +28,8 @@ import {
   MetricsModule,
   AutomationModule,
   MetricsInterceptor,
+  GraphQLExceptionFilter,
+  GraphQLResponseInterceptor,
 } from '@delivery/common';
 import { CommonModule } from './common/common.module';
 import realtimeConfig from './common/config/realtime.config';
@@ -98,11 +96,11 @@ import realtimeConfig from './common/config/realtime.config';
   providers: [
     {
       provide: APP_FILTER,
-      useClass: HttpExceptionFilter,
+      useClass: GraphQLExceptionFilter,
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: GraphqlResponseInterceptor,
+      useClass: GraphQLResponseInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,

@@ -11,7 +11,7 @@ import { BcryptPasswordHasher } from './security/bcrypt-password.hasher';
 import { JwtTokenProvider } from './security/jwt-token.provider';
 import { OutboxWorkerService } from './messaging/outbox-worker.service';
 import { OutboxProcessor } from './messaging/outbox.queue';
-import { GraphqlResponseInterceptor } from './interceptors/graphql-response.interceptor';
+import { GraphQLResponseInterceptor } from '@delivery/common';
 
 @Global()
 @Module({
@@ -30,7 +30,7 @@ import { GraphqlResponseInterceptor } from './interceptors/graphql-response.inte
     RedisSessionRepository,
     OutboxWorkerService,
     OutboxProcessor,
-    GraphqlResponseInterceptor,
+    GraphQLResponseInterceptor,
     {
       provide: 'SHARED_REDIS_SERVICE',
       useExisting: RedisService,
@@ -47,7 +47,7 @@ import { GraphqlResponseInterceptor } from './interceptors/graphql-response.inte
     RedisSessionRepository,
     OutboxWorkerService,
     OutboxProcessor,
-    GraphqlResponseInterceptor,
+    GraphQLResponseInterceptor,
     'SHARED_REDIS_SERVICE',
   ],
 })

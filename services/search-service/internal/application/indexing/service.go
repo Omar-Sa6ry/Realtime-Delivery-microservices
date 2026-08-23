@@ -44,3 +44,13 @@ func (s *Service) DeleteMedia(ctx context.Context, id string) error {
 	slog.Info("Deleting media from index", "id", id)
 	return s.repo.DeleteMedia(ctx, id)
 }
+
+func (s *Service) UpsertUser(ctx context.Context, doc search.UserDocument) error {
+	slog.Info("Indexing user", "id", doc.ID, "email", doc.Email)
+	return s.repo.UpsertUser(ctx, doc)
+}
+
+func (s *Service) DeleteUser(ctx context.Context, id string) error {
+	slog.Info("Deleting user from index", "id", id)
+	return s.repo.DeleteUser(ctx, id)
+}

@@ -3,7 +3,6 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { StructuredLogger } from '@delivery/common';
-import { setupInterceptors } from '@bts-soft/core';
 import { I18nValidationException } from 'nestjs-i18n';
 import { RealtimeWsAdapter } from '@delivery/common';
 
@@ -14,7 +13,6 @@ async function bootstrap() {
   });
 
   app.enableCors();
-  setupInterceptors(app);
 
   app.useGlobalPipes(
     new ValidationPipe({

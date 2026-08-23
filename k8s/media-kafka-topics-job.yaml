@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: media-kafka-topics
+  namespace: default
+  labels:
+    app: media-kafka-topics
+spec:
+  backoffLimit: 12
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: media-kafka-topics
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: topic-provisioner
+        image: apache/kafka:3.8.0
+        env:
+        - name: KAFKA_BOOTSTRAP_SERVER
+          value: kafka-srv:9092
+        command: ["/bin/sh", "-ec"]
+        args:
+        - |
+          until /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server "$KAFKA_BOOTSTRAP_SERVER" >/dev/null 2>&1; do
+            echo "Waiting for Kafka at $KAFKA_BOOTSTRAP_SERVER"
+            sleep 3
+          done
+          topics="
+          media.upload.created
+          media.upload.completed
+          media.upload.aborted
+          media.scan.started
+          media.scan.completed
+          media.scan.failed
+          media.processing.started
+          media.processing.completed
+          media.processing.failed
+          media.ready
+          media.delete.requested
+          media.deleted
+          media.delete.failed
+          media.upload.completed.dlq
+          media.scan.completed.dlq
+          media.delete.requested.dlq
+          "
+          for topic in $topics; do
+            /opt/kafka/bin/kafka-topics.sh \
+              --bootstrap-server "$KAFKA_BOOTSTRAP_SERVER" \
+              --create --if-not-exists \
+              --topic "$topic" \
+              --partitions 6 \
+              --replication-factor 1
+          done
+          echo "Media topics and DLQs are ready"

@@ -1,10 +1,11 @@
 package ports
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+	"time"
+)
 
-// EventPublisher abstracts event publishing to Kafka.
-// The Outbox pattern ensures events are never lost:
-// events are first persisted in DynamoDB, then published here by the outbox worker.
 type EventPublisher interface {
 	// Publish sends a single event to the appropriate Kafka topic.
 	// The topic is derived from the event type.
@@ -14,11 +15,42 @@ type EventPublisher interface {
 	Close() error
 }
 
+type RealtimePublisher interface {
+	PublishProgress(ctx context.Context, subject string, payload interface{}) error
+}
+
+// DLQManager abstracts Dead Letter Queue operations
+type DLQManager interface {
+	// ListDLQTopics returns all DLQ topics for media service
+	ListDLQTopics() []string
+
+	// ReplayDLQMessage replays a single message from DLQ back to its original topic
+	ReplayDLQMessage(ctx context.Context, topic string, msg DLQMessage) error
+
+	// ReplayAllDLQMessages replays all messages from a DLQ topic
+	ReplayAllDLQMessages(ctx context.Context, brokers []string, topic string, maxMessages int) (int, error)
+
+	// GetDLQStats returns statistics about DLQ messages
+	GetDLQStats(ctx context.Context, brokers []string, topics []string) (map[string]int, error)
+}
+
+// DLQMessage represents a message in the Dead Letter Queue
+type DLQMessage struct {
+	ID                string                 `json:"id"`
+	Topic             string                 `json:"topic"`
+	Partition         int                    `json:"partition"`
+	Offset            int64                  `json:"offset"`
+	Key               string                 `json:"key"`
+	Value             json.RawMessage        `json:"value"`
+	Headers           map[string]string      `json:"headers"`
+	Error             string                 `json:"error"`
+	RetryCount        int                    `json:"retryCount"`
+	CreatedAt         time.Time              `json:"createdAt"`
+	OriginalTimestamp time.Time              `json:"originalTimestamp"`
+}
+
 // VirusScanner abstracts malware scanning for uploaded objects.
 // The default implementation delegates to ClamAV via TCP.
 type VirusScanner interface {
-	// ScanObject downloads the object from S3 and scans it for malware.
-	// Returns infected=true and a threat name if a threat is found.
-	// Returns an error for transient failures (e.g. ClamAV unavailable) — these are retried.
 	ScanObject(ctx context.Context, objectKey string) (infected bool, threat string, err error)
 }

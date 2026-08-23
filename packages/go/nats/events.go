@@ -66,6 +66,12 @@ const (
 	RealtimeDriverPresenceUpdated  = "realtime.driver.presence.updated"
 	RealtimeCommandDriver          = "realtime.command.driver"
 	RealtimeCommandDelivery        = "realtime.command.delivery"
+	// Media realtime fan-out subjects (published by media-service workers)
+	RealtimeMediaUploadProgress     = "realtime.media.upload.progress"
+	RealtimeMediaProcessingProgress = "realtime.media.processing.progress"
+	RealtimeMediaReady              = "realtime.media.ready"
+	RealtimeMediaDeleted            = "realtime.media.deleted"
+	RealtimeMediaFailed             = "realtime.media.failed"
 )
 
 // RealtimeKafkaTopics defines the Kafka DLQ topics used by the realtime domain.

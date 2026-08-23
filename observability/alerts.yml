@@ -1,0 +1,38 @@
+groups:
+  - name: media-service
+    rules:
+      - alert: MediaServiceUploadFailures
+        expr: increase(media_upload_failures_total[10m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Media upload failures are elevated
+      - alert: MediaServiceDLQBacklog
+        expr: increase(media_dlq_messages_total[10m]) > 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: Messages are entering a media DLQ
+      - alert: MediaServiceS3Errors
+        expr: increase(media_s3_errors_total[10m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: S3 errors are elevated
+      - alert: MediaServiceProcessingP99
+        expr: histogram_quantile(0.99, sum by (le) (rate(media_processing_duration_seconds_bucket[10m]))) > 30
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Media processing p99 exceeds 30 seconds
+      - alert: MediaServiceKafkaLag
+        expr: media_kafka_consumer_lag > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Kafka consumer lag is high

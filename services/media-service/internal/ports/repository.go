@@ -42,6 +42,9 @@ type UploadRepository interface {
 	// UpdateCompletedParts atomically appends completed parts to the session record.
 	UpdateCompletedParts(ctx context.Context, uploadID string, parts []domain.UploadPart) error
 
+	// UpdateExpiry atomically extends the upload session expiry and TTL.
+	UpdateExpiry(ctx context.Context, uploadID string, expiresAt time.Time) error
+
 	// ListExpired returns upload sessions that expired before the given time.
 	// Used by the reconciliation worker.
 	ListExpired(ctx context.Context, before time.Time) ([]*domain.UploadSession, error)

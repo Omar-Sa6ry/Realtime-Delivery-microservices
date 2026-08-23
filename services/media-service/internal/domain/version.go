@@ -6,17 +6,18 @@ import "time"
 type VersionType string
 
 const (
-	VersionTypeOriginal    VersionType = "original"
-	VersionTypeThumbnail   VersionType = "thumbnail"
-	VersionTypeMedium      VersionType = "medium"
-	VersionTypeOptimized   VersionType = "optimized"
-	VersionType360p        VersionType = "360p"
-	VersionType720p        VersionType = "720p"
-	VersionType1080p       VersionType = "1080p"
-	VersionTypeWebP        VersionType = "webp"
-	VersionTypePreview     VersionType = "preview"
-	VersionTypeCompressed  VersionType = "compressed"  // gzip-compressed rendition
-	VersionTypeHLS         VersionType = "hls"         // HLS adaptive streaming master playlist
+	VersionTypeOriginal   VersionType = "original"
+	VersionTypeThumbnail  VersionType = "thumbnail"
+	VersionTypeMedium     VersionType = "medium"
+	VersionTypeOptimized  VersionType = "optimized"
+	VersionType360p       VersionType = "360p"
+	VersionType720p       VersionType = "720p"
+	VersionType1080p      VersionType = "1080p"
+	VersionTypeWebP       VersionType = "webp"
+	VersionTypeAVIF       VersionType = "avif"
+	VersionTypePreview    VersionType = "preview"
+	VersionTypeCompressed VersionType = "compressed" // gzip-compressed rendition
+	VersionTypeHLS        VersionType = "hls"        // HLS adaptive streaming master playlist
 )
 
 type MediaVersion struct {

@@ -3,6 +3,7 @@ package graphql
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/application/download"
@@ -10,6 +11,7 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/application/upload"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/graphql/dlq"
 	gql "github.com/graphql-go/graphql"
 )
 
@@ -18,11 +20,14 @@ type Handler struct {
 	completeUpload  *upload.CompleteUploadUseCase
 	abortUpload     *upload.AbortUploadUseCase
 	getUploadStatus *upload.GetUploadStatusUseCase
+	renewPresigned  *upload.RenewPresignedUseCase
 	getMedia        *appMedia.GetMediaUseCase
 	listMedia       *appMedia.ListMediaUseCase
 	deleteMedia     *appMedia.DeleteMediaUseCase
 	getDownloadURL  *download.GetDownloadUrlUseCase
 	quotaRepo       ports.QuotaRepository
+	dlqManager      *dlq.DLQManager
+	kafkaBrokers    []string
 }
 
 func NewHandler(
@@ -30,22 +35,28 @@ func NewHandler(
 	completeUpload *upload.CompleteUploadUseCase,
 	abortUpload *upload.AbortUploadUseCase,
 	getUploadStatus *upload.GetUploadStatusUseCase,
+	renewPresigned *upload.RenewPresignedUseCase,
 	getMedia *appMedia.GetMediaUseCase,
 	listMedia *appMedia.ListMediaUseCase,
 	deleteMedia *appMedia.DeleteMediaUseCase,
 	getDownloadURL *download.GetDownloadUrlUseCase,
 	quotaRepo ports.QuotaRepository,
+	dlqManager *dlq.DLQManager,
+	kafkaBrokers []string,
 ) *Handler {
 	return &Handler{
 		createSession:   createSession,
 		completeUpload:  completeUpload,
 		abortUpload:     abortUpload,
 		getUploadStatus: getUploadStatus,
+		renewPresigned:  renewPresigned,
 		getMedia:        getMedia,
 		listMedia:       listMedia,
 		deleteMedia:     deleteMedia,
 		getDownloadURL:  getDownloadURL,
 		quotaRepo:       quotaRepo,
+		dlqManager:      dlqManager,
+		kafkaBrokers:    kafkaBrokers,
 	}
 }
 
@@ -344,4 +355,87 @@ func intSlice(in []int) []interface{} {
 		out = append(out, v)
 	}
 	return out
+}
+
+// resolveDLQTopics returns all DLQ topics
+func (h *Handler) resolveDLQTopics(p gql.ResolveParams) (interface{}, error) {
+	return h.dlqManager.ListDLQTopics(), nil
+}
+
+// resolveDLQStats returns statistics for DLQ topics
+func (h *Handler) resolveDLQStats(p gql.ResolveParams) (interface{}, error) {
+	topicsArg, ok := p.Args["topics"].([]interface{})
+	var topics []string
+	if ok {
+		for _, t := range topicsArg {
+			if s, ok := t.(string); ok {
+				topics = append(topics, s)
+			}
+		}
+	}
+	if len(topics) == 0 {
+		topics = h.dlqManager.ListDLQTopics()
+	}
+
+	stats, err := h.dlqManager.GetDLQStats(context.Background(), h.kafkaBrokers, topics)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]interface{}, 0, len(stats))
+	for topic, count := range stats {
+		result = append(result, map[string]interface{}{
+			"topic":        topic,
+			"messageCount": count,
+		})
+	}
+	return result, nil
+}
+
+// resolveDLQReplay replays messages from a DLQ topic.
+func (h *Handler) resolveDLQReplay(p gql.ResolveParams) (interface{}, error) {
+	topic := argString(p.Args, "topic")
+	if topic == "" {
+		return nil, fmt.Errorf("topic is required")
+	}
+	maxMessages := argInt(p.Args, "maxMessages")
+	if maxMessages <= 0 {
+		maxMessages = 100
+	}
+	replayed, err := h.dlqManager.ReplayAllDLQMessages(p.Context, h.kafkaBrokers, topic, maxMessages)
+	if err != nil {
+		return map[string]interface{}{"success": false, "replayedCount": 0, "errors": []string{err.Error()}}, nil
+	}
+	return map[string]interface{}{"success": true, "replayedCount": replayed, "errors": []string{}}, nil
+}
+
+// resolveRenewPresigned renews expired multipart URLs for the authenticated owner.
+func (h *Handler) resolveRenewPresigned(p gql.ResolveParams) (interface{}, error) {
+	inputArg, ok := p.Args["input"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid input")
+	}
+	userID, err := h.requireUser(p.Context)
+	if err != nil {
+		return nil, err
+	}
+	uploadID := argString(inputArg, "uploadId")
+	if uploadID == "" {
+		return nil, fmt.Errorf("uploadId is required")
+	}
+	result, err := h.renewPresigned.Execute(p.Context, upload.RenewPresignedInput{
+		UserID: userID, UploadID: uploadID, ExpirySeconds: argInt(inputArg, "expirySeconds"),
+	})
+	if err != nil {
+		return nil, err
+	}
+	parts := make([]interface{}, len(result.PresignedParts))
+	for i, part := range result.PresignedParts {
+		parts[i] = map[string]interface{}{"partNumber": part.PartNumber, "presignedUrl": part.PresignedURL}
+	}
+	return map[string]interface{}{
+		"uploadId": result.UploadID, "s3UploadId": result.S3UploadID,
+		"presignedParts": parts, "partSize": float64(result.PartSize),
+		"totalParts": result.TotalParts, "expiresAt": float64(result.ExpiresAt.Unix()),
+	}, nil
 }

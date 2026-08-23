@@ -21,6 +21,7 @@ import (
 	kafkago "github.com/segmentio/kafka-go"
 
 	kafkaadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/kafka"
+	sharednats "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/nats"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
@@ -51,10 +52,11 @@ var standardProfiles = []videoProfile{
 
 // Worker processes video media after upload and malware scanning.
 type Worker struct {
-	mediaRepo   ports.MediaRepository
-	versionRepo ports.VersionRepository
-	storage     ports.ObjectStorage
-	publisher   ports.EventPublisher
+	mediaRepo      ports.MediaRepository
+	versionRepo    ports.VersionRepository
+	storage        ports.ObjectStorage
+	publisher      ports.EventPublisher
+	realtimePub    ports.RealtimePublisher
 }
 
 // NewWorker creates a new video transcoding worker.
@@ -63,12 +65,14 @@ func NewWorker(
 	versionRepo ports.VersionRepository,
 	storage ports.ObjectStorage,
 	publisher ports.EventPublisher,
+	realtimePub ports.RealtimePublisher,
 ) *Worker {
 	return &Worker{
 		mediaRepo:   mediaRepo,
 		versionRepo: versionRepo,
 		storage:     storage,
 		publisher:   publisher,
+		realtimePub: realtimePub,
 	}
 }
 
@@ -98,6 +102,13 @@ func (w *Worker) processVideo(ctx context.Context, payload scanCompletedPayload,
 
 	// Transition to PROCESSING (scan worker already brought us here, but ensure idempotency).
 	_ = w.mediaRepo.UpdateStatus(ctx, payload.MediaID, domain.MediaStatusScanning, domain.MediaStatusProcessing)
+
+	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
+		"mediaId": payload.MediaID,
+		"userId":  payload.UserID,
+		"stage":   "video",
+		"percent": 5,
+	})
 
 	// Create a temporary workspace for FFmpeg output.
 	tmpDir, err := os.MkdirTemp("", "media-transcode-*")
@@ -130,14 +141,35 @@ func (w *Worker) processVideo(ctx context.Context, payload scanCompletedPayload,
 	}
 	inputFile.Close()
 
+	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
+		"mediaId": payload.MediaID,
+		"userId":  payload.UserID,
+		"stage":   "video",
+		"percent": 10,
+	})
+
 	// Generate thumbnail from first frame.
 	if err := w.generateThumbnail(ctx, payload, traceID, inputPath, tmpDir); err != nil {
 		slog.Warn("Video worker: thumbnail generation failed (non-fatal)", "mediaId", payload.MediaID, "error", err)
 	}
 
+	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
+		"mediaId": payload.MediaID,
+		"userId":  payload.UserID,
+		"stage":   "video",
+		"percent": 15,
+	})
+
 	// Transcode each standard profile.
 	allFailed := true
-	for _, profile := range standardProfiles {
+	for i, profile := range standardProfiles {
+		_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
+			"mediaId": payload.MediaID,
+			"userId":  payload.UserID,
+			"stage":   "video",
+			"percent": 15 + (i * 25), // 15, 40, 65
+		})
+
 		if err := w.transcodeProfile(ctx, payload, traceID, inputPath, tmpDir, profile); err != nil {
 			slog.Error("Video worker: transcoding failed for profile", "profile", profile.Name, "mediaId", payload.MediaID, "error", err)
 			continue
@@ -147,8 +179,20 @@ func (w *Worker) processVideo(ctx context.Context, payload scanCompletedPayload,
 
 	if allFailed {
 		_ = w.mediaRepo.UpdateStatus(ctx, payload.MediaID, domain.MediaStatusProcessing, domain.MediaStatusFailed)
+		_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaFailed, map[string]interface{}{
+			"mediaId": payload.MediaID,
+			"userId":  payload.UserID,
+			"reason":  "all video profiles failed",
+		})
 		return fmt.Errorf("all video profiles failed for mediaId %s", payload.MediaID)
 	}
+
+	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
+		"mediaId": payload.MediaID,
+		"userId":  payload.UserID,
+		"stage":   "video",
+		"percent": 90,
+	})
 
 	// Generate HLS master playlist.
 	if err := w.generateHLS(ctx, payload, traceID, inputPath, tmpDir); err != nil {
@@ -162,6 +206,13 @@ func (w *Worker) processVideo(ctx context.Context, payload scanCompletedPayload,
 
 	// Publish media.ready.
 	w.publishEvent(ctx, kafkaadapter.TopicMediaReady, payload.MediaID, payload.UserID, traceID, map[string]interface{}{
+		"mediaId":   payload.MediaID,
+		"userId":    payload.UserID,
+		"mediaType": payload.MediaType,
+	})
+
+	// Publish media ready to NATS for realtime WebSocket
+	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaReady, map[string]interface{}{
 		"mediaId":   payload.MediaID,
 		"userId":    payload.UserID,
 		"mediaType": payload.MediaType,

@@ -15,11 +15,11 @@ import (
 )
 
 type Client struct {
-	s3Client   *s3.Client
-	presigner  *s3.PresignClient
-	bucketName string
+	s3Client       *s3.Client
+	presigner      *s3.PresignClient
+	bucketName     string
 	publicEndpoint string
-	sseKMS bool
+	sseKMS         bool
 }
 
 func NewClient(ctx context.Context, region, accessKeyID, secretKey, bucketName, endpoint, publicEndpoint string) (*Client, error) {
@@ -53,7 +53,7 @@ func NewClient(ctx context.Context, region, accessKeyID, secretKey, bucketName, 
 		presigner:      s3.NewPresignClient(s3c),
 		bucketName:     bucketName,
 		publicEndpoint: strings.TrimSuffix(publicEndpoint, "/"),
-		sseKMS: endpoint == "",
+		sseKMS:         endpoint == "",
 	}, nil
 }
 
@@ -101,6 +101,34 @@ func (c *Client) EnsureBucketPolicy(ctx context.Context) error {
 	})
 	if err != nil {
 		return fmt.Errorf("put public access block on bucket %q: %w", c.bucketName, err)
+	}
+	return nil
+}
+
+// EnsureBucketLifecycle configures automatic cleanup for abandoned multipart uploads.
+// The rule is idempotent because PutBucketLifecycleConfiguration replaces the
+// bucket configuration with the same stable rule ID.
+func (c *Client) EnsureBucketLifecycle(ctx context.Context, abortAfterDays int) error {
+	if abortAfterDays < 1 {
+		return fmt.Errorf("invalid multipart lifecycle days: %d", abortAfterDays)
+	}
+	_, err := c.s3Client.PutBucketLifecycleConfiguration(ctx, &s3.PutBucketLifecycleConfigurationInput{
+		Bucket: aws.String(c.bucketName),
+		LifecycleConfiguration: &types.BucketLifecycleConfiguration{
+			Rules: []types.LifecycleRule{
+				{
+					ID:     aws.String("abort-incomplete-multipart-uploads"),
+					Status: types.ExpirationStatusEnabled,
+					Filter: &types.LifecycleRuleFilterMemberPrefix{Value: ""},
+					AbortIncompleteMultipartUpload: &types.AbortIncompleteMultipartUpload{
+						DaysAfterInitiation: aws.Int32(int32(abortAfterDays)),
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("configure S3 multipart lifecycle for bucket %q: %w", c.bucketName, err)
 	}
 	return nil
 }

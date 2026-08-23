@@ -44,6 +44,12 @@ const (
 	ServerMessageNotificationReceived    ServerMessageType = "NOTIFICATION_RECEIVED"
 	ServerMessageLocationUpdateRejected  ServerMessageType = "LOCATION_UPDATE_REJECTED"
 	ServerMessageError                   ServerMessageType = "ERROR"
+	// Media messages
+	ServerMessageMediaUploadProgress     ServerMessageType = "MEDIA_UPLOAD_PROGRESS"
+	ServerMessageMediaProcessingProgress ServerMessageType = "MEDIA_PROCESSING_PROGRESS"
+	ServerMessageMediaReady              ServerMessageType = "MEDIA_READY"
+	ServerMessageMediaDeleted            ServerMessageType = "MEDIA_DELETED"
+	ServerMessageMediaFailed             ServerMessageType = "MEDIA_FAILED"
 )
 
 // MessagePriority is the delivery priority of a realtime message.

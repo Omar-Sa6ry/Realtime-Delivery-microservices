@@ -12,30 +12,50 @@ import (
 )
 
 var magicByteSignatures = map[string][][]byte{
-	"image/jpeg": {
-		{0xFF, 0xD8, 0xFF},
-	},
-	"image/png": {
-		{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A},
-	},
+	"image/jpeg": {{0xFF, 0xD8, 0xFF}},
+	"image/png":  {{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}},
 	"image/gif": {
 		{0x47, 0x49, 0x46, 0x38, 0x37, 0x61}, // GIF87a
 		{0x47, 0x49, 0x46, 0x38, 0x39, 0x61}, // GIF89a
 	},
-	"image/webp": {
-		// RIFF....WEBP
-		{0x52, 0x49, 0x46, 0x46},
-	},
-	"video/mp4": {
-		// ftyp box at offset 4
-		{0x00, 0x00, 0x00}, // partial — checked with offset
-	},
-	"application/pdf": {
-		{0x25, 0x50, 0x44, 0x46}, // %PDF
-	},
-	"application/zip": {
-		{0x50, 0x4B, 0x03, 0x04}, // PK header
-	},
+	"application/pdf": {{0x25, 0x50, 0x44, 0x46}}, // %PDF
+	"application/zip": {{0x50, 0x4B, 0x03, 0x04}}, // PK header
+}
+
+func hasPrefixAt(data, sig []byte, offset int) bool {
+	if offset < 0 || len(data) < offset+len(sig) {
+		return false
+	}
+	for i, b := range sig {
+		if data[offset+i] != b {
+			return false
+		}
+	}
+	return true
+}
+
+func isContainerType(contentType string) bool {
+	switch contentType {
+	case "image/webp", "video/mp4", "video/quicktime", "video/x-msvideo", "video/webm":
+		return true
+	default:
+		return false
+	}
+}
+
+func matchesContainerSignature(contentType string, header []byte) bool {
+	switch contentType {
+	case "image/webp":
+		return hasPrefixAt(header, []byte("RIFF"), 0) && hasPrefixAt(header, []byte("WEBP"), 8)
+	case "video/mp4", "video/quicktime":
+		return hasPrefixAt(header, []byte("ftyp"), 4)
+	case "video/x-msvideo":
+		return hasPrefixAt(header, []byte("RIFF"), 0) && hasPrefixAt(header, []byte("AVI "), 8)
+	case "video/webm":
+		return hasPrefixAt(header, []byte{0x1A, 0x45, 0xDF, 0xA3}, 0)
+	default:
+		return false
+	}
 }
 
 type MagicBytesValidator struct {
@@ -47,23 +67,30 @@ func NewMagicBytesValidator(storage ports.ObjectStorage) *MagicBytesValidator {
 }
 
 func (v *MagicBytesValidator) ValidateObject(ctx context.Context, objectKey, contentType string) error {
-	sigs, ok := magicByteSignatures[contentType]
-	if !ok {
-		return nil // no signature registered — skip
-	}
-
 	body, err := v.storage.GetObject(ctx, objectKey)
 	if err != nil {
 		return fmt.Errorf("open object for magic bytes check: %w", err)
 	}
 	defer body.Close()
 
-	header := make([]byte, 16)
+	header := make([]byte, 512)
 	n, err := io.ReadAtLeast(body, header, 3)
 	if err != nil && err != io.ErrUnexpectedEOF {
 		return fmt.Errorf("read object header for magic bytes: %w", err)
 	}
 	header = header[:n]
+
+	if matchesContainerSignature(contentType, header) {
+		return nil
+	}
+	if isContainerType(contentType) {
+		return domain.ErrInvalidMagicBytes
+	}
+
+	sigs, ok := magicByteSignatures[contentType]
+	if !ok {
+		return nil // no signature registered — skip
+	}
 
 	for _, sig := range sigs {
 		if len(header) >= len(sig) {

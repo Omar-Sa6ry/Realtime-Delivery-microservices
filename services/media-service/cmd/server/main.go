@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,10 +13,12 @@ import (
 	sharedautomation "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/automation"
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	sharedmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
+	sharednats "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/nats"
 	sharedratelimiter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/ratelimiter"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/dynamodb"
 	kafkaadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/kafka"
+	natsadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/nats"
 	redisadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/redis"
 	s3adapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/s3"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/application/download"
@@ -24,9 +27,12 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/config"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/scheduler"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/telemetry"
 	gqltransport "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/graphql"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/graphql/dlq"
 	grpctransport "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/grpc"
 	pb "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/grpc/pb"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/ws"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/validation"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/workers"
 	compressionWorker "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/workers/compression"
@@ -53,6 +59,24 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Initialize OpenTelemetry tracing
+	tp, err := telemetry.InitTracer(ctx, telemetry.Config{
+		ServiceName:    "media-service",
+		JaegerEndpoint: cfg.JaegerEndpoint,
+		OTLPEndpoint:   cfg.OTLPEndpoint,
+		Environment:    cfg.Environment,
+		SampleRatio:    cfg.TraceSampleRatio,
+	})
+	if err != nil {
+		slog.Error("Failed to initialize telemetry", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			slog.Error("Failed to shutdown tracer provider", "error", err)
+		}
+	}()
 
 	observability.RegisterMediaMetrics()
 	go func() {
@@ -89,6 +113,11 @@ func main() {
 		}
 	}
 	slog.Info("DynamoDB ready", "endpoint", cfg.DynamoDBEndpoint, "table", cfg.DynamoDBTableName)
+	if err := dynamodb.EnsureTTL(ctx, dbClient, cfg.DynamoDBTableName, "TTL"); err != nil {
+		slog.Warn("DynamoDB TTL could not be enabled", "error", err)
+	} else {
+		slog.Info("DynamoDB TTL enabled", "table", cfg.DynamoDBTableName, "attribute", "TTL")
+	}
 
 	mediaRepo := dynamodb.NewMediaRepository(dbClient, cfg.DynamoDBTableName)
 	uploadRepo := dynamodb.NewUploadRepository(dbClient, cfg.DynamoDBTableName)
@@ -112,14 +141,47 @@ func main() {
 	if err := s3Client.EnsureBucketCORS(ctx); err != nil {
 		slog.Warn("S3 bucket CORS ensure failed", "error", err)
 	}
-	slog.Info("S3 ready", "bucket", cfg.S3BucketName)
-
+	if err := s3Client.EnsureBucketLifecycle(ctx, cfg.S3LifecycleAbortDays); err != nil {
+		slog.Warn("S3 lifecycle could not be configured", "error", err)
+	} else {
+		slog.Info("S3 lifecycle enabled", "bucket", cfg.S3BucketName, "abortAfterDays", cfg.S3LifecycleAbortDays)
+	}
 	redisClient, err := redisadapter.NewClient(cfg.RedisAddr(), cfg.RedisPassword)
 	if err != nil {
 		slog.Error("Redis client init failed", "error", err)
 		os.Exit(1)
 	}
 	cacheAdapter := redisadapter.NewCacheAdapter(redisClient)
+
+	// NATS client for WebSocket hub
+	natsClient, err := sharednats.Connect(cfg.NATSURL())
+	if err != nil {
+		slog.Error("NATS client init failed", "error", err)
+		os.Exit(1)
+	}
+	defer natsClient.Close()
+
+	// Realtime publisher for NATS progress events
+	realtimePublisher := natsadapter.NewRealtimePublisher(natsClient, logger)
+
+	// WebSocket Hub
+	wsHub := ws.NewHub(natsClient, logger, cfg)
+	go func() {
+		if err := wsHub.Run(ctx); err != nil {
+			slog.Error("WebSocket hub stopped", "error", err)
+		}
+	}()
+	wsServer := &http.Server{
+		Addr:    ":" + cfg.WSPort,
+		Handler: http.HandlerFunc(wsHub.ServeWS),
+	}
+	go func() {
+		slog.Info("WebSocket server starting", "port", cfg.WSPort)
+		if err := wsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("WebSocket server error", "error", err)
+			cancel()
+		}
+	}()
 
 	const (
 		kafkaRetryDelay  = 5 * time.Second
@@ -167,12 +229,12 @@ func main() {
 
 	validator := validation.NewValidator(cfg.AllowedContentTypes, storage, cfg.MaxFileSizeBytes)
 
-	scanPool        := workers.NewWorkerPool("scan-worker",        cfg.ScanWorkers)
-	imagePool       := workers.NewWorkerPool("image-worker",       cfg.ImageWorkers)
-	videoPool       := workers.NewWorkerPool("video-worker",       cfg.VideoWorkers)
-	deletePool      := workers.NewWorkerPool("delete-worker",      cfg.DeleteWorkers)
-	compressPool    := workers.NewWorkerPool("compression-worker", cfg.CompressionWorkers)
-	metaPool        := workers.NewWorkerPool("metadata-worker",    cfg.MetadataWorkers)
+	scanPool := workers.NewWorkerPool("scan-worker", cfg.ScanWorkers)
+	imagePool := workers.NewWorkerPool("image-worker", cfg.ImageWorkers)
+	videoPool := workers.NewWorkerPool("video-worker", cfg.VideoWorkers)
+	deletePool := workers.NewWorkerPool("delete-worker", cfg.DeleteWorkers)
+	compressPool := workers.NewWorkerPool("compression-worker", cfg.CompressionWorkers)
+	metaPool := workers.NewWorkerPool("metadata-worker", cfg.MetadataWorkers)
 
 	createSessionUC := upload.NewCreateSessionUseCase(
 		mediaRepo, uploadRepo, quotaRepo, storage, cacheAdapter,
@@ -194,9 +256,13 @@ func main() {
 	)
 
 	// ── GraphQL Federation Subgraph Server
+	dlqManager := dlq.NewDLQManager(producer, logger)
+	renewPresignedUC := upload.NewRenewPresignedUseCase(uploadRepo, storage, cacheAdapter, cfg.S3PresignedURLExpiry)
 	gqlHandler := gqltransport.NewHandler(
 		createSessionUC, completeUploadUC, abortUploadUC, getUploadStatusUC,
+		renewPresignedUC,
 		getMediaUC, listMediaUC, deleteMediaUC, getDownloadURLUC, quotaRepo,
+		dlqManager, cfg.KafkaBrokers,
 	)
 	gqlServer, err := gqltransport.NewServer(gqlHandler, cfg.GraphQLPort)
 	if err != nil {
@@ -225,12 +291,12 @@ func main() {
 		uploadRepo, mediaRepo, outboxRepo, storage, cacheAdapter, producer,
 		cfg.StuckUploadTimeout, cfg.StuckProcessingTimeout,
 	)
-	imgWorker   := imageWorker.NewWorker(mediaRepo, versionRepo, storage, cacheAdapter, producer)
-	vidWorker   := videoWorker.NewWorker(mediaRepo, versionRepo, storage, producer)
-	scnWorker   := scanWorker.NewWorker(mediaRepo, storage, producer)
-	delWorker   := deleteWorker.NewWorker(mediaRepo, versionRepo, quotaRepo, storage, producer)
-	cmpWorker   := compressionWorker.NewWorker(mediaRepo, versionRepo, storage, producer)
-	metaWorker  := metadataWorker.NewWorker(mediaRepo, versionRepo, storage, producer)
+	imgWorker := imageWorker.NewWorker(mediaRepo, versionRepo, storage, cacheAdapter, producer, realtimePublisher)
+	vidWorker := videoWorker.NewWorker(mediaRepo, versionRepo, storage, producer, realtimePublisher)
+	scnWorker := scanWorker.NewWorker(mediaRepo, storage, producer, cfg)
+	delWorker := deleteWorker.NewWorker(mediaRepo, versionRepo, quotaRepo, storage, producer)
+	cmpWorker := compressionWorker.NewWorker(mediaRepo, versionRepo, storage, producer)
+	metaWorker := metadataWorker.NewWorker(mediaRepo, versionRepo, storage, producer)
 
 	// Start outbox publisher in background
 	go outboxPublisher.Run(ctx)
@@ -242,6 +308,7 @@ func main() {
 			Topic:      kafkaadapter.TopicUploadCompleted,
 			GroupID:    kafkaadapter.GroupScanner,
 			MaxRetries: 3,
+			DLQ:        producer,
 		})
 		defer consumer.Close()
 		if err := consumer.Run(ctx, func(ctx context.Context, msg kafkago.Message) error {
@@ -253,13 +320,14 @@ func main() {
 		}
 	}()
 
-	// ── Image consumer: media.scan.completed → image worker 
+	// ── Image consumer: media.scan.completed → image worker
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
 			Topic:      kafkaadapter.TopicScanCompleted,
 			GroupID:    kafkaadapter.GroupImageWorker,
 			MaxRetries: 3,
+			DLQ:        producer,
 		})
 		defer consumer.Close()
 		if err := consumer.Run(ctx, func(ctx context.Context, msg kafkago.Message) error {
@@ -271,13 +339,14 @@ func main() {
 		}
 	}()
 
-	// ── Video consumer: media.scan.completed → video worker 
+	// ── Video consumer: media.scan.completed → video worker
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
 			Topic:      kafkaadapter.TopicScanCompleted,
 			GroupID:    kafkaadapter.GroupVideoWorker,
 			MaxRetries: 3,
+			DLQ:        producer,
 		})
 		defer consumer.Close()
 		if err := consumer.Run(ctx, func(ctx context.Context, msg kafkago.Message) error {
@@ -296,6 +365,7 @@ func main() {
 			Topic:      kafkaadapter.TopicScanCompleted,
 			GroupID:    kafkaadapter.GroupCompressionWorker,
 			MaxRetries: 3,
+			DLQ:        producer,
 		})
 		defer consumer.Close()
 		if err := consumer.Run(ctx, func(ctx context.Context, msg kafkago.Message) error {
@@ -307,13 +377,14 @@ func main() {
 		}
 	}()
 
-	// ── Metadata consumer: media.scan.completed → metadata worker 
+	// ── Metadata consumer: media.scan.completed → metadata worker
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
 			Topic:      kafkaadapter.TopicScanCompleted,
 			GroupID:    kafkaadapter.GroupMetadataWorker,
 			MaxRetries: 3,
+			DLQ:        producer,
 		})
 		defer consumer.Close()
 		if err := consumer.Run(ctx, func(ctx context.Context, msg kafkago.Message) error {
@@ -325,13 +396,14 @@ func main() {
 		}
 	}()
 
-	// ── Delete consumer: media.delete.requested → delete worker 
+	// ── Delete consumer: media.delete.requested → delete worker
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
 			Topic:      kafkaadapter.TopicDeleteRequested,
 			GroupID:    kafkaadapter.GroupDeleteWorker,
 			MaxRetries: 5,
+			DLQ:        producer,
 		})
 		defer consumer.Close()
 		if err := consumer.Run(ctx, func(ctx context.Context, msg kafkago.Message) error {
@@ -343,7 +415,7 @@ func main() {
 		}
 	}()
 
-	// ── Scheduler 
+	// ── Scheduler
 	sched := scheduler.NewScheduler(ctx)
 	reconcileExpr := fmt.Sprintf("@every %ds", int(cfg.ReconcileInterval.Seconds()))
 	sched.Add("reconciliation", reconcileExpr, reconciler.Run)
@@ -389,6 +461,13 @@ func main() {
 
 	// Gracefully stop the internal gRPC server
 	grpcServer.GracefulStop()
+
+	// Gracefully stop WebSocket server
+	wsShutdownCtx, wsShutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer wsShutdownCancel()
+	if err := wsServer.Shutdown(wsShutdownCtx); err != nil {
+		slog.Error("WebSocket server shutdown error", "error", err)
+	}
 
 	// Wait for worker pools to drain
 	scanPool.Shutdown()

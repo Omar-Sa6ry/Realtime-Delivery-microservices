@@ -22,6 +22,11 @@ const PRIORITY_FALLBACK: Record<ServerMessageType, MessagePriority> = {
   [ServerMessageType.LOCATION_UPDATE_REJECTED]: MessagePriority.NORMAL,
   [ServerMessageType.NOTIFICATION_RECEIVED]: MessagePriority.NORMAL,
   [ServerMessageType.ERROR]: MessagePriority.CRITICAL,
+  [ServerMessageType.MEDIA_UPLOAD_PROGRESS]: MessagePriority.HIGH_FREQUENCY_LOSSY,
+  [ServerMessageType.MEDIA_PROCESSING_PROGRESS]: MessagePriority.NORMAL,
+  [ServerMessageType.MEDIA_READY]: MessagePriority.CRITICAL,
+  [ServerMessageType.MEDIA_DELETED]: MessagePriority.CRITICAL,
+  [ServerMessageType.MEDIA_FAILED]: MessagePriority.CRITICAL,
 };
 
 @Injectable()

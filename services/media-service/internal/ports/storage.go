@@ -31,9 +31,12 @@ type ObjectStorage interface {
 	// GeneratePresignedParts generates N presigned PUT URLs, one per part.
 	GeneratePresignedParts(ctx context.Context, objectKey, s3UploadID string, totalParts int, partSize int64, expiry time.Duration) ([]PresignedPart, error)
 
-	// GeneratePresignedGET returns a time-limited presigned GET URL for downloading an object.
-	// Presigned GET URLs are NEVER logged — they grant direct S3 access.
+// GeneratePresignedGET returns a time-limited presigned GET URL for downloading an object.
+// Presigned GET URLs are NEVER logged — they grant direct S3 access.
 	GeneratePresignedGET(ctx context.Context, objectKey string, expiry time.Duration) (url string, err error)
+
+	// GeneratePresignedGETWithRange returns a time-limited presigned GET URL with optional Range header.
+	GeneratePresignedGETWithRange(ctx context.Context, objectKey, rangeHeader string, expiry time.Duration) (url string, err error)
 
 	// CompleteMultipartUpload finalises the S3 multipart upload from the completed parts list.
 	CompleteMultipartUpload(ctx context.Context, objectKey, s3UploadID string, parts []domain.UploadPart) error
@@ -53,6 +56,9 @@ type ObjectStorage interface {
 	// GetObject streams the raw bytes of an object — used ONLY for post-upload validation
 	// (magic byte check, checksum). Never called for client downloads.
 	GetObject(ctx context.Context, objectKey string) (io.ReadCloser, error)
+
+	// GetObjectWithRange retrieves an object with optional Range header support for resumable downloads.
+	GetObjectWithRange(ctx context.Context, objectKey, rangeHeader string) (io.ReadCloser, error)
 
 	// PutObject uploads small objects (processed renditions < 100MB) directly without multipart.
 	// Use this for resized images and short processed video clips.

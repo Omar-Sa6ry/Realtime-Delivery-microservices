@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
-const PermissionViewUser = "VIEW_USER"
+const (
+	RoleAdmin          = "admin"
+	PermissionViewUser = "view_user"
+)
 
 // Claims is the subset of the shared JWT contract required by search-service.
 type Claims struct {
@@ -83,7 +86,8 @@ func RequirePermission(header, permission string) (Claims, error) {
 
 // Keep this map aligned with packages/ts/src/constants/rolePermissionsMap.constant.ts.
 func HasPermission(role, permission string) bool {
-	return role == "ADMIN" && permission == PermissionViewUser
+	return strings.EqualFold(role, RoleAdmin) &&
+		strings.EqualFold(permission, PermissionViewUser)
 }
 
 func decode(value string, target interface{}) error {

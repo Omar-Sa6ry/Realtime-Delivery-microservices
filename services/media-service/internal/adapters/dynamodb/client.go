@@ -104,3 +104,22 @@ func EnsureTableExists(ctx context.Context, client *dynamodb.Client, tableName s
 	}
 	return nil
 }
+
+// EnsureTTL enables DynamoDB's native TTL reaper for temporary upload sessions.
+// UploadRepository writes the TTL attribute as a Unix timestamp.
+func EnsureTTL(ctx context.Context, client *dynamodb.Client, tableName, attributeName string) error {
+	if attributeName == "" {
+		return fmt.Errorf("DynamoDB TTL attribute name is empty")
+	}
+	_, err := client.UpdateTimeToLive(ctx, &dynamodb.UpdateTimeToLiveInput{
+		TableName: aws.String(tableName),
+		TimeToLiveSpecification: &types.TimeToLiveSpecification{
+			AttributeName: aws.String(attributeName),
+			Enabled:       aws.Bool(true),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("enable DynamoDB TTL on %q.%s: %w", tableName, attributeName, err)
+	}
+	return nil
+}

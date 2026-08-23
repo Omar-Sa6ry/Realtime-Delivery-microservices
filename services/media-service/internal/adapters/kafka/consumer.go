@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"strings"
 	"time"
 
-	kafkago "github.com/segmentio/kafka-go"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
+	kafkago "github.com/segmentio/kafka-go"
 )
 
 type MessageHandler func(ctx context.Context, msg kafkago.Message) error
@@ -41,8 +42,8 @@ func NewConsumer(cfg ConsumerConfig) *Consumer {
 		Topic:          cfg.Topic,
 		GroupID:        cfg.GroupID,
 		MinBytes:       1,
-		MaxBytes:       10e6,              // 10 MB
-		CommitInterval: 0,                 // explicit commit only — after successful processing
+		MaxBytes:       10e6, // 10 MB
+		CommitInterval: 0,    // explicit commit only — after successful processing
 		MaxWait:        500 * time.Millisecond,
 		StartOffset:    kafkago.FirstOffset,
 		RetentionTime:  7 * 24 * time.Hour, // match Kafka topic retention
@@ -51,11 +52,11 @@ func NewConsumer(cfg ConsumerConfig) *Consumer {
 		}),
 		ErrorLogger: kafkago.LoggerFunc(func(msg string, args ...interface{}) {
 			formatted := fmt.Sprintf(msg, args...)
-			if strings.Contains(formatted, "Rebalance In Progress") || 
-			   strings.Contains(formatted, "i/o timeout") ||
-			   strings.Contains(formatted, "Not Coordinator For Group") ||
-			   strings.Contains(formatted, "Group Coordinator Not Available") ||
-			   strings.Contains(formatted, "Not Leader For Partition") {
+			if strings.Contains(formatted, "Rebalance In Progress") ||
+				strings.Contains(formatted, "i/o timeout") ||
+				strings.Contains(formatted, "Not Coordinator For Group") ||
+				strings.Contains(formatted, "Group Coordinator Not Available") ||
+				strings.Contains(formatted, "Not Leader For Partition") {
 				slog.Debug(formatted, "component", "kafka-consumer", "topic", cfg.Topic)
 			} else {
 				slog.Error(formatted, "component", "kafka-consumer", "topic", cfg.Topic)
@@ -80,15 +81,19 @@ func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 	slog.Info("Kafka consumer started", "topic", c.reader.Config().Topic, "group", c.reader.Config().GroupID)
 	for {
 		msg, err := c.reader.FetchMessage(ctx)
+		stats := c.reader.Stats()
+		if observability.KafkaConsumerLag != nil {
+			observability.KafkaConsumerLag.WithLabelValues(c.reader.Config().Topic, c.reader.Config().GroupID).Set(float64(stats.Lag))
+		}
 		if err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				slog.Info("Kafka consumer stopped", "topic", c.reader.Config().Topic)
 				return nil
 			}
-			if strings.Contains(err.Error(), "Rebalance In Progress") || 
-			   strings.Contains(err.Error(), "Not Coordinator For Group") ||
-			   strings.Contains(err.Error(), "Group Coordinator Not Available") ||
-			   strings.Contains(err.Error(), "Not Leader For Partition") {
+			if strings.Contains(err.Error(), "Rebalance In Progress") ||
+				strings.Contains(err.Error(), "Not Coordinator For Group") ||
+				strings.Contains(err.Error(), "Group Coordinator Not Available") ||
+				strings.Contains(err.Error(), "Not Leader For Partition") {
 				slog.Debug("Kafka consumer transient coordinator/rebalance/leader state, waiting...", "topic", c.reader.Config().Topic)
 				select {
 				case <-ctx.Done():
@@ -102,10 +107,16 @@ func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 		}
 
 		if processErr := c.processWithRetry(ctx, msg, handler); processErr != nil {
-			c.routeToDLQ(ctx, msg, processErr)
+			if dlqErr := c.routeToDLQ(ctx, msg, processErr); dlqErr != nil {
+				// Do not acknowledge a message if its DLQ handoff failed. The
+				// broker will redeliver it after the consumer restarts/rebalances.
+				slog.Error("DLQ handoff failed; leaving message uncommitted", "error", dlqErr, "topic", c.reader.Config().Topic, "offset", msg.Offset)
+				continue
+			}
 		}
 
-		// Commit AFTER successful processing — at-least-once delivery guarantee.
+		// Commit after successful processing or a confirmed DLQ handoff — this
+		// preserves at-least-once delivery without silently dropping failures.
 		if commitErr := c.reader.CommitMessages(ctx, msg); commitErr != nil {
 			slog.Error("Failed to commit Kafka offset", "error", commitErr, "topic", c.reader.Config().Topic)
 		}
@@ -124,12 +135,13 @@ func (c *Consumer) processWithRetry(ctx context.Context, msg kafkago.Message, ha
 				"offset", msg.Offset,
 				"delay_ms", delay.Milliseconds(),
 			)
+			jitter := time.Duration(rand.Int63n(int64(delay/2) + 1))
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case <-time.After(delay):
+			case <-time.After(delay + jitter):
 			}
-			delay = delay * 2 // exponential backoff
+			delay = minDuration(delay*2, 30*time.Second) // capped exponential backoff
 		}
 
 		lastErr = handler(ctx, msg)
@@ -145,7 +157,7 @@ func (c *Consumer) processWithRetry(ctx context.Context, msg kafkago.Message, ha
 	return fmt.Errorf("exhausted %d retries: %w", c.maxRetries, lastErr)
 }
 
-func (c *Consumer) routeToDLQ(ctx context.Context, msg kafkago.Message, reason error) {
+func (c *Consumer) routeToDLQ(ctx context.Context, msg kafkago.Message, reason error) error {
 	topic := c.reader.Config().Topic
 	slog.Error("Routing Kafka message to DLQ",
 		"topic", topic,
@@ -156,7 +168,7 @@ func (c *Consumer) routeToDLQ(ctx context.Context, msg kafkago.Message, reason e
 	observability.DeadLetterQueueTotal.WithLabelValues(topic).Inc()
 
 	if c.dlqProducer == nil {
-		return
+		return fmt.Errorf("DLQ producer is not configured for topic %q", topic)
 	}
 	dlqTopic := topic + ".dlq"
 	headers := append(msg.Headers, kafkago.Header{Key: "x-dlq-reason", Value: []byte(reason.Error())})
@@ -168,7 +180,16 @@ func (c *Consumer) routeToDLQ(ctx context.Context, msg kafkago.Message, reason e
 	}
 	if err := c.dlqProducer.writer.WriteMessages(ctx, dlqMsg); err != nil {
 		slog.Error("Failed to write to DLQ", "error", err, "dlq_topic", dlqTopic)
+		return fmt.Errorf("write Kafka DLQ %q: %w", dlqTopic, err)
 	}
+	return nil
+}
+
+func minDuration(a, b time.Duration) time.Duration {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // Close gracefully shuts down the consumer.

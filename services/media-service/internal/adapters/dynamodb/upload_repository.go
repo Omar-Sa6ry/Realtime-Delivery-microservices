@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
 )
 
 type uploadItem struct {
@@ -23,6 +23,7 @@ type uploadItem struct {
 	S3UploadID     string `dynamodbav:"S3UploadID"`
 	ObjectKey      string `dynamodbav:"ObjectKey"`
 	TotalParts     int    `dynamodbav:"TotalParts"`
+	PartSize       int64  `dynamodbav:"PartSize"`
 	CompletedParts []struct {
 		PartNumber int    `dynamodbav:"PartNumber"`
 		ETag       string `dynamodbav:"ETag"`
@@ -76,6 +77,7 @@ func (r *UploadRepository) Create(ctx context.Context, s *domain.UploadSession) 
 		S3UploadID:     s.S3UploadID,
 		ObjectKey:      s.ObjectKey,
 		TotalParts:     s.TotalParts,
+		PartSize:       s.PartSize,
 		CompletedParts: completedParts,
 		Status:         string(s.Status),
 		ExpiresAt:      expiresAt,
@@ -127,7 +129,7 @@ func (r *UploadRepository) UpdateStatus(ctx context.Context, uploadID string, st
 			"PK": &types.AttributeValueMemberS{Value: uploadPK(uploadID)},
 			"SK": &types.AttributeValueMemberS{Value: uploadSK()},
 		},
-		UpdateExpression: aws.String("SET #st = :st, GSI2_PK = :gsi2pk, UpdatedAt = :now"),
+		UpdateExpression:         aws.String("SET #st = :st, GSI2_PK = :gsi2pk, UpdatedAt = :now"),
 		ExpressionAttributeNames: map[string]string{"#st": "Status"},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":st":     &types.AttributeValueMemberS{Value: string(status)},
@@ -154,6 +156,27 @@ func (r *UploadRepository) UpdateCompletedParts(ctx context.Context, uploadID st
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":parts": &types.AttributeValueMemberL{Value: partsAV},
 			":now":   &types.AttributeValueMemberS{Value: now},
+		},
+	})
+	return err
+}
+
+func (r *UploadRepository) UpdateExpiry(ctx context.Context, uploadID string, expiresAt time.Time) error {
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName: aws.String(r.tableName),
+		Key: map[string]types.AttributeValue{
+			"PK": &types.AttributeValueMemberS{Value: uploadPK(uploadID)},
+			"SK": &types.AttributeValueMemberS{Value: uploadSK()},
+		},
+		UpdateExpression:         aws.String("SET ExpiresAt = :expires, #ttl = :ttl, UpdatedAt = :now"),
+		ConditionExpression:      aws.String("attribute_exists(PK) AND #st = :uploading"),
+		ExpressionAttributeNames: map[string]string{"#ttl": "TTL", "#st": "Status"},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":expires":   &types.AttributeValueMemberS{Value: expiresAt.UTC().Format(time.RFC3339Nano)},
+			":ttl":       &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", expiresAt.Unix())},
+			":now":       &types.AttributeValueMemberS{Value: now},
+			":uploading": &types.AttributeValueMemberS{Value: string(domain.UploadStatusUploading)},
 		},
 	})
 	return err
@@ -202,6 +225,7 @@ func itemToUpload(item *uploadItem) *domain.UploadSession {
 		S3UploadID:     item.S3UploadID,
 		ObjectKey:      item.ObjectKey,
 		TotalParts:     item.TotalParts,
+		PartSize:       item.PartSize,
 		CompletedParts: parts,
 		Status:         domain.UploadStatus(item.Status),
 		ExpiresAt:      expiresAt,

@@ -29,22 +29,26 @@ spec:
             httpGet:
               path: /realtime/health
               port: 4006
-            initialDelaySeconds: 180
-            periodSeconds: 5
-            failureThreshold: 240
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 30
+            timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: /realtime/ready
               port: 4006
-            periodSeconds: 3
-            failureThreshold: 120
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 30
+            timeoutSeconds: 5
           livenessProbe:
             httpGet:
               path: /realtime/health
               port: 4006
-            initialDelaySeconds: 5
+            initialDelaySeconds: 30
             periodSeconds: 20
             failureThreshold: 6
+            timeoutSeconds: 5
           env:
             - name: NODE_OPTIONS
               value: "--max-old-space-size=768"

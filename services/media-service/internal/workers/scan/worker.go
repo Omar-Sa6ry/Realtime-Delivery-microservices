@@ -1,18 +1,22 @@
 // Package scan implements the malware scanning worker.
-// It consumes media.upload.completed events and simulates ClamAV scanning.
-// In production, replace scanWithClamAV with a real TCP/Unix socket call to the ClamAV daemon.
+// It consumes media.upload.completed events and scans with ClamAV daemon.
 package scan
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	kafkago "github.com/segmentio/kafka-go"
 
 	kafkaadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/kafka"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/config"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
@@ -31,6 +35,7 @@ type Worker struct {
 	mediaRepo ports.MediaRepository
 	storage   ports.ObjectStorage
 	publisher ports.EventPublisher
+	cfg       *config.Config
 }
 
 // NewWorker creates a new scan worker.
@@ -38,11 +43,13 @@ func NewWorker(
 	mediaRepo ports.MediaRepository,
 	storage ports.ObjectStorage,
 	publisher ports.EventPublisher,
+	cfg *config.Config,
 ) *Worker {
 	return &Worker{
 		mediaRepo: mediaRepo,
 		storage:   storage,
 		publisher: publisher,
+		cfg:       cfg,
 	}
 }
 
@@ -80,7 +87,7 @@ func (w *Worker) scan(ctx context.Context, payload uploadCompletedPayload, trace
 		"userId":  payload.UserID,
 	})
 
-	// Perform the actual scan (ClamAV TCP/Unix socket in production).
+	// Perform the actual scan (ClamAV TCP socket).
 	infected, threat, err := w.scanWithClamAV(ctx, payload.ObjectKey)
 	if err != nil {
 		slog.Error("Scan worker: scan engine error — treating as retriable", "mediaId", payload.MediaID, "error", err)
@@ -123,16 +130,88 @@ func (w *Worker) scan(ctx context.Context, payload uploadCompletedPayload, trace
 	return nil
 }
 
-// scanWithClamAV connects to the ClamAV daemon and scans the S3 object.
-// Production implementation should stream the object body via clamav-go or equivalent.
-// This stub always returns clean — replace with real implementation.
+// scanWithClamAV connects to the ClamAV daemon (clamd) via TCP and scans the S3 object.
+// Uses the CLAMAV_HOST and CLAMAV_PORT from config (default: clamav-srv:3310).
 func (w *Worker) scanWithClamAV(ctx context.Context, objectKey string) (infected bool, threat string, err error) {
-	// TODO: Stream object from S3 → ClamAV daemon via TCP socket (port 3310).
-	// Example with clamav-go:
-	//   reader, err := w.storage.GetObject(ctx, objectKey)
-	//   result, err := clamav.ScanReader(reader)
-	//   return result.Infected, result.Threat, err
-	slog.Debug("Scan worker: ClamAV stub — treating as clean", "objectKey", objectKey)
+	host := w.cfg.ClamAVHost
+	port := w.cfg.ClamAVPort
+
+	// Connect to clamd with timeout
+	dialer := &net.Dialer{Timeout: 10 * time.Second}
+	conn, err := dialer.DialContext(ctx, "tcp", host+":"+port)
+	if err != nil {
+		slog.Warn("ClamAV: connection failed, retrying", "error", err, "host", host, "port", port)
+		return false, "", fmt.Errorf("clamd connection: %w", err)
+	}
+	defer conn.Close()
+
+	// Download object from S3 and stream to clamd
+	reader, err := w.storage.GetObject(ctx, objectKey)
+	if err != nil {
+		return false, "", fmt.Errorf("download from S3: %w", err)
+	}
+	defer reader.Close()
+
+	// Send INSTREAM command to clamd
+	// Protocol: "INSTREAM\n" then chunks of 4-byte length + data, then 4-byte 0
+	conn.SetWriteDeadline(time.Now().Add(30 * time.Second))
+	if _, err := conn.Write([]byte("INSTREAM\n")); err != nil {
+		return false, "", fmt.Errorf("write INSTREAM: %w", err)
+	}
+
+	buf := make([]byte, 8192)
+	for {
+		n, err := reader.Read(buf)
+		if n > 0 {
+			// Send chunk length (4 bytes, network byte order) + data
+			chunk := buf[:n]
+			length := make([]byte, 4)
+			length[0] = byte(n >> 24)
+			length[1] = byte(n >> 16)
+			length[2] = byte(n >> 8)
+			length[3] = byte(n)
+			if _, err := conn.Write(length); err != nil {
+				return false, "", fmt.Errorf("write chunk length: %w", err)
+			}
+			if _, err := conn.Write(chunk); err != nil {
+				return false, "", fmt.Errorf("write chunk data: %w", err)
+			}
+		}
+		if err != nil {
+			break
+		}
+	}
+
+	// Send zero-length chunk to end stream
+	conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	if _, err := conn.Write([]byte{0, 0, 0, 0}); err != nil {
+		return false, "", fmt.Errorf("write zero chunk: %w", err)
+	}
+
+	// Read response
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	scanner := bufio.NewScanner(conn)
+	for scanner.Scan() {
+		line := scanner.Text()
+		slog.Debug("ClamAV response", "line", line)
+		if strings.Contains(line, "FOUND") {
+			// Format: "stream: Threat.Name FOUND"
+			parts := strings.Split(line, " ")
+			if len(parts) >= 2 {
+				threat = parts[1]
+			}
+			return true, threat, nil
+		}
+		if strings.Contains(line, "OK") {
+			return false, "", nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return false, "", fmt.Errorf("read clamd response: %w", err)
+	}
+
+	// Default to clean if no clear result
+	slog.Warn("ClamAV: unexpected response, treating as clean", "objectKey", objectKey)
 	return false, "", nil
 }
 

@@ -6,15 +6,17 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 type Config struct {
 	// Server
-	GraphQLPort  string // GraphQL federation subgraph port (default :4005)
-	MetricsPort  string
-	WSPort       string // WebSocket server port (default :4003)
-	GRPCPort     string // internal gRPC server port (default :50052)
-	Environment  string
+	GraphQLPort string // GraphQL federation subgraph port (default :4005)
+	MetricsPort string
+	WSPort      string // WebSocket server port (default :4003)
+	GRPCPort    string // internal gRPC server port (default :50052)
+	Environment string
 
 	// AWS
 	AWSRegion          string
@@ -30,8 +32,8 @@ type Config struct {
 	S3LifecycleAbortDays   int
 
 	// DynamoDB
-	DynamoDBTableName  string
-	DynamoDBEndpoint   string // empty = real AWS; set for localstack/local
+	DynamoDBTableName string
+	DynamoDBEndpoint  string // empty = real AWS; set for localstack/local
 
 	// Redis
 	RedisHost     string
@@ -52,29 +54,38 @@ type Config struct {
 	FFmpegBinary string
 
 	// Upload limits
-	MaxFileSizeBytes         int64
-	MaxConcurrentUploads     int
-	StorageQuotaBytes        int64
-	AllowedContentTypes      map[string]struct{}
-	UploadSessionTTL         time.Duration
+	MaxFileSizeBytes     int64
+	MaxConcurrentUploads int
+	StorageQuotaBytes    int64
+	AllowedContentTypes  map[string]struct{}
+	UploadSessionTTL     time.Duration
 
 	// Worker pool sizes
-	ScanWorkers         int
-	ImageWorkers        int
-	VideoWorkers        int
-	DeleteWorkers       int
-	OutboxWorkers       int
-	CompressionWorkers  int
-	MetadataWorkers     int
+	ScanWorkers        int
+	ImageWorkers       int
+	VideoWorkers       int
+	DeleteWorkers      int
+	OutboxWorkers      int
+	CompressionWorkers int
+	MetadataWorkers    int
 
 	// Reconciliation
-	ReconcileInterval         time.Duration
-	StuckUploadTimeout        time.Duration
-	StuckProcessingTimeout    time.Duration
+	ReconcileInterval      time.Duration
+	StuckUploadTimeout     time.Duration
+	StuckProcessingTimeout time.Duration
 
 	// Rate limiting (per user, per minute)
 	RateLimitUploadPerMinute   int
 	RateLimitDownloadPerMinute int
+
+	// WebSocket rate limiting (per connection, per second)
+	WSRateLimitPerSecond rate.Limit
+	WSRateLimitBurst     int
+
+	// Telemetry (OpenTelemetry)
+	JaegerEndpoint   string  // Jaeger agent endpoint (e.g., jaeger-srv:6831)
+	OTLPEndpoint     string  // OTLP gRPC endpoint (e.g., otel-collector:4317)
+	TraceSampleRatio float64 // 0.0 to 1.0
 }
 
 // Load reads all required configuration values from environment variables.
@@ -156,7 +167,7 @@ func Load() (*Config, error) {
 	}
 
 	allowedRaw := getEnvOrDefault("MEDIA_ALLOWED_TYPES",
-		"image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/x-msvideo,application/pdf,application/zip,text/plain")
+		"image/jpeg,image/png,image/gif,image/webp,image/avif,video/mp4,video/quicktime,video/x-msvideo,application/pdf,application/zip,text/plain")
 	c.AllowedContentTypes = parseCSVSet(allowedRaw)
 
 	sessionTTLSec, err := getEnvInt("MEDIA_UPLOAD_SESSION_TTL", 86400) // 24h
@@ -224,6 +235,27 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("MEDIA_RATE_LIMIT_DOWNLOAD_PER_MINUTE: %w", err)
 	}
 
+	// WebSocket rate limiting
+	wsRateLimitPerSec, err := getEnvFloat("MEDIA_WS_RATE_LIMIT_PER_SECOND", 50)
+	if err != nil {
+		return nil, fmt.Errorf("MEDIA_WS_RATE_LIMIT_PER_SECOND: %w", err)
+	}
+	c.WSRateLimitPerSecond = rate.Limit(wsRateLimitPerSec)
+
+	c.WSRateLimitBurst, err = getEnvInt("MEDIA_WS_RATE_LIMIT_BURST", 100)
+	if err != nil {
+		return nil, fmt.Errorf("MEDIA_WS_RATE_LIMIT_BURST: %w", err)
+	}
+
+	// Telemetry
+	c.JaegerEndpoint = getEnvOrDefault("JAEGER_ENDPOINT", "")
+	c.OTLPEndpoint = getEnvOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+	sampleRatio, err := getEnvFloat("TRACE_SAMPLE_RATIO", 0.1)
+	if err != nil {
+		return nil, fmt.Errorf("TRACE_SAMPLE_RATIO: %w", err)
+	}
+	c.TraceSampleRatio = sampleRatio
+
 	return c, nil
 }
 
@@ -235,6 +267,11 @@ func (c *Config) IsDev() bool {
 // RedisAddr returns the Redis address in host:port format.
 func (c *Config) RedisAddr() string {
 	return c.RedisHost + ":" + c.RedisPort
+}
+
+// NATSURL returns the NATS server URL.
+func (c *Config) NATSURL() string {
+	return getEnvOrDefault("NATS_URL", "nats://nats-srv:4222")
 }
 
 // IsAllowedContentType checks if a MIME type is in the whitelist.
@@ -280,6 +317,18 @@ func getEnvInt64(key string, def int64) (int64, error) {
 	v, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("invalid int64 value %q: %w", raw, err)
+	}
+	return v, nil
+}
+
+func getEnvFloat(key string, def float64) (float64, error) {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return def, nil
+	}
+	v, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid float value %q: %w", raw, err)
 	}
 	return v, nil
 }

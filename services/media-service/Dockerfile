@@ -39,8 +39,12 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 # ─── Stage 2: Runtime ──────────────────────────────────────────────────────────
 FROM alpine:3.19 AS runtime
 
-# Install ffmpeg, ffprobe, and dependencies
-RUN apk add --no-cache ffmpeg ca-certificates tzdata
+# Install ffmpeg, ffprobe, ClamAV, libavif, and dependencies
+RUN apk add --no-cache ffmpeg clamav clamav-libunrar libavif ca-certificates tzdata
+
+# Initialize ClamAV database
+RUN mkdir -p /var/lib/clamav && chown -R clamav:clamav /var/lib/clamav && \
+    freshclam --quiet || true
 
 # Copy timezone data and CA certificates from builder
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
@@ -53,7 +57,7 @@ COPY --from=builder /workspace/bin/media-service /media-service
 # Running unprivileged limits the blast radius of parser/codec vulnerabilities.
 USER 10001:10001
 
-# GraphQL federation subgraph port and metrics port
-EXPOSE 4005 9102
+# GraphQL federation subgraph port, WebSocket port, and metrics port
+EXPOSE 4005 4003 9102
 
 ENTRYPOINT ["/media-service"]

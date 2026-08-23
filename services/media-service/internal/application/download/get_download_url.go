@@ -12,10 +12,11 @@ import (
 
 // GetDownloadUrlInput holds parameters for the download URL generation.
 type GetDownloadUrlInput struct {
-	UserID      string
-	MediaID     string
-	VersionType string // "original", "thumbnail", "720p", etc. — empty = original
+	UserID       string
+	MediaID      string
+	VersionType  string // "original", "thumbnail", "720p", etc. — empty = original
 	ExpirySeconds int
+	Range        string // Optional Range header (e.g., "bytes=0-1023")
 }
 
 // GetDownloadUrlOutput holds the presigned download URL and metadata.
@@ -104,9 +105,9 @@ func (uc *GetDownloadUrlUseCase) Execute(ctx context.Context, in GetDownloadUrlI
 		expiry = time.Duration(in.ExpirySeconds) * time.Second
 	}
 
-	// 5. Generate presigned GET URL
+	// 5. Generate presigned GET URL (with optional Range header for resumable downloads)
 	// SECURITY: URL is NOT logged — it grants direct S3 access.
-	url, err := uc.storage.GeneratePresignedGET(ctx, objectKey, expiry)
+	url, err := uc.storage.GeneratePresignedGETWithRange(ctx, objectKey, in.Range, expiry)
 	if err != nil {
 		return nil, fmt.Errorf("%w: GeneratePresignedGET: %s", domain.ErrS3OperationFailed, err.Error())
 	}

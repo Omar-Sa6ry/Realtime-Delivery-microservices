@@ -9,19 +9,22 @@ import (
 	"image/png"
 	"io"
 	"log/slog"
+	"os"
+	"os/exec"
 	"strings"
 
-	_ "image/gif"
 	_ "golang.org/x/image/webp"
+	_ "image/gif"
 
-	kafkago "github.com/segmentio/kafka-go"
-	"github.com/google/uuid"
+	"bytes"
+	sharednats "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/nats"
 	kafkaadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/kafka"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
-	"time"
-	"bytes"
+	"github.com/google/uuid"
+	kafkago "github.com/segmentio/kafka-go"
 	"golang.org/x/image/draw"
+	"time"
 )
 
 // uploadCompletedPayload is the event payload for media.upload.completed.
@@ -41,6 +44,7 @@ type Worker struct {
 	storage     ports.ObjectStorage
 	cache       ports.Cache
 	publisher   ports.EventPublisher
+	realtimePub ports.RealtimePublisher
 }
 
 // NewWorker creates a new image processing worker.
@@ -50,6 +54,7 @@ func NewWorker(
 	storage ports.ObjectStorage,
 	cache ports.Cache,
 	publisher ports.EventPublisher,
+	realtimePub ports.RealtimePublisher,
 ) *Worker {
 	return &Worker{
 		mediaRepo:   mediaRepo,
@@ -57,6 +62,7 @@ func NewWorker(
 		storage:     storage,
 		cache:       cache,
 		publisher:   publisher,
+		realtimePub: realtimePub,
 	}
 }
 
@@ -87,6 +93,12 @@ func (w *Worker) processImage(ctx context.Context, payload uploadCompletedPayloa
 
 	// Report progress via Redis TTL key (expires automatically — no separate cleanup needed)
 	_ = w.cache.SetProcessingProgress(ctx, payload.MediaID, 10, 2*time.Hour)
+	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
+		"mediaId": payload.MediaID,
+		"userId":  payload.UserID,
+		"stage":   "image",
+		"percent": 10,
+	})
 
 	// Download original image
 	body, err := w.storage.GetObject(ctx, payload.ObjectKey)
@@ -106,6 +118,12 @@ func (w *Worker) processImage(ctx context.Context, payload uploadCompletedPayloa
 	}
 
 	_ = w.cache.SetProcessingProgress(ctx, payload.MediaID, 30, 2*time.Hour)
+	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
+		"mediaId": payload.MediaID,
+		"userId":  payload.UserID,
+		"stage":   "image",
+		"percent": 30,
+	})
 
 	// Generate thumbnail (200x200)
 	if err := w.generateAndUpload(ctx, payload, traceID, src, 200, 200, domain.VersionTypeThumbnail); err != nil {
@@ -113,23 +131,59 @@ func (w *Worker) processImage(ctx context.Context, payload uploadCompletedPayloa
 	}
 
 	_ = w.cache.SetProcessingProgress(ctx, payload.MediaID, 60, 2*time.Hour)
+	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
+		"mediaId": payload.MediaID,
+		"userId":  payload.UserID,
+		"stage":   "image",
+		"percent": 60,
+	})
 
 	// Generate medium version (800x600)
 	if err := w.generateAndUpload(ctx, payload, traceID, src, 800, 600, domain.VersionTypeMedium); err != nil {
 		slog.Error("Image worker: medium generation failed", "mediaId", payload.MediaID, "error", err)
 	}
 
+	// Generate modern browser renditions through the FFmpeg/libavif runtime
+	// already shipped in the media container. This avoids a fragile native Go
+	// encoder dependency and keeps format work in the bounded worker process.
+	for _, rendition := range []struct {
+		format      string
+		contentType string
+		codec       string
+		versionType domain.VersionType
+	}{
+		{format: "webp", contentType: "image/webp", codec: "libwebp", versionType: domain.VersionTypeWebP},
+		{format: "avif", contentType: "image/avif", codec: "libaom-av1", versionType: domain.VersionTypeAVIF},
+	} {
+		if err := w.generateAndUploadModernFormat(ctx, payload, traceID, src, 800, 600, rendition.format, rendition.contentType, rendition.codec, rendition.versionType); err != nil {
+			return fmt.Errorf("generate %s rendition: %w", rendition.format, err)
+		}
+	}
+
 	_ = w.cache.SetProcessingProgress(ctx, payload.MediaID, 100, 2*time.Hour)
+	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
+		"mediaId": payload.MediaID,
+		"userId":  payload.UserID,
+		"stage":   "image",
+		"percent": 100,
+	})
 
 	// Transition media to READY
 	if err := w.mediaRepo.UpdateStatus(ctx, payload.MediaID, domain.MediaStatusProcessing, domain.MediaStatusReady); err != nil {
 		return fmt.Errorf("transition to READY: %w", err)
 	}
 
-	// Publish media.ready event
+	// Publish media.ready event to Kafka
 	eventBytes, _ := kafkaadapter.MarshalEnvelope(uuid.NewString(), kafkaadapter.TopicMediaReady, traceID,
 		map[string]interface{}{"mediaId": payload.MediaID, "userId": payload.UserID})
 	_ = w.publisher.Publish(ctx, kafkaadapter.TopicMediaReady, payload.MediaID, eventBytes, traceID)
+
+	// Publish media ready to NATS for realtime WebSocket
+	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaReady, map[string]interface{}{
+		"mediaId":   payload.MediaID,
+		"userId":    payload.UserID,
+		"mediaType": payload.MediaType,
+	})
 
 	slog.Info("Image worker: processing complete", "mediaId", payload.MediaID)
 	return nil
@@ -180,6 +234,52 @@ func (w *Worker) generateAndUpload(ctx context.Context, payload uploadCompletedP
 		return fmt.Errorf("persist version metadata %s: %w", versionType, err)
 	}
 
+	return nil
+}
+
+// generateAndUploadModernFormat encodes a resized PNG through FFmpeg into a
+// modern browser format and persists its object and metadata atomically enough
+// for the idempotent worker retry path.
+func (w *Worker) generateAndUploadModernFormat(ctx context.Context, payload uploadCompletedPayload, traceID string, src image.Image, maxW, maxH int, format, contentType, codec string, versionType domain.VersionType) error {
+	resized := resizeImage(src, maxW, maxH)
+	var input bytes.Buffer
+	if err := png.Encode(&input, resized); err != nil {
+		return fmt.Errorf("encode intermediate PNG: %w", err)
+	}
+
+	ffmpegPath := os.Getenv("FFMPEG_PATH")
+	if ffmpegPath == "" {
+		var err error
+		ffmpegPath, err = exec.LookPath("ffmpeg")
+		if err != nil {
+			return fmt.Errorf("ffmpeg not available: %w", err)
+		}
+	}
+	cmd := exec.CommandContext(ctx, ffmpegPath, "-hide_banner", "-loglevel", "error", "-f", "png_pipe", "-i", "pipe:0", "-frames:v", "1", "-c:v", codec, "-f", format, "pipe:1")
+	cmd.Stdin = bytes.NewReader(input.Bytes())
+	var output bytes.Buffer
+	cmd.Stdout = &output
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("ffmpeg %s: %w (%s)", format, err, strings.TrimSpace(stderr.String()))
+	}
+	data := output.Bytes()
+	if len(data) == 0 {
+		return fmt.Errorf("ffmpeg %s returned empty output", format)
+	}
+
+	objectKey := buildVersionKey(payload.ObjectKey, string(versionType), "."+format)
+	if err := w.storage.PutObject(ctx, objectKey, contentType, data); err != nil {
+		return fmt.Errorf("upload %s to S3: %w", format, err)
+	}
+	if err := w.versionRepo.Create(ctx, &domain.MediaVersion{
+		VersionID: uuid.NewString(), MediaID: payload.MediaID, VersionType: versionType,
+		ObjectKey: objectKey, ContentType: contentType, Size: int64(len(data)),
+		Width: int32(resized.Bounds().Dx()), Height: int32(resized.Bounds().Dy()), CreatedAt: time.Now().UTC(),
+	}); err != nil {
+		return fmt.Errorf("persist %s metadata: %w", format, err)
+	}
 	return nil
 }
 

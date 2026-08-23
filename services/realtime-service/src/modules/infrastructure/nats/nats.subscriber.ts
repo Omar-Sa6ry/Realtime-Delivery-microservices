@@ -21,6 +21,7 @@ interface NatsFanoutMessage {
  *  realtime.driver.assignment.updated   -> delivery subscribers (CRITICAL)
  *  realtime.driver.presence.updated     -> admin sockets
  *  notification.user.*                  -> user sockets (NORMAL)
+ *  realtime.media.*                     -> user sockets (NORMAL)
  */
 @Injectable()
 export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
@@ -45,6 +46,12 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
       RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
       RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED,
       `${NotificationNatsSubjects.NOTIFICATION_USER}.*`,
+      // Media realtime subjects
+      RealtimeNatsSubjects.MEDIA_UPLOAD_PROGRESS,
+      RealtimeNatsSubjects.MEDIA_PROCESSING_PROGRESS,
+      RealtimeNatsSubjects.MEDIA_READY,
+      RealtimeNatsSubjects.MEDIA_DELETED,
+      RealtimeNatsSubjects.MEDIA_FAILED,
     ];
 
     for (const subject of subjects) {
@@ -86,9 +93,15 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
       }
     } else if (subject === RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED) {
       await this.fanoutToAdmins(message);
+    } else if (this.isMediaSubject(subject)) {
+      await this.fanoutMediaToUser(message);
     } else {
       await this.fanoutToDeliverySubscribers(message);
     }
+  }
+
+  private isMediaSubject(subject: string): boolean {
+    return subject.startsWith('realtime.media.');
   }
 
   private async fanoutToUser(userId: string, message: NatsFanoutMessage): Promise<void> {
@@ -99,6 +112,23 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
       sockets,
       {
         type: ServerMessageType.NOTIFICATION_RECEIVED,
+        data: message.data,
+      },
+      message.priority || MessagePriority.NORMAL,
+    );
+  }
+
+  private async fanoutMediaToUser(message: NatsFanoutMessage): Promise<void> {
+    const userId = String(message.data?.userId || '');
+    if (!userId) return;
+
+    const sockets = this.connectionService.getLocalSocketsByUser(userId);
+    if (sockets.length === 0) return;
+
+    this.writer.sendMany(
+      sockets,
+      {
+        type: message.type,
         data: message.data,
       },
       message.priority || MessagePriority.NORMAL,

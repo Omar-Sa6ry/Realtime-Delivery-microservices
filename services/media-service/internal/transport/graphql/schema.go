@@ -88,6 +88,32 @@ type AbortUploadResult {
   success: Boolean!
 }
 
+# DLQ types
+type DLQMessage {
+  id: String!
+  topic: String!
+  partition: Int!
+  offset: Float!
+  key: String!
+  value: String!
+  headers: [String]
+  error: String
+  retryCount: Int!
+  createdAt: Float!
+  originalTimestamp: Float!
+}
+
+type DLQStats {
+  topic: String!
+  messageCount: Int!
+}
+
+type DLQReplayResult {
+  success: Boolean!
+  replayedCount: Int!
+  errors: [String]
+}
+
 input CreateUploadSessionInput {
   fileName: String!
   contentType: String!
@@ -95,6 +121,20 @@ input CreateUploadSessionInput {
   checksum: String
   deliveryId: String
   idempotencyKey: String
+}
+
+input RenewPresignedInput {
+  uploadId: String!
+  expirySeconds: Int
+}
+
+type RenewPresignedResult {
+  uploadId: String!
+  s3UploadId: String!
+  presignedParts: [PresignedPart]!
+  partSize: Float!
+  totalParts: Int!
+  expiresAt: Float!
 }
 
 input UploadPartInput {
@@ -112,8 +152,10 @@ type Query {
   media(mediaId: String!): Media!
   listMedia(ownerId: String!, limit: Int, cursor: String, statusFilter: String): MediaListResult!
   uploadStatus(uploadId: String!): UploadStatus!
-  downloadUrl(mediaId: String!, versionType: String, expirySeconds: Int): DownloadUrl!
+  downloadUrl(mediaId: String!, versionType: String, expirySeconds: Int, range: String): DownloadUrl!
   quota: Quota!
+  dlqTopics: [String]!
+  dlqStats(topics: [String]!): [DLQStats]!
 }
 
 type Mutation {
@@ -121,6 +163,8 @@ type Mutation {
   completeUpload(input: CompleteUploadInput!): CompleteUploadResult!
   abortUpload(uploadId: String!): AbortUploadResult!
   deleteMedia(mediaId: String!, idempotencyKey: String): BooleanResult!
+  dlqReplay(topic: String!, maxMessages: Int): DLQReplayResult!
+  renewPresigned(input: RenewPresignedInput!): RenewPresignedResult!
 }`
 
 var mediaVersionType = gql.NewObject(gql.ObjectConfig{
@@ -236,6 +280,35 @@ var abortUploadResultType = gql.NewObject(gql.ObjectConfig{
 	},
 })
 
+var dlqStatsType = gql.NewObject(gql.ObjectConfig{
+	Name: "DLQStats",
+	Fields: gql.Fields{
+		"topic":         &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"messageCount":  &gql.Field{Type: gql.NewNonNull(gql.Int)},
+	},
+})
+
+var dlqReplayResultType = gql.NewObject(gql.ObjectConfig{
+	Name: "DLQReplayResult",
+	Fields: gql.Fields{
+		"success":        &gql.Field{Type: gql.NewNonNull(gql.Boolean)},
+		"replayedCount":  &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"errors":         &gql.Field{Type: gql.NewList(gql.String)},
+	},
+})
+
+var renewPresignedResultType = gql.NewObject(gql.ObjectConfig{
+	Name: "RenewPresignedResult",
+	Fields: gql.Fields{
+		"uploadId":       &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"s3UploadId":     &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"presignedParts": &gql.Field{Type: gql.NewNonNull(gql.NewList(presignedPartType))},
+		"partSize":       &gql.Field{Type: gql.NewNonNull(gql.Float)},
+		"totalParts":     &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"expiresAt":      &gql.Field{Type: gql.NewNonNull(gql.Float)},
+	},
+})
+
 var serviceType = gql.NewObject(gql.ObjectConfig{
 	Name: "_Service",
 	Fields: gql.Fields{
@@ -271,6 +344,14 @@ var completeUploadInput = gql.NewInputObject(gql.InputObjectConfig{
 			Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(uploadPartInput))),
 		},
 		"idempotencyKey": &gql.InputObjectFieldConfig{Type: gql.String},
+	},
+})
+
+var renewPresignedInput = gql.NewInputObject(gql.InputObjectConfig{
+	Name: "RenewPresignedInput",
+	Fields: gql.InputObjectConfigFieldMap{
+		"uploadId":     &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.String)},
+		"expirySeconds": &gql.InputObjectFieldConfig{Type: gql.Int},
 	},
 })
 
@@ -314,6 +395,7 @@ func buildSchema(h *Handler) (gql.Schema, error) {
 					"mediaId":       &gql.ArgumentConfig{Type: gql.NewNonNull(gql.String)},
 					"versionType":   &gql.ArgumentConfig{Type: gql.String},
 					"expirySeconds": &gql.ArgumentConfig{Type: gql.Int},
+					"range":         &gql.ArgumentConfig{Type: gql.String},
 				},
 				Resolve: h.resolveDownloadUrl,
 			},
@@ -321,43 +403,69 @@ func buildSchema(h *Handler) (gql.Schema, error) {
 				Type:    gql.NewNonNull(quotaType),
 				Resolve: h.resolveQuota,
 			},
+			"dlqTopics": &gql.Field{
+				Type:    gql.NewNonNull(gql.NewList(gql.NewNonNull(gql.String))),
+				Resolve: h.resolveDLQTopics,
+			},
+			"dlqStats": &gql.Field{
+				Type: gql.NewNonNull(gql.NewList(dlqStatsType)),
+				Args: gql.FieldConfigArgument{
+					"topics": &gql.ArgumentConfig{Type: gql.NewList(gql.String)},
+				},
+				Resolve: h.resolveDLQStats,
+			},
 		},
 	})
 
-	mutation := gql.NewObject(gql.ObjectConfig{
-		Name: "Mutation",
-		Fields: gql.Fields{
-			"createUploadSession": &gql.Field{
-				Type: gql.NewNonNull(uploadSessionType),
-				Args: gql.FieldConfigArgument{
-					"input": &gql.ArgumentConfig{Type: gql.NewNonNull(createUploadSessionInput)},
-				},
-				Resolve: h.resolveCreateUploadSession,
+mutation := gql.NewObject(gql.ObjectConfig{
+	Name: "Mutation",
+	Fields: gql.Fields{
+		"createUploadSession": &gql.Field{
+			Type: gql.NewNonNull(uploadSessionType),
+			Args: gql.FieldConfigArgument{
+				"input": &gql.ArgumentConfig{Type: gql.NewNonNull(createUploadSessionInput)},
 			},
-			"completeUpload": &gql.Field{
-				Type: gql.NewNonNull(completeUploadResultType),
-				Args: gql.FieldConfigArgument{
-					"input": &gql.ArgumentConfig{Type: gql.NewNonNull(completeUploadInput)},
-				},
-				Resolve: h.resolveCompleteUpload,
-			},
-			"abortUpload": &gql.Field{
-				Type: gql.NewNonNull(abortUploadResultType),
-				Args: gql.FieldConfigArgument{
-					"uploadId": &gql.ArgumentConfig{Type: gql.NewNonNull(gql.String)},
-				},
-				Resolve: h.resolveAbortUpload,
-			},
-			"deleteMedia": &gql.Field{
-				Type: gql.NewNonNull(booleanResultType),
-				Args: gql.FieldConfigArgument{
-					"mediaId":        &gql.ArgumentConfig{Type: gql.NewNonNull(gql.String)},
-					"idempotencyKey": &gql.ArgumentConfig{Type: gql.String},
-				},
-				Resolve: h.resolveDeleteMedia,
-			},
+			Resolve: h.resolveCreateUploadSession,
 		},
-	})
+		"completeUpload": &gql.Field{
+			Type: gql.NewNonNull(completeUploadResultType),
+			Args: gql.FieldConfigArgument{
+				"input": &gql.ArgumentConfig{Type: gql.NewNonNull(completeUploadInput)},
+			},
+			Resolve: h.resolveCompleteUpload,
+		},
+		"abortUpload": &gql.Field{
+			Type: gql.NewNonNull(abortUploadResultType),
+			Args: gql.FieldConfigArgument{
+				"uploadId": &gql.ArgumentConfig{Type: gql.NewNonNull(gql.String)},
+			},
+			Resolve: h.resolveAbortUpload,
+		},
+		"deleteMedia": &gql.Field{
+			Type: gql.NewNonNull(booleanResultType),
+			Args: gql.FieldConfigArgument{
+				"mediaId":        &gql.ArgumentConfig{Type: gql.NewNonNull(gql.String)},
+				"idempotencyKey": &gql.ArgumentConfig{Type: gql.String},
+			},
+			Resolve: h.resolveDeleteMedia,
+		},
+		"dlqReplay": &gql.Field{
+			Type: gql.NewNonNull(dlqReplayResultType),
+			Args: gql.FieldConfigArgument{
+				"topic":        &gql.ArgumentConfig{Type: gql.NewNonNull(gql.String)},
+				"maxMessages":  &gql.ArgumentConfig{Type: gql.Int},
+			},
+			Resolve: h.resolveDLQReplay,
+		},
+		"renewPresigned": &gql.Field{
+			Type: gql.NewNonNull(renewPresignedResultType),
+			Args: gql.FieldConfigArgument{
+				"input": &gql.ArgumentConfig{Type: gql.NewNonNull(renewPresignedInput)},
+			},
+			Resolve: h.resolveRenewPresigned,
+		},
+	},
+})
 
 	schema, err := gql.NewSchema(gql.SchemaConfig{Query: query, Mutation: mutation})
 	if err != nil {

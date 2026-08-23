@@ -3,8 +3,8 @@ package observability
 import (
 	"sync"
 
-	"github.com/prometheus/client_golang/prometheus"
 	sharedmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -19,11 +19,12 @@ var (
 	ProcessingFailedTotal    *prometheus.CounterVec
 	ProcessingDuration       *prometheus.HistogramVec
 
-	S3ErrorsTotal           *prometheus.CounterVec
-	KafkaPublishFailures    *prometheus.CounterVec
-	IdempotencyHitsTotal    *prometheus.CounterVec
-	ReconciliationTotal     *prometheus.CounterVec
-	DeadLetterQueueTotal    *prometheus.CounterVec
+	S3ErrorsTotal        *prometheus.CounterVec
+	KafkaPublishFailures *prometheus.CounterVec
+	IdempotencyHitsTotal *prometheus.CounterVec
+	ReconciliationTotal  *prometheus.CounterVec
+	DeadLetterQueueTotal *prometheus.CounterVec
+	KafkaConsumerLag     *prometheus.GaugeVec
 
 	QuotaUsageBytes *prometheus.GaugeVec
 
@@ -106,6 +107,11 @@ func RegisterMediaMetrics() {
 			Help: "Total number of messages routed to dead letter queues.",
 		}, []string{"topic"})
 
+		KafkaConsumerLag = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "media_kafka_consumer_lag",
+			Help: "Current Kafka consumer lag by topic and consumer group.",
+		}, []string{"topic", "group"})
+
 		QuotaUsageBytes = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "media_quota_usage_bytes",
 			Help: "Current storage quota usage per user.",
@@ -126,6 +132,7 @@ func RegisterMediaMetrics() {
 			IdempotencyHitsTotal,
 			ReconciliationTotal,
 			DeadLetterQueueTotal,
+			KafkaConsumerLag,
 			QuotaUsageBytes,
 		)
 	})

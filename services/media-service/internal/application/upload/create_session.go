@@ -6,12 +6,12 @@ import (
 	"math"
 	"time"
 
-	"github.com/google/uuid"
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	sharedratelimiter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/ratelimiter"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/validation"
+	"github.com/google/uuid"
 )
 
 // CreateSessionInput holds all parameters for the CreateUploadSession use case.
@@ -27,29 +27,29 @@ type CreateSessionInput struct {
 
 // CreateSessionOutput is the result returned to the gRPC handler.
 type CreateSessionOutput struct {
-	MediaID       string
-	UploadID      string
-	S3UploadID    string
+	MediaID        string
+	UploadID       string
+	S3UploadID     string
 	PresignedParts []ports.PresignedPart
-	PartSize      int64
-	TotalParts    int
-	ExpiresAt     time.Time
+	PartSize       int64
+	TotalParts     int
+	ExpiresAt      time.Time
 }
 
 // CreateSessionUseCase orchestrates the upload session creation flow.
 type CreateSessionUseCase struct {
-	mediaRepo  ports.MediaRepository
-	uploadRepo ports.UploadRepository
-	quotaRepo  ports.QuotaRepository
-	storage    ports.ObjectStorage
-	cache      ports.Cache
-	validator  *validation.Validator
+	mediaRepo   ports.MediaRepository
+	uploadRepo  ports.UploadRepository
+	quotaRepo   ports.QuotaRepository
+	storage     ports.ObjectStorage
+	cache       ports.Cache
+	validator   *validation.Validator
 	rateLimiter *sharedratelimiter.RateLimiter
 	// Config values
-	sessionTTL     time.Duration
-	presignExpiry  time.Duration
-	minPartSize    int64
-	maxFileSize    int64
+	sessionTTL    time.Duration
+	presignExpiry time.Duration
+	minPartSize   int64
+	maxFileSize   int64
 }
 
 // NewCreateSessionUseCase constructs the use case with all dependencies injected.
@@ -65,17 +65,17 @@ func NewCreateSessionUseCase(
 	minPartSize, maxFileSize int64,
 ) *CreateSessionUseCase {
 	return &CreateSessionUseCase{
-		mediaRepo:   mediaRepo,
-		uploadRepo:  uploadRepo,
-		quotaRepo:   quotaRepo,
-		storage:     storage,
-		cache:       cache,
-		validator:   validator,
-		rateLimiter: rateLimiter,
-		sessionTTL:  sessionTTL,
+		mediaRepo:     mediaRepo,
+		uploadRepo:    uploadRepo,
+		quotaRepo:     quotaRepo,
+		storage:       storage,
+		cache:         cache,
+		validator:     validator,
+		rateLimiter:   rateLimiter,
+		sessionTTL:    sessionTTL,
 		presignExpiry: presignExpiry,
-		minPartSize: minPartSize,
-		maxFileSize: maxFileSize,
+		minPartSize:   minPartSize,
+		maxFileSize:   maxFileSize,
 	}
 }
 
@@ -180,6 +180,7 @@ func (uc *CreateSessionUseCase) Execute(ctx context.Context, in CreateSessionInp
 		S3UploadID:     s3UploadID,
 		ObjectKey:      objectKey,
 		TotalParts:     totalParts,
+		PartSize:       partSize,
 		CompletedParts: nil,
 		Status:         domain.UploadStatusUploading,
 		ExpiresAt:      expiresAt,

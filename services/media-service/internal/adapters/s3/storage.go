@@ -68,10 +68,19 @@ func (a *StorageAdapter) GeneratePresignedParts(
 }
 
 func (a *StorageAdapter) GeneratePresignedGET(ctx context.Context, objectKey string, expiry time.Duration) (string, error) {
-	req, err := a.client.presigner.PresignGetObject(ctx, &s3.GetObjectInput{
+	return a.GeneratePresignedGETWithRange(ctx, objectKey, "", expiry)
+}
+
+// GeneratePresignedGETWithRange generates a presigned GET URL with optional Range header
+func (a *StorageAdapter) GeneratePresignedGETWithRange(ctx context.Context, objectKey, rangeHeader string, expiry time.Duration) (string, error) {
+	input := &s3.GetObjectInput{
 		Bucket: aws.String(a.client.bucketName),
 		Key:    aws.String(objectKey),
-	}, func(o *s3.PresignOptions) {
+	}
+	if rangeHeader != "" {
+		input.Range = aws.String(rangeHeader)
+	}
+	req, err := a.client.presigner.PresignGetObject(ctx, input, func(o *s3.PresignOptions) {
 		o.Expires = expiry
 	})
 	if err != nil {
@@ -161,10 +170,19 @@ func (a *StorageAdapter) DeleteObjects(ctx context.Context, objectKeys []string)
 }
 
 func (a *StorageAdapter) GetObject(ctx context.Context, objectKey string) (io.ReadCloser, error) {
-	out, err := a.client.s3Client.GetObject(ctx, &s3.GetObjectInput{
+	return a.GetObjectWithRange(ctx, objectKey, "")
+}
+
+// GetObjectWithRange retrieves an object with optional Range header support
+func (a *StorageAdapter) GetObjectWithRange(ctx context.Context, objectKey, rangeHeader string) (io.ReadCloser, error) {
+	input := &s3.GetObjectInput{
 		Bucket: aws.String(a.client.bucketName),
 		Key:    aws.String(objectKey),
-	})
+	}
+	if rangeHeader != "" {
+		input.Range = aws.String(rangeHeader)
+	}
+	out, err := a.client.s3Client.GetObject(ctx, input)
 	if err != nil {
 		return nil, fmt.Errorf("S3 GetObject %q: %w", objectKey, err)
 	}

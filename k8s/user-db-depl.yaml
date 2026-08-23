@@ -20,9 +20,9 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              if [ -d /var/lib/postgresql/data ] && [ -f /var/lib/postgresql/data/PG_VERSION ] && [ ! -f /var/lib/postgresql/data/global/pg_control ]; then
+              if [ -d /var/lib/postgresql/data ] && [ -f /var/lib/postgresql/data/pgdata/PG_VERSION ] && [ ! -f /var/lib/postgresql/data/pgdata/global/pg_control ]; then
                 echo "Postgres data dir is incomplete; wiping for a fresh init";
-                find /var/lib/postgresql/data -mindepth 1 -delete;
+                find /var/lib/postgresql/data/pgdata -mindepth 1 -delete;
               fi
               exit 0
           volumeMounts:
@@ -63,21 +63,21 @@ spec:
             - containerPort: 5432
           startupProbe:
             exec:
-              command: ['pg_isready', '-U', 'postgres', '-d', 'delivery_user_db']
+              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_USER" -d delivery_user_db']
             initialDelaySeconds: 3
             periodSeconds: 4
             timeoutSeconds: 5
             failureThreshold: 150
           readinessProbe:
             exec:
-              command: ['pg_isready', '-U', 'postgres', '-d', 'delivery_user_db']
+              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_USER" -d delivery_user_db']
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 5
             failureThreshold: 60
           livenessProbe:
             exec:
-              command: ['pg_isready', '-U', 'postgres', '-d', 'delivery_user_db']
+              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_USER" -d delivery_user_db']
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -87,7 +87,8 @@ spec:
               mountPath: /var/lib/postgresql/data
       volumes:
         - name: postgres-storage
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: user-db-pvc
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

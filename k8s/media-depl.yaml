@@ -37,7 +37,7 @@ data:
   MEDIA_UPLOAD_SESSION_TTL: "86400"  # 24h
 
   MEDIA_ALLOWED_TYPES: >-
-    image/jpeg,image/png,image/gif,image/webp,
+    image/jpeg,image/png,image/gif,image/webp,image/avif,
     video/mp4,video/quicktime,video/x-msvideo,video/webm,
     application/pdf,application/zip,text/plain
 
@@ -49,7 +49,6 @@ data:
   # Externally-reachable host for presigned URLs (browser → localhost:4566 tunnel).
   # Empty/absent in production so real AWS hosts are used.
   S3_PUBLIC_ENDPOINT: "http://localhost:4566"
-
 
   # Worker pool sizes
   MEDIA_SCAN_WORKERS: "4"
@@ -135,22 +134,26 @@ spec:
           httpGet:
             path: /healthz
             port: graphql
-          initialDelaySeconds: 120
-          periodSeconds: 5
-          failureThreshold: 240
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 30
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /healthz
             port: graphql
-          periodSeconds: 5
-          failureThreshold: 120
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 30
+          timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
             port: graphql
-          initialDelaySeconds: 5
+          initialDelaySeconds: 30
           periodSeconds: 20
           failureThreshold: 6
+          timeoutSeconds: 5
         # FFmpeg and temporary media operations use the dedicated writable /tmp volume.
         securityContext:
           allowPrivilegeEscalation: false
@@ -227,7 +230,7 @@ spec:
         averageUtilization: 75
 
 ---
-apiVersion: policy/v1
+apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: media-service-egress
@@ -296,5 +299,3 @@ kind: ServiceAccount
 metadata:
   name: media-service-sa
   namespace: default
-
-

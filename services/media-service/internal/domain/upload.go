@@ -26,6 +26,7 @@ type UploadSession struct {
 	S3UploadID     string       `json:"s3UploadId"`
 	ObjectKey      string       `json:"objectKey"`
 	TotalParts     int          `json:"totalParts"`
+	PartSize       int64        `json:"partSize"`
 	CompletedParts []UploadPart `json:"completedParts"`
 	Status         UploadStatus `json:"status"`
 	ExpiresAt      time.Time    `json:"expiresAt"`

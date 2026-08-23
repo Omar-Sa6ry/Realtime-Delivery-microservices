@@ -27,4 +27,10 @@ export enum RealtimeNatsSubjects {
   DRIVER_PRESENCE_UPDATED = 'realtime.driver.presence.updated',
   COMMAND_DRIVER = 'realtime.command.driver',
   COMMAND_DELIVERY = 'realtime.command.delivery',
+  // Media realtime fan-out subjects (published by media-service workers)
+  MEDIA_UPLOAD_PROGRESS = 'realtime.media.upload.progress',
+  MEDIA_PROCESSING_PROGRESS = 'realtime.media.processing.progress',
+  MEDIA_READY = 'realtime.media.ready',
+  MEDIA_DELETED = 'realtime.media.deleted',
+  MEDIA_FAILED = 'realtime.media.failed',
 }

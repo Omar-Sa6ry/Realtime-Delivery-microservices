@@ -146,9 +146,11 @@ const deliveriesMapping = `{
         "properties": {
           "city": {
             "type": "text",
-            "analyzer": "autocomplete_analyzer",
-            "search_analyzer": "standard",
-            "fields": { "keyword": { "type": "keyword" } }
+            "analyzer": "standard",
+            "fields": {
+              "autocomplete": { "type": "text", "analyzer": "autocomplete_analyzer", "search_analyzer": "standard" },
+              "keyword": { "type": "keyword" }
+            }
           },
           "country": { "type": "keyword" },
           "location": { "type": "geo_point" }
@@ -158,9 +160,11 @@ const deliveriesMapping = `{
         "properties": {
           "city": {
             "type": "text",
-            "analyzer": "autocomplete_analyzer",
-            "search_analyzer": "standard",
-            "fields": { "keyword": { "type": "keyword" } }
+            "analyzer": "standard",
+            "fields": {
+              "autocomplete": { "type": "text", "analyzer": "autocomplete_analyzer", "search_analyzer": "standard" },
+              "keyword": { "type": "keyword" }
+            }
           },
           "country": { "type": "keyword" },
           "location": { "type": "geo_point" }
@@ -200,9 +204,11 @@ const driversMapping = `{
       "driver_id": { "type": "keyword" },
       "name": {
         "type": "text",
-        "analyzer": "autocomplete_analyzer",
-        "search_analyzer": "standard",
-        "fields": { "keyword": { "type": "keyword" } }
+        "analyzer": "standard",
+        "fields": {
+          "autocomplete": { "type": "text", "analyzer": "autocomplete_analyzer", "search_analyzer": "standard" },
+          "keyword": { "type": "keyword" }
+        }
       },
       "status": { "type": "keyword" },
       "vehicle_type": { "type": "keyword" },
@@ -228,9 +234,30 @@ const usersMapping = `{
   },
   "mappings": { "properties": {
     "id": { "type": "keyword" },
-    "first_name": { "type": "text", "analyzer": "user_autocomplete", "search_analyzer": "standard" },
-    "last_name": { "type": "text", "analyzer": "user_autocomplete", "search_analyzer": "standard" },
-    "email": { "type": "keyword" },
+    "first_name": {
+      "type": "text",
+      "analyzer": "standard",
+      "fields": {
+        "autocomplete": { "type": "text", "analyzer": "user_autocomplete", "search_analyzer": "standard" },
+        "keyword": { "type": "keyword" }
+      }
+    },
+    "last_name": {
+      "type": "text",
+      "analyzer": "standard",
+      "fields": {
+        "autocomplete": { "type": "text", "analyzer": "user_autocomplete", "search_analyzer": "standard" },
+        "keyword": { "type": "keyword" }
+      }
+    },
+    "email": {
+      "type": "text",
+      "analyzer": "standard",
+      "fields": {
+        "autocomplete": { "type": "text", "analyzer": "user_autocomplete", "search_analyzer": "standard" },
+        "keyword": { "type": "keyword" }
+      }
+    },
     "role": { "type": "keyword" },
     "is_active": { "type": "boolean" },
     "created_at": { "type": "date" }
@@ -264,9 +291,11 @@ const mediaMapping = `{
       "owner_id": { "type": "keyword" },
       "file_name": {
         "type": "text",
-        "analyzer": "autocomplete_analyzer",
-        "search_analyzer": "standard",
-        "fields": { "keyword": { "type": "keyword" } }
+        "analyzer": "standard",
+        "fields": {
+          "autocomplete": { "type": "text", "analyzer": "autocomplete_analyzer", "search_analyzer": "standard" },
+          "keyword": { "type": "keyword" }
+        }
       },
       "mime_type": { "type": "keyword" },
       "media_type": { "type": "keyword" },

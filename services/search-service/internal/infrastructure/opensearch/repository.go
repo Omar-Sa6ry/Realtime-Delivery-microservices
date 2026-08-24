@@ -59,12 +59,11 @@ func (r *Repository) Autocomplete(ctx context.Context, q search.AutocompleteQuer
 		"query": map[string]interface{}{
 			"multi_match": map[string]interface{}{
 				"query": q.Prefix,
-				"type":  "bool_prefix",
 				"fields": []string{
-					"pickup.city", "pickup.city._2gram", "pickup.city._3gram",
-					"dropoff.city", "dropoff.city._2gram", "dropoff.city._3gram",
-					"name", "name._2gram", "name._3gram",
-					"file_name", "file_name._2gram", "file_name._3gram",
+					"pickup.city.autocomplete^3", "dropoff.city.autocomplete^3",
+					"name.autocomplete^4", "file_name.autocomplete^4",
+					"first_name.autocomplete^4", "last_name.autocomplete^4", "email.autocomplete^2",
+					"pickup.city", "dropoff.city", "name", "file_name", "first_name", "last_name", "email",
 				},
 			},
 		},
@@ -116,6 +115,9 @@ func (r *Repository) Autocomplete(ctx context.Context, q search.AutocompleteQuer
 		if err := json.Unmarshal(hit.Source, &genericDoc); err == nil {
 			if name, ok := genericDoc["name"].(string); ok && name != "" {
 				suggestions = append(suggestions, name)
+			} else if firstName, ok := genericDoc["first_name"].(string); ok && firstName != "" {
+				lastName, _ := genericDoc["last_name"].(string)
+				suggestions = append(suggestions, strings.TrimSpace(firstName+" "+lastName))
 			} else if pickup, ok := genericDoc["pickup"].(map[string]interface{}); ok {
 				if city, ok := pickup["city"].(string); ok && city != "" {
 					suggestions = append(suggestions, city)
@@ -616,10 +618,23 @@ func buildDeliveryQuery(q search.DeliverySearchQuery) map[string]interface{} {
 
 	if strings.TrimSpace(q.Query) != "" {
 		must = append(must, map[string]interface{}{
-			"multi_match": map[string]interface{}{
-				"query":     q.Query,
-				"fields":    []string{"delivery_id^3", "pickup.city^2", "dropoff.city^2", "status"},
-				"fuzziness": "AUTO",
+			"bool": map[string]interface{}{
+				"should": []map[string]interface{}{
+					{
+						"multi_match": map[string]interface{}{
+							"query":     q.Query,
+							"fields":    []string{"pickup.city^2", "dropoff.city^2"},
+							"fuzziness": "AUTO",
+						},
+					},
+					{
+						"multi_match": map[string]interface{}{
+							"query":  q.Query,
+							"fields": []string{"delivery_id^5", "pickup.city.autocomplete^3", "dropoff.city.autocomplete^3", "pickup.city", "dropoff.city", "status"},
+						},
+					},
+				},
+				"minimum_should_match": 1,
 			},
 		})
 	}
@@ -715,10 +730,23 @@ func buildDriverQuery(q search.DriverSearchQuery) map[string]interface{} {
 
 	if strings.TrimSpace(q.Query) != "" {
 		must = append(must, map[string]interface{}{
-			"multi_match": map[string]interface{}{
-				"query":     q.Query,
-				"fields":    []string{"name^3", "driver_id^2", "vehicle_type"},
-				"fuzziness": "AUTO",
+			"bool": map[string]interface{}{
+				"should": []map[string]interface{}{
+					{
+						"multi_match": map[string]interface{}{
+							"query":     q.Query,
+							"fields":    []string{"name^3", "vehicle_type"},
+							"fuzziness": "AUTO",
+						},
+					},
+					{
+						"multi_match": map[string]interface{}{
+							"query":  q.Query,
+							"fields": []string{"name.autocomplete^4", "name", "driver_id^5", "vehicle_type"},
+						},
+					},
+				},
+				"minimum_should_match": 1,
 			},
 		})
 	}
@@ -789,12 +817,29 @@ func buildUserQuery(q search.UserSearchQuery) map[string]interface{} {
 	must := []map[string]interface{}{}
 	filter := []map[string]interface{}{}
 	if strings.TrimSpace(q.Query) != "" {
-		must = append(must, map[string]interface{}{"multi_match": map[string]interface{}{
-			"query": q.Query, "fields": []string{"first_name^3", "last_name^3", "email^2", "id"}, "fuzziness": "AUTO",
-		}})
+		must = append(must, map[string]interface{}{
+			"bool": map[string]interface{}{
+				"should": []map[string]interface{}{
+					{
+						"multi_match": map[string]interface{}{
+							"query":     q.Query,
+							"fields":    []string{"first_name^3", "last_name^3", "email^2"},
+							"fuzziness": "AUTO",
+						},
+					},
+					{
+						"multi_match": map[string]interface{}{
+							"query":  q.Query,
+							"fields": []string{"first_name.autocomplete^4", "last_name.autocomplete^4", "email.autocomplete^3", "first_name^2", "last_name^2", "email", "id^5"},
+						},
+					},
+				},
+				"minimum_should_match": 1,
+			},
+		})
 	}
 	if q.Role != "" {
-		filter = append(filter, map[string]interface{}{"term": map[string]interface{}{"role": q.Role}})
+		filter = append(filter, map[string]interface{}{"term": map[string]interface{}{"role": strings.ToLower(q.Role)}})
 	}
 	if q.IsActive != nil {
 		filter = append(filter, map[string]interface{}{"term": map[string]interface{}{"is_active": *q.IsActive}})
@@ -815,10 +860,23 @@ func buildMediaQuery(q search.MediaSearchQuery) map[string]interface{} {
 
 	if strings.TrimSpace(q.Query) != "" {
 		must = append(must, map[string]interface{}{
-			"multi_match": map[string]interface{}{
-				"query":     q.Query,
-				"fields":    []string{"file_name^3", "media_id^2", "mime_type"},
-				"fuzziness": "AUTO",
+			"bool": map[string]interface{}{
+				"should": []map[string]interface{}{
+					{
+						"multi_match": map[string]interface{}{
+							"query":     q.Query,
+							"fields":    []string{"file_name^3", "mime_type"},
+							"fuzziness": "AUTO",
+						},
+					},
+					{
+						"multi_match": map[string]interface{}{
+							"query":  q.Query,
+							"fields": []string{"file_name.autocomplete^4", "file_name", "media_id^5", "mime_type"},
+						},
+					},
+				},
+				"minimum_should_match": 1,
 			},
 		})
 	}

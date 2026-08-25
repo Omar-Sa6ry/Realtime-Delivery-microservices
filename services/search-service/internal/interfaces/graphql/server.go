@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -69,7 +70,6 @@ func (s *Server) Handler() http.HandlerFunc {
 			}
 		}
 		res := s.executeGraphQL(ctx, req.Query, req.Variables)
-
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(res)
 	}
@@ -423,7 +423,7 @@ type Mutation {
 `
 
 func parseGraphQLInput(query string, vars map[string]interface{}, fieldName string, target interface{}) {
-	if vars != nil && len(vars) > 0 {
+	if len(vars) > 0 {
 		// 1. Direct "input" key
 		if raw, ok := vars["input"].(map[string]interface{}); ok {
 			b, _ := json.Marshal(raw)

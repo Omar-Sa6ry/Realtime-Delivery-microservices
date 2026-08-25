@@ -41,6 +41,7 @@ type MediaUploadCreatedPayload struct {
 type MediaUploadCompletedPayload struct {
 	MediaID     string `json:"mediaId"`
 	UserID      string `json:"userId"`
+	FileName    string `json:"fileName"`
 	ObjectKey   string `json:"objectKey"`
 	Size        int64  `json:"size"`
 	ContentType string `json:"contentType"`
@@ -51,6 +52,8 @@ type MediaUploadCompletedPayload struct {
 type MediaReadyPayload struct {
 	MediaID     string             `json:"mediaId"`
 	UserID      string             `json:"userId"`
+	FileName    string             `json:"fileName"`
+	Size        int64              `json:"size"`
 	MediaType   string             `json:"mediaType"`
 	ContentType string             `json:"contentType"`
 	Versions    []MediaVersionInfo `json:"versions"`

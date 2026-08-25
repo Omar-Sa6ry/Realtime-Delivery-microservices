@@ -147,6 +147,7 @@ func (uc *CompleteUploadUseCase) Execute(ctx context.Context, in CompleteUploadI
 		map[string]interface{}{
 			"mediaId":     media.MediaID,
 			"userId":      in.UserID,
+			"fileName":    media.FileName,
 			"objectKey":   session.ObjectKey,
 			"size":        media.Size,
 			"contentType": media.ContentType,

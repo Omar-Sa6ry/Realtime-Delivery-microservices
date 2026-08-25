@@ -48,6 +48,8 @@ func (cm *ConsumerManager) Start(ctx context.Context) error {
 		"driver.updated",
 		"driver.deleted",
 		// Media
+		"media.upload.created",
+		"media.upload.completed",
 		"media.ready",
 		"media.deleted",
 		// User
@@ -185,16 +187,59 @@ func (cm *ConsumerManager) handleMessage(ctx context.Context, topic string, msg 
 		}
 		return cm.indexingService.DeleteDriver(ctx, p.DriverID)
 
-	case string(events.MediaReady):
-		var p events.MediaReadyPayload
+	case string(events.MediaUploadCreated):
+		var p events.MediaUploadCreatedPayload
 		if err := json.Unmarshal(env.Payload, &p); err != nil {
 			return fmt.Errorf("%w: %v", pkgKafka.ErrPermanent, err)
 		}
 		doc := search.MediaDocument{
 			MediaID:       p.MediaID,
 			OwnerID:       p.UserID,
+			FileName:      p.FileName,
+			MimeType:      p.ContentType,
 			MediaType:     p.MediaType,
+			Status:        "UPLOADING",
+			Size:          p.Size,
+			CreatedAt:     time.Now().UTC(),
+			SourceVersion: 1,
+		}
+		return cm.indexingService.UpsertMedia(ctx, doc)
+
+	case string(events.MediaUploadCompleted):
+		var p events.MediaUploadCompletedPayload
+		if err := json.Unmarshal(env.Payload, &p); err != nil {
+			return fmt.Errorf("%w: %v", pkgKafka.ErrPermanent, err)
+		}
+		doc := search.MediaDocument{
+			MediaID:       p.MediaID,
+			OwnerID:       p.UserID,
+			FileName:      p.FileName,
+			MimeType:      p.ContentType,
+			MediaType:     p.MediaType,
+			Status:        "UPLOADED",
+			Size:          p.Size,
+			CreatedAt:     time.Now().UTC(),
+			SourceVersion: 1,
+		}
+		return cm.indexingService.UpsertMedia(ctx, doc)
+
+	case string(events.MediaReady):
+		var p events.MediaReadyPayload
+		if err := json.Unmarshal(env.Payload, &p); err != nil {
+			return fmt.Errorf("%w: %v", pkgKafka.ErrPermanent, err)
+		}
+		size := p.Size
+		if size == 0 && len(p.Versions) > 0 {
+			size = p.Versions[0].Size
+		}
+		doc := search.MediaDocument{
+			MediaID:       p.MediaID,
+			OwnerID:       p.UserID,
+			FileName:      p.FileName,
+			MediaType:     p.MediaType,
+			MimeType:      p.ContentType,
 			Status:        "READY",
+			Size:          size,
 			CreatedAt:     time.Now().UTC(),
 			SourceVersion: 1,
 		}

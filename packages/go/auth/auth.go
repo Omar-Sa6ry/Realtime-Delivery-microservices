@@ -51,7 +51,7 @@ func Authenticate(header string) (Claims, error) {
 	}
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "f3c12be5d179b8d5690d4735a0b48b5d68e7b68e3cda6b3"
+		return Claims{}, errors.New("JWT_SECRET is not configured")
 	}
 	mac := hmac.New(sha256.New, []byte(secret))
 	_, _ = mac.Write([]byte(segments[0] + "." + segments[1]))

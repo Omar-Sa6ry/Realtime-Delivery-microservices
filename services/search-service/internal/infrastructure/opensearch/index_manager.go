@@ -269,10 +269,16 @@ const mediaMapping = `{
     "number_of_shards": 1,
     "number_of_replicas": 0,
     "analysis": {
+      "tokenizer": {
+        "pattern_tokenizer": {
+          "type": "pattern",
+          "pattern": "[\\W_]+"
+        }
+      },
       "analyzer": {
         "autocomplete_analyzer": {
           "type": "custom",
-          "tokenizer": "standard",
+          "tokenizer": "pattern_tokenizer",
           "filter": ["lowercase", "edge_ngram_filter"]
         }
       },

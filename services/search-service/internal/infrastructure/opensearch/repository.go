@@ -41,6 +41,8 @@ func (r *Repository) SearchDrivers(ctx context.Context, q search.DriverSearchQue
 
 func (r *Repository) SearchMedia(ctx context.Context, q search.MediaSearchQuery) (search.SearchResult[search.MediaDocument], error) {
 	queryDsl := buildMediaQuery(q)
+	b, _ := json.Marshal(queryDsl)
+	slog.Info("SearchMedia query execution", "dsl", string(b), "q", q)
 	return executeSearch[search.MediaDocument](ctx, r, "media", queryDsl, q.Pagination)
 }
 
@@ -228,6 +230,26 @@ func (r *Repository) DeleteDriver(ctx context.Context, id string) error {
 
 func (r *Repository) UpsertMedia(ctx context.Context, doc search.MediaDocument) error {
 	doc.IndexedAt = time.Now().UTC()
+	if doc.FileName == "" {
+		getReq := opensearchapi.DocumentGetReq{
+			Index:      "media",
+			DocumentID: doc.MediaID,
+		}
+		if res, err := r.client.Do(ctx, getReq, nil); err == nil && res.StatusCode == http.StatusOK {
+			defer res.Body.Close()
+			var existing struct {
+				Source search.MediaDocument `json:"_source"`
+			}
+			if err := json.NewDecoder(res.Body).Decode(&existing); err == nil {
+				if existing.Source.FileName != "" {
+					doc.FileName = existing.Source.FileName
+				}
+				if doc.Size == 0 {
+					doc.Size = existing.Source.Size
+				}
+			}
+		}
+	}
 	return r.upsertDoc(ctx, "media", doc.MediaID, doc, doc.SourceVersion)
 }
 
@@ -875,6 +897,20 @@ func buildMediaQuery(q search.MediaSearchQuery) map[string]interface{} {
 							"fields": []string{"file_name.autocomplete^4", "file_name", "media_id^5", "mime_type"},
 						},
 					},
+					{
+						"query_string": map[string]interface{}{
+							"query":         "*" + q.Query + "*",
+							"default_field": "file_name",
+						},
+					},
+					{
+						"wildcard": map[string]interface{}{
+							"file_name.keyword": map[string]interface{}{
+								"wildcard":         "*" + strings.ToLower(q.Query) + "*",
+								"case_insensitive": true,
+							},
+						},
+					},
 				},
 				"minimum_should_match": 1,
 			},
@@ -883,7 +919,7 @@ func buildMediaQuery(q search.MediaSearchQuery) map[string]interface{} {
 
 	if q.MediaType != "" {
 		filter = append(filter, map[string]interface{}{
-			"term": map[string]interface{}{"media_type": q.MediaType},
+			"term": map[string]interface{}{"media_type": strings.ToUpper(q.MediaType)},
 		})
 	}
 
@@ -912,6 +948,10 @@ func buildMediaQuery(q search.MediaSearchQuery) map[string]interface{} {
 	return map[string]interface{}{
 		"query": map[string]interface{}{
 			"bool": boolQuery,
+		},
+		"sort": []map[string]interface{}{
+			{"created_at": map[string]interface{}{"order": "desc"}},
+			{"_id": map[string]interface{}{"order": "asc"}},
 		},
 	}
 }

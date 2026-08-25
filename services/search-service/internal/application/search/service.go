@@ -32,7 +32,9 @@ func (s *Service) SearchDeliveries(ctx context.Context, q search.DeliverySearchQ
 		return search.SearchResult[search.DeliveryDocument]{}, err
 	}
 
-	_ = s.cache.Set(ctx, cacheKey, res, 60*time.Second)
+	if res.PageInfo.Total > 0 {
+		_ = s.cache.Set(ctx, cacheKey, res, 60*time.Second)
+	}
 	return res, nil
 }
 
@@ -48,7 +50,9 @@ func (s *Service) SearchDrivers(ctx context.Context, q search.DriverSearchQuery)
 		return search.SearchResult[search.DriverDocument]{}, err
 	}
 
-	_ = s.cache.Set(ctx, cacheKey, res, 60*time.Second)
+	if res.PageInfo.Total > 0 {
+		_ = s.cache.Set(ctx, cacheKey, res, 60*time.Second)
+	}
 	return res, nil
 }
 
@@ -64,7 +68,9 @@ func (s *Service) SearchMedia(ctx context.Context, q search.MediaSearchQuery) (s
 		return search.SearchResult[search.MediaDocument]{}, err
 	}
 
-	_ = s.cache.Set(ctx, cacheKey, res, 60*time.Second)
+	if res.PageInfo.Total > 0 {
+		_ = s.cache.Set(ctx, cacheKey, res, 60*time.Second)
+	}
 	return res, nil
 }
 
@@ -78,7 +84,9 @@ func (s *Service) SearchUsers(ctx context.Context, q search.UserSearchQuery) (se
 	if err != nil {
 		return search.SearchResult[search.UserDocument]{}, err
 	}
-	_ = s.cache.Set(ctx, cacheKey, res, 60*time.Second)
+	if res.PageInfo.Total > 0 {
+		_ = s.cache.Set(ctx, cacheKey, res, 60*time.Second)
+	}
 	return res, nil
 }
 

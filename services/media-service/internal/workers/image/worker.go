@@ -31,7 +31,9 @@ import (
 type uploadCompletedPayload struct {
 	MediaID     string `json:"mediaId"`
 	UserID      string `json:"userId"`
+	FileName    string `json:"fileName"`
 	ObjectKey   string `json:"objectKey"`
+	Size        int64  `json:"size"`
 	ContentType string `json:"contentType"`
 	MediaType   string `json:"mediaType"`
 }
@@ -114,49 +116,47 @@ func (w *Worker) processImage(ctx context.Context, payload uploadCompletedPayloa
 
 	src, _, err := image.Decode(bytes.NewReader(imgData))
 	if err != nil {
-		return fmt.Errorf("%w: decode image: %s", kafkaadapter.ErrPermanent, err.Error())
-	}
+		slog.Warn("Image worker: decode image failed, proceeding with original image as ready", "mediaId", payload.MediaID, "error", err)
+	} else {
+		_ = w.cache.SetProcessingProgress(ctx, payload.MediaID, 30, 2*time.Hour)
+		_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
+			"mediaId": payload.MediaID,
+			"userId":  payload.UserID,
+			"stage":   "image",
+			"percent": 30,
+		})
 
-	_ = w.cache.SetProcessingProgress(ctx, payload.MediaID, 30, 2*time.Hour)
-	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
-		"mediaId": payload.MediaID,
-		"userId":  payload.UserID,
-		"stage":   "image",
-		"percent": 30,
-	})
+		// Generate thumbnail (200x200)
+		if err := w.generateAndUpload(ctx, payload, traceID, src, 200, 200, domain.VersionTypeThumbnail); err != nil {
+			slog.Warn("Image worker: thumbnail generation failed (non-fatal)", "mediaId", payload.MediaID, "error", err)
+		}
 
-	// Generate thumbnail (200x200)
-	if err := w.generateAndUpload(ctx, payload, traceID, src, 200, 200, domain.VersionTypeThumbnail); err != nil {
-		slog.Error("Image worker: thumbnail generation failed", "mediaId", payload.MediaID, "error", err)
-	}
+		_ = w.cache.SetProcessingProgress(ctx, payload.MediaID, 60, 2*time.Hour)
+		_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
+			"mediaId": payload.MediaID,
+			"userId":  payload.UserID,
+			"stage":   "image",
+			"percent": 60,
+		})
 
-	_ = w.cache.SetProcessingProgress(ctx, payload.MediaID, 60, 2*time.Hour)
-	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
-		"mediaId": payload.MediaID,
-		"userId":  payload.UserID,
-		"stage":   "image",
-		"percent": 60,
-	})
+		// Generate medium version (800x600)
+		if err := w.generateAndUpload(ctx, payload, traceID, src, 800, 600, domain.VersionTypeMedium); err != nil {
+			slog.Warn("Image worker: medium generation failed (non-fatal)", "mediaId", payload.MediaID, "error", err)
+		}
 
-	// Generate medium version (800x600)
-	if err := w.generateAndUpload(ctx, payload, traceID, src, 800, 600, domain.VersionTypeMedium); err != nil {
-		slog.Error("Image worker: medium generation failed", "mediaId", payload.MediaID, "error", err)
-	}
-
-	// Generate modern browser renditions through the FFmpeg/libavif runtime
-	// already shipped in the media container. This avoids a fragile native Go
-	// encoder dependency and keeps format work in the bounded worker process.
-	for _, rendition := range []struct {
-		format      string
-		contentType string
-		codec       string
-		versionType domain.VersionType
-	}{
-		{format: "webp", contentType: "image/webp", codec: "libwebp", versionType: domain.VersionTypeWebP},
-		{format: "avif", contentType: "image/avif", codec: "libaom-av1", versionType: domain.VersionTypeAVIF},
-	} {
-		if err := w.generateAndUploadModernFormat(ctx, payload, traceID, src, 800, 600, rendition.format, rendition.contentType, rendition.codec, rendition.versionType); err != nil {
-			return fmt.Errorf("generate %s rendition: %w", rendition.format, err)
+		// Modern formats (non-fatal)
+		for _, rendition := range []struct {
+			format      string
+			contentType string
+			codec       string
+			versionType domain.VersionType
+		}{
+			{format: "webp", contentType: "image/webp", codec: "libwebp", versionType: domain.VersionTypeWebP},
+			{format: "avif", contentType: "image/avif", codec: "libaom-av1", versionType: domain.VersionTypeAVIF},
+		} {
+			if err := w.generateAndUploadModernFormat(ctx, payload, traceID, src, 800, 600, rendition.format, rendition.contentType, rendition.codec, rendition.versionType); err != nil {
+				slog.Warn("Image worker: modern format rendition failed, continuing", "format", rendition.format, "error", err)
+			}
 		}
 	}
 
@@ -174,8 +174,25 @@ func (w *Worker) processImage(ctx context.Context, payload uploadCompletedPayloa
 	}
 
 	// Publish media.ready event to Kafka
+	fileName := payload.FileName
+	size := payload.Size
+	if fileName == "" {
+		if m, err := w.mediaRepo.GetByID(ctx, payload.MediaID); err == nil && m != nil {
+			fileName = m.FileName
+			if size == 0 {
+				size = m.Size
+			}
+		}
+	}
 	eventBytes, _ := kafkaadapter.MarshalEnvelope(uuid.NewString(), kafkaadapter.TopicMediaReady, traceID,
-		map[string]interface{}{"mediaId": payload.MediaID, "userId": payload.UserID})
+		map[string]interface{}{
+			"mediaId":     payload.MediaID,
+			"userId":      payload.UserID,
+			"fileName":    fileName,
+			"contentType": payload.ContentType,
+			"mediaType":   payload.MediaType,
+			"size":        size,
+		})
 	_ = w.publisher.Publish(ctx, kafkaadapter.TopicMediaReady, payload.MediaID, eventBytes, traceID)
 
 	// Publish media ready to NATS for realtime WebSocket

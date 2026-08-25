@@ -45,6 +45,22 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
       driver: ApolloGatewayDriver,
       server: {
         context: ({ req }: any) => {
+          if (req && !req.user && req.headers?.authorization?.startsWith('Bearer ')) {
+            try {
+              const token = req.headers.authorization.split(' ')[1];
+              const parts = token.split('.');
+              if (parts.length === 3) {
+                const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+                req.user = {
+                  userId: payload.sub || payload.userId || payload.id,
+                  role: payload.role || 'USER',
+                  sessionId: payload.sessionId,
+                };
+              }
+            } catch {
+              // ignore invalid format
+            }
+          }
           return { req };
         },
         validationRules: [depthLimit(7)],
@@ -129,20 +145,37 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
           return new RemoteGraphQLDataSource({
             url,
             willSendRequest({ request, context }: any) {
-              // Header Propagation: Inject user identity & correlation headers to downstream subgraphs
-              if (context.req?.user) {
+              let user = context.req?.user;
+              if (!user && context.req?.headers?.authorization?.startsWith('Bearer ')) {
+                try {
+                  const token = context.req.headers.authorization.split(' ')[1];
+                  const parts = token.split('.');
+                  if (parts.length === 3) {
+                    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+                    user = {
+                      userId: payload.sub || payload.userId || payload.id,
+                      role: payload.role || 'USER',
+                      sessionId: payload.sessionId,
+                    };
+                  }
+                } catch {
+                  // ignore
+                }
+              }
+
+              if (user) {
                 request.http.headers.set(
                   'x-user-id',
-                  context.req.user.userId || '',
+                  user.userId || '',
                 );
                 request.http.headers.set(
                   'x-user-role',
-                  context.req.user.role || '',
+                  user.role || '',
                 );
-                if (context.req.user.sessionId) {
+                if (user.sessionId) {
                   request.http.headers.set(
                     'x-user-session',
-                    context.req.user.sessionId,
+                    user.sessionId,
                   );
                 }
               }

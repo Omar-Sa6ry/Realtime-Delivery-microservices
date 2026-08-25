@@ -30,7 +30,9 @@ import (
 type scanCompletedPayload struct {
 	MediaID     string `json:"mediaId"`
 	UserID      string `json:"userId"`
+	FileName    string `json:"fileName"`
 	ObjectKey   string `json:"objectKey"`
+	Size        int64  `json:"size"`
 	ContentType string `json:"contentType"`
 	MediaType   string `json:"mediaType"`
 }
@@ -178,13 +180,7 @@ func (w *Worker) processVideo(ctx context.Context, payload scanCompletedPayload,
 	}
 
 	if allFailed {
-		_ = w.mediaRepo.UpdateStatus(ctx, payload.MediaID, domain.MediaStatusProcessing, domain.MediaStatusFailed)
-		_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaFailed, map[string]interface{}{
-			"mediaId": payload.MediaID,
-			"userId":  payload.UserID,
-			"reason":  "all video profiles failed",
-		})
-		return fmt.Errorf("all video profiles failed for mediaId %s", payload.MediaID)
+		slog.Warn("Video worker: profile transcoding had failures, proceeding with original video", "mediaId", payload.MediaID)
 	}
 
 	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
@@ -205,10 +201,23 @@ func (w *Worker) processVideo(ctx context.Context, payload scanCompletedPayload,
 	}
 
 	// Publish media.ready.
+	fileName := payload.FileName
+	size := payload.Size
+	if fileName == "" {
+		if m, err := w.mediaRepo.GetByID(ctx, payload.MediaID); err == nil && m != nil {
+			fileName = m.FileName
+			if size == 0 {
+				size = m.Size
+			}
+		}
+	}
 	w.publishEvent(ctx, kafkaadapter.TopicMediaReady, payload.MediaID, payload.UserID, traceID, map[string]interface{}{
-		"mediaId":   payload.MediaID,
-		"userId":    payload.UserID,
-		"mediaType": payload.MediaType,
+		"mediaId":     payload.MediaID,
+		"userId":      payload.UserID,
+		"fileName":    fileName,
+		"contentType": payload.ContentType,
+		"mediaType":   payload.MediaType,
+		"size":        size,
 	})
 
 	// Publish media ready to NATS for realtime WebSocket

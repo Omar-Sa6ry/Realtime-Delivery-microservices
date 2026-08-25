@@ -6,6 +6,13 @@ export enum DeliveryKafkaTopics {
   DELIVERY_IN_TRANSIT = 'delivery.in_transit',
   DELIVERY_COMPLETED = 'delivery.completed',
   DELIVERY_CANCELLED = 'delivery.cancelled',
+  DELIVERY_DELETED = 'delivery.deleted',
+}
+
+export enum DriverKafkaTopics {
+  DRIVER_CREATED = 'driver.created',
+  DRIVER_UPDATED = 'driver.updated',
+  DRIVER_DELETED = 'driver.deleted',
 }
 
 export enum PaymentKafkaTopics {
@@ -32,6 +39,8 @@ export enum MediaKafkaTopics {
 
 export enum UserKafkaTopics {
   USER_CREATED = 'user.created',
+  USER_UPDATED = 'user.updated',
+  USER_DELETED = 'user.deleted',
   PASSWORD_RESET_REQUESTED = 'user.password_reset_requested',
 }
 

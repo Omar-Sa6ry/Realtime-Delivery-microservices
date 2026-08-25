@@ -251,6 +251,8 @@ spec:
     - protocol: TCP
       port: 4005
     - protocol: TCP
+      port: 4003
+    - protocol: TCP
       port: 50052
     - protocol: TCP
       port: 6379

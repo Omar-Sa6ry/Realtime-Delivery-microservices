@@ -1,14 +1,28 @@
+query {
+  autocomplete(
+    input: {
+      prefix: "high"
+      index: "media"
+      # index: "users"
+      limit: 5
+    }
+  ) {
+    data {
+      suggestions
+    }
+  }
+}
+
 # Search users (Admin only; requires Bearer token with VIEW_USER permission)
 query {
   searchUsers(
     input: {
-      query: "john"
-      pagination: { limit: 10 }
+      query: "omarrrr"
+      role:"user"
+      isActive:true
+      pagination: { limit: 4 }
     }
   ) {
-    success
-    statusCode
-    message
     items {
       id
       first_name
@@ -25,6 +39,33 @@ query {
     }
   }
 }
+
+
+# Search Media (Admin only; requires Bearer token with VIEW_USER permission)
+query {
+  searchMedia(
+    input: {
+      query: "High"
+      pagination: { limit: 10 }
+    }
+  ) {
+    items {
+      media_id
+      file_name
+      mime_type
+      owner_id
+      size
+      status
+      created_at
+    }
+    pageInfo {
+      hasNextPage
+      cursor
+      total
+    }
+  }
+}
+
 
 # Search deliveries (search-service)
 query {
@@ -74,26 +115,3 @@ query {
   }
 }
 
-# Search media (search-service)
-query {
-  searchMedia(
-    input: {
-      query: "sample"
-      pagination: { limit: 10 }
-    }
-  ) {
-    success
-    statusCode
-    message
-    items {
-      media_id
-      file_name
-      mime_type
-    }
-    pageInfo {
-      hasNextPage
-      cursor
-      total
-    }
-  }
-}

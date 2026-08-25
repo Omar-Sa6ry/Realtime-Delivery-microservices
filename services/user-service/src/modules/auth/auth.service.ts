@@ -107,18 +107,24 @@ export class AuthService {
     // Enqueue event to Redis BullMQ
     await this.outboxWorkerService.enqueueEvent(outboxId);
 
-    // Publish user.created event for the notification service (event-driven).
-    // Fire-and-forget; consumer dedupes via the inbox pattern.
-    this.kafkaService
-      .emit(UserKafkaTopics.USER_CREATED, UserKafkaTopics.USER_CREATED, {
-        userId: savedUser.id,
-        email: savedUser.email,
-        firstName: savedUser.firstName,
-        lastName: savedUser.lastName,
-        role: savedUser.role,
-        createdAt: savedUser.createdAt,
-      })
-      .catch((err) => console.error('Failed to publish user.created event:', err));
+    // Publish user.created event for search indexing and notification service.
+    try {
+      await this.kafkaService.emit(
+        UserKafkaTopics.USER_CREATED,
+        UserKafkaTopics.USER_CREATED,
+        {
+          userId: savedUser.id,
+          email: savedUser.email,
+          firstName: savedUser.firstName,
+          lastName: savedUser.lastName,
+          role: savedUser.role,
+          createdAt: savedUser.createdAt,
+        },
+      );
+    } catch (err) {
+      // Log but don't fail registration — search index can be rebuilt via reindex
+      console.error('Failed to publish user.created event:', err);
+    }
 
     const sessionId = crypto.randomUUID();
     const permissions = rolePermissionsMap[savedUser.role] || [];

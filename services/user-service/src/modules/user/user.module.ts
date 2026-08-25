@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { KafkaModule } from '@delivery/common';
 import { UserService } from './user.service';
 import { DbUserService } from './db-user.service';
 import { UserResolver } from './user.resolver';
@@ -7,6 +9,17 @@ import { MetricsController } from './metrics.controller';
 import { HealthController } from './health.controller';
 
 @Module({
+  imports: [
+    KafkaModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        clientId: 'user-service',
+        brokers: (config.get<string>('KAFKA_BROKERS', 'kafka-srv:9092') || '')
+          .split(',').map(b => b.trim()).filter(Boolean),
+      }),
+    }),
+  ],
   controllers: [UserGrpcController, MetricsController, HealthController],
   providers: [
     DbUserService, 

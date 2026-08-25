@@ -22,6 +22,15 @@ spec:
             - >-
               until nc -z kafka-srv 9092;
               do echo "Waiting for kafka-srv:9092"; sleep 2; done
+        - name: wait-for-opensearch
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - >-
+              until wget -q --spider http://opensearch-srv:9200/_cluster/health;
+              do echo "Waiting for opensearch-srv:9200"; sleep 3; done
       containers:
         - name: search
           image: delivery/search
@@ -48,10 +57,10 @@ spec:
             timeoutSeconds: 5
           readinessProbe:
             httpGet:
-              path: /health/live
+              path: /health/ready
               port: 4007
             initialDelaySeconds: 5
-            periodSeconds: 10
+            periodSeconds: 5
             failureThreshold: 30
             timeoutSeconds: 5
           livenessProbe:

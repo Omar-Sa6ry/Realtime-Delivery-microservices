@@ -16,6 +16,7 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/reindex"
 	appSearch "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/search"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/config"
+	pkgKafka "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/kafka"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/infrastructure/kafka"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/infrastructure/opensearch"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/infrastructure/redis"
@@ -41,11 +42,24 @@ func main() {
 	}
 
 	indexManager := opensearch.NewIndexManager(osClient)
-	ctxInit, cancelInit := context.WithTimeout(context.Background(), 10*time.Second)
-	if err := indexManager.EnsureIndices(ctxInit); err != nil {
-		slog.Warn("Index initialization deferred or already created", "error", err)
+
+	// Wait for OpenSearch indices to be ready before starting Kafka consumers.
+	maxRetries := 30
+	for i := 0; i < maxRetries; i++ {
+		ctxInit, cancelInit := context.WithTimeout(context.Background(), 5*time.Second)
+		err := indexManager.EnsureIndices(ctxInit)
+		cancelInit()
+		if err == nil {
+			slog.Info("OpenSearch indices ready")
+			break
+		}
+		if i == maxRetries-1 {
+			slog.Warn("Index initialization failed after max retries, continuing anyway", "error", err)
+		} else {
+			slog.Warn("Waiting for OpenSearch indices", "attempt", i+1, "maxRetries", maxRetries, "error", err)
+			time.Sleep(3 * time.Second)
+		}
 	}
-	cancelInit()
 
 	searchRepo := opensearch.NewRepository(osClient, indexManager)
 
@@ -57,14 +71,30 @@ func main() {
 	indexingService := indexing.NewService(searchRepo)
 	reindexService := reindex.NewService(searchRepo)
 
-	// 4. Kafka Event Consumer Manager
+	// 4. Ensure Kafka topics exist before starting consumers.
+
+	searchTopics := []string{
+		"delivery.created", "delivery.driver.assigned", "delivery.driver.accepted",
+		"delivery.picked_up", "delivery.in_transit", "delivery.completed",
+		"delivery.cancelled", "delivery.deleted",
+		"driver.created", "driver.updated", "driver.deleted",
+		"media.upload.created", "media.upload.completed", "media.ready", "media.deleted",
+		"user.created", "user.updated", "user.deleted",
+	}
+	if err := pkgKafka.EnsureTopics(cfg.KafkaBrokers, searchTopics, 1, 1); err != nil {
+		slog.Warn("Failed to ensure Kafka topics (will retry on consumer start)", "error", err)
+	} else {
+		slog.Info("Kafka topics verified", "count", len(searchTopics))
+	}
+
+	// 5. Kafka Event Consumer Manager
 	consumerManager := kafka.NewConsumerManager(cfg, indexingService)
 	consumerCtx, consumerCancel := context.WithCancel(context.Background())
 	if err := consumerManager.Start(consumerCtx); err != nil {
 		slog.Error("Failed to start Kafka consumers", "error", err)
 	}
 
-	// 5. HTTP & GraphQL Server - Create GraphQL server first to get its handler
+	// 6. HTTP & GraphQL Server - Create GraphQL server first to get its handler
 	gqlServer, err := graphql.NewServer(searchService, reindexService, cfg.PortGraphQL)
 	if err != nil {
 		slog.Error("Failed to create GraphQL server", "error", err)

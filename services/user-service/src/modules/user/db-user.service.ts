@@ -6,7 +6,7 @@ import { Address } from '../../common/database/entities/address.entity';
 import { Outbox } from '../../common/database/entities/outbox.entity';
 import { BcryptPasswordHasher } from '../../common/security/bcrypt-password.hasher';
 import { OutboxWorkerService } from '../../common/messaging/outbox-worker.service';
-import { Role } from '@delivery/common';
+import { Role, KafkaService, UserKafkaTopics } from '@delivery/common';
 import { IdGenerator } from '@bts-soft/core';
 import { I18nService } from 'nestjs-i18n';
 import { UpdateProfileInput, ChangePasswordInput } from './dto/user.types';
@@ -23,6 +23,7 @@ export class DbUserService {
     private readonly dataSource: DataSource,
     private readonly outboxWorkerService: OutboxWorkerService,
     private readonly mediaGrpcService: MediaGrpcService,
+    private readonly kafkaService: KafkaService,
     private readonly i18n: I18nService,
   ) {}
 
@@ -121,6 +122,26 @@ export class DbUserService {
     // Immediate dispatching via BullMQ
     await this.outboxWorkerService.enqueueEvent(outboxId);
 
+    // Publish user.updated event for search indexing
+    try {
+      this.kafkaService.emit(
+        UserKafkaTopics.USER_UPDATED,
+        UserKafkaTopics.USER_UPDATED,
+        {
+          userId: savedUser.id,
+          email: savedUser.email,
+          firstName: savedUser.firstName,
+          lastName: savedUser.lastName,
+          role: savedUser.role,
+          isActive: savedUser.isActive,
+          createdAt: savedUser.createdAt,
+          updatedAt: savedUser.updatedAt || new Date(),
+        },
+      );
+    } catch (err) {
+      console.error('Failed to publish user.updated event:', err);
+    }
+
     return savedUser;
   }
 
@@ -146,7 +167,9 @@ export class DbUserService {
     }
 
     user.role = Role.ADMIN;
-    return this.userRepo.save(user);
+    const saved = await this.userRepo.save(user);
+    this.emitUserUpdated(saved);
+    return saved;
   }
 
   async toggleUserActive(id: string, isActive: boolean): Promise<User> {
@@ -156,7 +179,9 @@ export class DbUserService {
     }
 
     user.isActive = isActive;
-    return this.userRepo.save(user);
+    const saved = await this.userRepo.save(user);
+    await this.emitUserUpdated(saved);
+    return saved;
   }
 
   async deleteUser(id: string): Promise<boolean> {
@@ -166,6 +191,21 @@ export class DbUserService {
     }
 
     const result = await this.userRepo.delete(id);
+
+    // Publish user.deleted event for search indexing
+    try {
+      this.kafkaService.emit(
+        UserKafkaTopics.USER_DELETED,
+        UserKafkaTopics.USER_DELETED,
+        {
+          userId: id,
+          deletedAt: new Date(),
+        },
+      );
+    } catch (err) {
+      console.error('Failed to publish user.deleted event:', err);
+    }
+
     return (result.affected ?? 0) > 0;
   }
 
@@ -256,6 +296,27 @@ export class DbUserService {
       : 100;
 
     return { totalUsers, usersThisMonth, percentageIncrease };
+  }
+
+  private async emitUserUpdated(user: User): Promise<void> {
+    try {
+      this.kafkaService.emit(
+        UserKafkaTopics.USER_UPDATED,
+        UserKafkaTopics.USER_UPDATED,
+        {
+          userId: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          isActive: user.isActive,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt || new Date(),
+        },
+      );
+    } catch (err) {
+      console.error('Failed to publish user.updated event:', err);
+    }
   }
 }
 

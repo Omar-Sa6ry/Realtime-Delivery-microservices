@@ -80,6 +80,34 @@ func (p *Producer) Close() error {
 	return p.writer.Close()
 }
 
+// EnsureTopics creates the given topics in Kafka if they don't already exist.
+func EnsureTopics(brokers []string, topics []string, numPartitions, replicationFactor int) error {
+	conn, err := kafkago.Dial("tcp", brokers[0])
+	if err != nil {
+		return fmt.Errorf("dial kafka for topic creation: %w", err)
+	}
+	defer conn.Close()
+
+	topicConfigs := make([]kafkago.TopicConfig, 0, len(topics))
+	for _, t := range topics {
+		topicConfigs = append(topicConfigs, kafkago.TopicConfig{
+			Topic:             t,
+			NumPartitions:     numPartitions,
+			ReplicationFactor: replicationFactor,
+		})
+	}
+
+	err = conn.CreateTopics(topicConfigs...)
+	if err != nil {
+		// TopicAlreadyExists is fine
+		if strings.Contains(err.Error(), "TopicAlreadyExists") {
+			return nil
+		}
+		return fmt.Errorf("create topics: %w", err)
+	}
+	return nil
+}
+
 // MessageHandler is the signature for processing a single Kafka message.
 // Return ErrPermanent to send the message to the DLQ without retrying.
 type MessageHandler func(ctx context.Context, msg kafkago.Message) error

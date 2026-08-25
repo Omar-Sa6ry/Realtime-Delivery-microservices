@@ -29,6 +29,7 @@ type UserUpdatedPayload struct {
 	LastName  string     `json:"lastName"`
 	Role      string     `json:"role"`
 	IsActive  bool       `json:"isActive"`
+	CreatedAt time.Time  `json:"createdAt"`
 	UpdatedAt time.Time  `json:"updatedAt"`
 	AvatarID  *string    `json:"avatarMediaId,omitempty"`
 }

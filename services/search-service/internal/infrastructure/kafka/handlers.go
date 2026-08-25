@@ -408,9 +408,9 @@ func (h *UserUpdatedHandler) Handle(ctx context.Context, payload json.RawMessage
 		return fmt.Errorf("unmarshal user.updated: %w", err)
 	}
 
-	updatedAt := p.UpdatedAt
-	if updatedAt.IsZero() {
-		updatedAt = time.Now().UTC()
+	createdAt := p.CreatedAt
+	if createdAt.IsZero() {
+		createdAt = time.Now().UTC()
 	}
 
 	doc := search.UserDocument{
@@ -420,7 +420,7 @@ func (h *UserUpdatedHandler) Handle(ctx context.Context, payload json.RawMessage
 		Email:     p.Email,
 		Role:      p.Role,
 		IsActive:  p.IsActive,
-		CreatedAt: updatedAt,
+		CreatedAt: createdAt,
 	}
 	return h.indexingService.UpsertUser(ctx, doc)
 }

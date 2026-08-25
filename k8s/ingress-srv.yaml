@@ -4,6 +4,8 @@ metadata:
   name: ingress-service
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 spec:
   ingressClassName: nginx
   tls:
@@ -22,3 +24,11 @@ spec:
                 name: api-gateway-srv
                 port:
                   number: 4000
+          # media-service WebSocket
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: media-srv
+                port:
+                  number: 4003

@@ -65,14 +65,21 @@ func main() {
 	}
 
 	// 5. HTTP & GraphQL Server
-	gqlServer := graphql.NewServer(searchService, reindexService)
+	gqlServer, err := graphql.NewServer(searchService, reindexService, cfg.PortGraphQL)
+	if err != nil {
+		slog.Error("Failed to create GraphQL server", "error", err)
+		os.Exit(1)
+	}
 	healthHandler := health.NewHandler(searchRepo, cache)
 
+	// Health endpoints on separate mux for the main server
 	mux := http.NewServeMux()
-	mux.HandleFunc("/search/graphql", gqlServer.Handler())
-	mux.HandleFunc("/graphql", gqlServer.Handler())
 	mux.HandleFunc("/health/live", healthHandler.LivenessHandler())
 	mux.HandleFunc("/health/ready", healthHandler.ReadinessHandler())
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.PortGraphQL),
@@ -89,11 +96,20 @@ func main() {
 		}
 	}()
 
-	// 7. Start Main HTTP Server
+	// 7. Start Main HTTP Server (health endpoints)
 	go func() {
-		slog.Info("Search Service listening", "port", cfg.PortGraphQL)
+		slog.Info("Search Service listening (health)", "port", cfg.PortGraphQL)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("Server error", "error", err)
+			slog.Error("Health server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	// 8. Start GraphQL Server (handles /search/graphql)
+	go func() {
+		slog.Info("Starting GraphQL server", "port", cfg.PortGraphQL)
+		if err := gqlServer.Serve(context.Background()); err != nil && err != http.ErrServerClosed {
+			slog.Error("GraphQL server error", "error", err)
 			os.Exit(1)
 		}
 	}()
@@ -111,7 +127,11 @@ func main() {
 	defer cancelShutdown()
 
 	if err := server.Shutdown(ctxShutdown); err != nil {
-		slog.Error("Server forced to shutdown", "error", err)
+		slog.Error("Health server forced to shutdown", "error", err)
+	}
+
+	if err := gqlServer.Shutdown(ctxShutdown); err != nil {
+		slog.Error("GraphQL server forced to shutdown", "error", err)
 	}
 
 	slog.Info("Search Service stopped.")

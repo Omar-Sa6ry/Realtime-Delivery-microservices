@@ -23,7 +23,7 @@ services:
     pull_policy: missing
     container_name: user-db-srv
     env_file:
-      - .env
+      - ../../.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -39,7 +39,7 @@ services:
     pull_policy: missing
     container_name: notification-db-srv
     env_file:
-      - .env
+      - ../../.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -85,12 +85,12 @@ services:
   # --- Microservices ---
   user-service:
     build:
-      context: .
+      context: ../..
       dockerfile: services/user-service/Dockerfile
     container_name: user-service
     restart: always
     env_file:
-      - .env
+      - ../../.env
     ports:
       - "4001:4001"
       - "50051:50051"
@@ -117,17 +117,17 @@ services:
       - redis-srv
       - nats-srv
     volumes:
-      - ./services/user-service/src:/usr/src/app/services/user-service/src
-      - ./packages/ts:/usr/src/app/packages/ts
+      - ../../services/user-service/src:/usr/src/app/services/user-service/src
+      - ../../packages/ts:/usr/src/app/packages/ts
 
   media-service:
     build:
-      context: .
+      context: ../..
       dockerfile: services/media-service/Dockerfile
     container_name: media-service
     restart: always
     env_file:
-      - .env
+      - ../../.env
     ports:
       - "4005:4005"
       - "4003:4003"
@@ -183,17 +183,17 @@ services:
       - localstack-srv
       - kafka-srv
     volumes:
-      - ./services/media-service/internal:/workspace/services/media-service/internal
-      - ./packages/go:/workspace/packages/go
+      - ../../services/media-service/internal:/workspace/services/media-service/internal
+      - ../../packages/go:/workspace/packages/go
 
   notification-service:
     build:
-      context: .
+      context: ../..
       dockerfile: services/notification-service/Dockerfile
     container_name: notification-service
     restart: always
     env_file:
-      - .env
+      - ../../.env
     ports:
       - "4004:4004"
       - "50053:50053"
@@ -268,18 +268,18 @@ services:
       - nats-srv
       - kafka-srv
     volumes:
-      - ./services/notification-service/src:/usr/src/app/services/notification-service/src
-      - ./packages/ts:/usr/src/app/packages/ts
-      - ./protos:/usr/src/app/protos
+      - ../../services/notification-service/src:/usr/src/app/services/notification-service/src
+      - ../../packages/ts:/usr/src/app/packages/ts
+      - ../../protos:/usr/src/app/protos
 
   realtime-service:
     build:
-      context: .
+      context: ../..
       dockerfile: services/realtime-service/Dockerfile
     container_name: realtime-service
     restart: always
     env_file:
-      - .env
+      - ../../.env
     ports:
       - "4006:4006"
     networks:
@@ -306,9 +306,9 @@ services:
       - nats-srv
       - kafka-srv
     volumes:
-      - ./services/realtime-service/src:/usr/src/app/services/realtime-service/src
-      - ./packages/ts:/usr/src/app/packages/ts
-      - ./protos:/usr/src/app/protos
+      - ../../services/realtime-service/src:/usr/src/app/services/realtime-service/src
+      - ../../packages/ts:/usr/src/app/packages/ts
+      - ../../protos:/usr/src/app/protos
 
   opensearch-srv:
     image: opensearchproject/opensearch:2.18.0
@@ -325,12 +325,12 @@ services:
 
   search-service:
     build:
-      context: .
+      context: ../..
       dockerfile: services/search-service/Dockerfile
     container_name: search-service
     restart: always
     env_file:
-      - .env
+      - ../../.env
     ports:
       - "4007:4007"
       - "9103:9103"
@@ -351,17 +351,17 @@ services:
       - opensearch-srv
       - kafka-srv
     volumes:
-      - ./services/search-service:/app/services/search-service
-      - ./packages/go:/app/packages/go
+      - ../../services/search-service:/app/services/search-service
+      - ../../packages/go:/app/packages/go
 
   api-gateway:
     build:
-      context: .
+      context: ../..
       dockerfile: services/api-gateway/Dockerfile
     container_name: api-gateway
     restart: always
     env_file:
-      - .env
+      - ../../.env
     ports:
       - "4000:4000"
     networks:
@@ -389,8 +389,8 @@ services:
       - realtime-service
       - search-service
     volumes:
-      - ./services/api-gateway/src:/usr/src/app/services/api-gateway/src
-      - ./packages/ts:/usr/src/app/packages/ts
+      - ../../services/api-gateway/src:/usr/src/app/services/api-gateway/src
+      - ../../packages/ts:/usr/src/app/packages/ts
 
 volumes:
   user_db_data:

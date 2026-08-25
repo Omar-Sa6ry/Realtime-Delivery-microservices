@@ -3,7 +3,7 @@ kind: Config
 
 manifests:
   rawYaml:
-    - ./k8s/*
+    - infrastructure/kubernetes/*
 
 deploy:
   statusCheckDeadlineSeconds: 900

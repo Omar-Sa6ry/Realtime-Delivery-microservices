@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "@bts-soft/validation": "^1.2.1",
-    "@nestjs/apollo": "^13.4.2",
-    "@nestjs/graphql": "^13.4.2",
-    "ws": "^8.21.3"
-  }
-}

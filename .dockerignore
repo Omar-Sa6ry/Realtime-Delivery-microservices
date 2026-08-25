@@ -21,6 +21,11 @@ out/
 .env.test.local
 .env.production.local
 *.env
+.env.development
+.env.production
+config/.env
+config/.env.*
+config/env/.env.*
 
 # Git
 .git/

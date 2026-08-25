@@ -39,7 +39,7 @@ import realtimeConfig from './common/config/realtime.config';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [realtimeConfig],
-      envFilePath: ['../../.env'],
+      envFilePath: ['../../config/.env'],
     }),
 
     RedisModule,

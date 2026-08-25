@@ -1,10 +1,11 @@
-# General
 .DS_Store
 .idea/
 .vscode/
 *.log
 .env
 .env.*
+config/.env
+config/.env.*
 node_modules/
 dist/
 coverage/

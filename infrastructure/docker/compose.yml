@@ -23,7 +23,7 @@ services:
     pull_policy: missing
     container_name: user-db-srv
     env_file:
-      - ../../.env
+      - ../../config/.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -39,7 +39,7 @@ services:
     pull_policy: missing
     container_name: notification-db-srv
     env_file:
-      - ../../.env
+      - ../../config/.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -80,7 +80,12 @@ services:
     environment:
       - SERVICES=s3,dynamodb
       - DEFAULT_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
       - PERSISTENCE=0
+    volumes:
+      - ../localstack/init:/etc/localstack/init/ready.d:ro
 
   # --- Microservices ---
   user-service:
@@ -90,7 +95,7 @@ services:
     container_name: user-service
     restart: always
     env_file:
-      - ../../.env
+      - ../../config/.env
     ports:
       - "4001:4001"
       - "50051:50051"
@@ -127,7 +132,7 @@ services:
     container_name: media-service
     restart: always
     env_file:
-      - ../../.env
+      - ../../config/.env
     ports:
       - "4005:4005"
       - "4003:4003"
@@ -193,7 +198,7 @@ services:
     container_name: notification-service
     restart: always
     env_file:
-      - ../../.env
+      - ../../config/.env
     ports:
       - "4004:4004"
       - "50053:50053"
@@ -279,7 +284,7 @@ services:
     container_name: realtime-service
     restart: always
     env_file:
-      - ../../.env
+      - ../../config/.env
     ports:
       - "4006:4006"
     networks:
@@ -330,7 +335,7 @@ services:
     container_name: search-service
     restart: always
     env_file:
-      - ../../.env
+      - ../../config/.env
     ports:
       - "4007:4007"
       - "9103:9103"
@@ -361,7 +366,7 @@ services:
     container_name: api-gateway
     restart: always
     env_file:
-      - ../../.env
+      - ../../config/.env
     ports:
       - "4000:4000"
     networks:

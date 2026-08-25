@@ -46,15 +46,3 @@ type MediaJob struct {
 func (j *MediaJob) IsRetryable() bool {
 	return j.Attempts < j.MaxAttempts
 }
-
-// DefaultMaxAttempts returns the default retry count per job type.
-func DefaultMaxAttempts(jt JobType) int {
-	switch jt {
-	case JobTypeTranscode:
-		return 2 // video transcoding is expensive; limit retries
-	case JobTypeScan:
-		return 5
-	default:
-		return 3
-	}
-}

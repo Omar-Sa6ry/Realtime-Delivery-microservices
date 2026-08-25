@@ -76,20 +76,3 @@ func (m *Media) CanTransitionTo(next MediaStatus) bool {
 	}
 	return false
 }
-
-// DeriveMediaType infers the MediaType from the MIME content type.
-func DeriveMediaType(contentType string) MediaType {
-	switch {
-	case len(contentType) >= 6 && contentType[:6] == "image/":
-		return MediaTypeImage
-	case len(contentType) >= 6 && contentType[:6] == "video/":
-		return MediaTypeVideo
-	case contentType == "application/pdf" ||
-		contentType == "text/plain" ||
-		contentType == "application/msword" ||
-		contentType == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-		return MediaTypeDocument
-	default:
-		return MediaTypeOther
-	}
-}

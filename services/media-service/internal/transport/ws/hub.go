@@ -75,13 +75,14 @@ type Connection struct {
 
 // Hub manages WebSocket connections and NATS subscriptions
 type Hub struct {
-	mu          sync.RWMutex
-	connections map[string]map[*Connection]bool // userID -> connections
-	natsClient  *sharednats.NatsClient
-	logger      *slog.Logger
-	upgrader    gorilla.Upgrader
-	rateLimit   rate.Limit
-	rateBurst   int
+	mu           sync.RWMutex
+	connections  map[string]map[*Connection]bool // userID -> connections
+	natsClient   *sharednats.NatsClient
+	logger       *slog.Logger
+	upgrader     gorilla.Upgrader
+	rateLimit    rate.Limit
+	rateBurst    int
+	handlerReg   *handlerRegistry
 }
 
 // NewHub creates a new WebSocket hub
@@ -95,8 +96,9 @@ func NewHub(natsClient *sharednats.NatsClient, logger *slog.Logger, cfg *config.
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 		},
-		rateLimit: rate.Limit(cfg.WSRateLimitPerSecond),
-		rateBurst: cfg.WSRateLimitBurst,
+		rateLimit:  rate.Limit(cfg.WSRateLimitPerSecond),
+		rateBurst:  cfg.WSRateLimitBurst,
+		handlerReg: BuildHandlerRegistry(),
 	}
 }
 
@@ -338,38 +340,27 @@ func (c *Connection) readPump(h *Hub) {
 }
 
 func (c *Connection) handleMessage(h *Hub, msg sharedws.ClientMessage) {
-	switch msg.Type {
-	case sharedws.ClientMessagePing:
-		// Respond with pong
-		pong := sharedws.ServerMessage{
-			Type:      sharedws.ServerMessagePong,
-			RequestID: msg.RequestID,
-			Data:      json.RawMessage(`{"timestamp":"` + time.Now().UTC().Format(time.RFC3339) + `"}`),
-		}
-		if bytes, err := pong.Marshal(); err == nil {
-			select {
-			case c.Send <- bytes:
-			default:
-			}
-		}
-
-	case sharedws.ClientMessageSubscribeDelivery:
-		// For media, we could subscribe to specific media IDs
-		// For now, just ack
-		ack := sharedws.ServerMessage{
-			Type:      sharedws.ServerMessageSubscribed,
-			RequestID: msg.RequestID,
-			Data:      json.RawMessage(`{"subscribed":true}`),
-		}
-		if bytes, err := ack.Marshal(); err == nil {
-			select {
-			case c.Send <- bytes:
-			default:
-			}
-		}
-
-	default:
+	handler, ok := h.handlerReg.get(msg.Type)
+	if !ok {
 		h.logger.Debug("Unknown message type", "type", msg.Type, "userID", c.UserID)
+		return
+	}
+
+	response, err := handler.Handle(c, msg)
+	if err != nil {
+		h.logger.Error("Message handler error", "type", msg.Type, "userID", c.UserID, "error", err)
+		return
+	}
+
+	bytes, err := response.Marshal()
+	if err != nil {
+		h.logger.Error("Failed to marshal response", "type", msg.Type, "error", err)
+		return
+	}
+
+	select {
+	case c.Send <- bytes:
+	default:
 	}
 }
 

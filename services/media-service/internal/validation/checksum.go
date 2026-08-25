@@ -34,30 +34,6 @@ func hasPrefixAt(data, sig []byte, offset int) bool {
 	return true
 }
 
-func isContainerType(contentType string) bool {
-	switch contentType {
-	case "image/webp", "video/mp4", "video/quicktime", "video/x-msvideo", "video/webm":
-		return true
-	default:
-		return false
-	}
-}
-
-func matchesContainerSignature(contentType string, header []byte) bool {
-	switch contentType {
-	case "image/webp":
-		return hasPrefixAt(header, []byte("RIFF"), 0) && hasPrefixAt(header, []byte("WEBP"), 8)
-	case "video/mp4", "video/quicktime":
-		return hasPrefixAt(header, []byte("ftyp"), 4)
-	case "video/x-msvideo":
-		return hasPrefixAt(header, []byte("RIFF"), 0) && hasPrefixAt(header, []byte("AVI "), 8)
-	case "video/webm":
-		return hasPrefixAt(header, []byte{0x1A, 0x45, 0xDF, 0xA3}, 0)
-	default:
-		return false
-	}
-}
-
 type MagicBytesValidator struct {
 	storage ports.ObjectStorage
 }

@@ -2,14 +2,10 @@ package grpc
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"log/slog"
 
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/application/download"
 	appMedia "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/application/media"
-	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
 	pb "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/grpc/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -24,6 +20,7 @@ type Server struct {
 	pb.UnimplementedMediaServiceServer
 	getDownloadURL *download.GetDownloadUrlUseCase
 	getMedia       *appMedia.GetMediaUseCase
+	errorMapper    *errorMapperRegistry
 }
 
 func NewServer(
@@ -33,6 +30,7 @@ func NewServer(
 	return &Server{
 		getDownloadURL: getDownloadURL,
 		getMedia:       getMedia,
+		errorMapper:    BuildErrorMapperRegistry(),
 	}
 }
 
@@ -52,7 +50,7 @@ func (s *Server) ResolveMediaUrl(ctx context.Context, in *pb.ResolveMediaUrlRequ
 		ExpirySeconds: int(in.GetExpirySeconds()),
 	})
 	if err != nil {
-		return nil, toGRPCStatus(err)
+		return nil, toGRPCStatus(err, s.errorMapper)
 	}
 
 	return &pb.ResolveMediaUrlResponse{
@@ -75,39 +73,24 @@ func (s *Server) GetMedia(ctx context.Context, in *pb.GetMediaRequest) (*pb.GetM
 
 	out, err := s.getMedia.Execute(ctx, requesterID, in.GetMediaId())
 	if err != nil {
-		return nil, toGRPCStatus(err)
+		return nil, toGRPCStatus(err, s.errorMapper)
 	}
 
 	m := out.Media
 	return &pb.GetMediaResponse{
-		MediaId:        m.MediaID,
-		OwnerId:        m.OwnerID,
-		FileName:       m.FileName,
-		ContentType:    m.ContentType,
-		MediaType:      string(m.MediaType),
-		Size:           m.Size,
-		Status:         string(m.Status),
-		ObjectKey:      m.ObjectKey,
-		CreatedAtSeconds: m.CreatedAt.Unix(),
-		UpdatedAtSeconds: m.UpdatedAt.Unix(),
+		MediaId:           m.MediaID,
+		OwnerId:           m.OwnerID,
+		FileName:          m.FileName,
+		ContentType:       m.ContentType,
+		MediaType:         string(m.MediaType),
+		Size:              m.Size,
+		Status:            string(m.Status),
+		ObjectKey:         m.ObjectKey,
+		CreatedAtSeconds:  m.CreatedAt.Unix(),
+		UpdatedAtSeconds:  m.UpdatedAt.Unix(),
 	}, nil
 }
 
 func requesterFromCtx(ctx context.Context) string {
 	return sharedlogging.GetUserID(ctx)
-}
-
-func toGRPCStatus(err error) error {
-	switch {
-	case errors.Is(err, domain.ErrUnauthorized):
-		return status.Error(codes.PermissionDenied, "access denied: resource ownership mismatch")
-	case errors.Is(err, domain.ErrMediaNotFound):
-		return status.Error(codes.NotFound, "media not found")
-	case errors.Is(err, domain.ErrMediaQuarantined):
-		return status.Error(codes.FailedPrecondition, "media is quarantined")
-	case errors.Is(err, domain.ErrRateLimitExceeded):
-		return status.Error(codes.ResourceExhausted, "rate limit exceeded")
-	}
-	slog.Error("grpc media use-case error", "error", err)
-	return status.Error(codes.Internal, fmt.Sprintf("internal error: %v", err))
 }

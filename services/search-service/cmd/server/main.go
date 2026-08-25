@@ -64,7 +64,7 @@ func main() {
 		slog.Error("Failed to start Kafka consumers", "error", err)
 	}
 
-	// 5. HTTP & GraphQL Server
+	// 5. HTTP & GraphQL Server - Create GraphQL server first to get its handler
 	gqlServer, err := graphql.NewServer(searchService, reindexService, cfg.PortGraphQL)
 	if err != nil {
 		slog.Error("Failed to create GraphQL server", "error", err)
@@ -72,7 +72,7 @@ func main() {
 	}
 	healthHandler := health.NewHandler(searchRepo, cache)
 
-	// Health endpoints on separate mux for the main server
+	// Single mux for both health and GraphQL endpoints
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health/live", healthHandler.LivenessHandler())
 	mux.HandleFunc("/health/ready", healthHandler.ReadinessHandler())
@@ -81,9 +81,17 @@ func main() {
 		_, _ = w.Write([]byte("ok"))
 	})
 
+	// GraphQL endpoints - delegate to GraphQL server's handler
+	mux.HandleFunc("/search/graphql", gqlServer.Handler())
+	mux.HandleFunc("/graphql", gqlServer.Handler())
+
+	// Wrap with metrics middleware
+	var handler http.Handler = mux
+	handler = metrics.HTTPMetricsMiddleware(handler)
+
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.PortGraphQL),
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 	}
@@ -96,20 +104,11 @@ func main() {
 		}
 	}()
 
-	// 7. Start Main HTTP Server (health endpoints)
+	// 7. Start Main HTTP Server (health + GraphQL endpoints)
 	go func() {
-		slog.Info("Search Service listening (health)", "port", cfg.PortGraphQL)
+		slog.Info("Search Service listening", "port", cfg.PortGraphQL)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("Health server error", "error", err)
-			os.Exit(1)
-		}
-	}()
-
-	// 8. Start GraphQL Server (handles /search/graphql)
-	go func() {
-		slog.Info("Starting GraphQL server", "port", cfg.PortGraphQL)
-		if err := gqlServer.Serve(context.Background()); err != nil && err != http.ErrServerClosed {
-			slog.Error("GraphQL server error", "error", err)
+			slog.Error("Server error", "error", err)
 			os.Exit(1)
 		}
 	}()
@@ -127,11 +126,7 @@ func main() {
 	defer cancelShutdown()
 
 	if err := server.Shutdown(ctxShutdown); err != nil {
-		slog.Error("Health server forced to shutdown", "error", err)
-	}
-
-	if err := gqlServer.Shutdown(ctxShutdown); err != nil {
-		slog.Error("GraphQL server forced to shutdown", "error", err)
+		slog.Error("Server forced to shutdown", "error", err)
 	}
 
 	slog.Info("Search Service stopped.")

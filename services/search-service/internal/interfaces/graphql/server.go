@@ -11,7 +11,6 @@ import (
 
 	sharedconstants "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/constants"
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
-	sharedmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
 	appSearch "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/search"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/reindex"
 	gql "github.com/graphql-go/graphql"
@@ -26,9 +25,7 @@ type graphqlRequest struct {
 }
 
 type Server struct {
-	schema     gql.Schema
-	port       string
-	httpServer *http.Server
+	schema gql.Schema
 }
 
 func NewServer(searchService *appSearch.Service, reindexService *reindex.Service, port string) (*Server, error) {
@@ -37,48 +34,15 @@ func NewServer(searchService *appSearch.Service, reindexService *reindex.Service
 	if err != nil {
 		return nil, fmt.Errorf("build graphql schema: %w", err)
 	}
-	return &Server{schema: schema, port: port}, nil
+	return &Server{schema: schema}, nil
 }
 
-func (s *Server) Serve(ctx context.Context) error {
-	mux := http.NewServeMux()
-	mux.HandleFunc(graphqlPath, s.handleGraphQL)
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
-
-	var handler http.Handler = mux
-	handler = sharedmetrics.HTTPMetricsMiddleware(handler)
-
-	s.httpServer = &http.Server{
-		Addr:              fmt.Sprintf(":%s", s.port),
-		Handler:           handler,
-		ReadHeaderTimeout: 10 * time.Second,
+// Handler returns an http.HandlerFunc that handles GraphQL requests.
+// This allows the caller to mount it on their own HTTP server/mux.
+func (s *Server) Handler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s.handleGraphQL(w, r)
 	}
-
-	go func() {
-		<-ctx.Done()
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
-			slog.Error("GraphQL server shutdown error", "error", err)
-		}
-	}()
-
-	slog.Info("GraphQL server starting", "port", s.port, "path", graphqlPath)
-	if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("graphql serve: %w", err)
-	}
-	return nil
-}
-
-// Shutdown gracefully shuts down the GraphQL HTTP server
-func (s *Server) Shutdown(ctx context.Context) error {
-	if s.httpServer != nil {
-		return s.httpServer.Shutdown(ctx)
-	}
-	return nil
 }
 
 func (s *Server) handleGraphQL(w http.ResponseWriter, r *http.Request) {

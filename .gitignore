@@ -22,8 +22,10 @@ coverage/
 *.out
 vendor/
 
-# infrastructure/kubernetes / Docker local
-infrastructure\kubernetes\base\secrets\
+# Kubernetes local secrets (never commit real credentials)
+infrastructure/kubernetes/base/secrets/*.yaml
+infrastructure/kubernetes/base/secrets/*.local.yaml
+
 
 frontend/
 

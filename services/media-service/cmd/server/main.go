@@ -11,6 +11,7 @@ import (
 	"time"
 
 	sharedautomation "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/automation"
+	sharedenv "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/env"
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	sharedmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
 	sharednats "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/nats"
@@ -50,6 +51,11 @@ import (
 func main() {
 	logger := sharedlogging.InitLogger()
 	logger.Info("media-service: starting", "version", "1.0.0")
+
+	if err := sharedenv.Load(); err != nil {
+		logger.Error("media-service: failed to load environment", "error", err)
+		os.Exit(1)
+	}
 
 	cfg, err := config.Load()
 	if err != nil {

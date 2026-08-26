@@ -19,18 +19,18 @@ minikube tunnel
 skaffold -f infrastructure\skaffold\skaffold.yaml delete
 skaffold -f infrastructure\skaffold\skaffold.yaml dev --cache-artifacts=true --build-concurrency=0
 skaffold diagnose -f infrastructure\skaffold\skaffold.yaml # To check if safe
-kubectl apply --dry-run=client -f infrastructure\kubernetes #To check Kubernetes manifests readable
+kubectl apply --dry-run=client --validate=false -f infrastructure\kubernetes # To check Kubernetes manifests are readable
 
 #-----Run All in dev-----
-docker-compose -f infrastructure\docker\compose.yml up --build -d
+docker-compose --env-file config\env\.env.development -f infrastructure\docker\compose.yml up --build -d
 
 #-----Run Infra Separate-----
-docker-compose -f infrastructure\docker\compose.infra.yml up -d
+docker-compose --env-file config\env\.env.development -f infrastructure\docker\compose.infra.yml up -d
 cd services/user-service
 npm run start:dev
 
 #----ToBase64String----
-powershell -Command "[Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('AIzaSyA5U03P6n8HMwsp9B35jOrDz7-HAtJ1MLc'))"
+powershell -Command "[Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('<YOUR_API_KEY>'))"
 
 #---nest---
 npx -y @nestjs/cli new name-service --package-manager npm --skip-git

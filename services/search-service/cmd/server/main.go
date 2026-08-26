@@ -10,13 +10,14 @@ import (
 	"syscall"
 	"time"
 
+	sharedenv "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/env"
+	pkgKafka "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/kafka"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/indexing"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/reindex"
 	appSearch "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/search"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/config"
-	pkgKafka "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/kafka"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/infrastructure/kafka"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/infrastructure/opensearch"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/infrastructure/redis"
@@ -27,6 +28,11 @@ import (
 func main() {
 	logging.InitLogger()
 	slog.Info("Starting Search Service...")
+
+	if err := sharedenv.Load(); err != nil {
+		slog.Error("Failed to load environment", "error", err)
+		os.Exit(1)
+	}
 
 	cfg, err := config.Load()
 	if err != nil {

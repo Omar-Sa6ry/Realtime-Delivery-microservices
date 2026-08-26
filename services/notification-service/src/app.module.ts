@@ -32,7 +32,9 @@ import {
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['../../config/.env'],
+      envFilePath: [
+        '../../config/env/.env.' + (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
+      ],
     }),
 
     TranslationModule,

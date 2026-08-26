@@ -34,8 +34,10 @@ import { BullModule } from '@nestjs/bullmq';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
-        join(process.cwd(), '.env'),
-        join(process.cwd(), '../../config/.env'),
+        join(
+          process.cwd(),
+          '../../config/env/.env.' + (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
+        ),
       ],
     }),
 

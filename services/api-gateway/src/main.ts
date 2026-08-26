@@ -54,11 +54,8 @@ async function bootstrap() {
 
   const port = process.env.PORT_GATEWAY ?? 4000;
   await app.listen(port, '0.0.0.0');
-  logger.log(
-    `API Gateway is running on: https://delivary.test/graphql or http://localhost:${port}/graphql`,
-  );
 
-  Promise.all([
+  await Promise.all([
     waitForService('http://realtime-srv:4006/realtime/graphql'),
     waitForService('http://notification-srv:4004/notification/graphql'),
     waitForService('http://media-srv:4005/media/graphql'),
@@ -67,6 +64,9 @@ async function bootstrap() {
   ])
     .then(() => {
       logger.log('All subgraphs are reachable.');
+      logger.log(
+        `API Gateway is running on: https://delivary.test/graphql or http://localhost:${port}/graphql`,
+      );
     })
     .catch((err: Error) => logger.warn(`Subgraph wait error: ${err.message}`));
 }

@@ -6,7 +6,7 @@ services:
     pull_policy: missing
     container_name: notification-db-srv
     env_file:
-      - ../../.env
+      - ../../config/env/.env.${APP_ENV:-development}
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -60,7 +60,7 @@ services:
       dockerfile: services/notification-service/Dockerfile
     container_name: notification-service
     env_file:
-      - ../../.env
+      - ../../config/env/.env.${APP_ENV:-development}
     ports:
       - "4004:4004"
       - "50053:50053"

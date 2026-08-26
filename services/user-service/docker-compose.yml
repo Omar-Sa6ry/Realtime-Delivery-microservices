@@ -6,7 +6,7 @@ services:
     pull_policy: missing
     container_name: user-db-srv
     env_file:
-      - ../../.env
+      - ../../config/env/.env.${APP_ENV:-development}
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -37,7 +37,7 @@ services:
       dockerfile: services/user-service/Dockerfile
     container_name: user-service
     env_file:
-      - ../../.env
+      - ../../config/env/.env.${APP_ENV:-development}
     ports:
       - "4001:4001"
       - "50051:50051"

@@ -23,11 +23,7 @@ coverage/
 vendor/
 
 # infrastructure/kubernetes / Docker local
-infrastructure/kubernetes/secrets.yaml
-infrastructure/kubernetes/media-secrets.yaml
-infrastructure/kubernetes/notification-secrets.yaml
-infrastructure/kubernetes/realtime-secrets.yaml
-infrastructure/kubernetes/search-secrets.yaml
+infrastructure\kubernetes\base\secrets\
 
 frontend/
 

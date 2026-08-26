@@ -11,15 +11,15 @@ docker info
 minikube start --driver=docker --image-mirror-country=all --base-image=docker.io/kicbase/stable:v0.0.48
 minikube status
 minikube addons enable ingress
-kubectl apply -f infrastructure\kubernetes
+kubectl apply -k infrastructure\kubernetes\overlays\development
 & minikube -p minikube docker-env | Invoke-Expression
 minikube tunnel
 
 #----Skaffold----
 skaffold -f infrastructure\skaffold\skaffold.yaml delete
-skaffold -f infrastructure\skaffold\skaffold.yaml dev --cache-artifacts=true --build-concurrency=0
+skaffold -f infrastructure\skaffold\skaffold.yaml dev --cache-artifacts=true
 skaffold diagnose -f infrastructure\skaffold\skaffold.yaml # To check if safe
-kubectl apply --dry-run=client --validate=false -f infrastructure\kubernetes # To check Kubernetes manifests are readable
+kubectl kustomize infrastructure\kubernetes\overlays\development # To check Kubernetes manifests are readable
 
 #-----Run All in dev-----
 docker-compose --env-file config\env\.env.development -f infrastructure\docker\compose.yml up --build -d

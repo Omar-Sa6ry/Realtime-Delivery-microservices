@@ -2,11 +2,13 @@ apiVersion: skaffold/v4beta3
 kind: Config
 
 manifests:
-  rawYaml:
-    - infrastructure/kubernetes/*
+  kustomize:
+    paths:
+      - infrastructure/kubernetes/overlays/development
 
 deploy:
   statusCheckDeadlineSeconds: 900
+  kubectl: {}
 
 build:
   local:
@@ -79,7 +81,20 @@ build:
             dest: /usr/src/app/packages/ts/dist
 
 
+profiles:
+  - name: test
+    manifests:
+      kustomize:
+        paths:
+          - infrastructure/kubernetes/overlays/test
+  - name: production
+    manifests:
+      kustomize:
+        paths:
+          - infrastructure/kubernetes/overlays/production
+
 portForward:
+
   - resourceType: service
     resourceName: api-gateway-srv
     port: 4000

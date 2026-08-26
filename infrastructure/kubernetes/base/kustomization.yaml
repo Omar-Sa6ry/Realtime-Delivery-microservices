@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - configmaps/media-service-config.yaml
+  - services/api-gateway-depl.yaml
+  - services/ingress-srv.yaml
+  - services/media-depl.yaml
+  - services/media-kafka-topics-job.yaml
+  - services/notification-depl.yaml
+  - services/realtime-depl.yaml
+  - services/search-depl.yaml
+  - services/user-depl.yaml
+  - infrastructure/kafka-depl.yaml
+  - infrastructure/localstack-depl.yaml
+  - infrastructure/nats-depl.yaml
+  - infrastructure/opensearch-depl.yaml
+  - infrastructure/redis-depl.yaml
+  - infrastructure/user-db-depl.yaml
+  - infrastructure/notification-db-depl.yaml
+  - secrets/media-secrets.yaml
+  - secrets/notification-secrets.yaml
+  - secrets/realtime-secrets.yaml
+  - secrets/search-secrets.yaml
+  - secrets/secrets.yaml

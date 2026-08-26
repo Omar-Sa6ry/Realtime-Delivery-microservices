@@ -14,7 +14,7 @@ services:
     image: otel/opentelemetry-collector-contrib:0.111.0
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     volumes:
-      - ../observability/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - ../observability/otel/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
     ports:
       - "4317:4317"
       - "4318:4318"
@@ -26,8 +26,8 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=7d"
     volumes:
-      - ../observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ../observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
     ports:
       - "9090:9090"
     restart: unless-stopped

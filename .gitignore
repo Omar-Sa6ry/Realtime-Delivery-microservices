@@ -26,7 +26,6 @@ vendor/
 infrastructure/kubernetes/base/secrets/*.yaml
 infrastructure/kubernetes/base/secrets/*.local.yaml
 
-
 frontend/
 
 system_articture.md

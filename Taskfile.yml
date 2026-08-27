@@ -1,0 +1,61 @@
+version: '3'
+
+vars:
+  ENV: '{{.ENV | default "development"}}'
+  ENV_FILE: 'config/env/.env.{{.ENV}}'
+  COMPOSE: 'docker-compose --env-file {{.ENV_FILE}}'
+
+tasks:
+  default:
+    desc: List available project tasks
+    cmds:
+      - task --list
+
+  env-check:
+    desc: Verify that the selected environment file exists
+    cmds:
+      - test -f {{.ENV_FILE}}
+
+  infra-up:
+    desc: Start infrastructure for ENV=test|development|production
+    deps: [env-check]
+    cmds:
+      - '{{.COMPOSE}} -f infrastructure/docker/compose.infra.yml up -d'
+
+  infra-down:
+    desc: Stop infrastructure for the selected environment
+    deps: [env-check]
+    cmds:
+      - '{{.COMPOSE}} -f infrastructure/docker/compose.infra.yml down'
+
+  dev-up:
+    desc: Start the full Docker stack for the selected environment
+    deps: [env-check]
+    cmds:
+      - '{{.COMPOSE}} -f infrastructure/docker/compose.yml -f infrastructure/docker/compose.integration.yml up --build -d'
+
+  dev-down:
+    desc: Stop the full Docker stack for the selected environment
+    deps: [env-check]
+    cmds:
+      - '{{.COMPOSE}} -f infrastructure/docker/compose.yml -f infrastructure/docker/compose.integration.yml down'
+
+  k8s-validate:
+    desc: Validate Kubernetes manifests locally
+    cmds:
+      - kubectl kustomize infrastructure/kubernetes/overlays/development
+
+  skaffold-dev:
+    desc: Start Skaffold development mode
+    cmds:
+      - skaffold dev -f infrastructure/skaffold/skaffold.yaml --cache-artifacts=true --build-concurrency=0
+
+  skaffold-delete:
+    desc: Delete Skaffold-managed resources
+    cmds:
+      - skaffold delete -f infrastructure/skaffold/skaffold.yaml
+
+  proto-generate:
+    desc: Show the protobuf generation reference
+    cmds:
+      - echo "Run the protobuf generation commands documented in infrastructure/commands.txt"

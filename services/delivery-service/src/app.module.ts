@@ -1,4 +1,4 @@
-import { join } from 'path';
+﻿import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -49,12 +49,12 @@ import { BullModule } from '@nestjs/bullmq';
             ? 'localhost'
             : config.get<string>('DB_HOST', 'localhost'),
         port: Number(config.get<number>('DB_PORT', 5433)) || 5433,
-        deliveryname:
+        username:
           config.get<string>('POSTGRES_delivery') ||
           config.get<string>('DB_deliveryNAME', 'postgres'),
         password: config.get<string>('POSTGRES_PASSWORD'),
         database: config.get<string>('DB_NAME', 'delivery_delivery_db'),
-        entities: [delivery, Address, Outbox],
+        autoLoadEntities: true,
         synchronize: true, // For development mode
         // Survive concurrent boot: retry for ~3 minutes before giving up.
         retryAttempts: 60,
@@ -82,7 +82,7 @@ import { BullModule } from '@nestjs/bullmq';
       },
       context: ({ req }) => ({
         req,
-        delivery: req.delivery,
+        user: req.user,
         language: req.headers['accept-language'] || 'en',
       }),
       playground: true,
@@ -109,3 +109,5 @@ import { BullModule } from '@nestjs/bullmq';
   ],
 })
 export class AppModule {}
+
+

@@ -1,4 +1,4 @@
-import { join } from 'path';
+﻿import { join } from 'path';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -51,7 +51,9 @@ async function bootstrap() {
   //   },
   // });
 
-  const port = process.env.PORT_DELIVERY ?? 4003;
+  const port = Number(process.env.PORT_DELIVERY ?? 4003);
+  process.env.PORT_DELIVERY_GRPC ??= '50054';
+  process.env.PORT_METRICS ??= '9104';
   await app.listen(port, '0.0.0.0');
   console.log(`Delivery Service is running on http://0.0.0.0:${port}`);
 

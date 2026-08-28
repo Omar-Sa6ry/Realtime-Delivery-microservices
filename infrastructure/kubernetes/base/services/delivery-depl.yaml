@@ -1,120 +1,106 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: -depl
+  name: delivery-depl
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: 
+      app: delivery
   template:
     metadata:
       labels:
-        app: 
+        app: delivery
     spec:
       containers:
-        - name: 
-          image: delivery/ 
+        - name: delivery
+          image: delivery/delivery
           imagePullPolicy: IfNotPresent
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "256Mi"
-            limits:
-              cpu: "1000m"
-              memory: "1Gi"
           ports:
-            - containerPort: 4003 
-            - containerPort: 50051
+            - name: http
+              containerPort: 4003
+            - name: grpc
+              containerPort: 50054
           startupProbe:
             httpGet:
-              path: //health
-              port: 4003
-            initialDelaySeconds: 180
+              path: /health/live
+              port: http
+            initialDelaySeconds: 20
             periodSeconds: 5
-            failureThreshold: 240
+            failureThreshold: 60
+            timeoutSeconds: 5
           readinessProbe:
             httpGet:
-              path: //ready
-              port: 4003
-            periodSeconds: 3
-            failureThreshold: 120
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 60
+            timeoutSeconds: 5
           livenessProbe:
             httpGet:
-              path: //health
-              port: 4003
-            initialDelaySeconds: 5
+              path: /health/live
+              port: http
+            initialDelaySeconds: 30
             periodSeconds: 20
             failureThreshold: 6
+            timeoutSeconds: 5
           env:
             - name: NODE_OPTIONS
               value: "--max-old-space-size=768"
             - name: PORT_DELIVERY
-              value: '4003'
-              
+              value: "4003"
+            - name: PORT_DELIVERY_GRPC
+              value: "50054"
+            - name: PORT_METRICS
+              value: "9104"
             - name: DB_HOST
-              value: '-db-srv'
-
+              value: delivery-db-srv
             - name: DB_PORT
-              value: '5432'
-
+              value: "5432"
             - name: DB_NAME
-              value: 'delivery_user_db'
-
+              value: delivery_delivery_db
             - name: NODE_ENV
-              value: 'development'
-
+              value: development
             - name: JWT_EXPIRE
-              value: '36000s'
-
+              value: 36000s
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: delivery-secrets
                   key: JWT_SECRET
-
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: delivery-secrets
                   key: POSTGRES_USER
-
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: delivery-secrets
                   key: POSTGRES_PASSWORD
-          
             - name: REDIS_HOST
-              value: 'redis-srv'
-
+              value: redis-srv
             - name: REDIS_PORT
-              value: '6379'
-
-            - name: REDIS_DB
-              value: '0'
-
+              value: "6379"
             - name: NATS_URL
-              value: 'nats://nats-srv:4222'
-
+              value: nats://nats-srv:4222
             - name: KAFKA_BROKERS
-              value: 'kafka-srv:9092'
+              value: kafka-srv:9092
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: -srv
+  name: delivery-srv
 spec:
   selector:
-    app: 
+    app: delivery
   ports:
     - name: http
       protocol: TCP
       port: 4003
-      targetPort: 4003
+      targetPort: http
     - name: grpc
       protocol: TCP
-      port: 50051
-      targetPort: 50051
-
-
+      port: 50054
+      targetPort: grpc

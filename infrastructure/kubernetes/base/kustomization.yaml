@@ -1,9 +1,10 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
+﻿apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
   - configmaps/media-service-config.yaml
   - services/api-gateway-depl.yaml
+  - services/delivery-depl.yaml
   - services/ingress-srv.yaml
   - services/media-depl.yaml
   - services/media-kafka-topics-job.yaml
@@ -18,6 +19,7 @@ resources:
   - infrastructure/redis-depl.yaml
   - infrastructure/user-db-depl.yaml
   - infrastructure/notification-db-depl.yaml
+  - infrastructure/delivery-db-depl.yaml
   - secrets/media-secrets.yaml
   - secrets/notification-secrets.yaml
   - secrets/realtime-secrets.yaml

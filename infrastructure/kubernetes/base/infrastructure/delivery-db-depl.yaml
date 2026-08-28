@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: delivery-db-depl
@@ -42,11 +42,11 @@ spec:
           env:
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
-            - name: POSTGRES_DELIVERY
+            - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: secrets
-                  key: POSTGRES_DELIVERY
+                  key: POSTGRES_USER
 
             - name: POSTGRES_PASSWORD
               valueFrom:
@@ -63,21 +63,21 @@ spec:
             - containerPort: 5432
           startupProbe:
             exec:
-              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_DELIVERY" -d delivery_delivery_db']
+              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_USER" -d delivery_delivery_db']
             initialDelaySeconds: 3
             periodSeconds: 4
             timeoutSeconds: 5
             failureThreshold: 150
           readinessProbe:
             exec:
-              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_DELIVERY" -d delivery_delivery_db']
+              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_USER" -d delivery_delivery_db']
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 5
             failureThreshold: 60
           livenessProbe:
             exec:
-              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_DELIVERY" -d delivery_delivery_db']
+              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_USER" -d delivery_delivery_db']
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -114,5 +114,6 @@ spec:
       protocol: TCP
       port: 5432
       targetPort: 5432
+
 
 

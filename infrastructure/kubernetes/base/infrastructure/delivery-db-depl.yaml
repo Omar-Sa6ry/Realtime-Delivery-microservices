@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: delivery-db-depl
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: delivery-db
+  template:
+    metadata:
+      labels:
+        app: delivery-db
+    spec:
+      initContainers:
+        - name: clean-incomplete-data
+          image: busybox:1.36
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              if [ -d /var/lib/postgresql/data ] && [ -f /var/lib/postgresql/data/pgdata/PG_VERSION ] && [ ! -f /var/lib/postgresql/data/pgdata/global/pg_control ]; then
+                echo "Postgres data dir is incomplete; wiping for a fresh init";
+                find /var/lib/postgresql/data/pgdata -mindepth 1 -delete;
+              fi
+              exit 0
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      containers:
+        - name: delivery-db
+          image: postgres:16
+          args: ["-c", "shared_buffers=64MB", "-c", "max_connections=50"]
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: POSTGRES_DELIVERY
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_DELIVERY
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_PASSWORD
+
+            - name: POSTGRES_DB
+              value: delivery_delivery_db
+
+            - name: POSTGRES_HOST_AUTH_METHOD
+              value: trust
+          ports:
+            - containerPort: 5432
+          startupProbe:
+            exec:
+              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_DELIVERY" -d delivery_delivery_db']
+            initialDelaySeconds: 3
+            periodSeconds: 4
+            timeoutSeconds: 5
+            failureThreshold: 150
+          readinessProbe:
+            exec:
+              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_DELIVERY" -d delivery_delivery_db']
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            exec:
+              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_DELIVERY" -d delivery_delivery_db']
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: delivery-db-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: delivery-db-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: delivery-db-srv
+spec:
+  selector:
+    app: delivery-db
+  ports:
+    - name: postgres
+      protocol: TCP
+      port: 5432
+      targetPort: 5432
+
+

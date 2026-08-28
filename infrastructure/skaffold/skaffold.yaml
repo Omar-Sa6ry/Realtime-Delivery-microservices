@@ -66,6 +66,18 @@ build:
           - src: 'packages/ts/dist/**/*.js'
             dest: /usr/src/app/packages/ts/dist
 
+    - image: delivery/delivery
+      context: .
+      docker:
+        dockerfile: services/delivery-service/Dockerfile
+      sync:
+        manual:
+          - src: 'services/delivery-service/src/**/*.ts'
+            dest: /usr/src/app/services/delivery-service/src
+          - src: "protos/**/*.proto"
+            dest: /usr/src/app/protos
+          - src: 'packages/ts/dist/**/*.js'
+            dest: /usr/src/app/packages/ts/dist
 
     - image: delivery/api-gateway
       context: .

@@ -1,0 +1,53 @@
+﻿services:
+  delivery-db-srv:
+    image: postgres:15
+    pull_policy: missing
+    container_name: delivery-db-srv
+    restart: unless-stopped
+    env_file:
+      - ../../config/env/.env.${APP_ENV:-development}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${DELIVERY_DB_NAME:-delivery_delivery_db}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5435:5432"
+    volumes:
+      - delivery_db_data:/var/lib/postgresql/data
+  delivery-service:
+    build:
+      context: ../..
+      dockerfile: services/delivery-service/Dockerfile
+    container_name: delivery-service
+    restart: unless-stopped
+    env_file:
+      - ../../config/env/.env.${APP_ENV:-development}
+    ports:
+      - "4003:4003"
+      - "50054:50054"
+      - "9104:9104"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT_DELIVERY: ${PORT_DELIVERY:-4003}
+      PORT_DELIVERY_GRPC: ${PORT_DELIVERY_GRPC:-50054}
+      PORT_METRICS: ${PORT_METRICS:-9104}
+      DB_HOST: delivery-db-srv
+      DB_PORT: 5432
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_NAME: ${DELIVERY_DB_NAME:-delivery_delivery_db}
+      REDIS_HOST: redis-srv
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka-srv:9092}
+      SERVICE_NAME: delivery-service
+    depends_on:
+      - delivery-db-srv
+      - redis-srv
+    volumes:
+      - ../../services/delivery-service:/usr/src/app/services/delivery-service
+      - ../../packages/ts:/usr/src/app/packages/ts
+      - ../../protos:/usr/src/app/protos
+volumes:
+  delivery_db_data:

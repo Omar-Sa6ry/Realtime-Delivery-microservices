@@ -1,9 +1,5 @@
-import { Global, Module } from '@nestjs/common';
-import { GrpcClient } from './grpc.client';
+﻿import { Global, Module } from '@nestjs/common';
 
 @Global()
-@Module({
-  providers: [GrpcClient],
-  exports: [GrpcClient],
-})
-export class GrpcModule {}
+@Module({})
+export class DeliveryGrpcModule {}

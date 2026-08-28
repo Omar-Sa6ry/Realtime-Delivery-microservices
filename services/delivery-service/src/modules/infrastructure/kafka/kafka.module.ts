@@ -1,9 +1,16 @@
 ﻿import { Module } from '@nestjs/common';
-import { KafkaConsumer } from './kafka.consumer';
-import { DELIVERY_EVENT_HANDLERS } from './handlers/base-kafka-event.handler';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { KafkaModule } from '@delivery/common';
 
 @Module({
-  providers: [KafkaConsumer, { provide: DELIVERY_EVENT_HANDLERS, useValue: [] }],
-  exports: [KafkaConsumer],
+  imports: [KafkaModule.registerAsync({
+    imports: [ConfigModule],
+    inject: [ConfigService],
+    useFactory: (config: ConfigService) => ({
+      clientId: config.get<string>('KAFKA_CLIENT_ID', 'delivery-service'),
+      brokers: (config.get<string>('KAFKA_BROKERS', 'localhost:9092') || '').split(',').map((b) => b.trim()).filter(Boolean),
+    }),
+  })],
+  exports: [KafkaModule],
 })
-export class KafkaConsumerModule {}
+export class DeliveryKafkaModule {}

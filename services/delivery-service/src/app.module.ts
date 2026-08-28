@@ -10,6 +10,13 @@ import {
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { RedisModule, NotificationModule } from '@bts-soft/core';
 import { TranslationModule } from './common/translation/translation.module';
+import deliveryConfig from './common/config/delivery.config';
+import { HealthController } from './health.controller';
+import { DeliveryMetricsService } from './common/metrics/delivery-metrics.service';
+import { DeliveryRedisModule } from './modules/infrastructure/redis/redis.module';
+import { DeliveryKafkaModule } from './modules/infrastructure/kafka/kafka.module';
+import { DeliveryNatsModule } from './modules/infrastructure/nats/nats.module';
+import { DeliveryGrpcModule } from './modules/infrastructure/grpc/grpc.module';
 
 import {
   LoggingModule,
@@ -92,8 +99,13 @@ import { BullModule } from '@nestjs/bullmq';
     LoggingModule,
     MetricsModule,
     AutomationModule,
+    DeliveryRedisModule,
+    DeliveryKafkaModule,
+    DeliveryNatsModule,
+    DeliveryGrpcModule,
   ],
-  providers: [
+  controllers: [HealthController],
+  providers: [DeliveryMetricsService,
     {
       provide: APP_FILTER,
       useClass: GraphQLExceptionFilter,
@@ -109,5 +121,8 @@ import { BullModule } from '@nestjs/bullmq';
   ],
 })
 export class AppModule {}
+
+
+
 
 

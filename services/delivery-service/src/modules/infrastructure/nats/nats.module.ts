@@ -1,7 +1,9 @@
-﻿import { Global, Module } from '@nestjs/common';
-import { RealtimeNatsService } from './nats.service';
-import { NatsPublisher } from './nats.publisher';
+﻿import { Module } from '@nestjs/common';
+import { NatsClientModule } from '@delivery/common';
 
-@Global()
-@Module({ providers: [RealtimeNatsService, NatsPublisher], exports: [RealtimeNatsService, NatsPublisher] })
-export class NatsModule {}
+@Module({
+  imports: [NatsClientModule.register({ name: 'DELIVERY_NATS', queue: process.env.NATS_QUEUE ?? 'delivery-service' })],
+  exports: [NatsClientModule],
+})
+export class DeliveryNatsModule {}
+

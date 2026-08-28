@@ -24,6 +24,7 @@
     "@apollo/subgraph": "^2.14.4",
     "@as-integrations/express5": "^1.1.2",
     "@bts-soft/core": "^3.1.7",
+    "@bts-soft/common": "^1.5.3",
     "@delivery/common": "file:../../packages/ts",
     "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.1",
@@ -93,3 +94,4 @@
     "testEnvironment": "node"
   }
 }
+

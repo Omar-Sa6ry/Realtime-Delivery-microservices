@@ -13,6 +13,7 @@ import { TranslationModule } from './common/translation/translation.module';
 import deliveryConfig from './common/config/delivery.config';
 import { HealthController } from './health.controller';
 import { DeliveryMetricsService } from './common/metrics/delivery-metrics.service';
+import { DeliveryModule } from './modules/delivery/delivery.module';
 import { DeliveryRedisModule } from './modules/infrastructure/redis/redis.module';
 import { DeliveryKafkaModule } from './modules/infrastructure/kafka/kafka.module';
 import { DeliveryNatsModule } from './modules/infrastructure/nats/nats.module';
@@ -35,7 +36,8 @@ import { BullModule } from '@nestjs/bullmq';
       envFilePath: [
         join(
           process.cwd(),
-          '../../config/env/.env.' + (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
+          '../../config/env/.env.' +
+            (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
         ),
       ],
     }),
@@ -43,7 +45,6 @@ import { BullModule } from '@nestjs/bullmq';
     TranslationModule,
     RedisModule,
 
-  
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -99,13 +100,15 @@ import { BullModule } from '@nestjs/bullmq';
     LoggingModule,
     MetricsModule,
     AutomationModule,
+    DeliveryModule,
     DeliveryRedisModule,
     DeliveryKafkaModule,
     DeliveryNatsModule,
     DeliveryGrpcModule,
   ],
   controllers: [HealthController],
-  providers: [DeliveryMetricsService,
+  providers: [
+    DeliveryMetricsService,
     {
       provide: APP_FILTER,
       useClass: GraphQLExceptionFilter,
@@ -121,8 +124,3 @@ import { BullModule } from '@nestjs/bullmq';
   ],
 })
 export class AppModule {}
-
-
-
-
-

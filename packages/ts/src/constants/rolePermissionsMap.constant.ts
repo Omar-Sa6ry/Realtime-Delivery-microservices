@@ -1,8 +1,7 @@
-import { Permission, Role } from "./enum.constant";
+﻿import { Permission, Role } from "./enum.constant";
 
 export const rolePermissionsMap: Record<Role, Permission[]> = {
   [Role.ADMIN]: [
-    // User
     Permission.UPDATE_USER,
     Permission.DELETE_USER,
     Permission.EDIT_USER_ROLE,
@@ -12,40 +11,41 @@ export const rolePermissionsMap: Record<Role, Permission[]> = {
     Permission.LOGOUT,
     Permission.VIEW_USER,
     Permission.RECHARGE_WALLET,
-    
-    // Notification
     Permission.READ_NOTIFICATION,
     Permission.UPDATE_NOTIFICATION,
     Permission.DELETE_NOTIFICATION,
     Permission.MANAGE_NOTIFICATION_PREFERENCES,
+    Permission.CREATE_DELIVERY,
+    Permission.VIEW_DELIVERY,
+    Permission.UPDATE_DELIVERY_STATUS,
+    Permission.CANCEL_DELIVERY,
+    Permission.ASSIGN_DELIVERY_DRIVER,
   ],
-
   [Role.USER]: [
-    // User
     Permission.UPDATE_USER,
     Permission.RESET_PASSWORD,
     Permission.CHANGE_PASSWORD,
     Permission.FORGOT_PASSWORD,
     Permission.LOGOUT,
     Permission.RECHARGE_WALLET,
-    
-    // Notification
     Permission.READ_NOTIFICATION,
     Permission.UPDATE_NOTIFICATION,
     Permission.MANAGE_NOTIFICATION_PREFERENCES,
+    Permission.CREATE_DELIVERY,
+    Permission.VIEW_DELIVERY,
+    Permission.CANCEL_DELIVERY,
   ],
-  
   [Role.DRIVER]: [
-    // User
     Permission.UPDATE_USER,
     Permission.RESET_PASSWORD,
     Permission.CHANGE_PASSWORD,
     Permission.FORGOT_PASSWORD,
     Permission.LOGOUT,
-    
-    // Notification
     Permission.READ_NOTIFICATION,
     Permission.UPDATE_NOTIFICATION,
     Permission.MANAGE_NOTIFICATION_PREFERENCES,
+    Permission.VIEW_DELIVERY,
+    Permission.UPDATE_DELIVERY_STATUS,
+    Permission.ASSIGN_DELIVERY_DRIVER,
   ],
 };

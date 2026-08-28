@@ -1,6 +1,8 @@
 ﻿import { BadRequestException } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { I18nService } from 'nestjs-i18n';
+import { Auth, Permission } from '@delivery/common';
+import { RateLimit, RateLimiterAlgorithm } from '@bts-soft/validation';
 import { DeliveryCommandService } from '../services/delivery-command.service';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
 import {
@@ -18,6 +20,8 @@ export class DeliveryResolver {
     private readonly i18n: I18nService,
   ) {}
 
+  @Auth([Permission.CREATE_DELIVERY])
+  @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 10, windowMs: 60000 })
   @Mutation(() => DeliveryResponse)
   async createDelivery(
     @Args('input') input: CreateDeliveryInputDto,
@@ -47,6 +51,12 @@ export class DeliveryResolver {
     };
   }
 
+  @Auth([Permission.UPDATE_DELIVERY_STATUS])
+  @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 30, windowMs: 60000 })
+  @Auth([Permission.CANCEL_DELIVERY])
+  @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 10, windowMs: 60000 })
+  @Auth([Permission.UPDATE_DELIVERY_STATUS])
+  @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 30, windowMs: 60000 })
   @Mutation(() => DeliveryResponse)
   async transitionDelivery(
     @Args('input') input: TransitionDeliveryInput,
@@ -68,6 +78,8 @@ export class DeliveryResolver {
     };
   }
   
+  @Auth([Permission.CANCEL_DELIVERY])
+  @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 10, windowMs: 60000 })
   @Mutation(() => DeliveryResponse)
   async cancelDelivery(
     @Args('deliveryId') deliveryId: string,
@@ -82,3 +94,7 @@ export class DeliveryResolver {
     };
   }
 }
+
+
+
+

@@ -1,0 +1,97 @@
+﻿## Queries
+
+query {
+  delivery(id: "123456789012345678") {
+    success
+    statusCode
+    message
+    data {
+      id
+      customerId
+      driverId
+      status
+      paymentStatus
+      amount
+      currency
+      pickupAddress { line1 city countryCode }
+      dropoffAddress { line1 city countryCode }
+      createdAt
+      updatedAt
+    }
+  }
+}
+
+query {
+  myDeliveries(page: 1, limit: 20) {
+    success
+    statusCode
+    message
+    total
+    data {
+      id
+      customerId
+      driverId
+      status
+      paymentStatus
+      amount
+      currency
+      createdAt
+      updatedAt
+    }
+  }
+}
+
+query {
+  deliveryNextStatuses(id: "123456789012345678") {
+    success
+    statusCode
+    message
+    data
+  }
+}
+
+query {
+  deliveryServiceInfo {
+    name
+    version
+    status
+  }
+}
+
+## Mutations
+
+mutation {
+  createDelivery(input: {
+    amount: 25.5
+    currency: "USD"
+    pickupAddress: { line1: "1 Main St", city: "Cairo", countryCode: "EG" }
+    dropoffAddress: { line1: "2 Nile St", city: "Giza", countryCode: "EG" }
+    idempotencyKey: "delivery-create-123456789012345678"
+  }) {
+    success
+    statusCode
+    message
+    data { id status paymentStatus amount currency }
+  }
+}
+
+mutation {
+  transitionDelivery(input: {
+    id: "123456789012345678"
+    status: DRIVER_ASSIGNED
+  }) {
+    success
+    statusCode
+    message
+    data { id status paymentStatus }
+  }
+}
+
+mutation {
+  cancelDelivery(id: "123456789012345678", reason: "Customer requested cancellation") {
+    success
+    statusCode
+    message
+    data { id status cancelledAt }
+  }
+}

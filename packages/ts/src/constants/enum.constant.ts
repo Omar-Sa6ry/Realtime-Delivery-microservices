@@ -1,4 +1,4 @@
-import { registerEnumType } from "@nestjs/graphql";
+﻿import { registerEnumType } from "@nestjs/graphql";
 
 export enum Role {
   ADMIN = "admin",
@@ -26,6 +26,11 @@ export enum Permission {
   UPDATE_NOTIFICATION = "UPDATE_NOTIFICATION",
   DELETE_NOTIFICATION = "DELETE_NOTIFICATION",
   MANAGE_NOTIFICATION_PREFERENCES = "MANAGE_NOTIFICATION_PREFERENCES",
+  CREATE_DELIVERY = "create_delivery",
+  VIEW_DELIVERY = "view_delivery",
+  UPDATE_DELIVERY_STATUS = "update_delivery_status",
+  CANCEL_DELIVERY = "cancel_delivery",
+  ASSIGN_DELIVERY_DRIVER = "assign_delivery_driver",
 }
 
 export enum PaymentMethod {
@@ -145,3 +150,5 @@ registerEnumType(NotificationPriority, {
   name: "NotificationPriority",
   description: "Priority of notification delivery",
 });
+
+

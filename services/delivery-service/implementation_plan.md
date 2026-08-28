@@ -961,12 +961,12 @@ mutation CompleteDelivery {
 
 ### Ø§Ù„Ù…Ø±Ø­Ù„Ø© 8 â€” Protos + Shared Package + Docs
 
-- [ ] ØªØ­Ø¯ÙŠØ« `delivery.proto`
-- [ ] ØªØ­Ø¯ÙŠØ« `driver.proto`
-- [ ] Ø¥Ù†Ø´Ø§Ø¡ `payment.proto`
-- [ ] Ø¥Ø¶Ø§ÙØ© `payment.events.ts` ÙÙŠ shared package
-- [ ] Ø¥Ø¶Ø§ÙØ© `KafkaEventEnvelope` ÙÙŠ shared package
-- [ ] Ø¥Ù†Ø´Ø§Ø¡ `graphql-docs/delivery.graphql`
+- [x] ØªØ­Ø¯ÙŠØ« `delivery.proto`
+- [x] ØªØ­Ø¯ÙŠØ« `driver.proto`
+- [x] Ø¥Ù†Ø´Ø§Ø¡ `payment.proto`
+- [x] Ø¥Ø¶Ø§ÙØ© `payment.events.ts` ÙÙŠ shared package
+- [x] Ø¥Ø¶Ø§ÙØ© `KafkaEventEnvelope` ÙÙŠ shared package
+- [x] Ø¥Ù†Ø´Ø§Ø¡ `graphql-docs/delivery.graphql`
 
 ---
 

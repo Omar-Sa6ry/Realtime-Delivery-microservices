@@ -1,16 +1,42 @@
-syntax = "proto3";
-
+﻿syntax = "proto3";
 package delivery;
 
 service DeliveryService {
   rpc IsParticipant (ParticipantRequest) returns (ParticipantResponse);
+  rpc GetDelivery (GetDeliveryRequest) returns (GetDeliveryResponse);
+  rpc RefundPayment (RefundPaymentRequest) returns (RefundPaymentResponse);
 }
 
-message ParticipantRequest {
-  string userId = 1;
-  string deliveryId = 2;
+message ParticipantRequest { 
+  string userId = 1; 
+  string deliveryId = 2; 
 }
 
-message ParticipantResponse {
-  bool isParticipant = 1;
+message ParticipantResponse { 
+  bool isParticipant = 1; 
+}
+
+message GetDeliveryRequest { 
+  string deliveryId = 1; 
+}
+
+message GetDeliveryResponse { 
+  bool found = 1; 
+  string deliveryId = 2; 
+  string customerId = 3; 
+  string driverId = 4; 
+  string status = 5; 
+  double amount = 6; 
+  string currency = 7; 
+}
+
+message RefundPaymentRequest { 
+  string deliveryId = 1; 
+  string reason = 2; 
+}
+
+message RefundPaymentResponse { 
+  bool accepted = 1; 
+  string deliveryId = 2; 
+  string refundId = 3; 
 }

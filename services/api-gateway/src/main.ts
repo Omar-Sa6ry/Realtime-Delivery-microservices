@@ -61,6 +61,7 @@ async function bootstrap() {
     waitForService('http://media-srv:4005/media/graphql'),
     waitForService('http://search-srv:4007/search/graphql'),
     waitForService('http://user-srv:4001/user/graphql'),
+    waitForService('http://delivery-srv:4003/delivery/graphql'),
   ])
     .then(() => {
       logger.log('All subgraphs are reachable.');

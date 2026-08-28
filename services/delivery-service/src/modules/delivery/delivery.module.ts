@@ -12,6 +12,9 @@ import { IdempotencyService } from './services/idempotency.service';
 import { DeliveryResolver } from './graphql/delivery.resolver';
 import { DeliveryQueryResolver } from './graphql/delivery.query.resolver';
 import { AppResolver } from './graphql/app.resolver';
+import { OutboxRepository } from './outbox/outbox.repository';
+import { OutboxPublisherService } from './outbox/outbox-publisher.service';
+import { KafkaProducer } from './outbox/kafka.producer';
 
 @Module({
   imports: [
@@ -28,6 +31,12 @@ import { AppResolver } from './graphql/app.resolver';
     DeliveryCommandService,
     DeliveryQueryService,
     IdempotencyService,
+    DeliveryResolver,
+    DeliveryQueryResolver,
+    AppResolver,
+    OutboxRepository,
+    OutboxPublisherService,
+    KafkaProducer,
   ],
   exports: [
     TypeOrmModule,
@@ -36,7 +45,9 @@ import { AppResolver } from './graphql/app.resolver';
     DeliveryCommandService,
     DeliveryQueryService,
     IdempotencyService,
+    OutboxRepository,
+    OutboxPublisherService,
+    KafkaProducer,
   ],
 })
 export class DeliveryModule {}
-

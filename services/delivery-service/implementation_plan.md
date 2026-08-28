@@ -948,9 +948,9 @@ mutation CompleteDelivery {
 
 ### Ø§Ù„Ù…Ø±Ø­Ù„Ø© 6 â€” Outbox + Kafka Producer
 
-- [ ] Ø¥Ù†Ø´Ø§Ø¡ `outbox.repository.ts`
-- [ ] Ø¥Ù†Ø´Ø§Ø¡ `outbox-publisher.service.ts`
-- [ ] Ø¥Ù†Ø´Ø§Ø¡ `kafka.producer.ts`
+- [x] Ø¥Ù†Ø´Ø§Ø¡ `outbox.repository.ts`
+- [x] Ø¥Ù†Ø´Ø§Ø¡ `outbox-publisher.service.ts`
+- [x] Ø¥Ù†Ø´Ø§Ø¡ `kafka.producer.ts`
 
 ### Ø§Ù„Ù…Ø±Ø­Ù„Ø© 7 â€” Saga + gRPC
 
@@ -988,4 +988,5 @@ mutation CompleteDelivery {
 | 12 | Ø¥Ø¶Ø§ÙØ© `payment.events.ts` | ðŸŸ¡ Medium | `packages/ts/` |
 | 13 | Ø¥Ù†Ø´Ø§Ø¡ `delivery.graphql` docs | ðŸŸ¡ Medium | `graphql-docs/` |
 | 14 | Ø¨Ù†Ø§Ø¡ Ù‡ÙŠÙƒÙ„ Ø§Ù„Ù…Ù„ÙØ§Øª Ø§Ù„ÙƒØ§Ù…Ù„ | ðŸŸ¢ Standard | `delivery-service/src/` |
+
 

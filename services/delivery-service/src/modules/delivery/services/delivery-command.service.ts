@@ -5,16 +5,14 @@ import { PaymentStatus } from '../enums/payment-status.enum';
 import { DeliveryRepository } from '../repositories/delivery.repository';
 import { DeliveryStateMachine } from './delivery.state-machine';
 import { IdempotencyService } from './idempotency.service';
-
 export interface CreateDeliveryInput {
   customerId: string;
   amount: string;
   currency?: string;
-  pickupAddress: Record<string, unknown>;
-  dropoffAddress: Record<string, unknown>;
+  pickupAddress: Delivery['pickupAddress'];
+  dropoffAddress: Delivery['dropoffAddress'];
   idempotencyKey?: string;
 }
-
 @Injectable()
 export class DeliveryCommandService {
   constructor(
@@ -22,17 +20,14 @@ export class DeliveryCommandService {
     private readonly stateMachine: DeliveryStateMachine,
     private readonly idempotency: IdempotencyService,
   ) {}
-  
   create(input: CreateDeliveryInput): Promise<Delivery> {
     const operation = () =>
       this.repository.create({
         customerId: input.customerId,
         amount: input.amount,
         currency: input.currency ?? 'USD',
-        pickupAddress:
-          input.pickupAddress as unknown as Delivery['pickupAddress'],
-        dropoffAddress:
-          input.dropoffAddress as unknown as Delivery['dropoffAddress'],
+        pickupAddress: input.pickupAddress,
+        dropoffAddress: input.dropoffAddress,
         status: DeliveryStatus.CREATED,
         paymentStatus: PaymentStatus.PENDING,
       });
@@ -40,7 +35,6 @@ export class DeliveryCommandService {
       ? this.idempotency.execute(input.idempotencyKey, operation)
       : operation();
   }
-
   async transition(
     id: string,
     status: DeliveryStatus,
@@ -48,7 +42,7 @@ export class DeliveryCommandService {
     note?: string,
   ): Promise<Delivery> {
     const delivery = await this.repository.findById(id);
-    this.stateMachine.assertTransition(delivery.status, status);
+    await this.stateMachine.assertTransition(delivery.status, status);
     delivery.status = status;
     if (status === DeliveryStatus.PICKED_UP) delivery.pickedUpAt = new Date();
     if (status === DeliveryStatus.COMPLETED) delivery.completedAt = new Date();

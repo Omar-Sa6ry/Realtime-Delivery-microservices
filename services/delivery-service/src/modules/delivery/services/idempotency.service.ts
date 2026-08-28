@@ -1,13 +1,17 @@
 ﻿import { ConflictException, Injectable } from '@nestjs/common';
 import { RedisService } from '@bts-soft/cache';
+import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
 export class IdempotencyService {
-  constructor(private readonly redis: RedisService) {}
+  constructor(
+    private readonly redis: RedisService,
+    private readonly i18n: I18nService,
+  ) {}
   async get<T>(key: string): Promise<T | null> {
     return this.redis.get<T>(`delivery:idempotency:${key}`);
   }
-  
+
   async execute<T>(
     key: string,
     operation: () => Promise<T>,

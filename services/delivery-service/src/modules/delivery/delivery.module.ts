@@ -9,6 +9,9 @@ import { DeliveryStateMachine } from './services/delivery.state-machine';
 import { DeliveryCommandService } from './services/delivery-command.service';
 import { DeliveryQueryService } from './services/delivery-query.service';
 import { IdempotencyService } from './services/idempotency.service';
+import { DeliveryResolver } from './graphql/delivery.resolver';
+import { DeliveryQueryResolver } from './graphql/delivery.query.resolver';
+import { AppResolver } from './graphql/app.resolver';
 
 @Module({
   imports: [
@@ -36,3 +39,4 @@ import { IdempotencyService } from './services/idempotency.service';
   ],
 })
 export class DeliveryModule {}
+

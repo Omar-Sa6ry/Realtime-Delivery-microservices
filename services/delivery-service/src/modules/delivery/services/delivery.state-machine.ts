@@ -1,4 +1,5 @@
 ﻿import { BadRequestException, Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
 
 @Injectable()
@@ -41,18 +42,21 @@ export class DeliveryStateMachine {
     [DeliveryStatus.CANCELLED]: [],
     [DeliveryStatus.FAILED]: [],
   };
-  
+  constructor(private readonly i18n: I18nService) {}
   canTransition(from: DeliveryStatus, to: DeliveryStatus): boolean {
     return this.transitions[from]?.includes(to) ?? false;
   }
-
-  assertTransition(from: DeliveryStatus, to: DeliveryStatus): void {
-    if (!this.canTransition(from, to))
-      throw new BadRequestException(
-        `Invalid delivery transition: ${from} -> ${to}`,
-      );
+  async assertTransition(
+    from: DeliveryStatus,
+    to: DeliveryStatus,
+  ): Promise<void> {
+    if (!this.canTransition(from, to)) {
+      const message = await this.i18n.t('delivery.invalidTransition', {
+        args: { from, to },
+      });
+      throw new BadRequestException(message);
+    }
   }
-
   nextStates(status: DeliveryStatus): readonly DeliveryStatus[] {
     return this.transitions[status] ?? [];
   }

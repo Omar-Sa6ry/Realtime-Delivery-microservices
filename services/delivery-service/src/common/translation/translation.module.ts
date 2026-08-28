@@ -1,4 +1,4 @@
-import * as path from 'path';
+﻿import * as path from 'path';
 import { Global, Module } from '@nestjs/common';
 import {
   AcceptLanguageResolver,

@@ -1,1 +1,18 @@
-{}
+﻿{
+  "delivery": {
+    "created": "تم إنشاء الشحنة بنجاح",
+    "statusUpdated": "تم تحديث حالة الشحنة بنجاح",
+    "cancelled": "تم إلغاء الشحنة بنجاح",
+    "retrieved": "تم استرجاع الشحنات بنجاح",
+    "nextStatusesRetrieved": "تم استرجاع الحالات التالية بنجاح",
+    "serviceInfo": "معلومات خدمة التوصيل",
+    "customerIdRequired": "معرف العميل مطلوب",
+    "authenticatedCustomerRequired": "يجب تسجيل دخول العميل",
+    "invalidTransition": "انتقال حالة الشحنة غير مسموح: {{from}} -> {{to}}",
+    "notFound": "الشحنة {{id}} غير موجودة",
+    "idempotencyInProgress": "هناك عملية أخرى بنفس مفتاح idempotency قيد التنفيذ",
+    "started": "خدمة التوصيل تعمل على {{url}}",
+    "microserviceStartupError": "خطأ في تشغيل خدمات النقل: {{message}}",
+    "bootstrapFailed": "فشل تشغيل الخدمة، ستتم إعادة المحاولة خلال 10 ثوانٍ: {{message}}"
+  }
+}

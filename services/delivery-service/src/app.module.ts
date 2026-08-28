@@ -11,10 +11,8 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { RedisModule, NotificationModule } from '@bts-soft/core';
 import { TranslationModule } from './common/translation/translation.module';
 import deliveryConfig from './common/config/delivery.config';
-import { HealthController } from './health.controller';
 import { DeliveryMetricsService } from './common/metrics/delivery-metrics.service';
 import { DeliveryModule } from './modules/delivery/delivery.module';
-import { DeliveryRedisModule } from './modules/infrastructure/redis/redis.module';
 import { DeliveryKafkaModule } from './modules/infrastructure/kafka/kafka.module';
 import { DeliveryNatsModule } from './modules/infrastructure/nats/nats.module';
 import { DeliveryGrpcModule } from './modules/infrastructure/grpc/grpc.module';
@@ -28,6 +26,7 @@ import {
   GraphQLResponseInterceptor,
 } from '@delivery/common';
 import { BullModule } from '@nestjs/bullmq';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -101,7 +100,6 @@ import { BullModule } from '@nestjs/bullmq';
     MetricsModule,
     AutomationModule,
     DeliveryModule,
-    DeliveryRedisModule,
     DeliveryKafkaModule,
     DeliveryNatsModule,
     DeliveryGrpcModule,

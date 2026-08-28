@@ -48,21 +48,14 @@ async function bootstrap() {
     },
   });
 
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.GRPC,
-    options: {
-      package: 'delivery',
-      protoPath: join(process.cwd(), '../../protos/delivery.proto'),
-      url: '0.0.0.0:' + (process.env.PORT_DELIVERY_GRPC ?? '50054'),
-      loader: { keepCase: false },
-    },
-  });
   const port = Number(process.env.PORT_DELIVERY ?? 4003);
   process.env.PORT_DELIVERY_GRPC ??= '50054';
   process.env.PORT_METRICS ??= '9104';
   await app.listen(port, '0.0.0.0');
   const i18n = app.get(I18nService);
-  console.log(i18n.t('delivery.serviceInfo' as never) + ': http://0.0.0.0:' + port);
+  console.log(
+    i18n.t('delivery.serviceInfo' as never) + ': http://0.0.0.0:' + port,
+  );
 
   // Start NATS + gRPC transports in the background after HTTP is live.
   app
@@ -76,9 +69,3 @@ bootstrap().catch((err) => {
   console.error(err.message);
   setTimeout(() => bootstrap(), 10000);
 });
-
-
-
-
-
-

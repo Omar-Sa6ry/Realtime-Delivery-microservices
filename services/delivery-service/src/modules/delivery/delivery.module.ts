@@ -15,6 +15,9 @@ import { AppResolver } from './graphql/app.resolver';
 import { OutboxRepository } from './outbox/outbox.repository';
 import { OutboxPublisherService } from './outbox/outbox-publisher.service';
 import { KafkaProducer } from './outbox/kafka.producer';
+import { DeliverySagaOrchestrator } from './saga/delivery-saga.orchestrator';
+import { PaymentConfirmationStep } from './saga/steps/payment-confirmation.step';
+import { DriverAssignmentStep } from './saga/steps/driver-assignment.step';
 
 @Module({
   imports: [
@@ -51,3 +54,5 @@ import { KafkaProducer } from './outbox/kafka.producer';
   ],
 })
 export class DeliveryModule {}
+
+

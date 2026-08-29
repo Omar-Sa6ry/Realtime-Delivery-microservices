@@ -1,4 +1,4 @@
-﻿import { join } from 'path';
+import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -49,16 +49,12 @@ import { HealthController } from './health.controller';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        host:
-          config.get<string>('DB_HOST', 'localhost') === 'delivery-db-srv' &&
-          process.env.NODE_ENV !== 'production' &&
-          !process.env.KUBERNETES_SERVICE_HOST
-            ? 'localhost'
-            : config.get<string>('DB_HOST', 'localhost'),
-        port: Number(config.get<number>('DB_PORT', 5433)) || 5433,
+        host: config.get<string>('DB_HOST', 'localhost'),
+        port: Number(config.get<number>('DB_PORT', 5432)) || 5432,
         username:
-          config.get<string>('POSTGRES_delivery') ||
-          config.get<string>('DB_deliveryNAME', 'postgres'),
+          config.get<string>('DB_USERNAME') ||
+          config.get<string>('POSTGRES_USER') ||
+          'postgres',
         password: config.get<string>('POSTGRES_PASSWORD'),
         database: config.get<string>('DB_NAME', 'delivery_delivery_db'),
         autoLoadEntities: true,
@@ -84,7 +80,6 @@ import { HealthController } from './health.controller';
       driver: ApolloFederationDriver,
       path: '/delivery/graphql',
       autoSchemaFile: {
-        path: join(process.cwd(), 'src/schema.gql'),
         federation: 2,
       },
       context: ({ req }) => ({

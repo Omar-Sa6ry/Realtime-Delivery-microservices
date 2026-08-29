@@ -1,4 +1,4 @@
-﻿import {
+import {
   Column,
   CreateDateColumn,
   Entity,
@@ -32,7 +32,7 @@ export class DeliverySagaState {
   @Column({ type: 'int', default: 1 })
   version!: number;
 
-  @OneToOne(() => Delivery, (delivery) => delivery.sagaStates, {
+  @OneToOne(() => Delivery, (delivery) => delivery.sagaState, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'deliveryId' })

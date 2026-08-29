@@ -28,6 +28,19 @@ async function bootstrap() {
   const logger = new StructuredLogger();
   await waitForRedis();
 
+  const subgraphs = [
+    'http://realtime-srv:4006/realtime/graphql',
+    'http://notification-srv:4004/notification/graphql',
+    'http://media-srv:4005/media/graphql',
+    'http://search-srv:4007/search/graphql',
+    'http://user-srv:4001/user/graphql',
+    'http://delivery-srv:4003/delivery/graphql',
+  ];
+
+  console.log('[startup] Waiting for subgraphs to be available...');
+  await Promise.all(subgraphs.map((url) => waitForService(url)));
+  logger.log('All subgraphs are reachable.');
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger,
   });
@@ -55,21 +68,9 @@ async function bootstrap() {
   const port = process.env.PORT_GATEWAY ?? 4000;
   await app.listen(port, '0.0.0.0');
 
-  await Promise.all([
-    waitForService('http://realtime-srv:4006/realtime/graphql'),
-    waitForService('http://notification-srv:4004/notification/graphql'),
-    waitForService('http://media-srv:4005/media/graphql'),
-    waitForService('http://search-srv:4007/search/graphql'),
-    waitForService('http://user-srv:4001/user/graphql'),
-    waitForService('http://delivery-srv:4003/delivery/graphql'),
-  ])
-    .then(() => {
-      logger.log('All subgraphs are reachable.');
-      logger.log(
-        `API Gateway is running on: https://delivary.test/graphql or http://localhost:${port}/graphql`,
-      );
-    })
-    .catch((err: Error) => logger.warn(`Subgraph wait error: ${err.message}`));
+  logger.log(
+    `API Gateway is running on: https://delivery.test/graphql or http://localhost:${port}/graphql`,
+  );
 }
 
 function runBootstrap() {
@@ -80,3 +81,4 @@ function runBootstrap() {
 }
 
 runBootstrap();
+

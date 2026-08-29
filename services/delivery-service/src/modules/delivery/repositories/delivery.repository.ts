@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -24,7 +24,7 @@ export class DeliveryRepository {
   async findById(id: string): Promise<Delivery> {
     const delivery = await this.deliveries.findOne({
       where: { id },
-      relations: { statusHistory: true, sagaStates: true },
+      relations: { statusHistory: true, sagaState: true },
     });
     if (!delivery)
       throw new NotFoundException(

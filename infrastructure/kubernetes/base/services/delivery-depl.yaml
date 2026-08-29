@@ -1,4 +1,4 @@
-﻿apiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: delivery-depl
@@ -25,17 +25,16 @@ spec:
             httpGet:
               path: /health/live
               port: http
-            initialDelaySeconds: 20
+            initialDelaySeconds: 180
             periodSeconds: 5
-            failureThreshold: 60
+            failureThreshold: 240
             timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: /health/ready
               port: http
-            initialDelaySeconds: 10
-            periodSeconds: 5
-            failureThreshold: 60
+            periodSeconds: 3
+            failureThreshold: 120
             timeoutSeconds: 5
           livenessProbe:
             httpGet:

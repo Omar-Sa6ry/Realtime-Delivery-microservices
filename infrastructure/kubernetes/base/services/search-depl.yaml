@@ -29,8 +29,8 @@ spec:
             - sh
             - -c
             - >-
-              until wget -q --spider http://opensearch-srv:9200/_cluster/health;
-              do echo "Waiting for opensearch-srv:9200"; sleep 3; done
+              until nc -z opensearch-srv 9200;
+              do echo "Waiting for opensearch-srv:9200"; sleep 2; done
       containers:
         - name: search
           image: delivery/search
@@ -51,9 +51,9 @@ spec:
             httpGet:
               path: /health/live
               port: 4007
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            failureThreshold: 30
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 60
             timeoutSeconds: 5
           readinessProbe:
             httpGet:
@@ -61,7 +61,7 @@ spec:
               port: 4007
             initialDelaySeconds: 5
             periodSeconds: 5
-            failureThreshold: 30
+            failureThreshold: 60
             timeoutSeconds: 5
           livenessProbe:
             httpGet:

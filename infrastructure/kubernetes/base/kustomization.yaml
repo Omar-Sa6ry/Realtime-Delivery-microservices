@@ -2,6 +2,7 @@
 kind: Kustomization
 
 resources:
+  - secrets/delivery-secrets.yaml
   - configmaps/media-service-config.yaml
   - services/api-gateway-depl.yaml
   - services/delivery-depl.yaml

@@ -1,4 +1,4 @@
-﻿import { BadRequestException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { I18nService } from 'nestjs-i18n';
 import { Auth, Permission } from '@delivery/common';
@@ -51,10 +51,6 @@ export class DeliveryResolver {
     };
   }
 
-  @Auth([Permission.UPDATE_DELIVERY_STATUS])
-  @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 30, windowMs: 60000 })
-  @Auth([Permission.CANCEL_DELIVERY])
-  @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 10, windowMs: 60000 })
   @Auth([Permission.UPDATE_DELIVERY_STATUS])
   @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 30, windowMs: 60000 })
   @Mutation(() => DeliveryResponse)

@@ -95,7 +95,6 @@ import { BullModule } from '@nestjs/bullmq';
       driver: ApolloFederationDriver,
       path: '/user/graphql',
       autoSchemaFile: {
-        path: join(process.cwd(), 'src/schema.gql'),
         federation: 2,
       },
       context: ({ req }) => ({

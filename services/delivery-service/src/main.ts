@@ -1,4 +1,4 @@
-﻿import { join } from 'path';
+import { join } from 'path';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -65,7 +65,17 @@ async function bootstrap() {
     );
 }
 
+// Keep the process alive while infrastructure (Redis, DB, NATS) is still
+// starting: library-level errors (e.g. ioredis connection) must not kill the
+// pod — the bootstrap retry loop recovers once dependencies are reachable.
+process.on('uncaughtException', (err) => {
+  console.error('[process] Uncaught exception (continuing):', err?.message ?? err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[process] Unhandled rejection (continuing):', reason);
+});
+
 bootstrap().catch((err) => {
-  console.error(err.message);
+  console.error('Bootstrap failed, retrying in 10s...', err.message);
   setTimeout(() => bootstrap(), 10000);
 });

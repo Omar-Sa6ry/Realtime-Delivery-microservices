@@ -1,4 +1,4 @@
-FROM node:24.11.0
+﻿FROM node:24.11.0
 
 WORKDIR /usr/src/app
 
@@ -29,3 +29,4 @@ WORKDIR /usr/src/app/services/delivery-service
 RUN npm run build
 
 CMD ["npm", "run", "start:prod"]
+

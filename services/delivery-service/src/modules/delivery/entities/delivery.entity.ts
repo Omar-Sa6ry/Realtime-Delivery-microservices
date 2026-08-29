@@ -1,4 +1,4 @@
-﻿import {
+import {
   Column,
   CreateDateColumn,
   Entity,
@@ -63,7 +63,7 @@ export class Delivery {
   statusHistory!: DeliveryStatusHistory[];
 
   @OneToOne(() => DeliverySagaState, (saga) => saga.delivery)
-  sagaStates!: DeliverySagaState[];
+  sagaState?: DeliverySagaState;
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   createdAt!: Date;

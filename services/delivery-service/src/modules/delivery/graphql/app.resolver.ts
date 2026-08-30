@@ -1,12 +1,17 @@
-﻿import { Query, Resolver, Context } from '@nestjs/graphql';
+import { Query, Resolver, Context } from '@nestjs/graphql';
 import { I18nService } from 'nestjs-i18n';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
 class DeliveryServiceInfo {
-  @Field() name!: string;
-  @Field() version!: string;
-  @Field() status!: string;
+  @Field(() => String)
+  name: string;
+
+  @Field(() => String)
+  version: string;
+
+  @Field(() => String)
+  status: string;
 }
 
 @Resolver()

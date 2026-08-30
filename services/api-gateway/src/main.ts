@@ -8,7 +8,12 @@ import { StructuredLogger } from '@delivery/common';
 import { waitForRedis, waitForService } from './utils/waitService.util';
 
 const LIVENESS_PORT = Number(process.env.PORT_LIVENESS ?? 4099);
-const livenessServer = http.createServer((_req, res) => {
+const livenessServer = http.createServer((req, res) => {
+  if (req.url === '/health' || req.url === '/health/ready' || req.url === '/health/live' || req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'alive', service: 'api-gateway' }));
+    return;
+  }
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ status: 'alive', service: 'api-gateway' }));
 });

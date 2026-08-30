@@ -1,14 +1,21 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Delivery } from '../entities/delivery.entity';
 import { DeliveryRepository } from '../repositories/delivery.repository';
 import { DeliverySagaContext, DeliverySagaStep } from './saga-step';
+import { PaymentConfirmationStep } from './steps/payment-confirmation.step';
+import { DriverAssignmentStep } from './steps/driver-assignment.step';
 
 @Injectable()
 export class DeliverySagaOrchestrator {
+  private readonly steps: DeliverySagaStep[];
+
   constructor(
     private readonly repository: DeliveryRepository,
-    private readonly steps: DeliverySagaStep[],
-  ) {}
+    paymentStep: PaymentConfirmationStep,
+    driverStep: DriverAssignmentStep,
+  ) {
+    this.steps = [paymentStep, driverStep];
+  }
   
   async execute(deliveryId: string): Promise<Delivery> {
     let context: DeliverySagaContext = {

@@ -1,5 +1,5 @@
-﻿import { ConflictException, Injectable } from '@nestjs/common';
-import { RedisService } from '@bts-soft/cache';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { RedisService } from '@bts-soft/core';
 import { I18nService } from 'nestjs-i18n';
 
 @Injectable()

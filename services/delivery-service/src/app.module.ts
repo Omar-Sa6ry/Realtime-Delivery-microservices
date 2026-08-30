@@ -8,6 +8,7 @@ import {
   ApolloFederationDriverConfig,
 } from '@nestjs/apollo';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { JwtModule } from '@nestjs/jwt';
 import { RedisModule, NotificationModule } from '@bts-soft/core';
 import { TranslationModule } from './common/translation/translation.module';
 import deliveryConfig from './common/config/delivery.config';
@@ -43,6 +44,16 @@ import { HealthController } from './health.controller';
 
     TranslationModule,
     RedisModule,
+
+    JwtModule.registerAsync({
+      global: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET') || 'default_secret',
+        signOptions: { expiresIn: '1d' },
+      }),
+    }),
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

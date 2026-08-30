@@ -1,4 +1,4 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Delivery } from './entities/delivery.entity';
 import { DeliveryStatusHistory } from './entities/delivery-status-history.entity';
@@ -19,8 +19,13 @@ import { DeliverySagaOrchestrator } from './saga/delivery-saga.orchestrator';
 import { PaymentConfirmationStep } from './saga/steps/payment-confirmation.step';
 import { DriverAssignmentStep } from './saga/steps/driver-assignment.step';
 
+import { RedisModule, RedisService } from '@bts-soft/core';
+import { DeliveryKafkaModule } from '../infrastructure/kafka/kafka.module';
+
 @Module({
   imports: [
+    RedisModule,
+    DeliveryKafkaModule,
     TypeOrmModule.forFeature([
       Delivery,
       DeliveryStatusHistory,
@@ -36,10 +41,22 @@ import { DriverAssignmentStep } from './saga/steps/driver-assignment.step';
     IdempotencyService,
     DeliveryResolver,
     DeliveryQueryResolver,
-    AppResolver,
     OutboxRepository,
     OutboxPublisherService,
     KafkaProducer,
+    PaymentConfirmationStep,
+    DriverAssignmentStep,
+    DeliverySagaOrchestrator,
+    {
+      provide: 'USER_SERVICE',
+      useValue: {
+        findById: async (id: string) => ({ id, email: '', role: 'USER' }),
+      },
+    },
+    {
+      provide: 'SHARED_REDIS_SERVICE',
+      useExisting: RedisService,
+    },
   ],
   exports: [
     TypeOrmModule,
@@ -51,6 +68,9 @@ import { DriverAssignmentStep } from './saga/steps/driver-assignment.step';
     OutboxRepository,
     OutboxPublisherService,
     KafkaProducer,
+    PaymentConfirmationStep,
+    DriverAssignmentStep,
+    DeliverySagaOrchestrator,
   ],
 })
 export class DeliveryModule {}

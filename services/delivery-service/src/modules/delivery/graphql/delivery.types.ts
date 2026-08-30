@@ -1,57 +1,105 @@
-﻿import { Field, ObjectType, Int } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
+import { GeneralResponse } from '../../../common/graphql/general-response.type';
 
 @ObjectType()
-export class AddressType {
-  @Field() line1!: string;
-  @Field({ nullable: true }) line2?: string;
-  @Field() city!: string;
-  @Field({ nullable: true }) state?: string;
-  @Field({ nullable: true }) postalCode?: string;
-  @Field() countryCode!: string;
-  @Field({ nullable: true }) latitude?: number;
-  @Field({ nullable: true }) longitude?: number;
+export class DeliveryAddressType {
+  @Field(() => String)
+  line1: string;
+
+  @Field(() => String, { nullable: true })
+  line2?: string;
+
+  @Field(() => String)
+  city: string;
+
+  @Field(() => String, { nullable: true })
+  state?: string;
+
+  @Field(() => String, { nullable: true })
+  postalCode?: string;
+
+  @Field(() => String)
+  countryCode: string;
+
+  @Field(() => Number, { nullable: true })
+  latitude?: number;
+
+  @Field(() => Number, { nullable: true })
+  longitude?: number;
 }
 
 @ObjectType()
 export class DeliveryType {
-  @Field() id!: string;
-  @Field() customerId!: string;
-  @Field({ nullable: true }) driverId?: string;
-  @Field(() => DeliveryStatus) status!: DeliveryStatus;
-  @Field() paymentStatus!: string;
-  @Field() amount!: string;
-  @Field() currency!: string;
-  @Field(() => AddressType) pickupAddress!: AddressType;
-  @Field(() => AddressType) dropoffAddress!: AddressType;
-  @Field({ nullable: true }) pickedUpAt?: Date;
-  @Field({ nullable: true }) completedAt?: Date;
-  @Field({ nullable: true }) cancelledAt?: Date;
-  @Field() createdAt!: Date;
-  @Field() updatedAt!: Date;
+  @Field(() => String)
+  id: string;
+
+  @Field(() => String)
+  customerId: string;
+
+  @Field(() => String, { nullable: true })
+  driverId?: string;
+
+  @Field(() => String)
+  status: string;
+
+  @Field(() => String)
+  paymentStatus: string;
+
+  @Field(() => String)
+  amount: string;
+
+  @Field(() => String)
+  currency: string;
+
+  @Field(() => DeliveryAddressType)
+  pickupAddress: DeliveryAddressType;
+
+  @Field(() => DeliveryAddressType)
+  dropoffAddress: DeliveryAddressType;
+
+  @Field(() => Date, { nullable: true })
+  pickedUpAt?: Date;
+
+  @Field(() => Date, { nullable: true })
+  completedAt?: Date;
+
+  @Field(() => Date, { nullable: true })
+  cancelledAt?: Date;
+
+  @Field(() => Date)
+  createdAt: Date;
+
+  @Field(() => Date)
+  updatedAt: Date;
 }
 
 @ObjectType()
-export class DeliveryResponse {
-  @Field() success!: boolean;
-  @Field(() => Int) statusCode!: number;
-  @Field() message!: string;
-  @Field(() => DeliveryType, { nullable: true }) data?: DeliveryType;
+export class DeliveryResponse extends GeneralResponse(DeliveryType) {}
+
+@ObjectType()
+export class PaginatedDeliveries {
+  @Field(() => [DeliveryType])
+  items: DeliveryType[];
+
+  @Field(() => Number)
+  total: number;
 }
 
 @ObjectType()
-export class DeliveryListResponse {
-  @Field() success!: boolean;
-  @Field(() => Int) statusCode!: number;
-  @Field() message!: string;
-  @Field(() => [DeliveryType]) data!: DeliveryType[];
-  @Field(() => Int) total!: number;
+export class PaginatedDeliveriesResponse extends GeneralResponse(PaginatedDeliveries) {}
+
+@ObjectType()
+export class DeliveryListResponse extends GeneralResponse(DeliveryType) {
+  @Field(() => [DeliveryType], { nullable: true })
+  data?: DeliveryType[];
 }
 
 @ObjectType()
-export class DeliveryStatusesResponse {
-  @Field() success!: boolean;
-  @Field(() => Int) statusCode!: number;
-  @Field() message!: string;
-  @Field(() => [DeliveryStatus]) data!: DeliveryStatus[];
+export class DeliveryStatusesData {
+  @Field(() => [String])
+  statuses: string[];
 }
+
+@ObjectType()
+export class DeliveryStatusesResponse extends GeneralResponse(DeliveryStatusesData) {}

@@ -86,6 +86,8 @@ spec:
               value: "http://realtime-srv:4006/realtime/graphql"
             - name: SEARCH_SERVICE_URL
               value: "http://search-srv:4007/search/graphql"
+            - name: DELIVERY_SERVICE_URL
+              value: "http://delivery-srv:4003/delivery/graphql"
 ---
 apiVersion: v1
 kind: Service

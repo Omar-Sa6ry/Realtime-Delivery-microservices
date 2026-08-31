@@ -1,7 +1,8 @@
-import { Field, ObjectType } from '@nestjs/graphql';
+import { Field, ObjectType, Directive, ID } from '@nestjs/graphql';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
 import { GeneralResponse } from '../../../common/graphql/general-response.type';
 
+@Directive('@shareable')
 @ObjectType()
 export class DeliveryAddressType {
   @Field(() => String)
@@ -29,9 +30,10 @@ export class DeliveryAddressType {
   longitude?: number;
 }
 
+@Directive('@key(fields: "id")')
 @ObjectType()
 export class DeliveryType {
-  @Field(() => String)
+  @Field(() => ID)
   id: string;
 
   @Field(() => String)
@@ -77,6 +79,7 @@ export class DeliveryType {
 @ObjectType()
 export class DeliveryResponse extends GeneralResponse(DeliveryType) {}
 
+@Directive('@shareable')
 @ObjectType()
 export class PaginatedDeliveries {
   @Field(() => [DeliveryType])
@@ -87,14 +90,9 @@ export class PaginatedDeliveries {
 }
 
 @ObjectType()
-export class PaginatedDeliveriesResponse extends GeneralResponse(PaginatedDeliveries) {}
+export class DeliveryListResponse extends GeneralResponse(PaginatedDeliveries) {}
 
-@ObjectType()
-export class DeliveryListResponse extends GeneralResponse(DeliveryType) {
-  @Field(() => [DeliveryType], { nullable: true })
-  data?: DeliveryType[];
-}
-
+@Directive('@shareable')
 @ObjectType()
 export class DeliveryStatusesData {
   @Field(() => [String])

@@ -51,7 +51,7 @@ services:
       - "4004:4004"
       - "50053:50053"
     environment:
-      PORT_realtime: ${PORT_realtime:-4004}
+      PORT_realtime: ${PORT_realtime:-4006}
       PORT_GRPC: ${PORT_GRPC:-50053}
       DB_HOST: "realtime-db-srv"
       DB_PORT: ${DB_PORT:-5432}

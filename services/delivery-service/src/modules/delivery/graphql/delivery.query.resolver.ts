@@ -1,4 +1,4 @@
-﻿import { BadRequestException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { Args, Context, Int, Query, Resolver } from '@nestjs/graphql';
 import { I18nService } from 'nestjs-i18n';
 import { Auth, Permission } from '@delivery/common';
@@ -57,9 +57,11 @@ export class DeliveryQueryResolver {
       success: true,
       statusCode: 200,
       message: await this.i18n.t('delivery.retrieved', { lang: ctx.language }),
-      data: deliveries.map(deliveryToGraphql),
-      total,
-    };
+      data: {
+        items: deliveries.map(deliveryToGraphql),
+        total,
+      },
+    } as DeliveryListResponse;
   }
 
   @Auth([Permission.VIEW_DELIVERY])
@@ -76,11 +78,9 @@ export class DeliveryQueryResolver {
       message: await this.i18n.t('delivery.nextStatusesRetrieved', {
         lang: ctx.language,
       }),
-      data: this.queries.nextStatuses(delivery),
-    };
+      data: {
+        statuses: this.queries.nextStatuses(delivery),
+      },
+    } as DeliveryStatusesResponse;
   }
 }
-
-
-
-

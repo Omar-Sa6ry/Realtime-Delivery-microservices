@@ -1,4 +1,4 @@
-﻿FROM node:24.11.0
+FROM node:24.11.0
 
 WORKDIR /usr/src/app
 
@@ -17,7 +17,9 @@ RUN npm install --legacy-peer-deps
 RUN rm -rf /usr/src/app/packages/ts/node_modules/nestjs-i18n \
            /usr/src/app/packages/ts/node_modules/@nestjs \
            /usr/src/app/packages/ts/node_modules/@grpc \
-           /usr/src/app/packages/ts/node_modules/express
+           /usr/src/app/packages/ts/node_modules/express \
+           /usr/src/app/packages/ts/node_modules/graphql \
+           /usr/src/app/packages/ts/node_modules/@apollo
 
 # Symlink the delivery-service node_modules up so packages/ts resolves them to the same instance
 RUN ln -s /usr/src/app/services/delivery-service/node_modules /usr/src/app/node_modules

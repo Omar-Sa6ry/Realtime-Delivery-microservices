@@ -31,12 +31,13 @@ async function bootstrap() {
     Number(configService.get<string>('WS_MAX_PAYLOAD', '16384')) || 16384;
   app.useWebSocketAdapter(new RealtimeWsAdapter(app.getHttpServer(), { maxPayload }));
 
-  const port = configService.get<string>('PORT_REALTIME', '4006');
+  const port = configService.get<string>('PORT_REALTIME') || '4006';
+
   await app.listen(port, '0.0.0.0');
 
   const logger = new StructuredLogger();
   logger.log(
-    `Realtime Service is running on http://localhost:${port}/realtime/graphql`,
+    `Realtime Service is running on http://0.0.0.0:${port}/realtime/graphql`,
   );
 
   const graceful = async (signal: string) => {
@@ -48,6 +49,18 @@ async function bootstrap() {
   process.on('SIGINT', () => graceful('SIGINT'));
 }
 
-bootstrap().catch((err) => {
-  setTimeout(() => bootstrap(), 10000);
+process.on('uncaughtException', (err) => {
+  console.error('[process] Uncaught exception (continuing):', err?.message ?? err);
 });
+process.on('unhandledRejection', (reason) => {
+  console.error('[process] Unhandled rejection (continuing):', reason);
+});
+
+function runBootstrap() {
+  bootstrap().catch((err) => {
+    console.error('Bootstrap failed, retrying in 10s...', err.message);
+    setTimeout(() => runBootstrap(), 10000);
+  });
+}
+
+runBootstrap();

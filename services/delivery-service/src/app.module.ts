@@ -33,26 +33,37 @@ import { HealthController } from './health.controller';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [
-        join(
-          process.cwd(),
-          '../../config/env/.env.' +
-            (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
-        ),
-      ],
+      load: [deliveryConfig],
+      envFilePath: ['../../config/.env'],
     }),
 
-    TranslationModule,
     RedisModule,
 
     JwtModule.registerAsync({
       global: true,
       imports: [ConfigModule],
-      inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET') || 'default_secret',
-        signOptions: { expiresIn: '1d' },
+        signOptions: {
+          expiresIn: (config.get<string>('JWT_EXPIRE', '36000s') || '36000s') as any,
+        },
       }),
+      inject: [ConfigService],
+    }),
+
+    GraphQLModule.forRoot<ApolloFederationDriverConfig>({
+      driver: ApolloFederationDriver,
+      path: '/delivery/graphql',
+      autoSchemaFile: {
+        federation: 2,
+      },
+      context: ({ req }) => ({
+        req,
+        user: req?.user,
+        language: req?.headers?.['accept-language'] || 'en',
+      }),
+      playground: true,
+      debug: false,
     }),
 
     TypeOrmModule.forRootAsync({
@@ -87,24 +98,10 @@ import { HealthController } from './health.controller';
       }),
     }),
 
-    GraphQLModule.forRoot<ApolloFederationDriverConfig>({
-      driver: ApolloFederationDriver,
-      path: '/delivery/graphql',
-      autoSchemaFile: {
-        federation: 2,
-      },
-      context: ({ req }) => ({
-        req,
-        user: req.user,
-        language: req.headers['accept-language'] || 'en',
-      }),
-      playground: true,
-      debug: false,
-    }),
-
     LoggingModule,
     MetricsModule,
     AutomationModule,
+    TranslationModule,
     DeliveryModule,
     DeliveryKafkaModule,
     DeliveryNatsModule,
@@ -113,6 +110,7 @@ import { HealthController } from './health.controller';
   controllers: [HealthController],
   providers: [
     DeliveryMetricsService,
+
     {
       provide: APP_FILTER,
       useClass: GraphQLExceptionFilter,

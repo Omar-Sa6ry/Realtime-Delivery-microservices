@@ -1,4 +1,4 @@
-﻿import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
 
@@ -10,6 +10,7 @@ export class DeliveryStateMachine {
   > = {
     [DeliveryStatus.CREATED]: [
       DeliveryStatus.PENDING_PAYMENT,
+      DeliveryStatus.PAYMENT_CONFIRMED,
       DeliveryStatus.CANCELLED,
     ],
     [DeliveryStatus.PENDING_PAYMENT]: [

@@ -1,8 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
-import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Context, Mutation, Resolver, ResolveReference } from '@nestjs/graphql';
 import { I18nService } from 'nestjs-i18n';
 import { Auth, Permission } from '@delivery/common';
 import { DeliveryCommandService } from '../services/delivery-command.service';
+import { DeliveryQueryService } from '../services/delivery-query.service';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
 import {
   CreateDeliveryInputDto,
@@ -16,8 +17,14 @@ import { addressFromInput, deliveryToGraphql } from './delivery.mapper';
 export class DeliveryResolver {
   constructor(
     private readonly commands: DeliveryCommandService,
+    private readonly queries: DeliveryQueryService,
     private readonly i18n: I18nService,
   ) {}
+
+  @ResolveReference()
+  async resolveReference(reference: { __typename: string; id: string }): Promise<DeliveryType> {
+    return deliveryToGraphql(await this.queries.getById(reference.id));
+  }
 
   @Auth([Permission.CREATE_DELIVERY])
   @Mutation(() => DeliveryResponse)

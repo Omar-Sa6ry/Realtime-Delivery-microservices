@@ -1,7 +1,7 @@
-import { Query, Resolver, Context } from '@nestjs/graphql';
+import { Query, Resolver, Context, Directive, Field, ObjectType } from '@nestjs/graphql';
 import { I18nService } from 'nestjs-i18n';
-import { Field, ObjectType } from '@nestjs/graphql';
 
+@Directive('@shareable')
 @ObjectType()
 class DeliveryServiceInfo {
   @Field(() => String)

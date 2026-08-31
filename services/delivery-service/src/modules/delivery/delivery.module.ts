@@ -41,6 +41,7 @@ import { DeliveryKafkaModule } from '../infrastructure/kafka/kafka.module';
     IdempotencyService,
     DeliveryResolver,
     DeliveryQueryResolver,
+    AppResolver,
     OutboxRepository,
     OutboxPublisherService,
     KafkaProducer,

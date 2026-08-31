@@ -29,10 +29,10 @@ spec:
             httpGet:
               path: /realtime/health
               port: 4006
-            initialDelaySeconds: 10
+            initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 30
-            timeoutSeconds: 5
+            timeoutSeconds: 10
           readinessProbe:
             httpGet:
               path: /realtime/ready

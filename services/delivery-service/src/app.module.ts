@@ -9,7 +9,7 @@ import {
 } from '@nestjs/apollo';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
-import { RedisModule, NotificationModule } from '@bts-soft/core';
+import { RedisModule } from '@bts-soft/core';
 import { TranslationModule } from './common/translation/translation.module';
 import deliveryConfig from './common/config/delivery.config';
 import { DeliveryMetricsService } from './common/metrics/delivery-metrics.service';
@@ -34,7 +34,9 @@ import { HealthController } from './health.controller';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [deliveryConfig],
-      envFilePath: ['../../config/.env'],
+      envFilePath: [
+        '../../config/env/.env.' + (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
+      ],
     }),
 
     RedisModule,

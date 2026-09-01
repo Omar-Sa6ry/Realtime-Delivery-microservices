@@ -60,18 +60,40 @@ export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit(): Promise<void> {
-    try {
-      await this.consumer.connect();
-      await this.consumer.subscribe({ topics: CONSUMED_TOPICS, fromBeginning: false });
-      await this.consumer.run({
-        eachMessage: async (payload) => this.handleMessage(payload),
-      });
-      this.connected = true;
-      this.logger.log('Kafka consumer started (realtime-service-group)');
-    } catch (err) {
-      this.connected = false;
-      this.logger.error(`Kafka consumer failed to start: ${err.message}`);
+    this.startConsumerWithRetry();
+  }
+
+  private async startConsumerWithRetry(retries = 10, delayMs = 5000): Promise<void> {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const admin = this.kafka.getClient().admin();
+        await admin.connect();
+        const existingTopics = await admin.listTopics();
+        const topicsToCreate = CONSUMED_TOPICS.filter((t) => !existingTopics.includes(t)).map(
+          (t) => ({ topic: t }),
+        );
+
+        if (topicsToCreate.length > 0) {
+          await admin.createTopics({ topics: topicsToCreate });
+          this.logger.log(`Created missing Kafka topics: ${topicsToCreate.map((t) => t.topic).join(', ')}`);
+        }
+        await admin.disconnect();
+
+        await this.consumer.connect();
+        await this.consumer.subscribe({ topics: CONSUMED_TOPICS, fromBeginning: false });
+        await this.consumer.run({
+          eachMessage: async (payload) => this.handleMessage(payload),
+        });
+        this.connected = true;
+        this.logger.log('Kafka consumer started (realtime-service-group)');
+        return;
+      } catch (err) {
+        this.connected = false;
+        this.logger.warn(`Kafka consumer failed to start (attempt ${i + 1}/${retries}): ${err.message}`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
     }
+    this.logger.error('Kafka consumer failed to start after maximum retries');
   }
 
   private async handleMessage(payload: EachMessagePayload): Promise<void> {

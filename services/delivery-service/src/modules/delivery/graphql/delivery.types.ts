@@ -30,6 +30,22 @@ export class DeliveryAddressType {
   longitude?: number;
 }
 
+@Directive('@shareable')
+@ObjectType()
+export class DeliveryStatusHistoryType {
+  @Field(() => String)
+  status: string;
+
+  @Field(() => String, { nullable: true })
+  changedBy?: string;
+
+  @Field(() => String, { nullable: true })
+  note?: string;
+
+  @Field(() => Date)
+  createdAt: Date;
+}
+
 @Directive('@key(fields: "id")')
 @ObjectType()
 export class DeliveryType {
@@ -59,6 +75,9 @@ export class DeliveryType {
 
   @Field(() => DeliveryAddressType)
   dropoffAddress: DeliveryAddressType;
+
+  @Field(() => [DeliveryStatusHistoryType], { nullable: true })
+  statusHistory?: DeliveryStatusHistoryType[];
 
   @Field(() => Date, { nullable: true })
   pickedUpAt?: Date;
@@ -104,3 +123,21 @@ export class DeliveryStatusesData {
 @Directive('@shareable')
 @ObjectType()
 export class DeliveryStatusesResponse extends GeneralResponse(DeliveryStatusesData) {}
+
+@Directive('@shareable')
+@ObjectType()
+export class DeliveryServiceInfo {
+  @Field(() => String)
+  name: string;
+
+  @Field(() => String)
+  version: string;
+
+  @Field(() => String)
+  status: string;
+}
+
+@Directive('@shareable')
+@ObjectType()
+export class DeliveryServiceInfoResponse extends GeneralResponse(DeliveryServiceInfo) {}
+

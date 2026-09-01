@@ -6,6 +6,7 @@ import { RateLimit, RateLimiterAlgorithm } from '@bts-soft/validation';
 import { DeliveryQueryService } from '../services/delivery-query.service';
 import {
   DeliveryType,
+  DeliveryResponse,
   DeliveryListResponse,
   DeliveryStatusesResponse,
 } from './delivery.types';
@@ -21,9 +22,18 @@ export class DeliveryQueryResolver {
 
   @Auth([Permission.VIEW_DELIVERY])
   @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 60, windowMs: 60000 })
-  @Query(() => DeliveryType, { nullable: true })
-  async delivery(@Args('id') id: string): Promise<DeliveryType> {
-    return deliveryToGraphql(await this.queries.getById(id));
+  @Query(() => DeliveryResponse)
+  async delivery(
+    @Args('id') id: string,
+    @Context() ctx: GraphqlContext,
+  ): Promise<DeliveryResponse> {
+    const delivery = await this.queries.getById(id);
+    return {
+      success: true,
+      statusCode: 200,
+      message: await this.i18n.t('delivery.retrieved', { lang: ctx.language }),
+      data: deliveryToGraphql(delivery),
+    };
   }
 
   @Auth([Permission.VIEW_DELIVERY])

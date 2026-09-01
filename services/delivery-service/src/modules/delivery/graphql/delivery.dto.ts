@@ -51,8 +51,11 @@ export class CreateDeliveryInputDto {
 
 @InputType()
 export class TransitionDeliveryInput {
-  @Field(() => String)
-  deliveryId: string;
+  @Field(() => String, { nullable: true })
+  deliveryId?: string;
+
+  @Field(() => String, { nullable: true })
+  id?: string;
 
   @Field(() => String)
   status: string;

@@ -1,4 +1,4 @@
-﻿import { Delivery } from '../../delivery/entities/delivery.entity';
+import { Delivery } from '../../delivery/entities/delivery.entity';
 import { Address } from '../../delivery/entities/address.entity';
 import { AddressInput } from './delivery.dto';
 import { DeliveryType } from './delivery.types';
@@ -45,6 +45,12 @@ export function deliveryToGraphql(delivery: Delivery): DeliveryType {
       latitude: delivery.dropoffAddress.latitude ?? undefined,
       longitude: delivery.dropoffAddress.longitude ?? undefined,
     },
+    statusHistory: delivery.statusHistory?.map((h) => ({
+      status: h.status,
+      changedBy: h.changedBy ?? undefined,
+      note: h.note ?? undefined,
+      createdAt: h.createdAt,
+    })) ?? undefined,
     pickedUpAt: delivery.pickedUpAt ?? undefined,
     completedAt: delivery.completedAt ?? undefined,
     cancelledAt: delivery.cancelledAt ?? undefined,

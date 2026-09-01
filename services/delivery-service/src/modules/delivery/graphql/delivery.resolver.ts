@@ -62,8 +62,12 @@ export class DeliveryResolver {
     @Args('input') input: TransitionDeliveryInput,
     @Context() ctx: GraphqlContext,
   ): Promise<DeliveryResponse> {
+    const targetId = input.deliveryId ?? input.id;
+    if (!targetId) {
+      throw new BadRequestException('deliveryId or id is required');
+    }
     const delivery = await this.commands.transition(
-      input.deliveryId,
+      targetId as string,
       input.status as DeliveryStatus,
       ctx.req?.user?.id,
       input.note,
@@ -81,14 +85,20 @@ export class DeliveryResolver {
   @Auth([Permission.CANCEL_DELIVERY])
   @Mutation(() => DeliveryResponse)
   async cancelDelivery(
-    @Args('deliveryId') deliveryId: string,
-    @Context() ctx: GraphqlContext,
+    @Args({ name: 'deliveryId', type: () => String, nullable: true }) deliveryIdArg?: string,
+    @Args({ name: 'id', type: () => String, nullable: true }) idArg?: string,
+    @Args({ name: 'reason', type: () => String, nullable: true }) reason?: string,
+    @Context() ctx?: GraphqlContext,
   ): Promise<DeliveryResponse> {
-    const delivery = await this.commands.cancel(deliveryId, ctx.req?.user?.id);
+    const targetId = deliveryIdArg ?? idArg;
+    if (!targetId) {
+      throw new BadRequestException('deliveryId or id is required');
+    }
+    const delivery = await this.commands.cancel(targetId as string, ctx?.req?.user?.id, reason);
     return {
       success: true,
       statusCode: 200,
-      message: await this.i18n.t('delivery.cancelled', { lang: ctx.language }),
+      message: await this.i18n.t('delivery.cancelled', { lang: ctx?.language }),
       data: deliveryToGraphql(delivery),
     };
   }

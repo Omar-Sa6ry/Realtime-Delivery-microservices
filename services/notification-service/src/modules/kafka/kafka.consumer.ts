@@ -45,6 +45,18 @@ export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
           ...Object.values(UserKafkaTopics),
         ];
 
+        // Create missing topics via Admin client
+        const admin = this.kafkaService.getClient().admin();
+        await admin.connect();
+        const existingTopics = await admin.listTopics();
+        const topicsToCreate = topics.filter((t) => !existingTopics.includes(t)).map((t) => ({ topic: t }));
+        
+        if (topicsToCreate.length > 0) {
+          await admin.createTopics({ topics: topicsToCreate });
+          this.logger.log(`Created missing Kafka topics: ${topicsToCreate.map((t) => t.topic).join(', ')}`);
+        }
+        await admin.disconnect();
+
         for (const topic of topics) {
           await this.consumer.subscribe({ topic, fromBeginning: false });
         }

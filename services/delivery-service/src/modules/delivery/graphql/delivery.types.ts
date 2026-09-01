@@ -76,6 +76,7 @@ export class DeliveryType {
   updatedAt: Date;
 }
 
+@Directive('@shareable')
 @ObjectType()
 export class DeliveryResponse extends GeneralResponse(DeliveryType) {}
 
@@ -89,6 +90,7 @@ export class PaginatedDeliveries {
   total: number;
 }
 
+@Directive('@shareable')
 @ObjectType()
 export class DeliveryListResponse extends GeneralResponse(PaginatedDeliveries) {}
 
@@ -99,5 +101,6 @@ export class DeliveryStatusesData {
   statuses: string[];
 }
 
+@Directive('@shareable')
 @ObjectType()
 export class DeliveryStatusesResponse extends GeneralResponse(DeliveryStatusesData) {}

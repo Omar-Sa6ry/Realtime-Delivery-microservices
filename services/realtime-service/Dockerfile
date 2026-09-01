@@ -8,16 +8,19 @@ RUN npm install --legacy-peer-deps
 RUN npm run build
 
 WORKDIR /usr/src/app
-COPY services/realtime-service/package.json ./services/realtime-service/
+COPY services/realtime-service/package*.json ./services/realtime-service/
 
 WORKDIR /usr/src/app/services/realtime-service
 RUN npm install --legacy-peer-deps
+RUN npm install graphql@16.10.0 --save-exact --legacy-peer-deps
 
 # Clean up duplicate modules from packages/ts to resolve NestJS DI token duplication
 RUN rm -rf /usr/src/app/packages/ts/node_modules/nestjs-i18n \
            /usr/src/app/packages/ts/node_modules/@nestjs \
            /usr/src/app/packages/ts/node_modules/@grpc \
-           /usr/src/app/packages/ts/node_modules/express
+           /usr/src/app/packages/ts/node_modules/express \
+           /usr/src/app/packages/ts/node_modules/graphql \
+           /usr/src/app/packages/ts/node_modules/@apollo
 
 # Symlink the realtime-service node_modules up so packages/ts resolves them to the same instance
 RUN ln -s /usr/src/app/services/realtime-service/node_modules /usr/src/app/node_modules

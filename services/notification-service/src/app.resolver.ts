@@ -4,7 +4,7 @@ import { BooleanResponse } from './common/graphql/general-response.type';
 @Resolver()
 export class AppResolver {
   @Query(() => BooleanResponse)
-  ping(): BooleanResponse {
+  pingForNotification(): BooleanResponse {
     return {
       success: true,
       statusCode: 200,

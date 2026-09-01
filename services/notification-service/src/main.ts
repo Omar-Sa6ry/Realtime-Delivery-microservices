@@ -8,9 +8,11 @@ import { join } from 'path';
 import { I18nValidationException } from 'nestjs-i18n';
 
 async function bootstrap() {
+  const logger = new StructuredLogger();
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
-    logger: new StructuredLogger(),
+    logger,
+    abortOnError: false,
   });
 
   app.enableCors();
@@ -33,7 +35,7 @@ async function bootstrap() {
     transport: Transport.GRPC,
     options: {
       package: 'notification',
-      protoPath: join(__dirname, '../../../protos/notification.proto'),
+      protoPath: join(process.cwd(), '../../protos/notification.proto'),
       url: `0.0.0.0:${configService.get<string>('PORT_GRPC', '50053')}`,
     },
   });
@@ -41,7 +43,6 @@ async function bootstrap() {
   const port = configService.get<string>('PORT_NOTIFICATION', '4004');
   await app.listen(port, '0.0.0.0');
 
-  const logger = new StructuredLogger();
   logger.log(`Notification Service is running on http://localhost:${port}/notification/graphql`);
 
   // Start gRPC transport in the background after HTTP is live.
@@ -53,6 +54,14 @@ async function bootstrap() {
       logger.error(`Microservice startup error: ${err.message}`),
     );
 }
+
+// Keep the process alive while infrastructure (Redis, DB, NATS, Kafka) is still starting:
+process.on('uncaughtException', (err) => {
+  console.error('[process] Uncaught exception (continuing):', err?.message ?? err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[process] Unhandled rejection (continuing):', reason);
+});
 
 bootstrap().catch((err) => {
   console.error('Bootstrap failed, retrying in 10s...', err.message);

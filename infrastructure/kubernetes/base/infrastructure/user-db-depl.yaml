@@ -63,21 +63,21 @@ spec:
             - containerPort: 5432
           startupProbe:
             exec:
-              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_USER" -d delivery_user_db']
+              command: ['/bin/sh', '-c', 'pg_isready -h 127.0.0.1 -U "$POSTGRES_USER" -d delivery_user_db']
             initialDelaySeconds: 3
             periodSeconds: 4
             timeoutSeconds: 5
             failureThreshold: 150
           readinessProbe:
             exec:
-              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_USER" -d delivery_user_db']
+              command: ['/bin/sh', '-c', 'pg_isready -h 127.0.0.1 -U "$POSTGRES_USER" -d delivery_user_db']
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 5
             failureThreshold: 60
           livenessProbe:
             exec:
-              command: ['/bin/sh', '-c', 'pg_isready -U "$POSTGRES_USER" -d delivery_user_db']
+              command: ['/bin/sh', '-c', 'pg_isready -h 127.0.0.1 -U "$POSTGRES_USER" -d delivery_user_db']
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5

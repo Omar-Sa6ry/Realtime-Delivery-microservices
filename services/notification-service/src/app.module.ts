@@ -7,9 +7,9 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloFederationDriver, ApolloFederationDriverConfig } from '@nestjs/apollo';
 import { JwtModule } from '@nestjs/jwt';
 import { RedisModule } from '@bts-soft/cache';
-import { NotificationModule as BtsNotificationModule } from '@bts-soft/core';
 import { StringValue } from 'ms';
 import { join } from 'path';
+import { NotificationModule as BtsNotificationModule } from '@bts-soft/notifications';
 import { AppResolver } from './app.resolver';
 import { CommonModule } from './common/common.module';
 import { TranslationModule } from './common/translation/translation.module';
@@ -86,7 +86,6 @@ import {
       driver: ApolloFederationDriver,
       path: '/notification/graphql',
       autoSchemaFile: {
-        path: join(process.cwd(), 'src/schema.gql'),
         federation: 2,
       },
       context: ({ req }) => ({

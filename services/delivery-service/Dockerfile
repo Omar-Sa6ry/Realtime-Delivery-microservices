@@ -8,10 +8,11 @@ RUN npm install --legacy-peer-deps
 RUN npm run build
 
 WORKDIR /usr/src/app
-COPY services/delivery-service/package.json ./services/delivery-service/
+COPY services/delivery-service/package*.json ./services/delivery-service/
 
 WORKDIR /usr/src/app/services/delivery-service
 RUN npm install --legacy-peer-deps
+RUN npm install graphql@16.10.0 --save-exact --legacy-peer-deps
 
 # Clean up duplicate modules from packages/ts to resolve NestJS DI token duplication
 RUN rm -rf /usr/src/app/packages/ts/node_modules/nestjs-i18n \

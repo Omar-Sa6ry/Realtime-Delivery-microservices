@@ -58,7 +58,6 @@ import realtimeConfig from './common/config/realtime.config';
       driver: ApolloFederationDriver,
       path: '/realtime/graphql',
       autoSchemaFile: {
-        path: join(process.cwd(), 'src/schema.gql'),
         federation: 2,
       },
       context: ({ req }) => ({

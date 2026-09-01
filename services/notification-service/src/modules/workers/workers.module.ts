@@ -10,11 +10,13 @@ import { RealtimeWorker } from './realtime.worker';
 import { ScheduledWorker } from './scheduled.worker';
 import { RetryWorker } from './retry.worker';
 import { DeliveryStateService } from './delivery-state.service';
+import { NotificationModule as BtsNotificationModule } from '@bts-soft/notifications';
 import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Notification, NotificationDelivery]),
+    BtsNotificationModule,
     NotificationModule,
   ],
   providers: [

@@ -1,4 +1,4 @@
-import { Resolver, Query, Mutation, Args, Context } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, Context, ResolveReference } from '@nestjs/graphql';
 import {
   UserType,
   UserResponse,
@@ -19,6 +19,11 @@ export class UserResolver {
     private readonly userService: UserService,
     private readonly i18n: I18nService,
   ) {}
+
+  @ResolveReference()
+  async resolveReference(reference: { __typename: string; id: string }): Promise<UserType> {
+    return (await this.userService.findById(reference.id)) as unknown as UserType;
+  }
 
   @Query(() => UserResponse)
   @Auth([Permission.VIEW_USER])

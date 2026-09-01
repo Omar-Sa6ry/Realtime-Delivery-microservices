@@ -1,4 +1,4 @@
-import { ObjectType, Field, InputType } from '@nestjs/graphql';
+import { ObjectType, Field, InputType, Directive } from '@nestjs/graphql';
 import {
   EmailField,
   PasswordField,
@@ -11,6 +11,7 @@ import { GeneralResponse } from '../../../common/graphql/general-response.type';
 
 import { UserType } from '../../user/dto/user.types';
 
+@Directive('@shareable')
 @ObjectType()
 export class AuthPayloadType {
   @Field(() => UserType)
@@ -23,6 +24,7 @@ export class AuthPayloadType {
   refreshToken: string;
 }
 
+@Directive('@shareable')
 @ObjectType()
 export class AuthResponse extends GeneralResponse(AuthPayloadType) {}
 

@@ -1,7 +1,8 @@
-import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { ObjectType, Field, ID, Directive } from '@nestjs/graphql';
 import { NotificationType, NotificationChannel } from '@delivery/common';
 import { GeneralResponse } from '../../../common/graphql/general-response.type';
 
+@Directive('@shareable')
 @ObjectType()
 export class NotificationPreferenceTypeObj {
   @Field(() => ID)
@@ -17,5 +18,6 @@ export class NotificationPreferenceTypeObj {
   enabled: boolean;
 }
 
+@Directive('@shareable')
 @ObjectType()
 export class NotificationPreferenceResponse extends GeneralResponse(NotificationPreferenceTypeObj) {}

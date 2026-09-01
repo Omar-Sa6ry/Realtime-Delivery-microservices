@@ -36,6 +36,10 @@ spec:
               value: "Admin_12345678"
             - name: "OPENSEARCH_JAVA_OPTS"
               value: "-Xms512m -Xmx512m"
+            - name: "DISABLE_INSTALL_DEMO_CONFIG"
+              value: "true"
+            - name: "bootstrap.memory_lock"
+              value: "false"
           startupProbe:
             tcpSocket:
               port: 9200

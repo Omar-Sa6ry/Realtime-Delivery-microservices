@@ -1,5 +1,4 @@
 import { ObjectType, Field, Int, Directive, registerEnumType } from '@nestjs/graphql';
-import { GraphqlBaseResponse } from '@bts-soft/core';
 
 export enum PresenceStatus {
   ONLINE = 'ONLINE',
@@ -14,7 +13,19 @@ registerEnumType(PresenceStatus, {
 
 @Directive('@shareable')
 @ObjectType()
-export class BooleanResponse extends GraphqlBaseResponse {
+export class BooleanResponse {
+  @Field(() => String, { nullable: true, defaultValue: 'Operation executed successfully' })
+  message?: string = 'Operation executed successfully';
+
+  @Field(() => Boolean, { nullable: true, defaultValue: true })
+  success?: boolean = true;
+
+  @Field(() => String, { nullable: true })
+  timeStamp?: string = new Date().toISOString();
+
+  @Field(() => Int, { nullable: true, defaultValue: 200 })
+  statusCode?: number = 200;
+
   @Field(() => Boolean, { nullable: true })
   data?: boolean;
 }
@@ -55,14 +66,40 @@ export class ConnectionsCountData {
   byRole: ConnectionsByRole;
 }
 
+@Directive('@shareable')
 @ObjectType()
-export class ConnectionStatusResponse extends GraphqlBaseResponse {
+export class ConnectionStatusResponse {
+  @Field(() => String, { nullable: true, defaultValue: 'Operation executed successfully' })
+  message?: string = 'Operation executed successfully';
+
+  @Field(() => Boolean, { nullable: true, defaultValue: true })
+  success?: boolean = true;
+
+  @Field(() => String, { nullable: true })
+  timeStamp?: string = new Date().toISOString();
+
+  @Field(() => Int, { nullable: true, defaultValue: 200 })
+  statusCode?: number = 200;
+
   @Field(() => ConnectionStatusData, { nullable: true })
   data?: ConnectionStatusData;
 }
 
+@Directive('@shareable')
 @ObjectType()
-export class ConnectionsCountResponse extends GraphqlBaseResponse {
+export class ConnectionsCountResponse {
+  @Field(() => String, { nullable: true, defaultValue: 'Operation executed successfully' })
+  message?: string = 'Operation executed successfully';
+
+  @Field(() => Boolean, { nullable: true, defaultValue: true })
+  success?: boolean = true;
+
+  @Field(() => String, { nullable: true })
+  timeStamp?: string = new Date().toISOString();
+
+  @Field(() => Int, { nullable: true, defaultValue: 200 })
+  statusCode?: number = 200;
+
   @Field(() => ConnectionsCountData, { nullable: true })
   data?: ConnectionsCountData;
 }

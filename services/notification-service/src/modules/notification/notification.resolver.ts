@@ -20,7 +20,7 @@ import {
 import { NotificationPreferenceResponse } from './dtos/preference.dto';
 import { NotificationPreferenceInput } from './inputs/preference.input';
 import { NotificationPreference } from '../../common/database/entities/notification-preference.entity';
-import { IntResponse, BooleanResponse } from '../../common/graphql/general-response.type';
+import { IntResponse, BooleanResponse } from '@delivery/common';
 
 const FIXED_WINDOW_RATE_LIMIT = { algorithm: RateLimiterAlgorithm.FIXED_WINDOW_COUNTER };
 
@@ -165,3 +165,4 @@ export class NotificationResolver {
     } as NotificationPreferenceResponse;
   }
 }
+

@@ -1,6 +1,6 @@
 import { ObjectType, Field, InputType, Directive, ID } from '@nestjs/graphql';
 import { PasswordField, PhoneField, TextField } from '@bts-soft/core';
-import { GeneralResponse } from '../../../common/graphql/general-response.type';
+import { GeneralResponse } from '@delivery/common';
 import { IsBoolean, IsOptional, IsNumber, IsString } from 'class-validator';
 
 @Directive('@key(fields: "id")')
@@ -163,3 +163,4 @@ export class AddressListResponse extends GeneralResponse(AddressType) {
   @Field(() => [AddressType], { nullable: true })
   data?: AddressType[];
 }
+

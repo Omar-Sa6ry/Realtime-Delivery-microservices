@@ -8,7 +8,7 @@ import {
   AddressResponse,
   AddressListResponse,
 } from './dto/user.types';
-import { BooleanResponse } from '../../common/graphql/general-response.type';
+import { BooleanResponse } from '@delivery/common';
 import { UserService } from './user.service';
 import { Auth, Permission } from '@delivery/common';
 import { I18nService } from 'nestjs-i18n';
@@ -185,3 +185,4 @@ export class UserResolver {
     } as BooleanResponse;
   }
 }
+

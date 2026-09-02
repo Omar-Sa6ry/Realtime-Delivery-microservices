@@ -1,6 +1,6 @@
 import { Field, ObjectType, Directive, ID } from '@nestjs/graphql';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
-import { GeneralResponse } from '../../../common/graphql/general-response.type';
+import { GeneralResponse } from '@delivery/common';
 
 @Directive('@shareable')
 @ObjectType()
@@ -140,4 +140,5 @@ export class DeliveryServiceInfo {
 @Directive('@shareable')
 @ObjectType()
 export class DeliveryServiceInfoResponse extends GeneralResponse(DeliveryServiceInfo) {}
+
 

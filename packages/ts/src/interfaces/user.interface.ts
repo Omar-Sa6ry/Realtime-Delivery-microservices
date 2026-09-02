@@ -20,5 +20,12 @@ export interface IJwtPayload {
 export interface IUser {
   id: string;
   email: string;
+  firstName: string;
+  lastName: string;
   role: Role;
+  phoneNumber?: string;
+  isActive: boolean;
+  isVerified: boolean;
+  createdAt: number;
+  updatedAt: number;
 }

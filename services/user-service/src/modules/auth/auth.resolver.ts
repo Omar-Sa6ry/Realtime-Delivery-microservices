@@ -10,7 +10,7 @@ import {
   ResetPasswordInput,
   RefreshTokenInput
 } from './dto/auth.types';
-import { BooleanResponse } from '../../common/graphql/general-response.type';
+import { BooleanResponse } from '@delivery/common';
 import { AuthService } from './auth.service';
 import { RoleGuard, RedisRateLimit, RateLimiterAlgorithm } from '@delivery/common';
 
@@ -110,3 +110,4 @@ export class AuthResolver {
     } as AuthResponse;
   }
 }
+

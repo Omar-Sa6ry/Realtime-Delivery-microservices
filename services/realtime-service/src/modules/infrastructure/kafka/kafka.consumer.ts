@@ -13,6 +13,7 @@ import {
   DeliveryKafkaTopics,
   PaymentKafkaTopics,
   RealtimeKafkaTopics,
+  BaseKafkaConsumer,
 } from '@delivery/common';
 import { KafkaEventHandler, REALTIME_EVENT_HANDLERS } from './handlers/base-kafka-event.handler';
 import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
@@ -29,29 +30,21 @@ const CONSUMED_TOPICS = [
   PaymentKafkaTopics.PAYMENT_FAILED,
 ];
 
-/**
- * Kafka consumer for the realtime fan-out pipeline.
- * Consumer group: realtime-service-group (scales with replicas — each event goes to one node).
- *  - deserialize envelope       (KafkaEventEnvelope)
- *  - route to handler by eventType (Strategy)
- *  - handler performs: validate schema -> dedup -> map -> NATS fan-out
- *  - failures are routed to the DLQ (realtime.delivery.dlq / realtime.payment.dlq)
- *  - offsets are committed by kafkajs after processing (at-least-once + idempotent handlers)
- */
 @Injectable()
-export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(KafkaConsumer.name);
-  private consumer: Consumer;
+export class KafkaConsumer extends BaseKafkaConsumer {
+  protected readonly logger: any = new Logger(KafkaConsumer.name);
+  protected consumer: Consumer;
+  protected topics = CONSUMED_TOPICS;
   private readonly registry = new Map<string, KafkaEventHandler>();
-  private connected = false;
 
   constructor(
-    private readonly kafka: KafkaService,
+    protected readonly kafkaService: KafkaService,
     private readonly config: ConfigService,
     private readonly metrics: RealtimeMetricsService,
     @Inject(REALTIME_EVENT_HANDLERS) handlers: KafkaEventHandler[],
   ) {
-    this.consumer = this.kafka.consumer(
+    super();
+    this.consumer = this.kafkaService.consumer(
       this.config.get<string>('KAFKA_GROUP_ID', 'realtime-service-group'),
     );
     for (const handler of handlers) {
@@ -59,44 +52,7 @@ export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async onModuleInit(): Promise<void> {
-    this.startConsumerWithRetry();
-  }
-
-  private async startConsumerWithRetry(retries = 10, delayMs = 5000): Promise<void> {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const admin = this.kafka.getClient().admin();
-        await admin.connect();
-        const existingTopics = await admin.listTopics();
-        const topicsToCreate = CONSUMED_TOPICS.filter((t) => !existingTopics.includes(t)).map(
-          (t) => ({ topic: t }),
-        );
-
-        if (topicsToCreate.length > 0) {
-          await admin.createTopics({ topics: topicsToCreate });
-          this.logger.log(`Created missing Kafka topics: ${topicsToCreate.map((t) => t.topic).join(', ')}`);
-        }
-        await admin.disconnect();
-
-        await this.consumer.connect();
-        await this.consumer.subscribe({ topics: CONSUMED_TOPICS, fromBeginning: false });
-        await this.consumer.run({
-          eachMessage: async (payload) => this.handleMessage(payload),
-        });
-        this.connected = true;
-        this.logger.log('Kafka consumer started (realtime-service-group)');
-        return;
-      } catch (err) {
-        this.connected = false;
-        this.logger.warn(`Kafka consumer failed to start (attempt ${i + 1}/${retries}): ${err.message}`);
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
-    }
-    this.logger.error('Kafka consumer failed to start after maximum retries');
-  }
-
-  private async handleMessage(payload: EachMessagePayload): Promise<void> {
+  protected async handleMessage(payload: EachMessagePayload): Promise<void> {
     try {
       const envelope = JSON.parse(payload.message.value?.toString() || '{}') as KafkaEventEnvelope;
       if (!envelope?.eventId || !envelope?.eventType) {
@@ -113,9 +69,9 @@ export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
       await handler.handle(envelope);
     } catch (err) {
       this.logger.error(
-        `Failed to process Kafka message (topic=${payload.topic}): ${err.message}`,
+        `Failed to process Kafka message (topic=${payload.topic}): ${(err as Error).message}`,
       );
-      await this.routeToDlq(payload, err);
+      await this.routeToDlq(payload, err as Error);
     }
   }
 
@@ -126,7 +82,7 @@ export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
 
     this.metrics.kafkaDlq.inc({ topic: payload.topic });
     try {
-      await this.kafka.emit(
+      await this.kafkaService.emit(
         dlqTopic,
         'realtime.dlq',
         {
@@ -139,21 +95,7 @@ export class KafkaConsumer implements OnModuleInit, OnModuleDestroy {
       );
       this.logger.warn(`Message routed to DLQ [${dlqTopic}]`);
     } catch (dlqErr) {
-      this.logger.error(`Failed to write to DLQ: ${dlqErr.message}`);
-    }
-  }
-
-  isConnected(): boolean {
-    return this.connected;
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    try {
-      await this.consumer.disconnect();
-      this.connected = false;
-      this.logger.log('Kafka consumer disconnected');
-    } catch (err) {
-      this.logger.error(`Kafka disconnect failed: ${err.message}`);
+      this.logger.error(`Failed to write to DLQ: ${(dlqErr as Error).message}`);
     }
   }
 }

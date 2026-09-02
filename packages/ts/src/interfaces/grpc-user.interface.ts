@@ -1,5 +1,7 @@
 export const USER_PACKAGE_NAME = 'user';
 export const USER_SERVICE_NAME = 'UserService';
+export const USER_FULL_SERVICE = '/user.UserService';
+export const JWT_PAYLOAD_KEY = 'jwt-payload';
 
 export interface GetUserRequest {
   id: string;

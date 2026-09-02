@@ -1,6 +1,6 @@
 import { ObjectType, Field, ID, Directive } from '@nestjs/graphql';
 import { NotificationType, NotificationChannel } from '@delivery/common';
-import { GeneralResponse } from '../../../common/graphql/general-response.type';
+import { GeneralResponse } from '@delivery/common';
 
 @Directive('@shareable')
 @ObjectType()

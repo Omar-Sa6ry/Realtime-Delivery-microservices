@@ -1,7 +1,7 @@
-import { ObjectType, Field, Int, Directive } from '@nestjs/graphql';
+import { ObjectType, Field, Directive, Int } from '@nestjs/graphql';
 import { Type } from '@nestjs/common';
 
-export function GeneralResponse<T>(classRef: Type<T>) {
+export function GeneralResponse<T>(classRef: Type<T>): any {
   @Directive('@shareable')
   @ObjectType({ isAbstract: true })
   abstract class GeneralResponseClass {

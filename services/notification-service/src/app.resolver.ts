@@ -1,5 +1,5 @@
 import { Resolver, Query } from '@nestjs/graphql';
-import { BooleanResponse } from './common/graphql/general-response.type';
+import { BooleanResponse } from '@delivery/common';
 
 @Resolver()
 export class AppResolver {

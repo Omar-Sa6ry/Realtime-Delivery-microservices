@@ -84,6 +84,11 @@ var RolePermissionsMap = map[Role][]Permission{
 		PermissionUpdateNotification,
 		PermissionDeleteNotification,
 		PermissionManageNotificationPreferences,
+		PermissionCreateDelivery,
+		PermissionViewDelivery,
+		PermissionUpdateDeliveryStatus,
+		PermissionCancelDelivery,
+		PermissionAssignDeliveryDriver,
 	},
 	RoleUser: {
 		PermissionUpdateUser,
@@ -95,6 +100,9 @@ var RolePermissionsMap = map[Role][]Permission{
 		PermissionReadNotification,
 		PermissionUpdateNotification,
 		PermissionManageNotificationPreferences,
+		PermissionCreateDelivery,
+		PermissionViewDelivery,
+		PermissionCancelDelivery,
 	},
 	RoleDriver: {
 		PermissionUpdateUser,
@@ -105,6 +113,9 @@ var RolePermissionsMap = map[Role][]Permission{
 		PermissionReadNotification,
 		PermissionUpdateNotification,
 		PermissionManageNotificationPreferences,
+		PermissionViewDelivery,
+		PermissionUpdateDeliveryStatus,
+		PermissionAssignDeliveryDriver,
 	},
 }
 
@@ -261,3 +272,40 @@ const (
 	SearchSuggestCacheTTL  = 300
 )
 
+
+// Delivery permissions shared with the TypeScript package.
+const (
+	PermissionCreateDelivery        Permission = "create_delivery"
+	PermissionViewDelivery          Permission = "view_delivery"
+	PermissionUpdateDeliveryStatus  Permission = "update_delivery_status"
+	PermissionCancelDelivery        Permission = "cancel_delivery"
+	PermissionAssignDeliveryDriver  Permission = "assign_delivery_driver"
+)
+
+// Additional notification types shared with the TypeScript package.
+const (
+	NotificationTypeMediaUploadCompleted   NotificationType = "MEDIA_UPLOAD_COMPLETED"
+	NotificationTypeMediaUploadFailed      NotificationType = "MEDIA_UPLOAD_FAILED"
+	NotificationTypeMediaScanFailed        NotificationType = "MEDIA_SCAN_FAILED"
+	NotificationTypeMediaProcessingFailed  NotificationType = "MEDIA_PROCESSING_FAILED"
+	NotificationTypeMediaReady             NotificationType = "MEDIA_READY"
+	NotificationTypeMediaDeleted            NotificationType = "MEDIA_DELETED"
+	NotificationTypeMediaDeleteFailed       NotificationType = "MEDIA_DELETE_FAILED"
+	NotificationTypeUserRegistered          NotificationType = "USER_REGISTERED"
+	NotificationTypePasswordResetRequested  NotificationType = "PASSWORD_RESET_REQUESTED"
+)
+
+// Payment, user, and realtime Kafka topics shared with the TypeScript package.
+const (
+	PaymentTopicCompleted = "payment.completed"
+	PaymentTopicFailed    = "payment.failed"
+	PaymentTopicRefunded  = "payment.refunded"
+
+	UserTopicCreated              = "user.created"
+	UserTopicUpdated              = "user.updated"
+	UserTopicDeleted              = "user.deleted"
+	UserTopicPasswordResetRequested = "user.password_reset_requested"
+
+	RealtimeTopicDLQDelivery = "realtime.delivery.dlq"
+	RealtimeTopicDLQPayment  = "realtime.payment.dlq"
+)

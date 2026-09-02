@@ -77,3 +77,5 @@ export * from "./automation/automation.module";
 export * from './events/payment.events';
 
 
+export * from "./graphql/general-response.type";
+export * from "./kafka/base-kafka-consumer";

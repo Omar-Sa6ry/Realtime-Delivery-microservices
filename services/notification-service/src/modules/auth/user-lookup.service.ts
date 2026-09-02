@@ -42,6 +42,12 @@ export class UserLookupService implements OnModuleInit {
       id: user.id,
       email: user.email || '',
       role: this.normalizeRole(user.role),
+      firstName: user.first_name || '',
+      lastName: user.last_name || '',
+      isActive: user.is_active ?? true,
+      isVerified: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
 
     return resolved;

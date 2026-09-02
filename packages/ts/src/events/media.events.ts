@@ -47,6 +47,7 @@ export interface MediaUploadCreatedPayload {
 export interface MediaUploadCompletedPayload {
   mediaId: string;
   userId: string;
+  fileName: string;
   objectKey: string;
   size: number;
   contentType: string;
@@ -56,6 +57,8 @@ export interface MediaUploadCompletedPayload {
 export interface MediaReadyPayload {
   mediaId: string;
   userId: string;
+  fileName: string;
+  size: number;
   mediaType: string;
   contentType: string;
   versions: MediaVersionInfo[];

@@ -6,7 +6,7 @@ import {
   NotificationChannel,
   DeliveryChannelStatus,
 } from '@delivery/common';
-import { GeneralResponse } from '../../../common/graphql/general-response.type';
+import { GeneralResponse } from '@delivery/common';
 
 registerEnumType(NotificationType, {
   name: 'NotificationType',

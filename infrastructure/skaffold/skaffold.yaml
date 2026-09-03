@@ -111,8 +111,3 @@ portForward:
     resourceName: api-gateway-srv
     port: 4000
     localPort: 4000
-    
-  - resourceType: service
-    resourceName: localstack-srv
-    port: 4566
-    localPort: 4566

@@ -1,4 +1,4 @@
-﻿services:
+services:
   delivery-db-srv:
     image: postgres:15
     pull_policy: missing
@@ -27,6 +27,10 @@
       - "4003:4003"
       - "50054:50054"
       - "9104:9104"
+    networks:
+      default:
+        aliases:
+          - delivery-srv
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT_DELIVERY: ${PORT_DELIVERY:-4003}
@@ -35,12 +39,17 @@
       DB_HOST: delivery-db-srv
       DB_PORT: 5432
       DB_USERNAME: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       DB_NAME: ${DELIVERY_DB_NAME:-delivery_delivery_db}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE: ${JWT_EXPIRE:-36000s}
       REDIS_HOST: redis-srv
       REDIS_PORT: ${REDIS_PORT:-6379}
       NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
       KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka-srv:9092}
+      KAFKA_CLIENT_ID: delivery-service
+      KAFKA_GROUP_ID: delivery-service-group
       SERVICE_NAME: delivery-service
     depends_on:
       - delivery-db-srv

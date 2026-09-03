@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Delivery } from './entities/delivery.entity';
 import { DeliveryStatusHistory } from './entities/delivery-status-history.entity';
@@ -21,11 +21,13 @@ import { DriverAssignmentStep } from './saga/steps/driver-assignment.step';
 
 import { RedisModule, RedisService } from '@bts-soft/core';
 import { DeliveryKafkaModule } from '../infrastructure/kafka/kafka.module';
+import { DeliveryNatsModule } from '../infrastructure/nats/nats.module';
 
 @Module({
   imports: [
     RedisModule,
-    DeliveryKafkaModule,
+    forwardRef(() => DeliveryKafkaModule),
+    DeliveryNatsModule,
     TypeOrmModule.forFeature([
       Delivery,
       DeliveryStatusHistory,
@@ -75,5 +77,3 @@ import { DeliveryKafkaModule } from '../infrastructure/kafka/kafka.module';
   ],
 })
 export class DeliveryModule {}
-
-

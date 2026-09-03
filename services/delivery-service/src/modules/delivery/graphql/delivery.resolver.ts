@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, Logger } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver, ResolveReference } from '@nestjs/graphql';
 import { I18nService } from 'nestjs-i18n';
 import { Auth, Permission } from '@delivery/common';
@@ -12,13 +12,17 @@ import {
 import { DeliveryResponse, DeliveryType } from './delivery.types';
 import type { GraphqlContext } from '../../../common/graphql/graphql-context';
 import { addressFromInput, deliveryToGraphql } from './delivery.mapper';
+import { DeliverySagaOrchestrator } from '../saga/delivery-saga.orchestrator';
 
 @Resolver(() => DeliveryType)
 export class DeliveryResolver {
+  private readonly logger = new Logger(DeliveryResolver.name);
+
   constructor(
     private readonly commands: DeliveryCommandService,
     private readonly queries: DeliveryQueryService,
     private readonly i18n: I18nService,
+    private readonly saga: DeliverySagaOrchestrator,
   ) {}
 
   @ResolveReference()
@@ -48,6 +52,14 @@ export class DeliveryResolver {
       dropoffAddress: addressFromInput(input.dropoffAddress),
       idempotencyKey: input.idempotencyKey,
     });
+
+    // Run saga workflow asynchronously in the background
+    setImmediate(() => {
+      this.saga.execute(delivery.id).catch((err: Error) => {
+        this.logger.error(`Saga failed for delivery [${delivery.id}]: ${err.message}`);
+      });
+    });
+
     return {
       success: true,
       statusCode: 201,
@@ -103,7 +115,3 @@ export class DeliveryResolver {
     };
   }
 }
-
-
-
-

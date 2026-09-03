@@ -1,0 +1,44 @@
+# ==============================================================================
+# REALTIME WEBSOCKETS TESTING GUIDE (POSTMAN)
+# ==============================================================================
+
+# URL for Postman WebSocket Request:
+# ws://localhost:4000/realtime
+
+# ------------------------------------------------------------------------------
+# 1. AUTHENTICATION
+# ------------------------------------------------------------------------------
+# Copy the JSON below into the "Message" tab in Postman and click "Send".
+# Replace YOUR_JWT_ACCESS_TOKEN_HERE with the token from the login mutation.
+
+# {
+#   "event": "auth",
+#   "data": {
+#     "token": "YOUR_JWT_ACCESS_TOKEN_HERE"
+#   }
+# }
+
+# ------------------------------------------------------------------------------
+# 2. SUBSCRIBE TO DELIVERY UPDATES
+# ------------------------------------------------------------------------------
+# Once authenticated, send this message to subscribe to a delivery's status.
+# Replace CUSTOMER_ID_HERE with the ID of the logged-in user.
+
+# {
+#   "event": "subscribe",
+#   "data": {
+#     "channel": "delivery.status.CUSTOMER_ID_HERE"
+#   }
+# }
+
+# ------------------------------------------------------------------------------
+# 3. UNSUBSCRIBE FROM DELIVERY UPDATES
+# ------------------------------------------------------------------------------
+# Send this message to stop receiving updates for the channel.
+
+# {
+#   "event": "unsubscribe",
+#   "data": {
+#     "channel": "delivery.status.CUSTOMER_ID_HERE"
+#   }
+# }

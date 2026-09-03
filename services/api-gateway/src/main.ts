@@ -9,7 +9,12 @@ import { waitForRedis, waitForService } from './utils/waitService.util';
 
 const LIVENESS_PORT = Number(process.env.PORT_LIVENESS ?? 4099);
 const livenessServer = http.createServer((req, res) => {
-  if (req.url === '/health' || req.url === '/health/ready' || req.url === '/health/live' || req.url === '/') {
+  if (
+    req.url === '/health' ||
+    req.url === '/health/ready' ||
+    req.url === '/health/live' ||
+    req.url === '/'
+  ) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'alive', service: 'api-gateway' }));
     return;
@@ -71,7 +76,35 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT_GATEWAY ?? 4000;
+
+  // WebSocket Proxy for Realtime Service
+  const { createProxyMiddleware } = require('http-proxy-middleware');
+  const wsProxy = createProxyMiddleware({
+    target: 'http://realtime-srv:4006',
+    ws: true,
+    changeOrigin: true,
+    pathFilter: '/realtime',
+  });
+  app.use(wsProxy);
+
+  // HTTP Proxy for Localstack (S3)
+  const s3Proxy = createProxyMiddleware({
+    target: 'http://localstack-srv:4566',
+    changeOrigin: true,
+    pathFilter: '/localstack',
+    pathRewrite: { '^/localstack': '' },
+  });
+  app.use(s3Proxy);
+
   await app.listen(port, '0.0.0.0');
+
+  // Attach the proxy upgrade handler manually to the underlying HTTP server
+  const httpServer = app.getHttpServer();
+  httpServer.on('upgrade', (req: any, socket: any, head: any) => {
+    if (req.url && req.url.startsWith('/realtime')) {
+      wsProxy.upgrade(req, socket, head);
+    }
+  });
 
   logger.log(
     `API Gateway is running on: https://delivery.test/graphql or http://localhost:${port}/graphql`,
@@ -86,4 +119,3 @@ function runBootstrap() {
 }
 
 runBootstrap();
-

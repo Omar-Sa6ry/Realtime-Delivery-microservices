@@ -43,15 +43,15 @@ spec:
           startupProbe:
             tcpSocket:
               port: 9200
-            initialDelaySeconds: 20
-            periodSeconds: 5
-            failureThreshold: 120
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 60
           readinessProbe:
             tcpSocket:
               port: 9200
             initialDelaySeconds: 10
-            periodSeconds: 5
-            failureThreshold: 60
+            periodSeconds: 10
+            failureThreshold: 30
           livenessProbe:
             tcpSocket:
               port: 9200

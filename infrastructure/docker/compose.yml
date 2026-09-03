@@ -1,4 +1,4 @@
-﻿
+
 
 services:
   # --- Infrastructure ---
@@ -385,6 +385,7 @@ services:
       NOTIFICATION_SERVICE_URL: "http://notification-srv:4004/notification/graphql"
       REALTIME_SERVICE_URL: "http://realtime-srv:4006/realtime/graphql"
       SEARCH_SERVICE_URL: "http://search-srv:4007/search/graphql"
+      DELIVERY_SERVICE_URL: "http://delivery-srv:4003/delivery/graphql"
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - redis-srv
@@ -393,6 +394,7 @@ services:
       - notification-service
       - realtime-service
       - search-service
+      - delivery-service
     volumes:
       - ../../services/api-gateway/src:/usr/src/app/services/api-gateway/src
       - ../../packages/ts:/usr/src/app/packages/ts
@@ -424,6 +426,10 @@ services:
       - "4003:4003"
       - "50054:50054"
       - "9104:9104"
+    networks:
+      default:
+        aliases:
+          - delivery-srv
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT_DELIVERY: ${PORT_DELIVERY:-4003}
@@ -432,11 +438,26 @@ services:
       DB_HOST: delivery-db-srv
       DB_PORT: 5432
       DB_USERNAME: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       DB_NAME: ${DELIVERY_DB_NAME:-delivery_delivery_db}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE: ${JWT_EXPIRE:-36000s}
+      REDIS_HOST: redis-srv
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka-srv:9092}
+      KAFKA_CLIENT_ID: delivery-service
+      KAFKA_GROUP_ID: delivery-service-group
     depends_on:
       - delivery-db-srv
       - redis-srv
+      - nats-srv
+      - kafka-srv
+    volumes:
+      - ../../services/delivery-service/src:/usr/src/app/services/delivery-service/src
+      - ../../packages/ts:/usr/src/app/packages/ts
+      - ../../protos:/usr/src/app/protos
 
 volumes:
   delivery_db_data:

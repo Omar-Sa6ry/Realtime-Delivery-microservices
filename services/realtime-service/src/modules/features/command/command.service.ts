@@ -8,7 +8,7 @@ import { IJwtPayload, Role } from '@delivery/common';
 import { AssignmentCommandPayload } from '../../../common/common-types/ws-message.types';
 import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ID_RE = /^[0-9a-zA-Z_-]{8,64}$/;
 
 export type CommandKind = 'ACCEPT_ASSIGNMENT' | 'REJECT_ASSIGNMENT' | 'COMPLETE_DELIVERY';
 
@@ -40,7 +40,7 @@ export class CommandService {
     payload: AssignmentCommandPayload,
   ): Promise<{ accepted: boolean; duplicate?: boolean; rejected?: boolean }> {
     // 1. Validate shape
-    if (!payload?.deliveryId || !UUID_RE.test(payload.deliveryId)) {
+    if (!payload?.deliveryId || !ID_RE.test(payload.deliveryId)) {
       throw new WsException(WsErrorCode.INVALID_DELIVERY_ID, 'Invalid deliveryId', false);
     }
     if (typeof payload.commandId !== 'string' || payload.commandId.length < 8) {

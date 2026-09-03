@@ -2,43 +2,68 @@
 # REALTIME WEBSOCKETS TESTING GUIDE (POSTMAN)
 # ==============================================================================
 
-# URL for Postman WebSocket Request:
-# ws://localhost:4000/realtime
-
 # ------------------------------------------------------------------------------
-# 1. AUTHENTICATION
+# 1. CONNECTION & AUTHENTICATION (Handshake)
 # ------------------------------------------------------------------------------
-# Copy the JSON below into the "Message" tab in Postman and click "Send".
-# Replace YOUR_JWT_ACCESS_TOKEN_HERE with the token from the login mutation.
-
+# In Postman WebSocket Request:
+# 
+# Option A (Recommended - via Query Parameter):
+# Enter this URL in Postman (replace YOUR_JWT_ACCESS_TOKEN with your login token):
+# ws://localhost:4000/ws?token=YOUR_JWT_ACCESS_TOKEN_HERE
+#
+# Option B (via Request Headers):
+# URL: ws://localhost:4000/ws
+# In the "Headers" tab in Postman, add:
+# Key: Authorization
+# Value: Bearer YOUR_JWT_ACCESS_TOKEN_HERE
+#
+# Click "Connect". 
+# Upon success, the server will respond immediately with:
 # {
-#   "event": "auth",
+#   "type": "CONNECTED",
+#   "timestamp": "2026-09-03T...",
+#   "data": { "socketId": "...", "nodeId": "..." }
+# }
+
+# ------------------------------------------------------------------------------
+# 2. PING / HEARTBEAT
+# ------------------------------------------------------------------------------
+# Send this in the "Message" tab:
+# {
+#   "type": "PING"
+# }
+
+# ------------------------------------------------------------------------------
+# 3. SUBSCRIBE TO DELIVERY UPDATES
+# ------------------------------------------------------------------------------
+# Send this message to subscribe to real-time events for a specific delivery:
+# {
+#   "type": "SUBSCRIBE_DELIVERY",
 #   "data": {
-#     "token": "YOUR_JWT_ACCESS_TOKEN_HERE"
+#     "deliveryId": "YOUR_DELIVERY_ID_HERE"
 #   }
 # }
 
 # ------------------------------------------------------------------------------
-# 2. SUBSCRIBE TO DELIVERY UPDATES
+# 4. UNSUBSCRIBE FROM DELIVERY UPDATES
 # ------------------------------------------------------------------------------
-# Once authenticated, send this message to subscribe to a delivery's status.
-# Replace CUSTOMER_ID_HERE with the ID of the logged-in user.
-
 # {
-#   "event": "subscribe",
+#   "type": "UNSUBSCRIBE_DELIVERY",
 #   "data": {
-#     "channel": "delivery.status.CUSTOMER_ID_HERE"
+#     "deliveryId": "YOUR_DELIVERY_ID_HERE"
 #   }
 # }
 
 # ------------------------------------------------------------------------------
-# 3. UNSUBSCRIBE FROM DELIVERY UPDATES
+# 5. DRIVER LOCATION UPDATE (For Driver)
 # ------------------------------------------------------------------------------
-# Send this message to stop receiving updates for the channel.
-
 # {
-#   "event": "unsubscribe",
+#   "type": "LOCATION_UPDATE",
 #   "data": {
-#     "channel": "delivery.status.CUSTOMER_ID_HERE"
+#     "deliveryId": "YOUR_DELIVERY_ID_HERE",
+#     "latitude": 30.0444,
+#     "longitude": 31.2357,
+#     "heading": 90.0,
+#     "speed": 35.5
 #   }
 # }

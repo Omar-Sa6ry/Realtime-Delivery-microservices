@@ -2,8 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { LocationUpdatePayload, LocationUpdateResult } from './location.types';
 import { TIMINGS } from '../../../common/common-types/constants';
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ID_RE = /^[0-9a-zA-Z_-]{8,64}$/;
 
 @Injectable()
 export class LocationValidator {
@@ -11,8 +10,8 @@ export class LocationValidator {
     const errors: string[] = [];
 
     const deliveryId = payload?.deliveryId;
-    if (typeof deliveryId !== 'string' || !UUID_RE.test(deliveryId)) {
-      errors.push('deliveryId must be a valid UUID');
+    if (typeof deliveryId !== 'string' || !ID_RE.test(deliveryId)) {
+      errors.push('deliveryId must be a valid ID');
     }
 
     const lat = payload?.lat;

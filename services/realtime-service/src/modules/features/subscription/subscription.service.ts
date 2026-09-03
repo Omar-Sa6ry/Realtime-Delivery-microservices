@@ -28,7 +28,11 @@ export class SubscriptionService {
     if (!canSubscribe) {
       throw new WsException(
         WsErrorCode.FORBIDDEN,
-        this.translate(user.role === Role.DRIVER ? 'ws.notAssignedDriver' : 'ws.notParticipant'),
+        this.translate(
+          user.role === Role.DRIVER
+            ? 'messages.ws.notAssignedDriver'
+            : 'messages.ws.notParticipant',
+        ),
         false,
       );
     }

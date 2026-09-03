@@ -77,13 +77,17 @@ async function bootstrap() {
 
   const port = process.env.PORT_GATEWAY ?? 4000;
 
-  // WebSocket Proxy for Realtime Service
+  // WebSocket Proxy for Realtime Service (handles both /ws and /realtime)
   const { createProxyMiddleware } = require('http-proxy-middleware');
   const wsProxy = createProxyMiddleware({
     target: 'http://realtime-srv:4006',
     ws: true,
     changeOrigin: true,
-    pathFilter: '/realtime',
+    pathFilter: (pathname: string) =>
+      pathname.startsWith('/realtime') || pathname.startsWith('/ws'),
+    pathRewrite: {
+      '^/realtime': '/ws',
+    },
   });
   app.use(wsProxy);
 
@@ -101,7 +105,10 @@ async function bootstrap() {
   // Attach the proxy upgrade handler manually to the underlying HTTP server
   const httpServer = app.getHttpServer();
   httpServer.on('upgrade', (req: any, socket: any, head: any) => {
-    if (req.url && req.url.startsWith('/realtime')) {
+    if (
+      req.url &&
+      (req.url.startsWith('/realtime') || req.url.startsWith('/ws'))
+    ) {
       wsProxy.upgrade(req, socket, head);
     }
   });

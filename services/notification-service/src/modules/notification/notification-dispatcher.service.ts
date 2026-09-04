@@ -30,7 +30,7 @@ export class NotificationDispatcherService {
         deliveryId: delivery.id,
       };
 
-      const jobId = `${notification.id}:${delivery.channel}`;
+      const jobId = `${notification.id}-${delivery.channel}`;
 
       try {
         switch (delivery.channel) {
@@ -67,7 +67,7 @@ export class NotificationDispatcherService {
       await this.scheduledQueue.add(
         'dispatch',
         { notificationId: notification.id },
-        { delay, jobId: `scheduled:${notification.id}` },
+        { delay, jobId: `scheduled-${notification.id}` },
       );
       this.logger.debug(`Scheduled notification ${notification.id} for ${scheduledAt.toISOString()}`);
     } catch (error) {

@@ -1,5 +1,6 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { lastValueFrom } from 'rxjs';
 import { Delivery } from '../entities/delivery.entity';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
 import { PaymentStatus } from '../enums/payment-status.enum';
@@ -19,16 +20,43 @@ export interface CreateDeliveryInput {
 }
 
 @Injectable()
-export class DeliveryCommandService {
+export class DeliveryCommandService implements OnModuleInit {
+  private readonly logger = new Logger(DeliveryCommandService.name);
+  private userServiceClient: any;
+
   constructor(
     private readonly repository: DeliveryRepository,
     private readonly stateMachine: DeliveryStateMachine,
     private readonly idempotency: IdempotencyService,
     private readonly outbox: OutboxRepository,
+    @Inject('USER_SERVICE') private readonly userServiceClientGrpc: any,
     @Optional() private readonly nats?: NatsService,
   ) {}
 
+  onModuleInit() {
+    this.userServiceClient = this.userServiceClientGrpc.getService('UserService');
+  }
+
   async create(input: CreateDeliveryInput): Promise<Delivery> {
+    // Validate customer existence via gRPC
+    if (this.userServiceClient) {
+      try {
+        const user = await lastValueFrom(this.userServiceClient.GetUser({ id: input.customerId }));
+        if (!user || !(user as any).id) {
+          throw new BadRequestException(`Customer with ID ${input.customerId} does not exist`);
+        }
+      } catch (err: any) {
+        if (err instanceof BadRequestException) {
+          throw err;
+        }
+        if (err?.code === 5 || err?.details?.includes('not found')) {
+          throw new BadRequestException(`Customer with ID ${input.customerId} does not exist`);
+        }
+        this.logger.error(`Failed to validate customer via gRPC: ${err.message}`);
+        throw new BadRequestException('Could not validate customer ID');
+      }
+    }
+
     const operation = async () => {
       const delivery = await this.repository.create({
         customerId: input.customerId,
@@ -85,6 +113,9 @@ export class DeliveryCommandService {
   ): Promise<Delivery> {
     const delivery = await this.repository.findById(id);
     await this.stateMachine.assertTransition(delivery.status, status);
+    if (delivery.status === status) {
+      return delivery;
+    }
     delivery.status = status;
     if (status === DeliveryStatus.PICKED_UP) delivery.pickedUpAt = new Date();
     if (status === DeliveryStatus.COMPLETED) delivery.completedAt = new Date();

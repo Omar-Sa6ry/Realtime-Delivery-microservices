@@ -1,18 +1,18 @@
 {
-  "delivery": {
-    "created": "Delivery created successfully",
-    "statusUpdated": "Delivery status updated successfully",
-    "cancelled": "Delivery cancelled successfully",
-    "retrieved": "Deliveries retrieved successfully",
-    "nextStatusesRetrieved": "Next delivery statuses retrieved successfully",
-    "serviceInfo": "Delivery service information",
-    "customerIdRequired": "Customer ID is required",
-    "authenticatedCustomerRequired": "An authenticated customer is required",
-    "invalidTransition": "Invalid delivery transition: {{from}} -> {{to}}",
-    "notFound": "Delivery {{id}} was not found",
-    "idempotencyInProgress": "An operation with this idempotency key is already in progress",
-    "started": "Delivery service is running on {{url}}",
-    "microserviceStartupError": "Microservice startup error: {{message}}",
-    "bootstrapFailed": "Bootstrap failed; retrying in 10 seconds: {{message}}"
-  }
+  "created": "Delivery created successfully",
+  "statusUpdated": "Delivery status updated successfully",
+  "cancelled": "Delivery cancelled successfully",
+  "retrieved": "Deliveries retrieved successfully",
+  "nextStatusesRetrieved": "Next delivery statuses retrieved successfully",
+  "serviceInfo": "Delivery service information",
+  "customerIdRequired": "Customer ID is required",
+  "authenticatedCustomerRequired": "An authenticated customer is required",
+  "invalidTransition": "Invalid delivery transition: {from} -> {to}",
+  "notFound": "Delivery {id} was not found",
+  "idempotencyInProgress": "An operation with this idempotency key is already in progress",
+  "started": "Delivery service is running on {url}",
+  "microserviceStartupError": "Microservice startup error: {message}",
+  "bootstrapFailed": "Bootstrap failed; retrying in 10 seconds: {message}",
+  "unauthorizedAccess": "You are not authorized to view this delivery",
+  "unauthorizedCancel": "You are not authorized to cancel this delivery"
 }

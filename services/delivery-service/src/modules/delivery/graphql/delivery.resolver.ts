@@ -1,4 +1,4 @@
-import { BadRequestException, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { Args, Context, Mutation, Resolver, ResolveReference } from '@nestjs/graphql';
 import { I18nService } from 'nestjs-i18n';
 import { Auth, Permission } from '@delivery/common';
@@ -36,14 +36,22 @@ export class DeliveryResolver {
     @Args('input') input: CreateDeliveryInputDto,
     @Context() ctx: GraphqlContext,
   ): Promise<DeliveryResponse> {
-    const customerId =
-      input.customerId ?? ctx.req?.user?.id ?? ctx.req?.headers?.['x-user-id'];
-    if (!customerId)
+    const tokenUserId = ctx.req?.user?.id ?? ctx.req?.headers?.['x-user-id'];
+    const userRole = (ctx.req?.user as any)?.role ?? ctx.req?.headers?.['x-user-role'];
+
+    let customerId = tokenUserId;
+    if (userRole === 'ADMIN' || userRole === 'admin') {
+      customerId = input.customerId ?? tokenUserId;
+    }
+
+    if (!customerId) {
       throw new BadRequestException(
         await this.i18n.t('delivery.customerIdRequired', {
           lang: ctx.language,
         }),
       );
+    }
+
     const delivery = await this.commands.create({
       customerId,
       amount: input.amount,
@@ -93,7 +101,7 @@ export class DeliveryResolver {
       data: deliveryToGraphql(delivery),
     };
   }
-  
+
   @Auth([Permission.CANCEL_DELIVERY])
   @Mutation(() => DeliveryResponse)
   async cancelDelivery(
@@ -106,7 +114,19 @@ export class DeliveryResolver {
     if (!targetId) {
       throw new BadRequestException('deliveryId or id is required');
     }
-    const delivery = await this.commands.cancel(targetId as string, ctx?.req?.user?.id, reason);
+
+    const tokenUserId = ctx?.req?.user?.id ?? ctx?.req?.headers?.['x-user-id'];
+    const userRole = (ctx?.req?.user as any)?.role ?? ctx?.req?.headers?.['x-user-role'];
+    const isAdmin = userRole === 'ADMIN' || userRole === 'admin';
+
+    const existing = await this.queries.getById(targetId as string);
+    if (!isAdmin && existing.customerId !== tokenUserId) {
+      throw new ForbiddenException(
+        await this.i18n.t('delivery.unauthorizedCancel', { lang: ctx?.language }),
+      );
+    }
+
+    const delivery = await this.commands.cancel(targetId as string, tokenUserId, reason);
     return {
       success: true,
       statusCode: 200,

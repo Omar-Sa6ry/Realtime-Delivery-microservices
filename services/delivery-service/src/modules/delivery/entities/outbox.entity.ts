@@ -1,4 +1,4 @@
-﻿import {
+import {
   Column,
   CreateDateColumn,
   Entity,
@@ -21,7 +21,7 @@ export class Outbox {
   id: string = IdGenerator.generate('snowflake');
 
   @Index({ unique: true })
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ type: 'varchar', length: 64 })
   eventId!: string;
 
   @Index()

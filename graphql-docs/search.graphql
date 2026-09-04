@@ -68,20 +68,39 @@ query {
 
 
 # Search deliveries (search-service)
+# Supports full-text query, status filter, city, driverId, customerId, fromDate, toDate, geo bounding, and pagination
 query {
   searchDeliveries(
     input: {
-      query: "downtown"
+      query: "Cairo"
+      status: "CREATED"
       pagination: { limit: 10 }
     }
   ) {
-    success
-    statusCode
-    message
     items {
       delivery_id
       customer_id
+      driver_id
       status
+      pickup {
+        city
+        country
+        location {
+          lat
+          lon
+        }
+      }
+      dropoff {
+        city
+        country
+        location {
+          lat
+          lon
+        }
+      }
+      created_at
+      updated_at
+      source_version
     }
     pageInfo {
       hasNextPage
@@ -99,13 +118,18 @@ query {
       pagination: { limit: 10 }
     }
   ) {
-    success
-    statusCode
-    message
     items {
       driver_id
       name
       status
+      vehicle_type
+      rating
+      location {
+        lat
+        lon
+      }
+      updated_at
+      source_version
     }
     pageInfo {
       hasNextPage

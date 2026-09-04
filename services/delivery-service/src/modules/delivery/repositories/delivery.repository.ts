@@ -45,21 +45,23 @@ export class DeliveryRepository {
     });
   }
   
-  appendHistory(
+  async appendHistory(
     delivery: Delivery,
     status: DeliveryStatus,
     changedBy?: string,
     note?: string,
   ): Promise<DeliveryStatusHistory> {
-    return this.history.save(
-      this.history.create({
-        deliveryId: delivery.id,
-        delivery,
-        status,
-        changedBy: changedBy ?? null,
-        note: note ?? null,
-        metadata: null,
-      }),
-    );
+    const historyItem = this.history.create({
+      deliveryId: delivery.id,
+      status,
+      changedBy: changedBy ?? null,
+      note: note ?? null,
+      metadata: null,
+    });
+    const saved = await this.history.save(historyItem);
+    if (delivery.statusHistory && Array.isArray(delivery.statusHistory)) {
+      delivery.statusHistory.push(saved);
+    }
+    return saved;
   }
 }

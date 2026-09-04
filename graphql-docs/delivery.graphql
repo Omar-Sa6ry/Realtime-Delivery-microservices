@@ -1,105 +1,4 @@
-# ------------------------------------------------------------------------------
-# 1. QUERIES
-# ------------------------------------------------------------------------------
-
-# 1.1 Get Delivery by ID (including Full Address, Status History & Timestamps)
-query GetDelivery {
-  delivery(id: "123456789012345678") {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      id
-      customerId
-      driverId
-      status
-      paymentStatus
-      amount
-      currency
-      pickupAddress {
-        line1
-        line2
-        city
-        state
-        postalCode
-        countryCode
-        latitude
-        longitude
-      }
-      dropoffAddress {
-        line1
-        line2
-        city
-        state
-        postalCode
-        countryCode
-        latitude
-        longitude
-      }
-      statusHistory {
-        status
-        changedBy
-        note
-        createdAt
-      }
-      pickedUpAt
-      completedAt
-      cancelledAt
-      createdAt
-      updatedAt
-    }
-  }
-}
-
-# 1.2 Get My Deliveries (Paginated for Authenticated Customer)
-query GetMyDeliveries {
-  myDeliveries(page: 1, pageSize: 20) {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      total
-      items {
-        id
-        customerId
-        driverId
-        status
-        paymentStatus
-        amount
-        currency
-        pickupAddress {
-          line1
-          city
-          countryCode
-        }
-        dropoffAddress {
-          line1
-          city
-          countryCode
-        }
-        createdAt
-        updatedAt
-      }
-    }
-  }
-}
-
-# 1.3 Get Allowed Next State Transitions for a Delivery
-query GetDeliveryNextStatuses {
-  deliveryNextStatuses(id: "123456789012345678") {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      statuses
-    }
-  }
-}
-
-# 1.4 Get Delivery Service Health & Info
+# Get Delivery Service Health & Info
 query GetDeliveryServiceInfo {
   deliveryServiceInfo {
     success
@@ -114,45 +13,50 @@ query GetDeliveryServiceInfo {
   }
 }
 
-# ------------------------------------------------------------------------------
-# 2. MUTATIONS
-# ------------------------------------------------------------------------------
-
-# 2.1 Create a New Delivery (with Pickup, Dropoff & Idempotency Key)
+# Create a New Delivery (with Pickup, Dropoff & Idempotency Key)
 mutation CreateDelivery {
-  createDelivery(input: {
-    amount: "25.50"
-    currency: "USD"
-    pickupAddress: {
-      line1: "1 Main Street"
-      line2: "Floor 3, Apt 12"
-      city: "Cairo"
-      state: "Cairo"
-      postalCode: "11511"
-      countryCode: "EG"
-      latitude: 30.0444
-      longitude: 31.2357
+  createDelivery(
+    input: {
+      amount: "25.50"
+      currency: "USD"
+      # customerId:"354267546792235009"
+      pickupAddress: {
+        line1: "1 Main Street"
+        line2: "Floor 3, Apt 12"
+        city: "Cairo"
+        state: "Cairo"
+        postalCode: "11511"
+        countryCode: "EG"
+        latitude: 30.0444
+        longitude: 31.2357
+      }
+      dropoffAddress: {
+        line1: "2 Nile Corniche"
+        line2: "Tower A"
+        city: "Giza"
+        state: "Giza"
+        postalCode: "12511"
+        countryCode: "EG"
+        latitude: 30.0131
+        longitude: 31.2089
+      }
+      idempotencyKey: "decreate-123456789c0123e45r67c8"
     }
-    dropoffAddress: {
-      line1: "2 Nile Corniche"
-      line2: "Tower A"
-      city: "Giza"
-      state: "Giza"
-      postalCode: "12511"
-      countryCode: "EG"
-      latitude: 30.0131
-      longitude: 31.2089
-    }
-    idempotencyKey: "delivery-create-123456789012345678"
-  }) {
+  ) {
     success
     statusCode
     message
     timeStamp
     data {
       id
-      customerId
-      driverId
+      driver {
+        email
+      }
+      customer {
+        email
+        firstName
+        role
+      }
       status
       paymentStatus
       amount
@@ -161,6 +65,11 @@ mutation CreateDelivery {
         line1
         city
         countryCode
+        line2
+        state
+        postalCode
+        latitude
+        longitude
       }
       dropoffAddress {
         line1
@@ -173,36 +82,80 @@ mutation CreateDelivery {
   }
 }
 
-# 2.2 Transition Delivery Status (State Machine Progression)
+# Get Allowed Next State Transitions for a Delivery
+query GetDeliveryNextStatuses {
+  deliveryNextStatuses(id: "354303639159836672") {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      statuses
+    }
+  }
+}
+
+# Transition Delivery Status (State Machine Progression)
 # Possible statuses: DRIVER_ASSIGNED, DRIVER_ACCEPTED, PICKED_UP, IN_TRANSIT, COMPLETED, CANCELLED
 mutation TransitionDelivery {
-  transitionDelivery(input: {
-    deliveryId: "123456789012345678"
-    status: "DRIVER_ASSIGNED"
-    note: "Driver assigned to pickup package"
-  }) {
+  transitionDelivery(
+    input: {
+      deliveryId: "354303639159836672"
+      status: DRIVER_ACCEPTED
+      note: "Driver assigned to pickup package"
+    }
+  ) {
     success
     statusCode
     message
     timeStamp
     data {
       id
-      customerId
-      driverId
+      driver {
+        email
+      }
+      customer {
+        email
+        firstName
+        role
+      }
       status
       paymentStatus
       pickedUpAt
       completedAt
       cancelledAt
+      currency
+      amount
+      statusHistory {
+        status
+        changedBy
+        note
+        createdAt
+      }
+      pickupAddress {
+        line1
+        city
+        countryCode
+        line2
+        state
+        postalCode
+        latitude
+        longitude
+      }
+      dropoffAddress {
+        line1
+        city
+        countryCode
+      }
       updatedAt
     }
   }
 }
 
-# 2.3 Cancel a Delivery
+#Cancel a Delivery
 mutation CancelDelivery {
   cancelDelivery(
-    deliveryId: "123456789012345678"
+    deliveryId: "354301801656225792"
     reason: "Customer requested cancellation before pickup"
   ) {
     success
@@ -213,6 +166,97 @@ mutation CancelDelivery {
       id
       status
       cancelledAt
+      updatedAt
+    }
+  }
+}
+
+# Get My Deliveries (Paginated for Authenticated Customer)
+query GetMyDeliveries {
+  myDeliveries(page: 1, pageSize: 20) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        id
+        driver {
+          email
+        }
+        customer {
+          email
+          firstName
+          role
+        }
+        status
+        paymentStatus
+        amount
+        currency
+        pickupAddress {
+          line1
+          city
+          countryCode
+          line2
+          state
+          postalCode
+          latitude
+          longitude
+        }
+        dropoffAddress {
+          line1
+          city
+          countryCode
+        }
+        createdAt
+        updatedAt
+      }
+    }
+  }
+}
+
+# Get Delivery by ID (including Full Address, Status History & Timestamps)
+query GetDelivery {
+  delivery(id: "354294205775876096") {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      id
+      driver {
+        email
+      }
+      customer {
+        email
+        firstName
+        role
+      }
+      status
+      paymentStatus
+      amount
+      currency
+      pickupAddress {
+        line1
+        city
+        countryCode
+        line2
+        state
+        postalCode
+        latitude
+        longitude
+      }
+      dropoffAddress {
+        line1
+        city
+        countryCode
+      }
+      createdAt
       updatedAt
     }
   }

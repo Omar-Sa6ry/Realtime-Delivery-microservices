@@ -1,5 +1,7 @@
 import { forwardRef, Module } from '@nestjs/common';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { join } from 'path';
 import { Delivery } from './entities/delivery.entity';
 import { DeliveryStatusHistory } from './entities/delivery-status-history.entity';
 import { Outbox } from './entities/outbox.entity';

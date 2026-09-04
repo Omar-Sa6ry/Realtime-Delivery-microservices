@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Args, Context, Int, Query, Resolver } from '@nestjs/graphql';
 import { I18nService } from 'nestjs-i18n';
 import { Auth, Permission } from '@delivery/common';
@@ -28,6 +28,16 @@ export class DeliveryQueryResolver {
     @Context() ctx: GraphqlContext,
   ): Promise<DeliveryResponse> {
     const delivery = await this.queries.getById(id);
+    const tokenUserId = ctx.req?.user?.id ?? ctx.req?.headers?.['x-user-id'];
+    const userRole = (ctx.req?.user as any)?.role ?? ctx.req?.headers?.['x-user-role'];
+    const isAdmin = userRole === 'ADMIN' || userRole === 'admin';
+
+    if (!isAdmin && delivery.customerId !== tokenUserId) {
+      throw new ForbiddenException(
+        await this.i18n.t('delivery.unauthorizedAccess', { lang: ctx.language }),
+      );
+    }
+
     return {
       success: true,
       statusCode: 200,
@@ -63,13 +73,19 @@ export class DeliveryQueryResolver {
       page,
       pageSize,
     );
+    const totalPages = Math.ceil(total / pageSize);
+    const nextPage = page < totalPages ? page + 1 : null;
     return {
       success: true,
       statusCode: 200,
       message: await this.i18n.t('delivery.retrieved', { lang: ctx.language }),
       data: {
         items: deliveries.map(deliveryToGraphql),
-        total,
+        paginationInfo: {
+          totalItems: total,
+          currentPage: page,
+          nextPage,
+        },
       },
     } as DeliveryListResponse;
   }

@@ -51,6 +51,9 @@ export class DeliveryStateMachine {
     from: DeliveryStatus,
     to: DeliveryStatus,
   ): Promise<void> {
+    if (from === to) {
+      return;
+    }
     if (!this.canTransition(from, to)) {
       const message = await this.i18n.t('delivery.invalidTransition', {
         args: { from, to },

@@ -54,11 +54,22 @@ export class RoleGuard implements CanActivate {
       throw new UnauthorizedException(await this.i18n.t('user.INVALID_TOKEN'));
     }
 
-    const userResponse = await this.userService.findById(userId);
-    const user = (userResponse as any).data || userResponse;
+    // Prefer JWT payload role if available to avoid unnecessary DB calls in microservices
+    let userRole = payload.role as Role;
+    
+    // Fallback to user service if role is missing in token
+    if (!userRole && this.userService) {
+      try {
+        const userResponse = await this.userService.findById(userId);
+        const user = (userResponse as any).data || userResponse;
+        userRole = user.role as Role;
+      } catch (err) {
+        // ignore
+      }
+    }
 
-    const hasRole = this.validateRole(user.role as Role, requiredRoles);
-    const userPermissions = rolePermissionsMap[user.role as Role] ?? [];
+    const hasRole = this.validateRole(userRole, requiredRoles);
+    const userPermissions = rolePermissionsMap[userRole] ?? [];
     const hasPermissions = this.validatePermissions(
       userPermissions,
       requiredPermissions,
@@ -70,9 +81,9 @@ export class RoleGuard implements CanActivate {
       );
 
     request['user'] = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
+      id: userId,
+      email: payload.email,
+      role: userRole,
       permissions: userPermissions,
       sessionId: payload.sessionId,
     };

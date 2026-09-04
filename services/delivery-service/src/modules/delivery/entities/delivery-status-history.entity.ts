@@ -1,10 +1,11 @@
-﻿import {
+import {
   Column,
   CreateDateColumn,
   Entity,
   Index,
   ManyToOne,
   PrimaryColumn,
+  JoinColumn,
 } from 'typeorm';
 import { Delivery } from './delivery.entity';
 import { IdGenerator } from '@bts-soft/common';
@@ -34,6 +35,7 @@ export class DeliveryStatusHistory {
   @ManyToOne(() => Delivery, (delivery) => delivery.statusHistory, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'deliveryId' })
   delivery!: Delivery;
 
   @CreateDateColumn({ type: 'timestamp with time zone' })

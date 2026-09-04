@@ -16,11 +16,16 @@ export function addressFromInput(input: AddressInput): Address {
   return address;
 }
 
+function toDate(val: Date | string | undefined | null): Date | undefined {
+  if (!val) return undefined;
+  return val instanceof Date ? val : new Date(val);
+}
+
 export function deliveryToGraphql(delivery: Delivery): DeliveryType {
   return {
     id: delivery.id,
-    customerId: delivery.customerId,
-    driverId: delivery.driverId ?? undefined,
+    customer: { id: delivery.customerId },
+    driver: delivery.driverId ? { id: delivery.driverId } : undefined,
     status: delivery.status,
     paymentStatus: delivery.paymentStatus,
     amount: delivery.amount,
@@ -49,12 +54,12 @@ export function deliveryToGraphql(delivery: Delivery): DeliveryType {
       status: h.status,
       changedBy: h.changedBy ?? undefined,
       note: h.note ?? undefined,
-      createdAt: h.createdAt,
+      createdAt: toDate(h.createdAt)!,
     })) ?? undefined,
-    pickedUpAt: delivery.pickedUpAt ?? undefined,
-    completedAt: delivery.completedAt ?? undefined,
-    cancelledAt: delivery.cancelledAt ?? undefined,
-    createdAt: delivery.createdAt,
-    updatedAt: delivery.updatedAt,
+    pickedUpAt: toDate(delivery.pickedUpAt),
+    completedAt: toDate(delivery.completedAt),
+    cancelledAt: toDate(delivery.cancelledAt),
+    createdAt: toDate(delivery.createdAt)!,
+    updatedAt: toDate(delivery.updatedAt)!,
   };
 }

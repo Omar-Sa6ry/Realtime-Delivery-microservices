@@ -1,5 +1,5 @@
 import { Controller } from '@nestjs/common';
-import { GrpcMethod } from '@nestjs/microservices';
+import { GrpcMethod, RpcException } from '@nestjs/microservices';
 import { UserService } from './user.service';
 import { JwtTokenProvider } from '../../common/security/jwt-token.provider';
 import { USER_SERVICE_NAME } from '@delivery/common';
@@ -21,20 +21,21 @@ export class UserGrpcController {
 
   @GrpcMethod(USER_SERVICE_NAME, 'GetUser')
   async getUser(data: GetUserRequest): Promise<Partial<GetUserResponse>> {
-    try {
-      const user = await this.userService.findById(data.id);
-      if (!user) return {};
-      return {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        first_name: user.firstName,
-        last_name: user.lastName,
-        is_active: user.isActive,
-      };
-    } catch {
-      return {};
+    const user = await this.userService.findById(data.id);
+    if (!user) {
+      throw new RpcException({
+        code: 5, // NOT_FOUND
+        message: `User with ID ${data.id} not found`,
+      });
     }
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      first_name: user.firstName,
+      last_name: user.lastName,
+      is_active: user.isActive,
+    };
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'ValidateToken')

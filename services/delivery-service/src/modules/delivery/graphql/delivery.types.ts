@@ -1,6 +1,25 @@
-import { Field, ObjectType, Directive, ID } from '@nestjs/graphql';
+import { Field, ObjectType, Directive, ID, registerEnumType } from '@nestjs/graphql';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
+import { PaymentStatus } from '../enums/payment-status.enum';
 import { GeneralResponse } from '@delivery/common';
+
+registerEnumType(DeliveryStatus, {
+  name: 'DeliveryStatus',
+  description: 'The lifecycle status of a delivery',
+});
+
+registerEnumType(PaymentStatus, {
+  name: 'PaymentStatus',
+  description: 'The payment status of a delivery',
+});
+
+@Directive('@key(fields: "id")')
+@Directive('@shareable')
+@ObjectType()
+export class UserType {
+  @Field(() => ID)
+  id: string;
+}
 
 @Directive('@shareable')
 @ObjectType()
@@ -33,8 +52,8 @@ export class DeliveryAddressType {
 @Directive('@shareable')
 @ObjectType()
 export class DeliveryStatusHistoryType {
-  @Field(() => String)
-  status: string;
+  @Field(() => DeliveryStatus)
+  status: DeliveryStatus;
 
   @Field(() => String, { nullable: true })
   changedBy?: string;
@@ -52,17 +71,17 @@ export class DeliveryType {
   @Field(() => ID)
   id: string;
 
-  @Field(() => String)
-  customerId: string;
+  @Field(() => UserType, { nullable: true })
+  customer?: UserType;
 
-  @Field(() => String, { nullable: true })
-  driverId?: string;
+  @Field(() => UserType, { nullable: true })
+  driver?: UserType;
 
-  @Field(() => String)
-  status: string;
+  @Field(() => DeliveryStatus)
+  status: DeliveryStatus;
 
-  @Field(() => String)
-  paymentStatus: string;
+  @Field(() => PaymentStatus)
+  paymentStatus: PaymentStatus;
 
   @Field(() => String)
   amount: string;
@@ -101,12 +120,25 @@ export class DeliveryResponse extends GeneralResponse(DeliveryType) {}
 
 @Directive('@shareable')
 @ObjectType()
+export class PaginationInfo {
+  @Field(() => Number)
+  totalItems: number;
+
+  @Field(() => Number)
+  currentPage: number;
+
+  @Field(() => Number, { nullable: true })
+  nextPage?: number | null;
+}
+
+@Directive('@shareable')
+@ObjectType()
 export class PaginatedDeliveries {
   @Field(() => [DeliveryType])
   items: DeliveryType[];
 
-  @Field(() => Number)
-  total: number;
+  @Field(() => PaginationInfo)
+  paginationInfo: PaginationInfo;
 }
 
 @Directive('@shareable')
@@ -116,8 +148,8 @@ export class DeliveryListResponse extends GeneralResponse(PaginatedDeliveries) {
 @Directive('@shareable')
 @ObjectType()
 export class DeliveryStatusesData {
-  @Field(() => [String])
-  statuses: string[];
+  @Field(() => [DeliveryStatus])
+  statuses: DeliveryStatus[];
 }
 
 @Directive('@shareable')
@@ -140,5 +172,6 @@ export class DeliveryServiceInfo {
 @Directive('@shareable')
 @ObjectType()
 export class DeliveryServiceInfoResponse extends GeneralResponse(DeliveryServiceInfo) {}
+
 
 

@@ -70,12 +70,12 @@ export class KafkaConsumer extends BaseKafkaConsumer {
       }
 
       // Save to Inbox
-      await this.inboxRepository.save({
+      await this.inboxRepository.save(this.inboxRepository.create({
         eventId,
         eventType,
         consumer: 'notification-service',
         processedAt: new Date(),
-      });
+      }));
       
     } catch (error) {
       this.logger.error(`Error processing message from topic ${topic}: ${(error as Error).message}`, (error as Error).stack);

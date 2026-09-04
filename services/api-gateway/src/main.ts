@@ -45,6 +45,7 @@ async function bootstrap() {
     'http://search-srv:4007/search/graphql',
     'http://user-srv:4001/user/graphql',
     'http://delivery-srv:4003/delivery/graphql',
+    'http://driver-srv:4008/driver/graphql',
   ];
 
   console.log('[startup] Waiting for subgraphs to be available...');

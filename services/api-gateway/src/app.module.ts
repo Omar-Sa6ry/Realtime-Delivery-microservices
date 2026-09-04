@@ -145,6 +145,12 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
                 process.env.DELIVERY_SERVICE_URL ||
                 'http://delivery-srv:4003/delivery/graphql',
             },
+            {
+              name: 'driver',
+              url:
+                process.env.DRIVER_SERVICE_URL ||
+                'http://driver-srv:4008/driver/graphql',
+            },
           ],
           pollIntervalInMs: 5000,
         }),

@@ -36,6 +36,17 @@ import { DeliveryNatsModule } from '../infrastructure/nats/nats.module';
       Outbox,
       DeliverySagaState,
     ]),
+    ClientsModule.register([
+      {
+        name: 'USER_SERVICE',
+        transport: Transport.GRPC,
+        options: {
+          package: 'user',
+          protoPath: join(process.cwd(), '../../protos/user.proto'),
+          url: process.env.USER_SERVICE_URL || 'user-srv:50051',
+        },
+      },
+    ]),
   ],
   providers: [
     DeliveryRepository,
@@ -52,12 +63,6 @@ import { DeliveryNatsModule } from '../infrastructure/nats/nats.module';
     PaymentConfirmationStep,
     DriverAssignmentStep,
     DeliverySagaOrchestrator,
-    {
-      provide: 'USER_SERVICE',
-      useValue: {
-        findById: async (id: string) => ({ id, email: '', role: 'USER' }),
-      },
-    },
     {
       provide: 'SHARED_REDIS_SERVICE',
       useExisting: RedisService,

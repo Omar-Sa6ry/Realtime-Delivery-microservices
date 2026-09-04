@@ -493,11 +493,17 @@ services:
       LOCATION_STALE_SECONDS: "30"
       LOCK_TTL_MS: "5000"
       MAX_DISPATCH_ATTEMPTS: "5"
+      # LocalStack (for S3/DynamoDB - used by media-service pattern)
+      AWS_DEFAULT_REGION: "us-east-1"
+      AWS_ENDPOINT: "http://localstack-srv:4566"
+      AWS_ACCESS_KEY_ID: "test"
+      AWS_SECRET_ACCESS_KEY: "test"
     depends_on:
       - delivery-db-srv
       - redis-srv
       - nats-srv
       - kafka-srv
+      - localstack-srv
     volumes:
       - ../../services/driver-service:/app/services/driver-service
       - ../../packages/go:/app/packages/go

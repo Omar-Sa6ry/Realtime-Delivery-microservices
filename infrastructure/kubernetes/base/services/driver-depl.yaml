@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: driver-depl
+  namespace: default
+  labels:
+    app: driver
+    version: "1.0.0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: driver
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: driver
+        version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9105"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: driver-service-sa
+      containers:
+      - name: driver-service
+        image: delivery/driver
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: graphql
+          containerPort: 4008
+        - name: grpc
+          containerPort: 50055
+        - name: metrics
+          containerPort: 9105
+        envFrom:
+        - configMapRef:
+            name: driver-service-config
+        - secretRef:
+            name: driver-secrets
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: grpc
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: grpc
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 30
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: grpc
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          failureThreshold: 6
+          timeoutSeconds: 5
+        env:
+          - name: PORT_DRIVER_GRAPHQL
+            value: "4008"
+          - name: PORT_DRIVER_GRPC
+            value: "50055"
+          - name: PORT_DRIVER_METRICS
+            value: "9105"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: driver-depl-pdb
+  namespace: default
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: driver
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: driver-depl
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: driver-depl
+  minReplicas: 1
+  maxReplicas: 10
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 25
+        periodSeconds: 60
+      selectPolicy: Max
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: driver-srv
+  namespace: default
+  labels:
+    app: driver
+spec:
+  selector:
+    app: driver
+  ports:
+  - name: graphql
+    port: 4008
+    targetPort: 4008
+    protocol: TCP
+  - name: grpc
+    port: 50055
+    targetPort: 50055
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: driver-service-sa
+  namespace: default

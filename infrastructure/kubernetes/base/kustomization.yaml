@@ -26,3 +26,7 @@ resources:
   - secrets/realtime-secrets.yaml
   - secrets/search-secrets.yaml
   - secrets/secrets.yaml
+  - services/driver-depl.yaml
+  - infrastructure/driver-db-depl.yaml
+  - configmaps/driver-service-config.yaml
+  - secrets/driver-secrets.yaml

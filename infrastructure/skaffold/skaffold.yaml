@@ -92,6 +92,11 @@ build:
           - src: 'packages/ts/dist/**/*.js'
             dest: /usr/src/app/packages/ts/dist
 
+    - image: delivery/driver
+      context: .
+      docker:
+        dockerfile: services/driver-service/Dockerfile
+
 
 profiles:
   - name: test

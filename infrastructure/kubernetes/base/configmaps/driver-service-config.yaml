@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: driver-service-config
+  namespace: default
+data:
+  # Server
+  PORT_DRIVER_GRAPHQL: "4008"
+  PORT_DRIVER_GRPC: "50055"
+  PORT_DRIVER_METRICS: "9105"
+  NODE_ENV: "development"
+
+  # MongoDB
+  MONGODB_URI: "mongodb://driver-db-srv:27017"
+  MONGODB_DATABASE: "driver_db"
+
+  # Redis
+  REDIS_HOST: "redis-srv"
+  REDIS_PORT: "6379"
+
+  # Kafka
+  KAFKA_BROKERS: "kafka-srv:9092"
+  KAFKA_GROUP_ID: "driver-service"
+  KAFKA_CLIENT_ID: "driver-service"
+
+  # NATS
+  NATS_URL: "nats://nats-srv:4222"
+
+  # Dispatch configuration
+  DISPATCH_SEARCH_RADIUS_KM: "5"
+  ASSIGNMENT_TIMEOUT_SECONDS: "20"
+  LOCATION_STALE_SECONDS: "30"
+  LOCK_TTL_MS: "5000"
+  MAX_DISPATCH_ATTEMPTS: "5"

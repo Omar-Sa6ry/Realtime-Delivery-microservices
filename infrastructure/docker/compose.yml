@@ -135,7 +135,7 @@ services:
       - ../../config/env/.env.${APP_ENV:-development}
     ports:
       - "4005:4005"
-      - "4003:4003"
+      - "4009:4003"
       - "9102:9102"
       - "50052:50052"
     networks:
@@ -457,6 +457,50 @@ services:
     volumes:
       - ../../services/delivery-service/src:/usr/src/app/services/delivery-service/src
       - ../../packages/ts:/usr/src/app/packages/ts
+      - ../../protos:/usr/src/app/protos
+
+  # --- Driver Service ---
+  driver-service:
+    build:
+      context: ../..
+      dockerfile: services/driver-service/Dockerfile
+    container_name: driver-service
+    restart: unless-stopped
+    env_file:
+      - ../../config/env/.env.${APP_ENV:-development}
+    ports:
+      - "4008:4008"
+      - "50055:50055"
+      - "9105:9105"
+    networks:
+      default:
+        aliases:
+          - driver-srv
+    environment:
+      PORT_DRIVER_GRAPHQL: "4008"
+      PORT_DRIVER_GRPC: "50055"
+      PORT_DRIVER_METRICS: "9105"
+      MONGODB_URI: "mongodb://driver-db-srv:27017"
+      MONGODB_DATABASE: "driver_db"
+      REDIS_HOST: "redis-srv"
+      REDIS_PORT: "6379"
+      KAFKA_BROKERS: "kafka-srv:9092"
+      KAFKA_GROUP_ID: "driver-service"
+      KAFKA_CLIENT_ID: "driver-service"
+      NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
+      DISPATCH_SEARCH_RADIUS_KM: "5"
+      ASSIGNMENT_TIMEOUT_SECONDS: "20"
+      LOCATION_STALE_SECONDS: "30"
+      LOCK_TTL_MS: "5000"
+      MAX_DISPATCH_ATTEMPTS: "5"
+    depends_on:
+      - delivery-db-srv
+      - redis-srv
+      - nats-srv
+      - kafka-srv
+    volumes:
+      - ../../services/driver-service:/app/services/driver-service
+      - ../../packages/go:/app/packages/go
       - ../../protos:/usr/src/app/protos
 
 volumes:

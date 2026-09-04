@@ -1,0 +1,77 @@
+services:
+  driver-db-srv:
+    image: mongo:7
+    container_name: driver-mongo-srv
+    ports:
+      - "27017:27017"
+    volumes:
+      - driver_db_data:/data/db
+
+  redis-srv:
+    image: redis:alpine
+    container_name: driver-redis-srv
+    ports:
+      - "6379:6379"
+
+  kafka-srv:
+    image: apache/kafka:3.8.0
+    container_name: driver-kafka-srv
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: CONTROLLER://:9093,PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-srv:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-srv:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+
+  nats-srv:
+    image: nats:2-alpine
+    container_name: driver-nats-srv
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  driver-service:
+    build:
+      context: ../..
+      dockerfile: services/driver-service/Dockerfile
+    container_name: driver-service-local
+    restart: unless-stopped
+    ports:
+      - "4008:4008"
+      - "50055:50055"
+      - "9105:9105"
+    environment:
+      PORT_DRIVER_GRAPHQL:        "4008"
+      PORT_DRIVER_GRPC:           "50055"
+      PORT_DRIVER_METRICS:        "9105"
+      MONGODB_URI:                "mongodb://driver-db-srv:27017"
+      MONGODB_DATABASE:           "driver_db"
+      REDIS_HOST:                 "redis-srv"
+      REDIS_PORT:                 "6379"
+      KAFKA_BROKERS:              "kafka-srv:9092"
+      KAFKA_GROUP_ID:             "driver-service"
+      KAFKA_CLIENT_ID:            "driver-service"
+      NATS_URL:                   "nats://nats-srv:4222"
+      DISPATCH_SEARCH_RADIUS_KM:  "5"
+      ASSIGNMENT_TIMEOUT_SECONDS: "20"
+      LOCATION_STALE_SECONDS:     "30"
+      LOCK_TTL_MS:                "5000"
+      MAX_DISPATCH_ATTEMPTS:      "5"
+    depends_on:
+      - driver-db-srv
+      - redis-srv
+      - kafka-srv
+      - nats-srv
+    volumes:
+      - ./internal:/workspace/services/driver-service/internal
+      - ../../packages/go:/workspace/packages/go
+
+volumes:
+  driver_db_data:

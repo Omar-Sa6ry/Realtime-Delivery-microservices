@@ -2,18 +2,89 @@
 package driver;
 
 service DriverService {
-  rpc IsAssignedDriver (DriverAssignmentRequest) returns (DriverAssignmentResponse);
-  rpc AssignDriver (DriverAssignmentRequest) returns (DriverAssignmentResponse);
-  rpc ReleaseDriver (DriverAssignmentRequest) returns (DriverAssignmentResponse);
+  rpc FindAvailableDrivers (FindAvailableDriversRequest) returns (FindAvailableDriversResponse);
+  rpc ReserveDriver        (ReserveDriverRequest)        returns (ReserveDriverResponse);
+  rpc ReleaseDriver        (ReleaseDriverRequest)        returns (ReleaseDriverResponse);
+  rpc GetDriver            (GetDriverRequest)            returns (GetDriverResponse);
+  rpc GetDriverStatus      (GetDriverStatusRequest)      returns (GetDriverStatusResponse);
+  rpc AssignDriver         (AssignDriverRequest)         returns (AssignDriverResponse);
 }
 
-message DriverAssignmentRequest { 
-  string driverId = 1; 
-  string deliveryId = 2; 
+message FindAvailableDriversRequest {
+  double latitude      = 1;
+  double longitude     = 2;
+  double radiusKm      = 3;
+  string vehicleType   = 4;
+  string deliveryId    = 5;
+  string correlationId = 6;
 }
 
-message DriverAssignmentResponse { 
-  bool assigned = 1; 
-  string driverId = 2; 
-  string deliveryId = 3; 
+message DriverCandidate {
+  string driverId       = 1;
+  double distanceMeters = 2;
+  string vehicleType    = 3;
+  double latitude       = 4;
+  double longitude      = 5;
+}
+
+message FindAvailableDriversResponse {
+  repeated DriverCandidate candidates = 1;
+}
+
+message ReserveDriverRequest {
+  string driverId       = 1;
+  string deliveryId     = 2;
+  string idempotencyKey = 3;
+  string correlationId  = 4;
+}
+
+message ReserveDriverResponse {
+  bool   reserved     = 1;
+  string driverId     = 2;
+  string deliveryId   = 3;
+  string assignmentId = 4;
+}
+
+message ReleaseDriverRequest {
+  string driverId      = 1;
+  string deliveryId    = 2;
+  string reason        = 3;
+  string correlationId = 4;
+}
+
+message ReleaseDriverResponse {
+  bool   released = 1;
+  string driverId = 2;
+}
+
+message AssignDriverRequest {
+  string driverId      = 1;
+  string deliveryId    = 2;
+  string correlationId = 3;
+}
+
+message AssignDriverResponse {
+  bool   assigned     = 1;
+  string driverId     = 2;
+  string deliveryId   = 3;
+  string assignmentId = 4;
+}
+
+message GetDriverRequest  { string driverId = 1; }
+
+message GetDriverResponse {
+  bool   found       = 1;
+  string driverId    = 2;
+  string userId      = 3;
+  string status      = 4;
+  string vehicleType = 5;
+}
+
+message GetDriverStatusRequest  { string driverId = 1; }
+
+message GetDriverStatusResponse {
+  string driverId            = 1;
+  string status              = 2;
+  bool   hasActiveAssignment = 3;
+  string activeDeliveryId    = 4;
 }

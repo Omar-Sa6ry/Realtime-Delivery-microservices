@@ -6,9 +6,19 @@ import "time"
 type DriverEventType string
 
 const (
-	DriverCreated DriverEventType = "driver.created"
-	DriverUpdated DriverEventType = "driver.updated"
-	DriverDeleted DriverEventType = "driver.deleted"
+	DriverCreated             DriverEventType = "driver.created"
+	DriverUpdated             DriverEventType = "driver.updated"
+	DriverDeleted             DriverEventType = "driver.deleted"
+	DriverActivated           DriverEventType = "driver.activated"
+	DriverDeactivated         DriverEventType = "driver.deactivated"
+	DriverAvailable           DriverEventType = "driver.available"
+	DriverUnavailable         DriverEventType = "driver.unavailable"
+	DriverAssignmentOffered   DriverEventType = "driver.assignment.offered"
+	DriverAssignmentAccepted  DriverEventType = "driver.assignment.accepted"
+	DriverAssignmentRejected  DriverEventType = "driver.assignment.rejected"
+	DriverAssignmentExpired   DriverEventType = "driver.assignment.expired"
+	DriverAssignmentReleased  DriverEventType = "driver.assignment.released"
+	DriverAssignmentCompleted DriverEventType = "driver.assignment.completed"
 )
 
 // DriverGeoPoint holds a geographic coordinate for a driver's location.
@@ -44,4 +54,68 @@ type DriverUpdatedPayload struct {
 type DriverDeletedPayload struct {
 	DriverID  string    `json:"driverId"`
 	DeletedAt time.Time `json:"deletedAt"`
+}
+
+// DriverActivatedPayload is emitted when a driver is activated.
+type DriverActivatedPayload struct {
+	DriverID string `json:"driverId"`
+}
+
+// DriverDeactivatedPayload is emitted when a driver is deactivated.
+type DriverDeactivatedPayload struct {
+	DriverID string `json:"driverId"`
+}
+
+// DriverAvailablePayload is emitted when a driver becomes available.
+type DriverAvailablePayload struct {
+	DriverID string `json:"driverId"`
+}
+
+// DriverUnavailablePayload is emitted when a driver becomes unavailable.
+type DriverUnavailablePayload struct {
+	DriverID string `json:"driverId"`
+}
+
+// DriverAssignmentOfferedPayload is emitted when a driver is offered an assignment.
+type DriverAssignmentOfferedPayload struct {
+	AssignmentID   string  `json:"assignmentId"`
+	DriverID       string  `json:"driverId"`
+	DeliveryID     string  `json:"deliveryId"`
+	ExpiresAt      string  `json:"expiresAt"`
+	RadiusKm       float64 `json:"radiusKm"`
+}
+
+// DriverAssignmentAcceptedPayload is emitted when a driver accepts an assignment.
+type DriverAssignmentAcceptedPayload struct {
+	AssignmentID string `json:"assignmentId"`
+	DriverID     string `json:"driverId"`
+	AcceptedAt   string `json:"acceptedAt"`
+}
+
+// DriverAssignmentRejectedPayload is emitted when a driver rejects an assignment.
+type DriverAssignmentRejectedPayload struct {
+	AssignmentID string `json:"assignmentId"`
+	DriverID     string `json:"driverId"`
+	Reason       string `json:"reason"`
+}
+
+// DriverAssignmentExpiredPayload is emitted when a driver assignment offer expires.
+type DriverAssignmentExpiredPayload struct {
+	AssignmentID string `json:"assignmentId"`
+	DriverID     string `json:"driverId"`
+	ExpiredAt    string `json:"expiredAt"`
+}
+
+// DriverAssignmentReleasedPayload is emitted when a driver assignment is released.
+type DriverAssignmentReleasedPayload struct {
+	AssignmentID string `json:"assignmentId"`
+	DriverID     string `json:"driverId"`
+	ReleasedAt   string `json:"releasedAt"`
+}
+
+// DriverAssignmentCompletedPayload is emitted when a driver assignment is completed.
+type DriverAssignmentCompletedPayload struct {
+	AssignmentID string `json:"assignmentId"`
+	DriverID     string `json:"driverId"`
+	CompletedAt  string `json:"completedAt"`
 }

@@ -80,24 +80,35 @@ const (
 	RealtimeTopicDLQPayment  = "realtime.payment.dlq"
 )
 
+// Driver topic constants (Kafka)
 const (
 	DriverTopicCreated = "driver.created"
 	DriverTopicUpdated = "driver.updated"
 	DriverTopicDeleted = "driver.deleted"
 )
 
-// Consumed by Analytics Service → ClickHouse for search observability.
+// Driver NATS subjects (transient, published via NATS for realtime coordination)
 const (
-	SearchTopicQueryCompleted   = "search.query.completed"
-	SearchTopicReindexStarted   = "search.reindex.started"
-	SearchTopicReindexCompleted = "search.reindex.completed"
-	SearchTopicReindexFailed    = "search.reindex.failed"
-	SearchTopicDLQ              = "search.dlq"
+	DriverSubjectLocationUpdated    = "driver.location.updated"
+	DriverSubjectAssignmentOffered  = "driver.assignment.offered"
+	DriverSubjectAssignmentCancelled = "driver.assignment.cancelled"
+	DriverSubjectAssignmentUpdated  = "driver.assignment.updated"
+	DriverSubjectStatusUpdated      = "driver.status.updated"
 )
 
+// Driver assignment events (published to Kafka for durable consumption).
+const (
+	DriverAssignmentOffered   = "driver.assignment.offered"
+	DriverAssignmentAccepted  = "driver.assignment.accepted"
+	DriverAssignmentRejected  = "driver.assignment.rejected"
+	DriverAssignmentExpired   = "driver.assignment.expired"
+	DriverAssignmentReleased  = "driver.assignment.released"
+	DriverAssignmentCompleted = "driver.assignment.completed"
+)
+
+// Consumed by Search Service → OpenSearch for indexing.
 const (
 	SearchSubjectQueryStarted   = "search.query.started"
 	SearchSubjectQueryCompleted = "search.query.completed"
 	SearchSubjectReindexProgress = "search.reindex.progress"
 )
-

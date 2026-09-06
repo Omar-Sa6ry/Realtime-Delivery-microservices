@@ -26,6 +26,9 @@ data:
   # NATS
   NATS_URL: "nats://nats-srv:4222"
 
+  # Jaeger
+  JAEGER_ENDPOINT: "jaeger:6831"
+
   # Dispatch configuration
   DISPATCH_SEARCH_RADIUS_KM: "5"
   ASSIGNMENT_TIMEOUT_SECONDS: "20"

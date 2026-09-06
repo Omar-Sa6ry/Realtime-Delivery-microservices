@@ -13,9 +13,14 @@ deploy:
 build:
   local:
     push: false
-    useBuildkit: false
+    useBuildkit: true
 
   artifacts:
+
+    - image: delivery/driver
+      context: .
+      docker:
+        dockerfile: services/driver-service/Dockerfile
 
     - image: delivery/notification
       context: .
@@ -91,12 +96,6 @@ build:
             dest: /usr/src/app/protos
           - src: 'packages/ts/dist/**/*.js'
             dest: /usr/src/app/packages/ts/dist
-
-    - image: delivery/driver
-      context: .
-      docker:
-        dockerfile: services/driver-service/Dockerfile
-
 
 profiles:
   - name: test

@@ -13,7 +13,7 @@ deploy:
 build:
   local:
     push: false
-    useBuildkit: true
+    useBuildkit: false
 
   artifacts:
 

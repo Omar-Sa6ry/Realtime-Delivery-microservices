@@ -1,0 +1,389 @@
+# DRIVER SERVICE — GraphQL Operations Reference
+# Port: 4008 | Subgraph: /driver/graphql
+# ============================================================
+
+# ─── QUERIES ───────────────────────────────────────────────
+
+# Get Driver Service Health
+query GetDriverServiceInfo {
+  driverServiceInfo {
+    success
+    statusCode
+    message
+    timeStamp
+    data { name  version  status }
+  }
+}
+
+# Get Driver by ID - FLAT response (no nested driver{} wrapper)
+# Fields appear directly, not under data { driver { ... } }
+query GetDriver {
+  driver(id: "driver-123") {
+    success
+    statusCode
+    message
+    timeStamp
+    id
+    userId
+    status        # OFFLINE | AVAILABLE | BUSY
+    vehicleType   # CAR | MOTORCYCLE | TRUCK
+    plateNumber
+    capacityKg
+    capabilities
+    serviceArea
+    rating
+    createdAt
+    updatedAt
+  }
+}
+
+# Get My Driver Profile (authenticated driver) - FLAT response
+query GetMyDriverProfile {
+  myDriverProfile {
+    success
+    statusCode
+    message
+    timeStamp
+    id
+    userId
+    status
+    vehicleType
+    plateNumber
+    capacityKg
+    capabilities
+    serviceArea
+    rating
+    createdAt
+    updatedAt
+  }
+}
+
+# Get Driver Active Assignment - FLAT response
+query GetDriverActiveAssignment {
+  driverActiveAssignment(driverId: "driver-123") {
+    success
+    statusCode
+    message
+    timeStamp
+    id
+    deliveryId
+    driverId
+    status        # OFFERED|ACCEPTED|ACTIVE|COMPLETED|REJECTED|EXPIRED|CANCELLED
+    attemptNumber
+    offeredAt
+    expiresAt
+    acceptedAt
+    rejectedAt
+    completedAt
+    createdAt
+    updatedAt
+  }
+}
+
+# Get Driver Status - FLAT response
+query GetDriverStatus {
+  driverStatus(driverId: "driver-123") {
+    success
+    statusCode
+    message
+    timeStamp
+    driverId
+    status
+    hasActiveAssignment
+    activeDeliveryId
+    lastSeenAt
+  }
+}
+
+# Get Nearby Drivers - FLAT response (items directly, not under data{items})
+query GetNearbyDrivers {
+  nearbyDrivers(input: {
+    latitude: 30.0444
+    longitude: 31.2357
+    radiusKm: 5.0
+    vehicleType: "CAR"
+    limit: 10
+  }) {
+    success
+    statusCode
+    message
+    timeStamp
+    items {
+      driverId
+      distanceMeters
+      status
+      vehicleType
+      latitude
+      longitude
+    }
+    total
+  }
+}
+
+# Get Assignment by ID - FLAT response
+query GetAssignment {
+  assignment(id: "assignment-123") {
+    success
+    statusCode
+    message
+    timeStamp
+    id
+    deliveryId
+    driverId
+    status
+    attemptNumber
+    offeredAt
+    expiresAt
+    acceptedAt
+    rejectedAt
+    completedAt
+    createdAt
+    updatedAt
+  }
+}
+
+# ─── MUTATIONS ──────────────────────────────────────────────
+
+# Go Online - FLAT response
+mutation GoOnline {
+  goOnline(idempotencyKey: "go-online-driver-123-1234567890") {
+    success
+    statusCode
+    message
+    timeStamp
+    driverId
+    status
+    updatedAt
+  }
+}
+
+# Go Offline - FLAT response
+mutation GoOffline {
+  goOffline(idempotencyKey: "go-offline-driver-123-1234567890") {
+    success
+    statusCode
+    message
+    timeStamp
+    driverId
+    status
+    updatedAt
+  }
+}
+
+# Accept Assignment - FLAT response
+mutation AcceptAssignment {
+  acceptAssignment(
+    assignmentId: "assignment-123"
+    idempotencyKey: "accept-assignment-123-driver-456"
+  ) {
+    success
+    statusCode
+    message
+    timeStamp
+    id
+    deliveryId
+    driverId
+    status
+    acceptedAt
+    updatedAt
+  }
+}
+
+# Reject Assignment - FLAT response
+mutation RejectAssignment {
+  rejectAssignment(
+    assignmentId: "assignment-123"
+    reason: "Too far from pickup"
+    idempotencyKey: "reject-assignment-123-driver-456"
+  ) {
+    success
+    statusCode
+    message
+    timeStamp
+    id
+    deliveryId
+    driverId
+    status
+    rejectedAt
+    updatedAt
+  }
+}
+
+# Register Driver (Admin / onboarding) - FLAT response
+mutation RegisterDriver {
+  registerDriver(input: {
+    userId: "user-789"
+    vehicleType: CAR
+    plateNumber: "ABC-123"
+    capacityKg: 50
+    capabilities: ["STANDARD"]
+    serviceArea: "Cairo"
+  }) {
+    success
+    statusCode
+    message
+    timeStamp
+    id
+    userId
+    status
+    vehicleType
+    plateNumber
+    capacityKg
+    capabilities
+    serviceArea
+    createdAt
+  }
+}
+
+# Update Driver Profile (Admin) - FLAT response
+mutation UpdateDriverProfile {
+  updateDriverProfile(
+    driverId: "driver-123"
+    input: {
+      vehicleType: MOTORCYCLE
+      plateNumber: "XYZ-456"
+      capacityKg: 20
+      capabilities: ["STANDARD", "FRAGILE"]
+      serviceArea: "Giza"
+    }
+  ) {
+    success
+    statusCode
+    message
+    timeStamp
+    id
+    status
+    vehicleType
+    plateNumber
+    capacityKg
+    capabilities
+    serviceArea
+    updatedAt
+  }
+}
+
+# Suspend Driver (Admin) - FLAT response
+mutation SuspendDriver {
+  suspendDriver(
+    driverId: "driver-123"
+    reason: "Policy violation"
+  ) {
+    success
+    statusCode
+    message
+    timeStamp
+    driverId
+    status
+    updatedAt
+  }
+}
+
+# Activate Driver (Admin) - FLAT response
+mutation ActivateDriver {
+  activateDriver(driverId: "driver-123") {
+    success
+    statusCode
+    message
+    timeStamp
+    driverId
+    status
+    updatedAt
+  }
+}
+
+# ─── SUBSCRIPTIONS ─────────────────────────────────────────
+
+# Subscribe to driver location updates - FLAT response
+subscription DriverLocationUpdated {
+  driverLocationUpdated {
+    success
+    statusCode
+    message
+    timeStamp
+    driverId
+    latitude
+    longitude
+  }
+}
+
+# Subscribe to assignment offer events - FLAT response
+subscription DriverAssignmentOffered {
+  driverAssignmentOffered(assignmentId: "assignment-123") {
+    success
+    statusCode
+    message
+    timeStamp
+    id
+    deliveryId
+    driverId
+    status
+    offeredAt
+    expiresAt
+  }
+}
+
+# Subscribe to assignment acceptance events - FLAT response
+subscription DriverAssignmentAccepted {
+  driverAssignmentAccepted(assignmentId: "assignment-123") {
+    success
+    statusCode
+    message
+    timeStamp
+    id
+    deliveryId
+    driverId
+    status
+    acceptedAt
+    updatedAt
+  }
+}
+
+# Subscribe to driver status updates - FLAT response
+subscription DriverStatusUpdated {
+  driverStatusUpdated(driverId: "driver-123") {
+    success
+    statusCode
+    message
+    timeStamp
+    driverId
+    status
+    updatedAt
+  }
+}
+
+# ─── SUBSCRIPTIONS — REALTIME EVENTS ───────────────────────
+
+# Subscribe to driver location.updated via NATS realtime - FLAT response
+subscription DriverLocationRealtimeUpdated {
+  driverLocationRealtimeUpdated {
+    success
+    statusCode
+    message
+    timeStamp
+    driverId
+    latitude
+    longitude
+    timestamp
+  }
+}
+
+# Subscribe to assignment status changes via NATS - FLAT response
+subscription DriverAssignmentRealtimeUpdated {
+  driverAssignmentRealtimeUpdated(assignmentId: "assignment-123") {
+    success
+    statusCode
+    message
+    timeStamp
+    id
+    deliveryId
+    driverId
+    status
+    attemptNumber
+    offeredAt
+    expiresAt
+    acceptedAt
+    rejectedAt
+    completedAt
+    updatedAt
+  }
+}

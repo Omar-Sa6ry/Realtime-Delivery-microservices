@@ -56,7 +56,7 @@ func (c *AcceptAssignmentCommand) Execute(ctx context.Context) error {
 	assignment.AcceptedAt = &now
 	assignment.UpdatedAt = time.Now()
 
-	err = c.assignmentRepo.Save(ctx, assignment.ID, assignment.DriverID, assignment.DeliveryID, string(assignment.Status))
+	err = c.assignmentRepo.Save(ctx, assignment)
 	if err != nil {
 		return err
 	}

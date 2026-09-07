@@ -11,9 +11,9 @@ import (
 
 // ReleaseDriverCommand releases a driver from their current assignment.
 type ReleaseDriverCommand struct {
-	driverID   string
-	deliveryID string
-	driverRepo ports.DriverRepository
+	driverID       string
+	deliveryID     string
+	driverRepo     ports.DriverRepository
 	assignmentRepo ports.AssignmentRepository
 	eventPublisher ports.EventPublisher
 }
@@ -33,17 +33,16 @@ func NewReleaseDriverCommand(driverID, deliveryID string, driverRepo ports.Drive
 
 // Execute releases the driver from their assignment.
 func (c *ReleaseDriverCommand) Execute(ctx context.Context) error {
-	// Find active assignment for driver
-	assignmentID, found := c.assignmentRepo.FindActiveByDriver(ctx, c.driverID)
-	if !found {
+	// FindActiveByDriver now returns (*domain.Assignment, error)
+	assignment, err := c.assignmentRepo.FindActiveByDriver(ctx, c.driverID)
+	if err != nil || assignment == nil {
 		log.Printf("release_driver: no active assignment found for driver %s", c.driverID)
 		return domain.ErrAssignmentNotFound
 	}
 
-	// Update assignment status to COMPLETED/released
-	err := c.assignmentRepo.UpdateStatus(ctx, assignmentID, string(domain.AssignmentStatusCompleted))
-	if err != nil {
-		log.Printf("release_driver: failed to update assignment %s status: %v", assignmentID, err)
+	// Update assignment status to COMPLETED
+	if err = c.assignmentRepo.UpdateStatus(ctx, assignment.ID, string(domain.AssignmentStatusCompleted)); err != nil {
+		log.Printf("release_driver: failed to update assignment %s status: %v", assignment.ID, err)
 		return err
 	}
 
@@ -56,16 +55,14 @@ func (c *ReleaseDriverCommand) Execute(ctx context.Context) error {
 	if driver != nil {
 		driver.Status = domain.DriverStatusAvailable
 		driver.UpdatedAt = time.Now()
-		err = c.driverRepo.Save(ctx, driver)
-		if err != nil {
+		if err = c.driverRepo.Save(ctx, driver); err != nil {
 			log.Printf("release_driver: failed to restore driver %s state: %v", c.driverID, err)
 			return err
 		}
 	}
 
-	// Publish driver available event
-	err = c.eventPublisher.PublishDriverAvailable(ctx, c.driverID)
-	if err != nil {
+	// Publish driver available event (best-effort)
+	if err = c.eventPublisher.PublishDriverAvailable(ctx, c.driverID); err != nil {
 		log.Printf("release_driver: failed to publish driver available event: %v", err)
 	}
 

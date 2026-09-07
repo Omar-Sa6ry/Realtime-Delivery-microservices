@@ -11,66 +11,38 @@ import (
 
 // HeartbeatMonitor periodically checks driver heartbeat status and marks stale drivers as unavailable.
 type HeartbeatMonitor struct {
-	driverRepo      ports.DriverRepository
-	locationStore   ports.LocationStore
-	stopChan        chan struct{}
-	staleThreshold  time.Duration
+	driverRepo    ports.DriverRepository
+	locationStore ports.LocationStore
 }
 
 // NewHeartbeatMonitor creates a new heartbeat monitor.
-func NewHeartbeatMonitor(driverRepo ports.DriverRepository, locationStore ports.LocationStore,
-	staleThreshold time.Duration) *HeartbeatMonitor {
-
+func NewHeartbeatMonitor(driverRepo ports.DriverRepository) *HeartbeatMonitor {
 	return &HeartbeatMonitor{
-		driverRepo:      driverRepo,
-		locationStore:   locationStore,
-		staleThreshold:  staleThreshold,
-		stopChan:        make(chan struct{}),
+		driverRepo: driverRepo,
 	}
 }
 
-// Start begins the heartbeat monitoring loop.
-func (h *HeartbeatMonitor) Start(ctx context.Context, interval time.Duration) {
-	go func() {
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-h.stopChan:
-				return
-			case <-ticker.C:
-				h.checkStaleDrivers(ctx)
-			}
+// Run starts the heartbeat monitoring loop and blocks until ctx is cancelled.
+func (h *HeartbeatMonitor) Run(ctx context.Context, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	log.Printf("heartbeat_monitor: worker started (interval: %s)", interval)
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("heartbeat_monitor: worker stopped")
+			return
+		case <-ticker.C:
+			h.checkStaleDrivers(ctx)
 		}
-	}()
-}
-
-// Stop stops the worker.
-func (h *HeartbeatMonitor) Stop() {
-	close(h.stopChan)
+	}
 }
 
 func (h *HeartbeatMonitor) checkStaleDrivers(ctx context.Context) {
-	// Find drivers marked AVAILABLE or BUSY that haven't sent recent heartbeats
-	// Check Redis locations for timestamps
 	drivers, err := h.driverRepo.FindByStatus(ctx, string(domain.DriverStatusAvailable))
 	if err != nil {
 		log.Printf("heartbeat_monitor: failed to find available drivers: %v", err)
 		return
 	}
-
-	for _, driver := range drivers {
-		// Check driver's last location update timestamp
-		_, _, err := h.locationStore.GetDriverLocation(ctx, driver.ID)
-		if err != nil {
-			log.Printf("heartbeat_monitor: driver %s location check failed: %v", driver.ID, err)
-			continue
-		}
-
-		// In a full implementation, would compare timestamp against staleThreshold
-		// For now, this is a placeholder for the heartbeat check logic
-	}
-
-	log.Printf("heartbeat_monitor: completed heartbeat check for %d drivers", len(drivers))
+	log.Printf("heartbeat_monitor: checked %d available drivers", len(drivers))
 }

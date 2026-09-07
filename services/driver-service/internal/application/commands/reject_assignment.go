@@ -59,7 +59,7 @@ func (c *RejectAssignmentCommand) Execute(ctx context.Context) error {
 	assignment.RejectedAt = &now
 	assignment.UpdatedAt = time.Now()
 
-	err = c.assignmentRepo.Save(ctx, assignment.ID, assignment.DriverID, assignment.DeliveryID, string(assignment.Status))
+	err = c.assignmentRepo.Save(ctx, assignment)
 	if err != nil {
 		log.Printf("reject_assignment: failed to save assignment %s: %v", c.assignmentID, err)
 		return err

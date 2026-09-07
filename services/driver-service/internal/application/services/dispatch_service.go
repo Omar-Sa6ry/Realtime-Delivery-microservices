@@ -10,124 +10,115 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// DispatchService orchestrates driver dispatch operations including finding available drivers,
-// reserving drivers, and managing assignment state transitions.
 type DispatchService struct {
-	driverRepo      ports.DriverRepository
-	assignmentRepo  ports.AssignmentRepository
-	locationStore   ports.LocationStore
-	lockManager     ports.LockManager
-	eventPublisher  ports.EventPublisher
-	dispatchPolicy  *domain.DispatchPolicy
-	mu              sync.Mutex
+	driverRepo     ports.DriverRepository
+	assignmentRepo ports.AssignmentRepository
+	locationStore  ports.LocationStore
+	lockManager    ports.LockManager
+	eventPublisher ports.EventPublisher
+	dispatchPolicy *domain.DispatchPolicy
+	mu             sync.Mutex
 }
 
 // NewDispatchService creates a new DispatchService.
-func NewDispatchService(driverRepo ports.DriverRepository, assignmentRepo ports.AssignmentRepository,
-	locationStore ports.LocationStore, lockManager ports.LockManager, eventPublisher ports.EventPublisher,
-	dispatchPolicy *domain.DispatchPolicy) *DispatchService {
+func NewDispatchService(
+	driverRepo ports.DriverRepository,
+	assignmentRepo ports.AssignmentRepository,
+	locationStore ports.LocationStore,
+	lockManager ports.LockManager,
+	eventPublisher ports.EventPublisher,
+	dispatchPolicy *domain.DispatchPolicy,
+) *DispatchService {
 	return &DispatchService{
-		driverRepo:      driverRepo,
-		assignmentRepo:  assignmentRepo,
-		locationStore:   locationStore,
-		lockManager:     lockManager,
-		eventPublisher:  eventPublisher,
-		dispatchPolicy:  dispatchPolicy,
+		driverRepo:     driverRepo,
+		assignmentRepo: assignmentRepo,
+		locationStore:  locationStore,
+		lockManager:    lockManager,
+		eventPublisher: eventPublisher,
+		dispatchPolicy: dispatchPolicy,
 	}
 }
 
 // FindAvailableDrivers finds drivers available near the given coordinates.
 func (s *DispatchService) FindAvailableDrivers(ctx context.Context, lat, lng, radiusKm float64, vehicleType string, deliveryID string) ([]domain.Candidate, error) {
-	// Search for drivers using Redis GEO
-	// Filter by AVAILABLE state from MongoDB
-	// Rank candidates by distance and compatibility
-	// Return ranked candidates
-
-	candidates, err := s.driverRepo.FindAvailableByLocation(ctx, lat, lng, radiusKm, vehicleType)
+	drivers, err := s.driverRepo.FindAvailableByLocation(ctx, lat, lng, radiusKm, vehicleType)
 	if err != nil {
 		log.Printf("dispatch service: find available by location failed: %v", err)
 		return nil, err
 	}
 
-	// Convert to candidates and rank
-	var candidatesSlice []domain.Candidate
-	for _, d := range candidates {
-		candidatesSlice = append(candidatesSlice, domain.Candidate{
+	var candidates []domain.Candidate
+	for _, d := range drivers {
+		candidates = append(candidates, domain.Candidate{
 			DriverID:       d.ID,
-			DistanceMeters: 0, // would be calculated from GEOSEARCH
+			DistanceMeters: 0, // TODO: calculate from Redis GEOSEARCH result
 			VehicleType:    d.Vehicle.Type,
 			Status:         d.Status,
 		})
 	}
 
-	return domain.NewDispatchPolicy().RankCandidates(candidatesSlice), nil
+	return domain.NewDispatchPolicy().RankCandidates(candidates), nil
 }
 
 // ReserveDriver reserves a driver for a delivery using distributed locking and conditional state transition.
 func (s *DispatchService) ReserveDriver(ctx context.Context, driverID, deliveryID string) (bool, error) {
-	// Acquire distributed lock for the driver
-	acquired, err := s.lockManager.Acquire(ctx, "driver:"+driverID, 30*time.Second)
+	acquired, err := s.lockManager.Acquire(ctx, driverID, 30*time.Second)
 	if err != nil {
 		log.Printf("dispatch service: failed to acquire lock for driver %s: %v", driverID, err)
 		return false, err
 	}
 	if !acquired {
 		log.Printf("dispatch service: lock already held for driver %s", driverID)
-		return false, nil
+		return false, domain.ErrDriverAlreadyReserved
 	}
-	defer s.lockManager.Release(ctx, "driver:"+driverID, "temp-token")
+	defer s.lockManager.Release(ctx, driverID, "")
 
-	// Check driver state from MongoDB
 	driver, err := s.driverRepo.FindByID(ctx, driverID)
 	if err != nil {
-		log.Printf("dispatch service: failed to find driver %s: %v", driverID, err)
 		return false, err
 	}
 	if driver == nil {
-		log.Printf("dispatch service: driver %s not found", driverID)
 		return false, domain.ErrDriverNotFound
 	}
-
-	// Check driver is available
 	if driver.Status != domain.DriverStatusAvailable {
-		log.Printf("dispatch service: driver %s is not available, status: %s", driverID, driver.Status)
 		return false, domain.ErrDriverNotAvailableForAssignment
 	}
 
-	// Conditionally update driver state from AVAILABLE to BUSY
-	err = s.driverRepo.Save(ctx, driver)
-	if err != nil {
-		log.Printf("dispatch service: failed to update driver %s state: %v", driverID, err)
+	// Transition to BUSY
+	if err := driver.Reserve(); err != nil {
+		return false, err
+	}
+	if err = s.driverRepo.Save(ctx, driver); err != nil {
+		log.Printf("dispatch service: failed to save driver %s state: %v", driverID, err)
 		return false, err
 	}
 
 	// Create assignment record as OFFERED
-	assignment := domain.Assignment{
-		ID:         deliveryID + "-" + driverID,
-		DriverID:   driverID,
-		DeliveryID: deliveryID,
-		Status:     domain.AssignmentStatusOffered,
+	now := time.Now()
+	assignment := &domain.Assignment{
+		ID:            deliveryID + "-" + driverID,
+		DriverID:      driverID,
+		DeliveryID:    deliveryID,
+		Status:        domain.AssignmentStatusOffered,
 		AttemptNumber: 1,
-		OfferedAt:  time.Now(),
-		ExpiresAt:  time.Now().Add(20 * time.Second), // default 20s timeout
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+		OfferedAt:     now,
+		ExpiresAt:     now.Add(20 * time.Second),
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
-	err = s.assignmentRepo.Save(ctx, assignment.ID, assignment.DriverID, assignment.DeliveryID, string(assignment.Status))
-	if err != nil {
+	if err = s.assignmentRepo.Save(ctx, assignment); err != nil {
 		log.Printf("dispatch service: failed to save assignment %s: %v", assignment.ID, err)
-		// Reset driver state on failure
+		// Rollback driver state
 		driver.Status = domain.DriverStatusAvailable
-		s.driverRepo.Save(ctx, driver)
+		driver.UpdatedAt = time.Now()
+		_ = s.driverRepo.Save(ctx, driver)
 		return false, err
 	}
 
-	// Publish assignment offered event
-	err = s.eventPublisher.PublishAssignmentOffered(ctx, assignment.ID, assignment.DeliveryID, assignment.DriverID)
-	if err != nil {
+	// Publish assignment offered event (best-effort)
+	if err = s.eventPublisher.PublishAssignmentOffered(ctx, assignment.ID, assignment.DeliveryID, assignment.DriverID); err != nil {
 		log.Printf("dispatch service: failed to publish assignment offered event: %v", err)
-		// Don't fail the whole operation - event publishing is best-effort
 	}
 
 	log.Printf("dispatch service: driver %s reserved for delivery %s", driverID, deliveryID)
@@ -136,39 +127,30 @@ func (s *DispatchService) ReserveDriver(ctx context.Context, driverID, deliveryI
 
 // ReleaseDriver releases a driver from their current assignment.
 func (s *DispatchService) ReleaseDriver(ctx context.Context, driverID, deliveryID string) error {
-	// Find active assignment for driver
-	assignmentID, found := s.assignmentRepo.FindActiveByDriver(ctx, driverID)
-	if !found {
-		log.Printf("dispatch service: no active assignment found for driver %s", driverID)
+	assignment, err := s.assignmentRepo.FindActiveByDriver(ctx, driverID)
+	if err != nil || assignment == nil {
 		return domain.ErrAssignmentNotFound
 	}
 
-	// Update assignment status to RELEASED/COMPLETED
-	err := s.assignmentRepo.UpdateStatus(ctx, assignmentID, string(domain.AssignmentStatusCompleted))
-	if err != nil {
-		log.Printf("dispatch service: failed to update assignment %s status: %v", assignmentID, err)
+	if err = s.assignmentRepo.UpdateStatus(ctx, assignment.ID, string(domain.AssignmentStatusCompleted)); err != nil {
+		log.Printf("dispatch service: failed to update assignment %s status: %v", assignment.ID, err)
 		return err
 	}
 
-	// Update driver state back to AVAILABLE
 	driver, err := s.driverRepo.FindByID(ctx, driverID)
 	if err != nil {
-		log.Printf("dispatch service: failed to find driver %s: %v", driverID, err)
 		return err
 	}
 	if driver != nil {
 		driver.Status = domain.DriverStatusAvailable
 		driver.UpdatedAt = time.Now()
-		err = s.driverRepo.Save(ctx, driver)
-		if err != nil {
+		if err = s.driverRepo.Save(ctx, driver); err != nil {
 			log.Printf("dispatch service: failed to restore driver %s state: %v", driverID, err)
 			return err
 		}
 	}
 
-	// Publish driver available event
-	err = s.eventPublisher.PublishDriverAvailable(ctx, driverID)
-	if err != nil {
+	if err = s.eventPublisher.PublishDriverAvailable(ctx, driverID); err != nil {
 		log.Printf("dispatch service: failed to publish driver available event: %v", err)
 	}
 
@@ -178,7 +160,6 @@ func (s *DispatchService) ReleaseDriver(ctx context.Context, driverID, deliveryI
 
 // AcceptAssignment accepts a driver's assignment offer.
 func (s *DispatchService) AcceptAssignment(ctx context.Context, assignmentID, driverID string) error {
-	// Validate assignment state is OFFERED
 	assignment, err := s.assignmentRepo.FindByID(ctx, assignmentID)
 	if err != nil {
 		return err
@@ -186,33 +167,26 @@ func (s *DispatchService) AcceptAssignment(ctx context.Context, assignmentID, dr
 	if assignment == nil {
 		return domain.ErrAssignmentNotFound
 	}
-
 	if assignment.DriverID != driverID {
 		return domain.ErrAssignmentInvalidState
 	}
-
 	if assignment.Status != domain.AssignmentStatusOffered {
+		if assignment.Status == domain.AssignmentStatusAccepted {
+			return nil // Idempotent
+		}
 		return domain.ErrAssignmentInvalidState
 	}
 
-	// Transition assignment from OFFERED to ACCEPTED
 	now := time.Now()
 	assignment.Status = domain.AssignmentStatusAccepted
 	assignment.AcceptedAt = &now
-	assignment.UpdatedAt = time.Now()
+	assignment.UpdatedAt = now
 
-	err = s.assignmentRepo.Save(ctx, assignment.ID, assignment.DriverID, assignment.DeliveryID, string(assignment.Status))
-	if err != nil {
-		log.Printf("dispatch service: failed to save assignment %s: %v", assignmentID, err)
+	if err = s.assignmentRepo.Save(ctx, assignment); err != nil {
 		return err
 	}
 
-	// Update driver state from BUSY to... keep BUSY until delivery completes, or transition
-	// For now, driver remains BUSY as they've accepted the assignment
-
-	// Publish assignment accepted event
-	err = s.eventPublisher.PublishAssignmentAccepted(ctx, assignment.ID, assignment.DeliveryID, assignment.DriverID)
-	if err != nil {
+	if err = s.eventPublisher.PublishAssignmentAccepted(ctx, assignment.ID, assignment.DeliveryID, assignment.DriverID); err != nil {
 		log.Printf("dispatch service: failed to publish assignment accepted event: %v", err)
 	}
 
@@ -222,7 +196,6 @@ func (s *DispatchService) AcceptAssignment(ctx context.Context, assignmentID, dr
 
 // RejectAssignment rejects a driver's assignment offer.
 func (s *DispatchService) RejectAssignment(ctx context.Context, assignmentID, driverID, reason string) error {
-	// Find assignment
 	assignment, err := s.assignmentRepo.FindByID(ctx, assignmentID)
 	if err != nil {
 		return err
@@ -230,56 +203,34 @@ func (s *DispatchService) RejectAssignment(ctx context.Context, assignmentID, dr
 	if assignment == nil {
 		return domain.ErrAssignmentNotFound
 	}
-
 	if assignment.DriverID != driverID {
 		return domain.ErrAssignmentInvalidState
 	}
-
 	if assignment.Status != domain.AssignmentStatusOffered {
+		if assignment.Status == domain.AssignmentStatusRejected {
+			return nil // Idempotent
+		}
 		return domain.ErrAssignmentInvalidState
 	}
 
-	// Transition assignment from OFFERED to REJECTED
 	now := time.Now()
 	assignment.Status = domain.AssignmentStatusRejected
 	assignment.RejectedAt = &now
-	assignment.UpdatedAt = time.Now()
+	assignment.UpdatedAt = now
 
-	err = s.assignmentRepo.Save(ctx, assignment.ID, assignment.DriverID, assignment.DeliveryID, string(assignment.Status))
-	if err != nil {
-		log.Printf("dispatch service: failed to save assignment %s: %v", assignmentID, err)
+	if err = s.assignmentRepo.Save(ctx, assignment); err != nil {
 		return err
 	}
 
 	// Release driver back to AVAILABLE
 	driver, err := s.driverRepo.FindByID(ctx, driverID)
-	if err != nil {
-		log.Printf("dispatch service: failed to find driver %s: %v", driverID, err)
-		return err
-	}
-	if driver != nil {
+	if err == nil && driver != nil {
 		driver.Status = domain.DriverStatusAvailable
 		driver.UpdatedAt = time.Now()
-		err = s.driverRepo.Save(ctx, driver)
-		if err != nil {
-			log.Printf("dispatch service: failed to restore driver %s state: %v", driverID, err)
-			return err
-		}
+		_ = s.driverRepo.Save(ctx, driver)
 	}
 
-	// Record dispatch attempt
-	dispatchP := domain.NewDispatchPolicy()
-	dispatchP.RecordAttempt(domain.DispatchAttempt{
-		AttemptNumber: 1,
-		DriverID:      driverID,
-		Result:        domain.DispatchResultRejected,
-		Reason:        reason,
-		CreatedAt:     time.Now(),
-	})
-
-	// Publish assignment rejected event
-	err = s.eventPublisher.PublishAssignmentRejected(ctx, assignment.ID, assignment.DeliveryID, driverID, reason)
-	if err != nil {
+	if err = s.eventPublisher.PublishAssignmentRejected(ctx, assignment.ID, assignment.DeliveryID, driverID, reason); err != nil {
 		log.Printf("dispatch service: failed to publish assignment rejected event: %v", err)
 	}
 
@@ -287,9 +238,8 @@ func (s *DispatchService) RejectAssignment(ctx context.Context, assignmentID, dr
 	return nil
 }
 
-// ReleaseDriverByID releases a driver assignment by ID.
-func (s *DispatchService) ReleaseDriverByID(ctx context.Context, assignmentID string) error {
-	// Find assignment
+// ReleaseDriverByAssignment releases a driver by assignment ID.
+func (s *DispatchService) ReleaseDriverByAssignment(ctx context.Context, assignmentID string) error {
 	assignment, err := s.assignmentRepo.FindByID(ctx, assignmentID)
 	if err != nil {
 		return err
@@ -298,43 +248,33 @@ func (s *DispatchService) ReleaseDriverByID(ctx context.Context, assignmentID st
 		return domain.ErrAssignmentNotFound
 	}
 
-	// Transition assignment based on current state
+	var newStatus domain.AssignmentStatus
 	switch assignment.Status {
-	case domain.AssignmentStatusActive:
-		assignment.Status = domain.AssignmentStatusCompleted
+	case domain.AssignmentStatusActive, domain.AssignmentStatusAccepted:
+		newStatus = domain.AssignmentStatusCompleted
 	case domain.AssignmentStatusOffered:
-		assignment.Status = domain.AssignmentStatusExpired // or released
+		newStatus = domain.AssignmentStatusExpired
 	default:
-		// Already in terminal state, no-op
+		// Already in terminal state — idempotent
+		return nil
 	}
 
+	assignment.Status = newStatus
 	assignment.UpdatedAt = time.Now()
-	err = s.assignmentRepo.Save(ctx, assignment.ID, assignment.DriverID, assignment.DeliveryID, string(assignment.Status))
-	if err != nil {
-		log.Printf("dispatch service: failed to save assignment %s: %v", assignmentID, err)
+	if err = s.assignmentRepo.Save(ctx, assignment); err != nil {
 		return err
 	}
 
-	// Release driver back to AVAILABLE if was offered
-	if assignment.Status == domain.AssignmentStatusExpired || assignment.Status == domain.AssignmentStatusCompleted {
-		driver, err := s.driverRepo.FindByID(ctx, assignment.DriverID)
-		if err != nil {
-			log.Printf("dispatch service: failed to find driver %s: %v", assignment.DriverID, err)
+	// Release driver
+	driver, err := s.driverRepo.FindByID(ctx, assignment.DriverID)
+	if err == nil && driver != nil {
+		driver.Status = domain.DriverStatusAvailable
+		driver.UpdatedAt = time.Now()
+		if err = s.driverRepo.Save(ctx, driver); err != nil {
 			return err
 		}
-		if driver != nil {
-			driver.Status = domain.DriverStatusAvailable
-			driver.UpdatedAt = time.Now()
-			err = s.driverRepo.Save(ctx, driver)
-			if err != nil {
-				log.Printf("dispatch service: failed to restore driver %s state: %v", assignment.DriverID, err)
-				return err
-			}
-			// Publish driver available event
-			err = s.eventPublisher.PublishDriverAvailable(ctx, assignment.DriverID)
-			if err != nil {
-				log.Printf("dispatch service: failed to publish driver available event: %v", err)
-			}
+		if err = s.eventPublisher.PublishDriverAvailable(ctx, assignment.DriverID); err != nil {
+			log.Printf("dispatch service: failed to publish driver available event: %v", err)
 		}
 	}
 
@@ -345,11 +285,16 @@ func (s *DispatchService) ReleaseDriverByID(ctx context.Context, assignmentID st
 // ValidateDriverID validates a driver ID using the driver repository.
 func (s *DispatchService) ValidateDriverID(ctx context.Context, driverID string) (bool, string) {
 	driver, err := s.driverRepo.FindByID(ctx, driverID)
-	if err != nil {
-		log.Printf("dispatch service: failed to validate driver %s: %v", driverID, err)
+	if err != nil || driver == nil {
 		return false, ""
 	}
-	if driver == nil {
+	return true, string(driver.Status)
+}
+
+// ValidateUserID validates that a user ID has a linked driver profile.
+func (s *DispatchService) ValidateUserID(ctx context.Context, userID string) (bool, string) {
+	driver, err := s.driverRepo.FindByUserID(ctx, userID)
+	if err != nil || driver == nil {
 		return false, ""
 	}
 	return true, string(driver.Status)

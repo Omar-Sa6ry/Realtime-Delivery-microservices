@@ -54,16 +54,11 @@ func (p *WorkerPool) Stop() {
 	p.wg.Wait()
 }
 
-// Submit submits a task to the worker pool.
-func (p *WorkerPool) Submit(task func() error) error {
-	// Distribute task to first available worker
-	select {
-	case p.workers[0].taskChan <- task:
-		return nil
-	default:
-		return ErrWorkerPoolFull
-	}
+// Submit submits a goroutine-based task to run in background.
+func (p *WorkerPool) Submit(task func()) {
+	go task()
 }
+
 
 // ErrWorkerPoolFull is returned when the worker pool task queue is full.
 var ErrWorkerPoolFull = func() error { return errWorkerPoolFull{} }()

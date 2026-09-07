@@ -10,9 +10,9 @@ import (
 // AssignmentRepository defines the interface for assignment data access.
 type AssignmentRepository interface {
 	FindByID(ctx context.Context, id string) (*domain.Assignment, error)
-	FindActiveByDriver(ctx context.Context, driverID string) (string, bool)
-	FindByDeliveryID(ctx context.Context, deliveryID string) (string, bool)
-	Save(ctx context.Context, assignmentID string, driverID string, deliveryID string, status string) error
+	FindActiveByDriver(ctx context.Context, driverID string) (*domain.Assignment, error)
+	FindByDeliveryID(ctx context.Context, deliveryID string) (*domain.Assignment, error)
+	Save(ctx context.Context, assignment *domain.Assignment) error
 	UpdateStatus(ctx context.Context, assignmentID string, status string) error
 	ExpireOffers(ctx context.Context, olderThan time.Duration) ([]string, error)
 }

@@ -90,7 +90,7 @@ func (c *ReserveDriverCommand) Execute(ctx context.Context) (bool, error) {
 		UpdatedAt:   time.Now(),
 	}
 
-	err = c.assignmentRepo.Save(ctx, assignment.ID, assignment.DriverID, assignment.DeliveryID, string(assignment.Status))
+	err = c.assignmentRepo.Save(ctx, &assignment)
 	if err != nil {
 		log.Printf("reserve_driver: failed to save assignment %s: %v", assignment.ID, err)
 		// Reset driver state on failure

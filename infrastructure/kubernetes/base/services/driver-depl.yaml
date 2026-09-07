@@ -53,27 +53,27 @@ spec:
         startupProbe:
           httpGet:
             path: /health/live
-            port: grpc
-          initialDelaySeconds: 60
-          periodSeconds: 10
-          failureThreshold: 12
-          timeoutSeconds: 10
+            port: graphql
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 30
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /health/ready
-            port: grpc
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          failureThreshold: 12
-          timeoutSeconds: 10
+            port: graphql
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 10
+          timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /health/live
-            port: grpc
-          initialDelaySeconds: 90
-          periodSeconds: 30
-          failureThreshold: 12
-          timeoutSeconds: 15
+            port: graphql
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
         env:
           - name: PORT_DRIVER_GRAPHQL
             value: "4008"

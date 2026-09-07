@@ -8,6 +8,20 @@ service DriverService {
   rpc GetDriver            (GetDriverRequest)            returns (GetDriverResponse);
   rpc GetDriverStatus      (GetDriverStatusRequest)      returns (GetDriverStatusResponse);
   rpc AssignDriver         (AssignDriverRequest)         returns (AssignDriverResponse);
+  rpc ValidateID           (ValidateIDRequest)         returns (ValidateIDResponse);
+}
+
+message ValidateIDRequest {
+  string id          = 1;
+  string idType      = 2; // "driver", "delivery", "user"
+  string context     = 3; // optional context for validation
+}
+
+message ValidateIDResponse {
+  bool   valid       = 1;
+  string driverId    = 2; // if validating a driver ID
+  string status      = 3; // current status if found
+  string message     = 4;
 }
 
 message FindAvailableDriversRequest {

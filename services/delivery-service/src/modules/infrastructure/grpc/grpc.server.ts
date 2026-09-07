@@ -1,95 +1,42 @@
-import { Controller } from '@nestjs/common';
-import { GrpcMethod } from '@nestjs/microservices';
-import { DeliveryRepository } from '../../delivery/repositories/delivery.repository';
+import { Controller, Inject, OnModuleInit } from '@nestjs/common';
+import { GrpcMethod, ClientGrpc } from '@nestjs/microservices';
 
-interface ParticipantRequest {
-  userId: string;
-  deliveryId: string;
-}
-interface ParticipantResponse {
-  isParticipant: boolean;
-}
-
-interface GetDeliveryRequest {
-  deliveryId: string;
-}
-interface GetDeliveryResponse {
-  found: boolean;
-  deliveryId: string;
-  customerId: string;
+interface ValidateDriverIdRequest {
   driverId: string;
-  status: string;
-  amount: number;
-  currency: string;
 }
 
-interface RefundPaymentRequest {
-  deliveryId: string;
-  reason: string;
+interface ValidateDriverIdResponse {
+  valid: boolean;
+  driverId: string;
+  message: string;
 }
-interface RefundPaymentResponse {
-  accepted: boolean;
-  deliveryId: string;
-  refundId: string;
+
+interface DriverGrpcService {
+  ValidateDriverId(request: ValidateDriverIdRequest): Promise<ValidateDriverIdResponse>;
 }
 
 @Controller()
-export class GrpcServer {
-  constructor(private readonly repository: DeliveryRepository) {}
+export class GrpcServer implements OnModuleInit {
+  private driverService: DriverGrpcService;
 
-  @GrpcMethod('DeliveryService', 'IsParticipant')
-  async isParticipant(
-    request: ParticipantRequest,
-  ): Promise<ParticipantResponse> {
-    try {
-      const delivery = await this.repository.findById(request.deliveryId);
-      return {
-        isParticipant:
-          delivery.customerId === request.userId ||
-          delivery.driverId === request.userId,
-      };
-    } catch {
-      return { isParticipant: false };
-    }
+  constructor(@Inject('DRIVER_SERVICE') private readonly client: ClientGrpc) {}
+
+  onModuleInit() {
+    this.driverService = this.client.getService<DriverGrpcService>('DriverService');
   }
 
-  @GrpcMethod('DeliveryService', 'GetDelivery')
-  async getDelivery(
-    request: GetDeliveryRequest,
-  ): Promise<GetDeliveryResponse> {
+  @GrpcMethod('DriverService', 'ValidateDriverId')
+  async validateDriverId(
+    request: ValidateDriverIdRequest,
+  ): Promise<ValidateDriverIdResponse> {
     try {
-      const delivery = await this.repository.findById(request.deliveryId);
-      return {
-        found: true,
-        deliveryId: delivery.id,
-        customerId: delivery.customerId,
-        driverId: delivery.driverId || '',
-        status: delivery.status,
-        amount: Number(delivery.amount) || 0,
-        currency: delivery.currency || 'USD',
-      };
+      return await this.driverService.ValidateDriverId(request);
     } catch {
       return {
-        found: false,
-        deliveryId: request.deliveryId,
-        customerId: '',
-        driverId: '',
-        status: '',
-        amount: 0,
-        currency: '',
+        valid: false,
+        driverId: request.driverId,
+        message: 'Driver validation failed',
       };
     }
-  }
-
-  @GrpcMethod('DeliveryService', 'RefundPayment')
-  async refundPayment(
-    request: RefundPaymentRequest,
-  ): Promise<RefundPaymentResponse> {
-    return {
-      accepted: true,
-      deliveryId: request.deliveryId,
-      refundId: `ref_${Date.now()}`,
-    };
   }
 }
-

@@ -341,3 +341,16 @@ func (s *DispatchService) ReleaseDriverByID(ctx context.Context, assignmentID st
 	log.Printf("dispatch service: assignment %s released", assignmentID)
 	return nil
 }
+
+// ValidateDriverID validates a driver ID using the driver repository.
+func (s *DispatchService) ValidateDriverID(ctx context.Context, driverID string) (bool, string) {
+	driver, err := s.driverRepo.FindByID(ctx, driverID)
+	if err != nil {
+		log.Printf("dispatch service: failed to validate driver %s: %v", driverID, err)
+		return false, ""
+	}
+	if driver == nil {
+		return false, ""
+	}
+	return true, string(driver.Status)
+}

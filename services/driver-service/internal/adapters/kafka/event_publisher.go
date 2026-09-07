@@ -2,11 +2,11 @@ package kafka
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"time"
 
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/events"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
+	"github.com/google/uuid"
 )
 
 // EventPublisherAdapter wraps KafkaPublisher and implements ports.EventPublisher.
@@ -20,68 +20,101 @@ func NewEventPublisherAdapter(pub *KafkaPublisher) *EventPublisherAdapter {
 }
 
 func (a *EventPublisherAdapter) publish(ctx context.Context, eventType, key string, payload interface{}) error {
-	data, err := json.Marshal(map[string]interface{}{
-		"type":      eventType,
-		"payload":   payload,
-		"timestamp": time.Now().UTC().Format(time.RFC3339),
-	})
+	eventID := uuid.New().String()
+	data, err := events.MarshalEnvelope(eventID, eventType, "", payload)
 	if err != nil {
-		return fmt.Errorf("event marshal failed: %w", err)
+		return err
 	}
-	return a.pub.PublishMessage(ctx, key, string(data))
+	return a.pub.PublishMessage(ctx, eventType, key, data)
 }
 
 func (a *EventPublisherAdapter) PublishDriverCreated(ctx context.Context, driverID, userID string) error {
-	return a.publish(ctx, "driver.created", driverID, map[string]string{"driverId": driverID, "userId": userID})
+	payload := events.DriverCreatedPayload{
+		DriverID:      driverID,
+		Name:          userID, // User identifier/name
+		Status:        "AVAILABLE",
+		VehicleType:   "CAR",
+		Rating:        5.0,
+		UpdatedAt:     time.Now().UTC(),
+		SourceVersion: 1,
+	}
+	return a.publish(ctx, string(events.DriverCreated), driverID, payload)
 }
 
 func (a *EventPublisherAdapter) PublishDriverUpdated(ctx context.Context, driverID string, vehicleType string, capabilities []string) error {
-	return a.publish(ctx, "driver.updated", driverID, map[string]interface{}{
-		"driverId": driverID, "vehicleType": vehicleType, "capabilities": capabilities,
-	})
+	payload := events.DriverUpdatedPayload{
+		DriverID:      driverID,
+		VehicleType:   vehicleType,
+		UpdatedAt:     time.Now().UTC(),
+		SourceVersion: 1,
+	}
+	return a.publish(ctx, string(events.DriverUpdated), driverID, payload)
 }
 
 func (a *EventPublisherAdapter) PublishDriverDeleted(ctx context.Context, driverID string) error {
-	return a.publish(ctx, "driver.deleted", driverID, map[string]string{"driverId": driverID})
+	payload := events.DriverDeletedPayload{
+		DriverID:  driverID,
+		DeletedAt: time.Now().UTC(),
+	}
+	return a.publish(ctx, string(events.DriverDeleted), driverID, payload)
 }
 
 func (a *EventPublisherAdapter) PublishAssignmentOffered(ctx context.Context, assignmentID, deliveryID, driverID string) error {
-	return a.publish(ctx, "driver.assignment.offered", assignmentID, map[string]string{
-		"assignmentId": assignmentID, "deliveryId": deliveryID, "driverId": driverID,
-	})
+	payload := events.DriverAssignmentOfferedPayload{
+		AssignmentID: assignmentID,
+		DeliveryID:   deliveryID,
+		DriverID:     driverID,
+		ExpiresAt:    time.Now().UTC().Add(20 * time.Second).Format(time.RFC3339),
+	}
+	return a.publish(ctx, string(events.DriverAssignmentOffered), assignmentID, payload)
 }
 
 func (a *EventPublisherAdapter) PublishAssignmentAccepted(ctx context.Context, assignmentID, deliveryID, driverID string) error {
-	return a.publish(ctx, "driver.assignment.accepted", assignmentID, map[string]string{
-		"assignmentId": assignmentID, "deliveryId": deliveryID, "driverId": driverID,
-		"acceptedAt": time.Now().UTC().Format(time.RFC3339),
-	})
+	payload := events.DriverAssignmentAcceptedPayload{
+		AssignmentID: assignmentID,
+		DriverID:     driverID,
+		AcceptedAt:   time.Now().UTC().Format(time.RFC3339),
+	}
+	return a.publish(ctx, string(events.DriverAssignmentAccepted), assignmentID, payload)
 }
 
 func (a *EventPublisherAdapter) PublishAssignmentRejected(ctx context.Context, assignmentID, deliveryID, driverID, reason string) error {
-	return a.publish(ctx, "driver.assignment.rejected", assignmentID, map[string]string{
-		"assignmentId": assignmentID, "deliveryId": deliveryID, "driverId": driverID, "reason": reason,
-	})
+	payload := events.DriverAssignmentRejectedPayload{
+		AssignmentID: assignmentID,
+		DriverID:     driverID,
+		Reason:       reason,
+	}
+	return a.publish(ctx, string(events.DriverAssignmentRejected), assignmentID, payload)
 }
 
 func (a *EventPublisherAdapter) PublishAssignmentExpired(ctx context.Context, assignmentID string) error {
-	return a.publish(ctx, "driver.assignment.expired", assignmentID, map[string]string{
-		"assignmentId": assignmentID, "expiredAt": time.Now().UTC().Format(time.RFC3339),
-	})
+	payload := events.DriverAssignmentExpiredPayload{
+		AssignmentID: assignmentID,
+		ExpiredAt:    time.Now().UTC().Format(time.RFC3339),
+	}
+	return a.publish(ctx, string(events.DriverAssignmentExpired), assignmentID, payload)
 }
 
 func (a *EventPublisherAdapter) PublishAssignmentReleased(ctx context.Context, assignmentID string) error {
-	return a.publish(ctx, "driver.assignment.released", assignmentID, map[string]string{
-		"assignmentId": assignmentID, "releasedAt": time.Now().UTC().Format(time.RFC3339),
-	})
+	payload := events.DriverAssignmentReleasedPayload{
+		AssignmentID: assignmentID,
+		ReleasedAt:   time.Now().UTC().Format(time.RFC3339),
+	}
+	return a.publish(ctx, string(events.DriverAssignmentReleased), assignmentID, payload)
 }
 
 func (a *EventPublisherAdapter) PublishDriverAvailable(ctx context.Context, driverID string) error {
-	return a.publish(ctx, "driver.available", driverID, map[string]string{"driverId": driverID})
+	payload := events.DriverAvailablePayload{
+		DriverID: driverID,
+	}
+	return a.publish(ctx, string(events.DriverAvailable), driverID, payload)
 }
 
 func (a *EventPublisherAdapter) PublishDriverUnavailable(ctx context.Context, driverID string) error {
-	return a.publish(ctx, "driver.unavailable", driverID, map[string]string{"driverId": driverID})
+	payload := events.DriverUnavailablePayload{
+		DriverID: driverID,
+	}
+	return a.publish(ctx, string(events.DriverUnavailable), driverID, payload)
 }
 
 func (a *EventPublisherAdapter) PublishLocationUpdated(ctx context.Context, driverID, latitude, longitude string) error {
@@ -92,3 +125,4 @@ func (a *EventPublisherAdapter) PublishLocationUpdated(ctx context.Context, driv
 
 // Compile-time interface check
 var _ ports.EventPublisher = (*EventPublisherAdapter)(nil)
+

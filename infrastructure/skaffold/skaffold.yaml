@@ -14,6 +14,7 @@ build:
   local:
     push: false
     useBuildkit: true
+    concurrency: 1
 
   artifacts:
 

@@ -14,6 +14,24 @@ spec:
       labels:
         app: driver-db
     spec:
+      initContainers:
+        - name: clean-incomplete-data
+          image: busybox:1.36
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              if [ -f /data/db/mongod.lock ]; then
+                echo "Removing stale mongod.lock file";
+                rm -f /data/db/mongod.lock;
+              fi
+              if [ -f /data/db/WiredTiger.wt ] && [ -d /data/db/journal ]; then
+                echo "Resetting corrupted MongoDB data files for clean startup";
+                rm -rf /data/db/*;
+              fi
+              exit 0
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
       containers:
       - name: mongodb
         image: mongo:7
@@ -23,33 +41,33 @@ spec:
             cpu: "100m"
             memory: "256Mi"
           limits:
-            cpu: "500m"
-            memory: "1Gi"
+            cpu: "1000m"
+            memory: "2Gi"
         ports:
         - containerPort: 27017
         volumeMounts:
         - name: data
           mountPath: /data/db
         startupProbe:
-          exec:
-            command: ['mongosh', '--eval', 'db.runCommand({ping:1})']
-          initialDelaySeconds: 3
-          periodSeconds: 3
-          timeoutSeconds: 5
-          failureThreshold: 120
-        readinessProbe:
-          exec:
-            command: ['mongosh', '--eval', 'db.runCommand({ping:1})']
+          tcpSocket:
+            port: 27017
           initialDelaySeconds: 5
           periodSeconds: 5
-          timeoutSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 60
+        readinessProbe:
+          tcpSocket:
+            port: 27017
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
           failureThreshold: 30
         livenessProbe:
-          exec:
-            command: ['mongosh', '--eval', 'db.runCommand({ping:1})']
+          tcpSocket:
+            port: 27017
           initialDelaySeconds: 30
           periodSeconds: 10
-          timeoutSeconds: 5
+          timeoutSeconds: 3
           failureThreshold: 5
       volumes:
       - name: data

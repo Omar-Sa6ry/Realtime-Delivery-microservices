@@ -129,9 +129,11 @@ func (p *DispatchPolicy) AttemptReservation(driverID string, deliveryID string) 
 
 // DispatchAttempt records why a candidate was selected or rejected.
 type DispatchAttempt struct {
-	AttemptNumber int
+	ID            string
+	DeliveryID    string
 	DriverID      string
 	DistanceMeters float64
+	AttemptNumber int
 	Result        DispatchResult
 	Reason        string
 	CreatedAt     time.Time

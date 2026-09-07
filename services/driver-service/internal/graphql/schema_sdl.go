@@ -66,9 +66,15 @@ type DispatchAttemptItem {
   createdAt: String!
 }
 
-type DispatchAttemptsResult {
+type DispatchAttemptsData {
+  paginationInfo: PaginationInfo!
   items: [DispatchAttemptItem!]!
-  total: Int!
+}
+
+type PaginationInfo @shareable {
+  totalItems: Int!
+  currentPage: Int!
+  nextPage: Int
 }
 
 input NearbyDriversInput {
@@ -96,34 +102,89 @@ input UpdateDriverProfileInput {
   serviceArea: String
 }
 
+type DriverResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: Driver
+}
+
+type AssignmentResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: Assignment
+}
+
+type DriverStatusResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: DriverStatus
+}
+
+type NearbyDriversData {
+  paginationInfo: PaginationInfo!
+  items: [NearbyDriverItem!]!
+}
+
+type NearbyDriversResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: NearbyDriversData
+}
+
+type DispatchAttemptsResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: DispatchAttemptsData
+}
+
+type DriverLocationUpdatedResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: Driver
+}
+
 type Query {
   _service: _Service!
   driverServiceInfo: DriverServiceInfoResponse
-  driver(id: ID!): Driver
-  myDriverProfile: Driver
-  driverActiveAssignment(driverId: ID!): Assignment
-  driverStatus(driverId: ID!): DriverStatus
-  nearbyDrivers(input: NearbyDriversInput!): NearbyDriversResult
-  assignment(id: ID!): Assignment
-  dispatchAttempts(deliveryId: ID!): DispatchAttemptsResult
+  driver(id: ID!): DriverResponse
+  myDriverProfile: DriverResponse
+  driverActiveAssignment(driverId: ID!): AssignmentResponse
+  driverStatus(driverId: ID!): DriverStatusResponse
+  nearbyDrivers(input: NearbyDriversInput!): NearbyDriversResponse
+  assignment(id: ID!): AssignmentResponse
+  dispatchAttempts(deliveryId: ID!): DispatchAttemptsResponse
 }
 
 type Mutation {
-  goOnline(idempotencyKey: String!): Driver
-  goOffline(idempotencyKey: String!): Driver
-  acceptAssignment(assignmentId: ID!, idempotencyKey: String!): Assignment
-  rejectAssignment(assignmentId: ID!, reason: String, idempotencyKey: String!): Assignment
-  registerDriver(input: RegisterDriverInput!): Driver
-  updateDriverProfile(driverId: ID!, input: UpdateDriverProfileInput!): Driver
-  suspendDriver(driverId: ID!, reason: String!): Driver
-  activateDriver(driverId: ID!): Driver
+  goOnline(idempotencyKey: String!): DriverResponse
+  goOffline(idempotencyKey: String!): DriverResponse
+  acceptAssignment(assignmentId: ID!, idempotencyKey: String!): AssignmentResponse
+  rejectAssignment(assignmentId: ID!, reason: String, idempotencyKey: String!): AssignmentResponse
+  registerDriver(input: RegisterDriverInput!): DriverResponse
+  updateDriverProfile(driverId: ID!, input: UpdateDriverProfileInput!): DriverResponse
+  suspendDriver(driverId: ID!, reason: String!): DriverResponse
+  activateDriver(driverId: ID!): DriverResponse
 }
 
 type Subscription {
-  driverLocationUpdated: Driver
-  driverAssignmentOffered(assignmentId: ID!): Assignment
-  driverAssignmentAccepted(assignmentId: ID!): Assignment
-  driverStatusUpdated(driverId: ID!): DriverStatus
+  driverLocationUpdated: DriverLocationUpdatedResponse
+  driverAssignmentOffered(assignmentId: ID!): AssignmentResponse
+  driverAssignmentAccepted(assignmentId: ID!): AssignmentResponse
+  driverStatusUpdated(driverId: ID!): DriverStatusResponse
+  driverLocationRealtimeUpdated: DriverLocationUpdatedResponse
+  driverAssignmentRealtimeUpdated(assignmentId: ID!): AssignmentResponse
 }
 
 type _Service {

@@ -1,4 +1,4 @@
-import { Field, ObjectType, Directive, ID, registerEnumType } from '@nestjs/graphql';
+import { Field, ObjectType, Directive, ID, Int, registerEnumType } from '@nestjs/graphql';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
 import { PaymentStatus } from '../enums/payment-status.enum';
 import { GeneralResponse } from '@delivery/common';
@@ -121,13 +121,13 @@ export class DeliveryResponse extends GeneralResponse(DeliveryType) {}
 @Directive('@shareable')
 @ObjectType()
 export class PaginationInfo {
-  @Field(() => Number)
+  @Field(() => Int)
   totalItems: number;
 
-  @Field(() => Number)
+  @Field(() => Int)
   currentPage: number;
 
-  @Field(() => Number, { nullable: true })
+  @Field(() => Int, { nullable: true })
   nextPage?: number | null;
 }
 

@@ -15,87 +15,95 @@ query GetDriverServiceInfo {
   }
 }
 
-# Get Driver by ID - FLAT response (no nested driver{} wrapper)
-# Fields appear directly, not under data { driver { ... } }
+# Get Driver by ID - WRAPPED response (no nested driver{} wrapper)
+# Fields appear under data { ... } { driver { ... } }
 query GetDriver {
   driver(id: "driver-123") {
     success
     statusCode
     message
     timeStamp
-    id
-    userId
-    status        # OFFLINE | AVAILABLE | BUSY
-    vehicleType   # CAR | MOTORCYCLE | TRUCK
-    plateNumber
-    capacityKg
-    capabilities
-    serviceArea
-    rating
-    createdAt
-    updatedAt
+    data {
+      id
+      userId
+      status        # OFFLINE | AVAILABLE | BUSY
+      vehicleType   # CAR | MOTORCYCLE | TRUCK
+      plateNumber
+      capacityKg
+      capabilities
+      serviceArea
+      rating
+      createdAt
+      updatedAt
+    }
   }
 }
 
-# Get My Driver Profile (authenticated driver) - FLAT response
+# Get My Driver Profile (authenticated driver) - WRAPPED response
 query GetMyDriverProfile {
   myDriverProfile {
     success
     statusCode
     message
     timeStamp
-    id
-    userId
-    status
-    vehicleType
-    plateNumber
-    capacityKg
-    capabilities
-    serviceArea
-    rating
-    createdAt
-    updatedAt
+    data {
+      id
+      userId
+      status
+      vehicleType
+      plateNumber
+      capacityKg
+      capabilities
+      serviceArea
+      rating
+      createdAt
+      updatedAt
+    }
   }
 }
 
-# Get Driver Active Assignment - FLAT response
+# Get Driver Active Assignment - WRAPPED response
 query GetDriverActiveAssignment {
   driverActiveAssignment(driverId: "driver-123") {
     success
     statusCode
     message
     timeStamp
-    id
-    deliveryId
-    driverId
-    status        # OFFERED|ACCEPTED|ACTIVE|COMPLETED|REJECTED|EXPIRED|CANCELLED
-    attemptNumber
-    offeredAt
-    expiresAt
-    acceptedAt
-    rejectedAt
-    completedAt
-    createdAt
-    updatedAt
+    data {
+      id
+      deliveryId
+      driverId
+      status        # OFFERED|ACCEPTED|ACTIVE|COMPLETED|REJECTED|EXPIRED|CANCELLED
+      attemptNumber
+      offeredAt
+      expiresAt
+      acceptedAt
+      rejectedAt
+      completedAt
+      createdAt
+      updatedAt
+    }
   }
 }
 
-# Get Driver Status - FLAT response
+# Get Driver Status - WRAPPED response
 query GetDriverStatus {
   driverStatus(driverId: "driver-123") {
     success
     statusCode
     message
     timeStamp
-    driverId
-    status
-    hasActiveAssignment
-    activeDeliveryId
-    lastSeenAt
+    data {
+      driverId
+      status
+      hasActiveAssignment
+      activeDeliveryId
+      lastSeenAt
+    }
   }
 }
 
-# Get Nearby Drivers - FLAT response (items directly, not under data{items})
+# Get Nearby Drivers - WRAPPED response (items under data { items })
 query GetNearbyDrivers {
   nearbyDrivers(input: {
     latitude: 30.0444
@@ -108,69 +116,81 @@ query GetNearbyDrivers {
     statusCode
     message
     timeStamp
-    items {
-      driverId
-      distanceMeters
-      status
-      vehicleType
-      latitude
-      longitude
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        driverId
+        distanceMeters
+        status
+        vehicleType
+        latitude
+        longitude
+      }
     }
-    total
   }
 }
 
-# Get Assignment by ID - FLAT response
+# Get Assignment by ID - WRAPPED response
 query GetAssignment {
   assignment(id: "assignment-123") {
     success
     statusCode
     message
     timeStamp
-    id
-    deliveryId
-    driverId
-    status
-    attemptNumber
-    offeredAt
-    expiresAt
-    acceptedAt
-    rejectedAt
-    completedAt
-    createdAt
-    updatedAt
+    data {
+      id
+      deliveryId
+      driverId
+      status
+      attemptNumber
+      offeredAt
+      expiresAt
+      acceptedAt
+      rejectedAt
+      completedAt
+      createdAt
+      updatedAt
+    }
   }
 }
 
 # ─── MUTATIONS ──────────────────────────────────────────────
 
-# Go Online - FLAT response
+# Go Online - WRAPPED response
 mutation GoOnline {
   goOnline(idempotencyKey: "go-online-driver-123-1234567890") {
     success
     statusCode
     message
     timeStamp
-    driverId
-    status
-    updatedAt
+    data {
+      driverId
+      status
+      updatedAt
+    }
   }
 }
 
-# Go Offline - FLAT response
+# Go Offline - WRAPPED response
 mutation GoOffline {
   goOffline(idempotencyKey: "go-offline-driver-123-1234567890") {
     success
     statusCode
     message
     timeStamp
-    driverId
-    status
-    updatedAt
+    data {
+      driverId
+      status
+      updatedAt
+    }
   }
 }
 
-# Accept Assignment - FLAT response
+# Accept Assignment - WRAPPED response
 mutation AcceptAssignment {
   acceptAssignment(
     assignmentId: "assignment-123"
@@ -180,16 +200,18 @@ mutation AcceptAssignment {
     statusCode
     message
     timeStamp
-    id
-    deliveryId
-    driverId
-    status
-    acceptedAt
-    updatedAt
+    data {
+      id
+      deliveryId
+      driverId
+      status
+      acceptedAt
+      updatedAt
+    }
   }
 }
 
-# Reject Assignment - FLAT response
+# Reject Assignment - WRAPPED response
 mutation RejectAssignment {
   rejectAssignment(
     assignmentId: "assignment-123"
@@ -200,16 +222,18 @@ mutation RejectAssignment {
     statusCode
     message
     timeStamp
-    id
-    deliveryId
-    driverId
-    status
-    rejectedAt
-    updatedAt
+    data {
+      id
+      deliveryId
+      driverId
+      status
+      rejectedAt
+      updatedAt
+    }
   }
 }
 
-# Register Driver (Admin / onboarding) - FLAT response
+# Register Driver (Admin / onboarding) - WRAPPED response
 mutation RegisterDriver {
   registerDriver(input: {
     userId: "user-789"
@@ -223,19 +247,21 @@ mutation RegisterDriver {
     statusCode
     message
     timeStamp
-    id
-    userId
-    status
-    vehicleType
-    plateNumber
-    capacityKg
-    capabilities
-    serviceArea
-    createdAt
+    data {
+      id
+      userId
+      status
+      vehicleType
+      plateNumber
+      capacityKg
+      capabilities
+      serviceArea
+      createdAt
+    }
   }
 }
 
-# Update Driver Profile (Admin) - FLAT response
+# Update Driver Profile (Admin) - WRAPPED response
 mutation UpdateDriverProfile {
   updateDriverProfile(
     driverId: "driver-123"
@@ -251,18 +277,20 @@ mutation UpdateDriverProfile {
     statusCode
     message
     timeStamp
-    id
-    status
-    vehicleType
-    plateNumber
-    capacityKg
-    capabilities
-    serviceArea
-    updatedAt
+    data {
+      id
+      status
+      vehicleType
+      plateNumber
+      capacityKg
+      capabilities
+      serviceArea
+      updatedAt
+    }
   }
 }
 
-# Suspend Driver (Admin) - FLAT response
+# Suspend Driver (Admin) - WRAPPED response
 mutation SuspendDriver {
   suspendDriver(
     driverId: "driver-123"
@@ -272,118 +300,134 @@ mutation SuspendDriver {
     statusCode
     message
     timeStamp
-    driverId
-    status
-    updatedAt
+    data {
+      driverId
+      status
+      updatedAt
+    }
   }
 }
 
-# Activate Driver (Admin) - FLAT response
+# Activate Driver (Admin) - WRAPPED response
 mutation ActivateDriver {
   activateDriver(driverId: "driver-123") {
     success
     statusCode
     message
     timeStamp
-    driverId
-    status
-    updatedAt
+    data {
+      driverId
+      status
+      updatedAt
+    }
   }
 }
 
 # ─── SUBSCRIPTIONS ─────────────────────────────────────────
 
-# Subscribe to driver location updates - FLAT response
+# Subscribe to driver location updates - WRAPPED response
 subscription DriverLocationUpdated {
   driverLocationUpdated {
     success
     statusCode
     message
     timeStamp
-    driverId
-    latitude
-    longitude
+    data {
+      driverId
+      latitude
+      longitude
+    }
   }
 }
 
-# Subscribe to assignment offer events - FLAT response
+# Subscribe to assignment offer events - WRAPPED response
 subscription DriverAssignmentOffered {
   driverAssignmentOffered(assignmentId: "assignment-123") {
     success
     statusCode
     message
     timeStamp
-    id
-    deliveryId
-    driverId
-    status
-    offeredAt
-    expiresAt
+    data {
+      id
+      deliveryId
+      driverId
+      status
+      offeredAt
+      expiresAt
+    }
   }
 }
 
-# Subscribe to assignment acceptance events - FLAT response
+# Subscribe to assignment acceptance events - WRAPPED response
 subscription DriverAssignmentAccepted {
   driverAssignmentAccepted(assignmentId: "assignment-123") {
     success
     statusCode
     message
     timeStamp
-    id
-    deliveryId
-    driverId
-    status
-    acceptedAt
-    updatedAt
+    data {
+      id
+      deliveryId
+      driverId
+      status
+      acceptedAt
+      updatedAt
+    }
   }
 }
 
-# Subscribe to driver status updates - FLAT response
+# Subscribe to driver status updates - WRAPPED response
 subscription DriverStatusUpdated {
   driverStatusUpdated(driverId: "driver-123") {
     success
     statusCode
     message
     timeStamp
-    driverId
-    status
-    updatedAt
+    data {
+      driverId
+      status
+      updatedAt
+    }
   }
 }
 
 # ─── SUBSCRIPTIONS — REALTIME EVENTS ───────────────────────
 
-# Subscribe to driver location.updated via NATS realtime - FLAT response
+# Subscribe to driver location.updated via NATS realtime - WRAPPED response
 subscription DriverLocationRealtimeUpdated {
   driverLocationRealtimeUpdated {
     success
     statusCode
     message
     timeStamp
-    driverId
-    latitude
-    longitude
-    timestamp
+    data {
+      driverId
+      latitude
+      longitude
+      timestamp
+    }
   }
 }
 
-# Subscribe to assignment status changes via NATS - FLAT response
+# Subscribe to assignment status changes via NATS - WRAPPED response
 subscription DriverAssignmentRealtimeUpdated {
   driverAssignmentRealtimeUpdated(assignmentId: "assignment-123") {
     success
     statusCode
     message
     timeStamp
-    id
-    deliveryId
-    driverId
-    status
-    attemptNumber
-    offeredAt
-    expiresAt
-    acceptedAt
-    rejectedAt
-    completedAt
-    updatedAt
+    data {
+      id
+      deliveryId
+      driverId
+      status
+      attemptNumber
+      offeredAt
+      expiresAt
+      acceptedAt
+      rejectedAt
+      completedAt
+      updatedAt
+    }
   }
 }

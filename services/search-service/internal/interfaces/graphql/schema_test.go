@@ -173,7 +173,7 @@ func TestSchemaHasAllQueries(t *testing.T) {
 		"searchUsers",
 		"autocomplete",
 		"nearbyDeliveries",
-		"nearbyDrivers",
+		"searchNearbyDrivers",
 		"searchHealth",
 	}
 

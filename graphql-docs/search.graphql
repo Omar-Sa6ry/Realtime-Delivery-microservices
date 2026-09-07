@@ -139,3 +139,63 @@ query {
   }
 }
 
+# Search nearby drivers using geo coordinates (search-service)
+query {
+  searchNearbyDrivers(
+    input: {
+      lat: 30.0444
+      lon: 31.2357
+      radiusKm: 5.0
+      pagination: { limit: 10 }
+    }
+  ) {
+    items {
+      driver_id
+      name
+      status
+      vehicle_type
+      rating
+      location {
+        lat
+        lon
+      }
+    }
+    pageInfo {
+      hasNextPage
+      cursor
+      total
+    }
+  }
+}
+
+# Search nearby deliveries using geo coordinates (search-service)
+query {
+  nearbyDeliveries(
+    input: {
+      lat: 30.0444
+      lon: 31.2357
+      radiusKm: 5.0
+      pagination: { limit: 10 }
+    }
+  ) {
+    items {
+      delivery_id
+      customer_id
+      status
+      pickup {
+        city
+        country
+        location {
+          lat
+          lon
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      cursor
+      total
+    }
+  }
+}
+

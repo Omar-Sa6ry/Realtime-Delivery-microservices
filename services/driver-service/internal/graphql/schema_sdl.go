@@ -71,7 +71,7 @@ type DispatchAttemptsResult {
   total: Int!
 }
 
-type NearbyDriversInput {
+input NearbyDriversInput {
   latitude: Float!
   longitude: Float!
   radiusKm: Float!

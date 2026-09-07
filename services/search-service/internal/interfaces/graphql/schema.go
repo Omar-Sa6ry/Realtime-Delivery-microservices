@@ -181,7 +181,7 @@ type Query {
   searchUsers(input: UserSearchInput!): UserSearchResponse!
   autocomplete(input: AutocompleteInput!): AutocompleteResponse!
   nearbyDeliveries(input: GeoSearchInput!): DeliverySearchResponse!
-  nearbyDrivers(input: GeoSearchInput!): DriverSearchResponse!
+  searchNearbyDrivers(input: GeoSearchInput!): DriverSearchResponse!
   searchHealth: SearchHealth!
 }
 
@@ -498,7 +498,7 @@ func buildSchema(r *Resolver) (gql.Schema, error) {
 				},
 				Resolve: r.ResolveNearbyDeliveries,
 			},
-			"nearbyDrivers": &gql.Field{
+			"searchNearbyDrivers": &gql.Field{
 				Type: gql.NewNonNull(driverSearchResponseType),
 				Args: gql.FieldConfigArgument{
 					"input": &gql.ArgumentConfig{Type: gql.NewNonNull(geoSearchInput)},

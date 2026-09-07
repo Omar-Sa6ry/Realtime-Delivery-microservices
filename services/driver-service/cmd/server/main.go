@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net"
 	"net/http"
@@ -23,212 +22,9 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/services"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/config"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
+	internalgql "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/graphql"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/workers"
 )
-
-// driverSubgraphSDL is the GraphQL SDL for the driver subgraph (Apollo Federation v2).
-const driverSubgraphSDL = `extend schema
-  @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key", "@shareable"])
-
-type Driver @key(fields: "id") {
-  id: ID!
-  userId: String!
-  status: String!
-  vehicleType: String
-  plateNumber: String
-  capacityKg: Int
-  capabilities: [String!]
-  serviceArea: String
-  rating: Float
-  createdAt: String
-  updatedAt: String
-}
-
-type Assignment {
-  id: ID!
-  deliveryId: String!
-  driverId: String!
-  status: String!
-  attemptNumber: Int
-  offeredAt: String
-  expiresAt: String
-  acceptedAt: String
-  rejectedAt: String
-  completedAt: String
-  createdAt: String
-  updatedAt: String
-}
-
-type DriverStatus {
-  driverId: String!
-  status: String!
-  hasActiveAssignment: Boolean!
-  activeDeliveryId: String
-  lastSeenAt: String
-}
-
-type NearbyDriverItem {
-  driverId: String!
-  distanceMeters: Float!
-  status: String!
-  vehicleType: String
-  latitude: Float!
-  longitude: Float!
-}
-
-type NearbyDriversResult {
-  items: [NearbyDriverItem!]!
-  total: Int!
-}
-
-type DispatchAttemptItem {
-  id: ID!
-  deliveryId: String!
-  driverId: String!
-  distanceMeters: Float!
-  attemptNumber: Int!
-  result: String!
-  reason: String
-  createdAt: String!
-}
-
-type DispatchAttemptsResult {
-  items: [DispatchAttemptItem!]!
-  total: Int!
-}
-
-type NearbyDriversInput {
-  latitude: Float!
-  longitude: Float!
-  radiusKm: Float!
-  vehicleType: String
-  limit: Int
-}
-
-input RegisterDriverInput {
-  userId: String!
-  vehicleType: String!
-  plateNumber: String!
-  capacityKg: Int!
-  capabilities: [String!]
-  serviceArea: String
-}
-
-input UpdateDriverProfileInput {
-  vehicleType: String
-  plateNumber: String
-  capacityKg: Int
-  capabilities: [String!]
-  serviceArea: String
-}
-
-type Query {
-  _service: _Service!
-  driverServiceInfo: DriverServiceInfoResponse
-  driver(id: ID!): Driver
-  myDriverProfile: Driver
-  driverActiveAssignment(driverId: ID!): Assignment
-  driverStatus(driverId: ID!): DriverStatus
-  nearbyDrivers(input: NearbyDriversInput!): NearbyDriversResult
-  assignment(id: ID!): Assignment
-  dispatchAttempts(deliveryId: ID!): DispatchAttemptsResult
-}
-
-type Mutation {
-  goOnline(idempotencyKey: String!): Driver
-  goOffline(idempotencyKey: String!): Driver
-  acceptAssignment(assignmentId: ID!, idempotencyKey: String!): Assignment
-  rejectAssignment(assignmentId: ID!, reason: String, idempotencyKey: String!): Assignment
-  registerDriver(input: RegisterDriverInput!): Driver
-  updateDriverProfile(driverId: ID!, input: UpdateDriverProfileInput!): Driver
-  suspendDriver(driverId: ID!, reason: String!): Driver
-  activateDriver(driverId: ID!): Driver
-}
-
-type Subscription {
-  driverLocationUpdated: Driver
-  driverAssignmentOffered(assignmentId: ID!): Assignment
-  driverAssignmentAccepted(assignmentId: ID!): Assignment
-  driverStatusUpdated(driverId: ID!): DriverStatus
-}
-
-type _Service {
-  sdl: String!
-}
-
-type DriverServiceInfoResponse {
-  success: Boolean!
-  statusCode: Int!
-  message: String!
-  timeStamp: String!
-  data: DriverServiceInfo
-}
-
-type DriverServiceInfo {
-  name: String!
-  version: String!
-  status: String!
-}`
-
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ok","service":"driver-service"}`))
-}
-
-func graphqlHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-	if r.Method == http.MethodGet {
-		resp := map[string]interface{}{"data": map[string]interface{}{"__typename": "Query"}}
-		_ = json.NewEncoder(w).Encode(resp)
-		return
-	}
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req struct {
-		Query string `json:"query"`
-	}
-	_ = json.NewDecoder(r.Body).Decode(&req)
-
-	if strings.Contains(req.Query, "_service") {
-		resp := map[string]interface{}{
-			"data": map[string]interface{}{
-				"_service": map[string]interface{}{"sdl": driverSubgraphSDL},
-			},
-		}
-		_ = json.NewEncoder(w).Encode(resp)
-		return
-	}
-
-	if strings.Contains(req.Query, "driverServiceInfo") {
-		resp := map[string]interface{}{
-			"data": map[string]interface{}{
-				"driverServiceInfo": map[string]interface{}{
-					"success":    true,
-					"statusCode": 200,
-					"message":    "Driver service is running",
-					"timeStamp":  time.Now().UTC().Format(time.RFC3339),
-					"data": map[string]interface{}{
-						"name":    "driver-service",
-						"version": "1.0.0",
-						"status":  "healthy",
-					},
-				},
-			},
-		}
-		_ = json.NewEncoder(w).Encode(resp)
-		return
-	}
-
-	resp := map[string]interface{}{
-		"data": map[string]interface{}{"__typename": "Query"},
-	}
-	_ = json.NewEncoder(w).Encode(resp)
-}
 
 func main() {
 	cfg := config.Load()
@@ -255,7 +51,7 @@ func main() {
 	driverRepo := adaptermongo.NewDriverRepository(mongoClient, cfg.MongoDBDatabase, "drivers")
 	assignmentRepo := adaptermongo.NewAssignmentRepository(mongoClient, cfg.MongoDBDatabase, "assignments")
 	idempotencyRepo := adaptermongo.NewIdempotencyRepository(mongoClient, cfg.MongoDBDatabase, "idempotency")
-	_ = idempotencyRepo // used by commands
+	_ = idempotencyRepo
 
 	// ─── Redis ────────────────────────────────────────────────────────────────
 	redisAddr := cfg.RedisHost + ":" + cfg.RedisPort
@@ -266,11 +62,6 @@ func main() {
 	// ─── Kafka Publisher ──────────────────────────────────────────────────────
 	kafkaBrokers := strings.Split(cfg.KafkaBrokers, ",")
 	kafkaPub := adapterkafka.NewKafkaPublisher(kafkaBrokers, "driver-events")
-
-	// ─── NATS ─────────────────────────────────────────────────────────────────
-	// NATS publisher (optional — best effort, no fatal if unavailable)
-	_ = geoStore  // used by dispatch service
-	_ = kafkaPub  // used via EventPublisher wrapper
 
 	// ─── Application Service ──────────────────────────────────────────────────
 	dispatchPolicy := domain.NewDispatchPolicy()
@@ -309,13 +100,13 @@ func main() {
 		}
 	}()
 
-	// ─── GraphQL HTTP Server ──────────────────────────────────────────────────
+	// ─── GraphQL & Health HTTP Server ─────────────────────────────────────────
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health/live", healthHandler)
-	mux.HandleFunc("/health/ready", healthHandler)
-	mux.HandleFunc("/healthz", healthHandler)
-	mux.HandleFunc("/driver/graphql", graphqlHandler)
-	mux.HandleFunc("/graphql", graphqlHandler)
+	mux.HandleFunc("/health/live", internalgql.HealthHandler)
+	mux.HandleFunc("/health/ready", internalgql.HealthHandler)
+	mux.HandleFunc("/healthz", internalgql.HealthHandler)
+	mux.HandleFunc("/driver/graphql", internalgql.Handler)
+	mux.HandleFunc("/graphql", internalgql.Handler)
 
 	gqlServer := &http.Server{
 		Addr:         ":" + cfg.PortGraphQL,

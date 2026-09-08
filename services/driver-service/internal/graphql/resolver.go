@@ -495,8 +495,8 @@ func (r *AssignmentResolver) Driver(ctx context.Context) (*DriverResolver, error
 	return &DriverResolver{driver: driver}, nil
 }
 
-func (r *RootResolver) Service() ServiceResolver {
-	return ServiceResolver{sdl: DriverSubgraphSDL}
+func (r *RootResolver) Service() *ServiceResolver {
+	return &ServiceResolver{sdl: DriverSubgraphSDL}
 }
 
 func (r *RootResolver) DriverServiceInfo(ctx context.Context) *DriverServiceInfoResponseResolver {

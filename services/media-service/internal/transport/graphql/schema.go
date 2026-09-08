@@ -6,7 +6,7 @@ import (
 	gql "github.com/graphql-go/graphql"
 )
 
-const subgraphSDL = `extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: [])
+const subgraphSDL = `extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@shareable"])
 
 type MediaVersion {
   versionType: String!
@@ -61,7 +61,7 @@ type CompleteUploadResult {
   status: String!
 }
 
-type PaginationInfo {
+type PaginationInfo @shareable {
   totalItems: Int!
   currentPage: Int!
   nextPage: Int

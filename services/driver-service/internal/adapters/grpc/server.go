@@ -227,6 +227,7 @@ func (s *DriverGRPCServer) GetDriver(ctx context.Context, req *pb.GetDriverReque
 		UserId:      driver.UserID,
 		Status:      string(driver.Status),
 		VehicleType: toProtoVehicleType(driver.Vehicle.Type),
+		IsBlocked:   driver.IsBlocked,
 	}, nil
 }
 

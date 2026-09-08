@@ -32,7 +32,11 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // NewHandler creates an Apollo Federation GraphQL subgraph request handler.
-func NewHandler(registerCmd *commands.RegisterDriverHandler) http.HandlerFunc {
+func NewHandler(
+	registerCmd *commands.RegisterDriverHandler,
+	blockCmd *commands.BlockDriverHandler,
+	unblockCmd *commands.UnblockDriverHandler,
+) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	lang := ExtractLanguage(r)
@@ -87,7 +91,7 @@ func NewHandler(registerCmd *commands.RegisterDriverHandler) http.HandlerFunc {
 
 		if strings.Contains(req.Query, "registerDriver") {
 			// Extremely naive parsing for demo purposes
-			resolver := NewDriverResolver(registerCmd)
+			resolver := NewDriverResolver(registerCmd, blockCmd, unblockCmd)
 			// Mocking args since we don't have a real AST parser
 			args := map[string]interface{}{
 				"userId":      "user-111",
@@ -99,6 +103,38 @@ func NewHandler(registerCmd *commands.RegisterDriverHandler) http.HandlerFunc {
 			resp := map[string]interface{}{
 				"data": map[string]interface{}{
 					"registerDriver": result,
+				},
+			}
+			_ = json.NewEncoder(w).Encode(resp)
+			return
+		}
+
+		if strings.Contains(req.Query, "blockDriver") && !strings.Contains(req.Query, "unblock") {
+			resolver := NewDriverResolver(registerCmd, blockCmd, unblockCmd)
+			args := map[string]interface{}{
+				"driverId": "driver-123", // In a real system, extract from query variables
+				"reason":   "Admin blocked",
+			}
+			result := resolver.BlockDriver(args)
+			resp := map[string]interface{}{
+				"data": map[string]interface{}{
+					"blockDriver": result,
+				},
+			}
+			_ = json.NewEncoder(w).Encode(resp)
+			return
+		}
+
+		if strings.Contains(req.Query, "unblockDriver") {
+			resolver := NewDriverResolver(registerCmd, blockCmd, unblockCmd)
+			args := map[string]interface{}{
+				"driverId": "driver-123", // In a real system, extract from query variables
+				"reason":   "Admin unblocked",
+			}
+			result := resolver.UnblockDriver(args)
+			resp := map[string]interface{}{
+				"data": map[string]interface{}{
+					"unblockDriver": result,
 				},
 			}
 			_ = json.NewEncoder(w).Encode(resp)

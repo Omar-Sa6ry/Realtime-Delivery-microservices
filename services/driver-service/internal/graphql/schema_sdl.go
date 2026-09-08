@@ -22,6 +22,7 @@ type Driver @key(fields: "id") {
   capabilities: [String!]
   serviceArea: String
   rating: Float
+  isBlocked: Boolean!
   createdAt: String
   updatedAt: String
 }
@@ -56,6 +57,8 @@ type NearbyDriverItem {
   vehicleType: VehicleType
   latitude: Float!
   longitude: Float!
+  rating: Float!
+  isBlocked: Boolean!
 }
 
 type NearbyDriversResult {
@@ -181,9 +184,11 @@ type Mutation {
   acceptAssignment(assignmentId: ID!, idempotencyKey: String!): AssignmentResponse
   rejectAssignment(assignmentId: ID!, reason: String, idempotencyKey: String!): AssignmentResponse
   registerDriver(input: RegisterDriverInput!): DriverResponse
-  updateDriverProfile(driverId: ID!, input: UpdateDriverProfileInput!): DriverResponse
+  updateDriverProfile(input: UpdateDriverProfileInput!): DriverResponse
   suspendDriver(driverId: ID!, reason: String!): DriverResponse
   activateDriver(driverId: ID!): DriverResponse
+  blockDriver(driverId: ID!, reason: String): DriverResponse
+  unblockDriver(driverId: ID!, reason: String): DriverResponse
 }
 
 type Subscription {

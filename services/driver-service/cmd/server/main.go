@@ -89,8 +89,8 @@ func main() {
 
 	// ─── Application Commands ─────────────────────────────────────────────────
 	registerDriverHandler := commands.NewRegisterDriverHandler(driverRepo, eventPublisher, userClient)
-	_ = registerDriverHandler // TODO: Inject into GraphQL handler
-
+	blockDriverHandler := commands.NewBlockDriverHandler(driverRepo, eventPublisher)
+	unblockDriverHandler := commands.NewUnblockDriverHandler(driverRepo, eventPublisher)
 
 	// ─── Background Workers ───────────────────────────────────────────────────
 	wp := workers.NewWorkerPool(3)
@@ -122,8 +122,8 @@ func main() {
 	mux.HandleFunc("/health/live", internalgql.HealthHandler)
 	mux.HandleFunc("/health/ready", internalgql.HealthHandler)
 	mux.HandleFunc("/healthz", internalgql.HealthHandler)
-	mux.HandleFunc("/driver/graphql", internalgql.NewHandler(registerDriverHandler))
-	mux.HandleFunc("/graphql", internalgql.NewHandler(registerDriverHandler))
+	mux.HandleFunc("/driver/graphql", internalgql.NewHandler(registerDriverHandler, blockDriverHandler, unblockDriverHandler))
+	mux.HandleFunc("/graphql", internalgql.NewHandler(registerDriverHandler, blockDriverHandler, unblockDriverHandler))
 
 	gqlServer := &http.Server{
 		Addr:         ":" + cfg.PortGraphQL,

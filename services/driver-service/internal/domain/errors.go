@@ -19,6 +19,7 @@ var (
 	ErrInvalidTransition       = &Error{Code: "invalid_transition", Message: "invalid state transition"}
 	ErrInvalidArgument         = &Error{Code: "invalid_argument", Message: "invalid argument"}
 	ErrMaxAttemptsReached      = &Error{Code: "max_attempts_reached", Message: "maximum attempts reached"}
+	ErrDriverBlocked           = &Error{Code: "driver_blocked", Message: "driver is blocked by admin"}
 	ErrInternal                = &Error{Code: "internal_error", Message: "internal error"}
 )
 

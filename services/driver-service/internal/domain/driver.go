@@ -11,6 +11,7 @@ type Driver struct {
 	ID         string
 	UserID     string
 	Status     DriverStatus
+	IsBlocked  bool
 	Vehicle    VehicleInfo
 	Capabilities []string
 	ServiceArea string
@@ -77,6 +78,9 @@ func (d *Driver) GoOnline() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
+	if d.IsBlocked {
+		return ErrDriverBlocked
+	}
 	if !IsValidDriverTransition(d.Status, DriverStatusAvailable, "GoOnline") {
 		return ErrInvalidTransition
 	}
@@ -103,6 +107,9 @@ func (d *Driver) Reserve() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
+	if d.IsBlocked {
+		return ErrDriverBlocked
+	}
 	if !IsValidDriverTransition(d.Status, DriverStatusBusy, "Reserve") {
 		return ErrInvalidTransition
 	}
@@ -120,6 +127,24 @@ func (d *Driver) CompleteDelivery() error {
 		return ErrInvalidTransition
 	}
 	d.Status = DriverStatusAvailable
+	d.UpdatedAt = time.Now()
+	return nil
+}
+
+// Block prevents the driver from accepting new assignments or going online.
+func (d *Driver) Block() error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.IsBlocked = true
+	d.UpdatedAt = time.Now()
+	return nil
+}
+
+// Unblock restores the driver's permissions.
+func (d *Driver) Unblock() error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.IsBlocked = false
 	d.UpdatedAt = time.Now()
 	return nil
 }

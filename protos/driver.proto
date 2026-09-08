@@ -1,6 +1,8 @@
 syntax = "proto3";
 package driver;
 
+option go_package = "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/grpc/proto";
+
 service DriverService {
   rpc FindAvailableDrivers (FindAvailableDriversRequest) returns (FindAvailableDriversResponse);
   rpc ReserveDriver        (ReserveDriverRequest)        returns (ReserveDriverResponse);
@@ -101,6 +103,7 @@ message GetDriverResponse {
   string userId      = 3;
   string status      = 4;
   VehicleType vehicleType = 5;
+  bool is_blocked    = 6;
 }
 
 message GetDriverStatusRequest  { string driverId = 1; }

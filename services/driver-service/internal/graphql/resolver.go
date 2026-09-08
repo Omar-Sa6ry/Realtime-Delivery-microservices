@@ -2,6 +2,7 @@ package graphql
 
 import (
 	"context"
+	"time"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/commands"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
@@ -10,12 +11,20 @@ import (
 // DriverResolver resolves driver query fields.
 type DriverResolver struct {
 	registerHandler *commands.RegisterDriverHandler
+	blockHandler    *commands.BlockDriverHandler
+	unblockHandler  *commands.UnblockDriverHandler
 }
 
 // NewDriverResolver creates a new DriverResolver
-func NewDriverResolver(registerHandler *commands.RegisterDriverHandler) *DriverResolver {
+func NewDriverResolver(
+	registerHandler *commands.RegisterDriverHandler,
+	blockHandler *commands.BlockDriverHandler,
+	unblockHandler *commands.UnblockDriverHandler,
+) *DriverResolver {
 	return &DriverResolver{
 		registerHandler: registerHandler,
+		blockHandler:    blockHandler,
+		unblockHandler:  unblockHandler,
 	}
 }
 
@@ -420,21 +429,99 @@ func (r *DriverResolver) UpdateDriverProfile(args map[string]interface{}) interf
 // SuspendDriverResolver resolves the suspendDriver mutation field.
 func (r *DriverResolver) SuspendDriver(args map[string]interface{}) interface{} {
 	driverID := "driver-123"
-
-	if dID, ok := args["driverId"]; ok {
-		driverID = dID.(string)
+	if id, ok := args["driverId"]; ok {
+		driverID = id.(string)
 	}
 
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Success",
+		"message":    "Driver suspended successfully",
 		"timeStamp":  "2026-09-02T12:00:00Z",
 		"data": map[string]interface{}{
-			"driverId":  driverID,
+			"id":        driverID,
+			"userId":    "user-456",
 			"status":    "SUSPENDED",
 			"updatedAt": "2026-09-02T12:00:00Z",
 		},
+	}
+}
+
+// BlockDriver resolves the blockDriver mutation.
+func (r *DriverResolver) BlockDriver(args map[string]interface{}) interface{} {
+	if r.blockHandler != nil {
+		driverID := args["driverId"].(string)
+		reason := ""
+		if rsn, ok := args["reason"]; ok {
+			reason = rsn.(string)
+		}
+		
+		cmd := commands.BlockDriverCommand{
+			DriverID: driverID,
+			Reason:   reason,
+		}
+		driver, err := r.blockHandler.Execute(context.Background(), cmd)
+		if err != nil {
+			return map[string]interface{}{
+				"success":    false,
+				"statusCode": 500,
+				"message":    err.Error(),
+			}
+		}
+		return map[string]interface{}{
+			"success":    true,
+			"statusCode": 200,
+			"message":    "Driver blocked successfully",
+			"data": map[string]interface{}{
+				"id":        driver.ID,
+				"status":    string(driver.Status),
+				"isBlocked": driver.IsBlocked,
+				"updatedAt": driver.UpdatedAt.Format(time.RFC3339),
+			},
+		}
+	}
+	return map[string]interface{}{
+		"success": true,
+		"message": "Mock Blocked",
+	}
+}
+
+// UnblockDriver resolves the unblockDriver mutation.
+func (r *DriverResolver) UnblockDriver(args map[string]interface{}) interface{} {
+	if r.unblockHandler != nil {
+		driverID := args["driverId"].(string)
+		reason := ""
+		if rsn, ok := args["reason"]; ok {
+			reason = rsn.(string)
+		}
+		
+		cmd := commands.UnblockDriverCommand{
+			DriverID: driverID,
+			Reason:   reason,
+		}
+		driver, err := r.unblockHandler.Execute(context.Background(), cmd)
+		if err != nil {
+			return map[string]interface{}{
+				"success":    false,
+				"statusCode": 500,
+				"message":    err.Error(),
+			}
+		}
+		return map[string]interface{}{
+			"success":    true,
+			"statusCode": 200,
+			"message":    "Driver unblocked successfully",
+			"data": map[string]interface{}{
+				"id":        driver.ID,
+				"status":    string(driver.Status),
+				"isBlocked": driver.IsBlocked,
+				"updatedAt": driver.UpdatedAt.Format(time.RFC3339),
+			},
+		}
+	}
+	return map[string]interface{}{
+		"success": true,
+		"message": "Mock Unblocked",
 	}
 }
 

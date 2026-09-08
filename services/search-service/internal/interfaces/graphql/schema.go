@@ -30,9 +30,23 @@ type UserDocument {
   created_at: String!
 }
 
-type UserSearchResponse {
+type PaginationInfo @shareable {
+  totalItems: Int!
+  currentPage: Int!
+  nextPage: Int
+}
+
+type UserSearchData {
+  paginationInfo: PaginationInfo!
   items: [UserDocument!]!
-  pageInfo: PageInfo!
+}
+
+type UserSearchResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: UserSearchData
 }
 
 type DeliveryDocument {
@@ -47,9 +61,17 @@ type DeliveryDocument {
   source_version: Int!
 }
 
-type DeliverySearchResponse {
+type DeliverySearchData {
+  paginationInfo: PaginationInfo!
   items: [DeliveryDocument!]!
-  pageInfo: PageInfo!
+}
+
+type DeliverySearchResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: DeliverySearchData
 }
 
 type DriverDocument {
@@ -63,9 +85,17 @@ type DriverDocument {
   source_version: Int!
 }
 
-type DriverSearchResponse {
+type DriverSearchData {
+  paginationInfo: PaginationInfo!
   items: [DriverDocument!]!
-  pageInfo: PageInfo!
+}
+
+type DriverSearchResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: DriverSearchData
 }
 
 type MediaDocument {
@@ -79,15 +109,17 @@ type MediaDocument {
   created_at: String!
 }
 
-type MediaSearchResponse {
+type MediaSearchData {
+  paginationInfo: PaginationInfo!
   items: [MediaDocument!]!
-  pageInfo: PageInfo!
 }
 
-type PageInfo {
-  hasNextPage: Boolean!
-  cursor: String
-  total: Int!
+type MediaSearchResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: MediaSearchData
 }
 
 type AutocompleteResult {
@@ -95,7 +127,11 @@ type AutocompleteResult {
 }
 
 type AutocompleteResponse {
-  data: AutocompleteResult!
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: AutocompleteResult
 }
 
 type ReindexJob {
@@ -105,6 +141,27 @@ type ReindexJob {
   startedAt: String!
   completedAt: String
   error: String
+}
+
+type ReindexJobResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: ReindexJob
+}
+
+type SearchHealthData {
+  status: String!
+  timestamp: String!
+}
+
+type SearchHealthResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: SearchHealthData
 }
 
 input PaginationInput {
@@ -182,21 +239,25 @@ type Query {
   autocomplete(input: AutocompleteInput!): AutocompleteResponse!
   nearbyDeliveries(input: GeoSearchInput!): DeliverySearchResponse!
   searchNearbyDrivers(input: GeoSearchInput!): DriverSearchResponse!
-  searchHealth: SearchHealth!
+  searchHealth: SearchHealthResponse!
 }
 
 type Mutation {
-  startReindex(index: String!): ReindexJob!
+  startReindex(index: String!): ReindexJobResponse!
 }
 
 type _Service {
   sdl: String!
-}
-
-type SearchHealth {
-  status: String!
-  timestamp: String!
 }`
+
+var paginationInfoType = gql.NewObject(gql.ObjectConfig{
+	Name: "PaginationInfo",
+	Fields: gql.Fields{
+		"totalItems":  &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"currentPage": &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"nextPage":    &gql.Field{Type: gql.Int},
+	},
+})
 
 var geoPointType = gql.NewObject(gql.ObjectConfig{
 	Name: "GeoPoint",
@@ -228,11 +289,22 @@ var userDocumentType = gql.NewObject(gql.ObjectConfig{
 	},
 })
 
+var userSearchDataType = gql.NewObject(gql.ObjectConfig{
+	Name: "UserSearchData",
+	Fields: gql.Fields{
+		"paginationInfo": &gql.Field{Type: gql.NewNonNull(paginationInfoType)},
+		"items":          &gql.Field{Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(userDocumentType)))},
+	},
+})
+
 var userSearchResponseType = gql.NewObject(gql.ObjectConfig{
 	Name: "UserSearchResponse",
 	Fields: gql.Fields{
-		"items":    &gql.Field{Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(userDocumentType)))},
-		"pageInfo": &gql.Field{Type: gql.NewNonNull(pageInfoType)},
+		"success":    &gql.Field{Type: gql.NewNonNull(gql.Boolean)},
+		"statusCode": &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"message":    &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"timeStamp":  &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"data":       &gql.Field{Type: userSearchDataType},
 	},
 })
 
@@ -251,11 +323,22 @@ var deliveryDocumentType = gql.NewObject(gql.ObjectConfig{
 	},
 })
 
+var deliverySearchDataType = gql.NewObject(gql.ObjectConfig{
+	Name: "DeliverySearchData",
+	Fields: gql.Fields{
+		"paginationInfo": &gql.Field{Type: gql.NewNonNull(paginationInfoType)},
+		"items":          &gql.Field{Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(deliveryDocumentType)))},
+	},
+})
+
 var deliverySearchResponseType = gql.NewObject(gql.ObjectConfig{
 	Name: "DeliverySearchResponse",
 	Fields: gql.Fields{
-		"items":    &gql.Field{Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(deliveryDocumentType)))},
-		"pageInfo": &gql.Field{Type: gql.NewNonNull(pageInfoType)},
+		"success":    &gql.Field{Type: gql.NewNonNull(gql.Boolean)},
+		"statusCode": &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"message":    &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"timeStamp":  &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"data":       &gql.Field{Type: deliverySearchDataType},
 	},
 })
 
@@ -273,11 +356,22 @@ var driverDocumentType = gql.NewObject(gql.ObjectConfig{
 	},
 })
 
+var driverSearchDataType = gql.NewObject(gql.ObjectConfig{
+	Name: "DriverSearchData",
+	Fields: gql.Fields{
+		"paginationInfo": &gql.Field{Type: gql.NewNonNull(paginationInfoType)},
+		"items":          &gql.Field{Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(driverDocumentType)))},
+	},
+})
+
 var driverSearchResponseType = gql.NewObject(gql.ObjectConfig{
 	Name: "DriverSearchResponse",
 	Fields: gql.Fields{
-		"items":    &gql.Field{Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(driverDocumentType)))},
-		"pageInfo": &gql.Field{Type: gql.NewNonNull(pageInfoType)},
+		"success":    &gql.Field{Type: gql.NewNonNull(gql.Boolean)},
+		"statusCode": &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"message":    &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"timeStamp":  &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"data":       &gql.Field{Type: driverSearchDataType},
 	},
 })
 
@@ -295,20 +389,22 @@ var mediaDocumentType = gql.NewObject(gql.ObjectConfig{
 	},
 })
 
-var mediaSearchResponseType = gql.NewObject(gql.ObjectConfig{
-	Name: "MediaSearchResponse",
+var mediaSearchDataType = gql.NewObject(gql.ObjectConfig{
+	Name: "MediaSearchData",
 	Fields: gql.Fields{
-		"items":    &gql.Field{Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(mediaDocumentType)))},
-		"pageInfo": &gql.Field{Type: gql.NewNonNull(pageInfoType)},
+		"paginationInfo": &gql.Field{Type: gql.NewNonNull(paginationInfoType)},
+		"items":          &gql.Field{Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(mediaDocumentType)))},
 	},
 })
 
-var pageInfoType = gql.NewObject(gql.ObjectConfig{
-	Name: "PageInfo",
+var mediaSearchResponseType = gql.NewObject(gql.ObjectConfig{
+	Name: "MediaSearchResponse",
 	Fields: gql.Fields{
-		"hasNextPage": &gql.Field{Type: gql.NewNonNull(gql.Boolean)},
-		"cursor":      &gql.Field{Type: gql.String},
-		"total":       &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"success":    &gql.Field{Type: gql.NewNonNull(gql.Boolean)},
+		"statusCode": &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"message":    &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"timeStamp":  &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"data":       &gql.Field{Type: mediaSearchDataType},
 	},
 })
 
@@ -322,7 +418,11 @@ var autocompleteResultType = gql.NewObject(gql.ObjectConfig{
 var autocompleteResponseType = gql.NewObject(gql.ObjectConfig{
 	Name: "AutocompleteResponse",
 	Fields: gql.Fields{
-		"data": &gql.Field{Type: gql.NewNonNull(autocompleteResultType)},
+		"success":    &gql.Field{Type: gql.NewNonNull(gql.Boolean)},
+		"statusCode": &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"message":    &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"timeStamp":  &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"data":       &gql.Field{Type: autocompleteResultType},
 	},
 })
 
@@ -338,11 +438,33 @@ var reindexJobType = gql.NewObject(gql.ObjectConfig{
 	},
 })
 
-var searchHealthType = gql.NewObject(gql.ObjectConfig{
-	Name: "SearchHealth",
+var reindexJobResponseType = gql.NewObject(gql.ObjectConfig{
+	Name: "ReindexJobResponse",
+	Fields: gql.Fields{
+		"success":    &gql.Field{Type: gql.NewNonNull(gql.Boolean)},
+		"statusCode": &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"message":    &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"timeStamp":  &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"data":       &gql.Field{Type: reindexJobType},
+	},
+})
+
+var searchHealthDataType = gql.NewObject(gql.ObjectConfig{
+	Name: "SearchHealthData",
 	Fields: gql.Fields{
 		"status":    &gql.Field{Type: gql.NewNonNull(gql.String)},
 		"timestamp": &gql.Field{Type: gql.NewNonNull(gql.String)},
+	},
+})
+
+var searchHealthResponseType = gql.NewObject(gql.ObjectConfig{
+	Name: "SearchHealthResponse",
+	Fields: gql.Fields{
+		"success":    &gql.Field{Type: gql.NewNonNull(gql.Boolean)},
+		"statusCode": &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"message":    &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"timeStamp":  &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"data":       &gql.Field{Type: searchHealthDataType},
 	},
 })
 
@@ -506,13 +628,8 @@ func buildSchema(r *Resolver) (gql.Schema, error) {
 				Resolve: r.ResolveNearbyDrivers,
 			},
 			"searchHealth": &gql.Field{
-				Type: gql.NewNonNull(searchHealthType),
-				Resolve: func(p gql.ResolveParams) (interface{}, error) {
-					return map[string]interface{}{
-						"status":    "UP",
-						"timestamp": p.Context.Value("timestamp"),
-					}, nil
-				},
+				Type: gql.NewNonNull(searchHealthResponseType),
+				Resolve: r.ResolveSearchHealth,
 			},
 		},
 	})
@@ -521,7 +638,7 @@ func buildSchema(r *Resolver) (gql.Schema, error) {
 		Name: "Mutation",
 		Fields: gql.Fields{
 			"startReindex": &gql.Field{
-				Type: gql.NewNonNull(reindexJobType),
+				Type: gql.NewNonNull(reindexJobResponseType),
 				Args: gql.FieldConfigArgument{
 					"index": &gql.ArgumentConfig{Type: gql.NewNonNull(gql.String)},
 				},

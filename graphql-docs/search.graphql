@@ -1,75 +1,90 @@
-query {
+# ─── QUERIES ───────────────────────────────────────────────
+
+# Autocomplete Suggestions (Single Item Envelope)
+query Autocomplete {
   autocomplete(
     input: {
       prefix: "high"
       index: "media"
-      # index: "users"
       limit: 5
     }
   ) {
+    success
+    statusCode
+    message
+    timeStamp
     data {
       suggestions
     }
   }
 }
 
-# Search users (Admin only; requires Bearer token with VIEW_USER permission)
-query {
+# Search Users (Admin only; requires x-user-id and role admin) - Paginated Collection Envelope
+query SearchUsers {
   searchUsers(
     input: {
       query: "omarrrr"
-      role:"user"
-      isActive:true
+      role: "user"
+      isActive: true
       pagination: { limit: 4 }
     }
   ) {
-    items {
-      id
-      first_name
-      last_name
-      email
-      role
-      is_active
-      created_at
-    }
-    pageInfo {
-      hasNextPage
-      cursor
-      total
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        id
+        first_name
+        last_name
+        email
+        role
+        is_active
+        created_at
+      }
     }
   }
 }
 
-
-# Search Media (Admin only; requires Bearer token with VIEW_USER permission)
-query {
+# Search Media (requires authentication) - Paginated Collection Envelope
+query SearchMedia {
   searchMedia(
     input: {
       query: "High"
       pagination: { limit: 10 }
     }
   ) {
-    items {
-      media_id
-      file_name
-      mime_type
-      owner_id
-      size
-      status
-      created_at
-    }
-    pageInfo {
-      hasNextPage
-      cursor
-      total
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        media_id
+        file_name
+        mime_type
+        owner_id
+        size
+        status
+        created_at
+      }
     }
   }
 }
 
-
-# Search deliveries (search-service)
-# Supports full-text query, status filter, city, driverId, customerId, fromDate, toDate, geo bounding, and pagination
-query {
+# Search Deliveries - Paginated Collection Envelope
+query SearchDeliveries {
   searchDeliveries(
     input: {
       query: "Cairo"
@@ -77,70 +92,82 @@ query {
       pagination: { limit: 10 }
     }
   ) {
-    items {
-      delivery_id
-      customer_id
-      driver_id
-      status
-      pickup {
-        city
-        country
-        location {
-          lat
-          lon
-        }
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
       }
-      dropoff {
-        city
-        country
-        location {
-          lat
-          lon
+      items {
+        delivery_id
+        customer_id
+        driver_id
+        status
+        pickup {
+          city
+          country
+          location {
+            lat
+            lon
+          }
         }
+        dropoff {
+          city
+          country
+          location {
+            lat
+            lon
+          }
+        }
+        created_at
+        updated_at
+        source_version
       }
-      created_at
-      updated_at
-      source_version
-    }
-    pageInfo {
-      hasNextPage
-      cursor
-      total
     }
   }
 }
 
-# Search drivers (search-service)
-query {
+# Search Drivers - Paginated Collection Envelope
+query SearchDrivers {
   searchDrivers(
     input: {
       query: "Ahmed"
       pagination: { limit: 10 }
     }
   ) {
-    items {
-      driver_id
-      name
-      status
-      vehicle_type
-      rating
-      location {
-        lat
-        lon
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
       }
-      updated_at
-      source_version
-    }
-    pageInfo {
-      hasNextPage
-      cursor
-      total
+      items {
+        driver_id
+        name
+        status
+        vehicle_type
+        rating
+        location {
+          lat
+          lon
+        }
+        updated_at
+        source_version
+      }
     }
   }
 }
 
-# Search nearby drivers using geo coordinates (search-service)
-query {
+# Search Nearby Drivers using Geo Coordinates - Paginated Collection Envelope
+query SearchNearbyDrivers {
   searchNearbyDrivers(
     input: {
       lat: 30.0444
@@ -149,27 +176,33 @@ query {
       pagination: { limit: 10 }
     }
   ) {
-    items {
-      driver_id
-      name
-      status
-      vehicle_type
-      rating
-      location {
-        lat
-        lon
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
       }
-    }
-    pageInfo {
-      hasNextPage
-      cursor
-      total
+      items {
+        driver_id
+        name
+        status
+        vehicle_type
+        rating
+        location {
+          lat
+          lon
+        }
+      }
     }
   }
 }
 
-# Search nearby deliveries using geo coordinates (search-service)
-query {
+# Search Nearby Deliveries using Geo Coordinates - Paginated Collection Envelope
+query NearbyDeliveries {
   nearbyDeliveries(
     input: {
       lat: 30.0444
@@ -178,24 +211,63 @@ query {
       pagination: { limit: 10 }
     }
   ) {
-    items {
-      delivery_id
-      customer_id
-      status
-      pickup {
-        city
-        country
-        location {
-          lat
-          lon
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        delivery_id
+        customer_id
+        status
+        pickup {
+          city
+          country
+          location {
+            lat
+            lon
+          }
         }
       }
-    }
-    pageInfo {
-      hasNextPage
-      cursor
-      total
     }
   }
 }
 
+# Search Health Probe - Single Item Envelope
+query SearchHealth {
+  searchHealth {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      status
+      timestamp
+    }
+  }
+}
+
+# ─── MUTATIONS ──────────────────────────────────────────────
+
+# Start Reindexing (Admin only) - Single Item Envelope
+mutation StartReindex {
+  startReindex(index: "deliveries") {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      jobId
+      index
+      status
+      startedAt
+      completedAt
+      error
+    }
+  }
+}

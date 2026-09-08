@@ -72,7 +72,7 @@ func TestIntrospection(t *testing.T) {
 
 func TestAuthRequired(t *testing.T) {
 	schema := newTestSchema(t)
-	result := runQuery(t, schema, `{ quota { usedBytes } }`)
+	result := runQuery(t, schema, `{ quota { data { usedBytes } } }`)
 
 	if len(result.Errors) == 0 {
 		t.Fatal("expected auth error")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/application/download"
@@ -82,7 +83,13 @@ func (h *Handler) resolveMedia(p gql.ResolveParams) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return mapMedia(out.Media, out.Versions), nil
+	return map[string]interface{}{
+		"success":    true,
+		"statusCode": 200,
+		"message":    "Media fetched successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data":       mapMedia(out.Media, out.Versions),
+	}, nil
 }
 
 func (h *Handler) resolveListMedia(p gql.ResolveParams) (interface{}, error) {
@@ -106,9 +113,26 @@ func (h *Handler) resolveListMedia(p gql.ResolveParams) (interface{}, error) {
 	for _, m := range items {
 		graphItems = append(graphItems, mapMedia(m, nil))
 	}
+
+	var nextPage *int
+	if nextCursor != "" {
+		np := 2
+		nextPage = &np
+	}
+
 	return map[string]interface{}{
-		"items":      graphItems,
-		"nextCursor": nextCursor,
+		"success":    true,
+		"statusCode": 200,
+		"message":    "Media list fetched successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data": map[string]interface{}{
+			"paginationInfo": map[string]interface{}{
+				"totalItems":  len(items),
+				"currentPage": 1,
+				"nextPage":    nextPage,
+			},
+			"items": graphItems,
+		},
 	}, nil
 }
 
@@ -124,12 +148,18 @@ func (h *Handler) resolveUploadStatus(p gql.ResolveParams) (interface{}, error) 
 		return nil, err
 	}
 	return map[string]interface{}{
-		"uploadId":       out.UploadID,
-		"status":         string(out.Status),
-		"totalParts":     out.TotalParts,
-		"completedParts": out.CompletedParts,
-		"missingParts":   intSlice(out.MissingParts),
-		"expiresAt":      float64(out.ExpiresAt.Unix()),
+		"success":    true,
+		"statusCode": 200,
+		"message":    "Upload status fetched successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data": map[string]interface{}{
+			"uploadId":       out.UploadID,
+			"status":         string(out.Status),
+			"totalParts":     out.TotalParts,
+			"completedParts": out.CompletedParts,
+			"missingParts":   intSlice(out.MissingParts),
+			"expiresAt":      float64(out.ExpiresAt.Unix()),
+		},
 	}, nil
 }
 
@@ -150,9 +180,15 @@ func (h *Handler) resolveDownloadUrl(p gql.ResolveParams) (interface{}, error) {
 		return nil, err
 	}
 	return map[string]interface{}{
-		"url":         out.URL,
-		"expiresAt":   float64(out.ExpiresAt.Unix()),
-		"contentType": out.ContentType,
+		"success":    true,
+		"statusCode": 200,
+		"message":    "Download URL generated successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data": map[string]interface{}{
+			"url":         out.URL,
+			"expiresAt":   float64(out.ExpiresAt.Unix()),
+			"contentType": out.ContentType,
+		},
 	}, nil
 }
 
@@ -168,11 +204,17 @@ func (h *Handler) resolveQuota(p gql.ResolveParams) (interface{}, error) {
 		return nil, err
 	}
 	return map[string]interface{}{
-		"usedBytes":            float64(usage.UsedBytes),
-		"quotaBytes":           float64(usage.QuotaBytes),
-		"remainingBytes":       float64(usage.RemainingBytes()),
-		"activeUploads":        usage.ActiveUploads,
-		"maxConcurrentUploads": usage.MaxConcurrent,
+		"success":    true,
+		"statusCode": 200,
+		"message":    "User quota fetched successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data": map[string]interface{}{
+			"usedBytes":            float64(usage.UsedBytes),
+			"quotaBytes":           float64(usage.QuotaBytes),
+			"remainingBytes":       float64(usage.RemainingBytes()),
+			"activeUploads":        usage.ActiveUploads,
+			"maxConcurrentUploads": usage.MaxConcurrent,
+		},
 	}, nil
 }
 
@@ -205,13 +247,19 @@ func (h *Handler) resolveCreateUploadSession(p gql.ResolveParams) (interface{}, 
 		})
 	}
 	return map[string]interface{}{
-		"mediaId":        out.MediaID,
-		"uploadId":       out.UploadID,
-		"s3UploadId":     out.S3UploadID,
-		"presignedParts": parts,
-		"partSize":       float64(out.PartSize),
-		"totalParts":     out.TotalParts,
-		"expiresAt":      float64(out.ExpiresAt.Unix()),
+		"success":    true,
+		"statusCode": 201,
+		"message":    "Upload session created successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data": map[string]interface{}{
+			"mediaId":        out.MediaID,
+			"uploadId":       out.UploadID,
+			"s3UploadId":     out.S3UploadID,
+			"presignedParts": parts,
+			"partSize":       float64(out.PartSize),
+			"totalParts":     out.TotalParts,
+			"expiresAt":      float64(out.ExpiresAt.Unix()),
+		},
 	}, nil
 }
 
@@ -243,8 +291,14 @@ func (h *Handler) resolveCompleteUpload(p gql.ResolveParams) (interface{}, error
 		return nil, err
 	}
 	return map[string]interface{}{
-		"mediaId": out.MediaID,
-		"status":  string(out.Status),
+		"success":    true,
+		"statusCode": 200,
+		"message":    "Upload completed successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data": map[string]interface{}{
+			"mediaId": out.MediaID,
+			"status":  string(out.Status),
+		},
 	}, nil
 }
 
@@ -258,7 +312,13 @@ func (h *Handler) resolveAbortUpload(p gql.ResolveParams) (interface{}, error) {
 	if err := h.abortUpload.Execute(ctx, userID, argString(p.Args, "uploadId")); err != nil {
 		return nil, err
 	}
-	return map[string]interface{}{"success": true}, nil
+	return map[string]interface{}{
+		"success":    true,
+		"statusCode": 200,
+		"message":    "Upload aborted successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data":       "Upload aborted",
+	}, nil
 }
 
 func (h *Handler) resolveDeleteMedia(p gql.ResolveParams) (interface{}, error) {
@@ -273,7 +333,13 @@ func (h *Handler) resolveDeleteMedia(p gql.ResolveParams) (interface{}, error) {
 	); err != nil {
 		return nil, err
 	}
-	return map[string]interface{}{"success": true}, nil
+	return map[string]interface{}{
+		"success":    true,
+		"statusCode": 200,
+		"message":    "Media deleted successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data":       "Media deleted",
+	}, nil
 }
 
 func mapMedia(m *domain.Media, versions []*domain.MediaVersion) map[string]interface{} {
@@ -389,7 +455,13 @@ func (h *Handler) resolveDLQStats(p gql.ResolveParams) (interface{}, error) {
 			"messageCount": count,
 		})
 	}
-	return result, nil
+	return map[string]interface{}{
+		"success":    true,
+		"statusCode": 200,
+		"message":    "DLQ stats fetched successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data":       result,
+	}, nil
 }
 
 // resolveDLQReplay replays messages from a DLQ topic.
@@ -402,11 +474,32 @@ func (h *Handler) resolveDLQReplay(p gql.ResolveParams) (interface{}, error) {
 	if maxMessages <= 0 {
 		maxMessages = 100
 	}
+	now := time.Now().UTC().Format(time.RFC3339)
 	replayed, err := h.dlqManager.ReplayAllDLQMessages(p.Context, h.kafkaBrokers, topic, maxMessages)
 	if err != nil {
-		return map[string]interface{}{"success": false, "replayedCount": 0, "errors": []string{err.Error()}}, nil
+		return map[string]interface{}{
+			"success":    false,
+			"statusCode": 500,
+			"message":    err.Error(),
+			"timeStamp":  now,
+			"data": map[string]interface{}{
+				"success":       false,
+				"replayedCount": 0,
+				"errors":        []string{err.Error()},
+			},
+		}, nil
 	}
-	return map[string]interface{}{"success": true, "replayedCount": replayed, "errors": []string{}}, nil
+	return map[string]interface{}{
+		"success":    true,
+		"statusCode": 200,
+		"message":    "DLQ messages replayed successfully",
+		"timeStamp":  now,
+		"data": map[string]interface{}{
+			"success":       true,
+			"replayedCount": replayed,
+			"errors":        []string{},
+		},
+	}, nil
 }
 
 // resolveRenewPresigned renews expired multipart URLs for the authenticated owner.
@@ -434,8 +527,17 @@ func (h *Handler) resolveRenewPresigned(p gql.ResolveParams) (interface{}, error
 		parts[i] = map[string]interface{}{"partNumber": part.PartNumber, "presignedUrl": part.PresignedURL}
 	}
 	return map[string]interface{}{
-		"uploadId": result.UploadID, "s3UploadId": result.S3UploadID,
-		"presignedParts": parts, "partSize": float64(result.PartSize),
-		"totalParts": result.TotalParts, "expiresAt": float64(result.ExpiresAt.Unix()),
+		"success":    true,
+		"statusCode": 200,
+		"message":    "Presigned URLs renewed successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data": map[string]interface{}{
+			"uploadId":       result.UploadID,
+			"s3UploadId":     result.S3UploadID,
+			"presignedParts": parts,
+			"partSize":       float64(result.PartSize),
+			"totalParts":     result.TotalParts,
+			"expiresAt":      float64(result.ExpiresAt.Unix()),
+		},
 	}, nil
 }

@@ -77,7 +77,7 @@ func TestIntrospection(t *testing.T) {
 
 func TestAuthRequired(t *testing.T) {
 	schema := newTestSchema(t)
-	result := runQuery(t, schema, `{ searchDeliveries(input: { pagination: { limit: 10 } }) { items { delivery_id } } }`, nil)
+	result := runQuery(t, schema, `{ searchDeliveries(input: { pagination: { limit: 10 } }) { data { items { delivery_id } } } }`, nil)
 
 	if len(result.Errors) == 0 {
 		t.Fatal("expected auth error")
@@ -92,8 +92,10 @@ func TestSearchDeliveriesRequiresAuth(t *testing.T) {
 	query := `
 		query {
 			searchDeliveries(input: { pagination: { limit: 10 } }) {
-				items { delivery_id }
-				pageInfo { hasNextPage total }
+				data {
+					items { delivery_id }
+					paginationInfo { totalItems currentPage }
+				}
 			}
 		}
 	`
@@ -109,8 +111,10 @@ func TestSearchUsersRequiresAdmin(t *testing.T) {
 	query := `
 		query {
 			searchUsers(input: { pagination: { limit: 10 } }) {
-				items { id email }
-				pageInfo { hasNextPage total }
+				data {
+					items { id email }
+					paginationInfo { totalItems currentPage }
+				}
 			}
 		}
 	`
@@ -126,8 +130,10 @@ func TestStartReindexRequiresAdmin(t *testing.T) {
 	query := `
 		mutation {
 			startReindex(index: "deliveries") {
-				jobId
-				status
+				data {
+					jobId
+					status
+				}
 			}
 		}
 	`
@@ -221,8 +227,10 @@ func TestVariablesParsing(t *testing.T) {
 	query := `
 		query SearchDeliveries($input: DeliverySearchInput!) {
 			searchDeliveries(input: $input) {
-				items { delivery_id }
-				pageInfo { hasNextPage total }
+				data {
+					items { delivery_id }
+					paginationInfo { totalItems currentPage }
+				}
 			}
 		}
 	`

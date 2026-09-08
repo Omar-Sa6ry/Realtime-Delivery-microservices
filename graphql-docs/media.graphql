@@ -1,31 +1,52 @@
-# Get a specific media file by ID
-query {
+# ─── QUERIES ───────────────────────────────────────────────
+
+# Get a specific media file by ID (Single Item Envelope)
+query GetMedia {
   media(mediaId: "media-001") {
+    success
     statusCode
     message
-    success
+    timeStamp
     data {
       mediaId
+      ownerId
       fileName
       contentType
       mediaType
       size
       status
+      objectKey
       createdAt
+      updatedAt
+      versions {
+        versionType
+        objectKey
+        contentType
+        size
+        width
+        height
+        durationMs
+      }
     }
   }
 }
 
-# Get paginated list of media files (requires authentication) (user)
-query {
-  listMedia(ownerId: "user-001", limit: 10) {
+# Get paginated list of media files (Paginated Collection Envelope)
+query ListMedia {
+  listMedia(ownerId: "user-001", limit: 10, cursor: "") {
+    success
     statusCode
     message
-    success
+    timeStamp
     data {
-      total
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
       items {
         mediaId
+        ownerId
         fileName
         contentType
         mediaType
@@ -37,12 +58,13 @@ query {
   }
 }
 
-# Get upload status
-query {
+# Get upload status (Single Item Envelope)
+query GetUploadStatus {
   uploadStatus(uploadId: "upload-001") {
+    success
     statusCode
     message
-    success
+    timeStamp
     data {
       uploadId
       status
@@ -54,12 +76,13 @@ query {
   }
 }
 
-# Get presigned download URL
-query {
+# Get presigned download URL (Single Item Envelope)
+query GetDownloadUrl {
   downloadUrl(mediaId: "media-001", versionType: "original", expirySeconds: 3600) {
+    success
     statusCode
     message
-    success
+    timeStamp
     data {
       url
       expiresAt
@@ -68,12 +91,13 @@ query {
   }
 }
 
-# Get user quota
-query {
+# Get user quota (Single Item Envelope)
+query GetQuota {
   quota {
+    success
     statusCode
     message
-    success
+    timeStamp
     data {
       usedBytes
       quotaBytes
@@ -84,18 +108,43 @@ query {
   }
 }
 
-# Create upload session
-mutation {
+# Get DLQ topics
+query GetDLQTopics {
+  dlqTopics
+}
+
+# Get DLQ statistics (Collection Envelope)
+query GetDLQStats {
+  dlqStats(topics: ["media-events-dlq"]) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      topic
+      messageCount
+    }
+  }
+}
+
+# ─── MUTATIONS ──────────────────────────────────────────────
+
+# Create upload session (Single Item Envelope)
+mutation CreateUploadSession {
   createUploadSession(
     input: {
       fileName: "sample.mp4"
       contentType: "video/mp4"
       size: 104857600
+      checksum: "sha256-xyz"
+      deliveryId: "delivery-123"
+      idempotencyKey: "upload-key-123"
     }
   ) {
+    success
     statusCode
     message
-    success
+    timeStamp
     data {
       mediaId
       uploadId
@@ -111,19 +160,21 @@ mutation {
   }
 }
 
-# Complete upload session
-mutation {
+# Complete upload session (Single Item Envelope)
+mutation CompleteUpload {
   completeUpload(
     input: {
       uploadId: "upload-001"
       parts: [
         { partNumber: 1, eTag: "etag-001" }
       ]
+      idempotencyKey: "complete-key-123"
     }
   ) {
+    success
     statusCode
     message
-    success
+    timeStamp
     data {
       mediaId
       status
@@ -131,20 +182,60 @@ mutation {
   }
 }
 
-# Abort upload session
-mutation {
+# Abort upload session (Base Response Envelope)
+mutation AbortUpload {
   abortUpload(uploadId: "upload-001") {
+    success
     statusCode
     message
-    success
+    timeStamp
+    data
   }
 }
 
-# Delete media file
-mutation {
+# Delete media file (Base Response Envelope)
+mutation DeleteMedia {
   deleteMedia(mediaId: "media-001", idempotencyKey: "del-001") {
+    success
     statusCode
     message
+    timeStamp
+    data
+  }
+}
+
+# Replay DLQ messages (Single Item Envelope)
+mutation ReplayDLQ {
+  dlqReplay(topic: "media-events-dlq", maxMessages: 50) {
     success
+    statusCode
+    message
+    timeStamp
+    data {
+      success
+      replayedCount
+      errors
+    }
+  }
+}
+
+# Renew presigned upload URLs (Single Item Envelope)
+mutation RenewPresigned {
+  renewPresigned(input: { uploadId: "upload-001", expirySeconds: 3600 }) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      uploadId
+      s3UploadId
+      presignedParts {
+        partNumber
+        presignedUrl
+      }
+      partSize
+      totalParts
+      expiresAt
+    }
   }
 }

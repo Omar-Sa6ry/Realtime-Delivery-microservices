@@ -80,7 +80,7 @@ func (r *Resolver) ResolveSearchDeliveries(p gql.ResolveParams) (interface{}, er
 		return nil, err
 	}
 
-	return mapSearchResult(res), nil
+	return mapSearchResult(res, "Deliveries fetched successfully"), nil
 }
 
 func (r *Resolver) ResolveSearchDrivers(p gql.ResolveParams) (interface{}, error) {
@@ -101,7 +101,7 @@ func (r *Resolver) ResolveSearchDrivers(p gql.ResolveParams) (interface{}, error
 		return nil, err
 	}
 
-	return mapSearchResult(res), nil
+	return mapSearchResult(res, "Drivers fetched successfully"), nil
 }
 
 func (r *Resolver) ResolveSearchMedia(p gql.ResolveParams) (interface{}, error) {
@@ -122,7 +122,7 @@ func (r *Resolver) ResolveSearchMedia(p gql.ResolveParams) (interface{}, error) 
 		return nil, err
 	}
 
-	return mapSearchResult(res), nil
+	return mapSearchResult(res, "Media fetched successfully"), nil
 }
 
 func (r *Resolver) ResolveSearchUsers(p gql.ResolveParams) (interface{}, error) {
@@ -148,7 +148,7 @@ func (r *Resolver) ResolveSearchUsers(p gql.ResolveParams) (interface{}, error) 
 		return nil, err
 	}
 
-	return mapSearchResult(res), nil
+	return mapSearchResult(res, "Users fetched successfully"), nil
 }
 
 func (r *Resolver) ResolveAutocomplete(p gql.ResolveParams) (interface{}, error) {
@@ -176,6 +176,10 @@ func (r *Resolver) ResolveAutocomplete(p gql.ResolveParams) (interface{}, error)
 	}
 
 	return map[string]interface{}{
+		"success":    true,
+		"statusCode": 200,
+		"message":    "Autocomplete suggestions fetched successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data": map[string]interface{}{
 			"suggestions": res.Suggestions,
 		},
@@ -200,7 +204,7 @@ func (r *Resolver) ResolveNearbyDeliveries(p gql.ResolveParams) (interface{}, er
 		return nil, err
 	}
 
-	return mapSearchResult(res), nil
+	return mapSearchResult(res, "Nearby deliveries fetched successfully"), nil
 }
 
 func (r *Resolver) ResolveNearbyDrivers(p gql.ResolveParams) (interface{}, error) {
@@ -221,7 +225,24 @@ func (r *Resolver) ResolveNearbyDrivers(p gql.ResolveParams) (interface{}, error
 		return nil, err
 	}
 
-	return mapSearchResult(res), nil
+	return mapSearchResult(res, "Nearby drivers fetched successfully"), nil
+}
+
+func (r *Resolver) ResolveSearchHealth(p gql.ResolveParams) (interface{}, error) {
+	ts, _ := p.Context.Value("timestamp").(string)
+	if ts == "" {
+		ts = time.Now().UTC().Format(time.RFC3339)
+	}
+	return map[string]interface{}{
+		"success":    true,
+		"statusCode": 200,
+		"message":    "Search service is healthy",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data": map[string]interface{}{
+			"status":    "UP",
+			"timestamp": ts,
+		},
+	}, nil
 }
 
 func (r *Resolver) ResolveStartReindex(p gql.ResolveParams) (interface{}, error) {
@@ -243,12 +264,18 @@ func (r *Resolver) ResolveStartReindex(p gql.ResolveParams) (interface{}, error)
 	}
 
 	return map[string]interface{}{
-		"jobId":       job.JobID,
-		"index":       job.Index,
-		"status":      job.Status,
-		"startedAt":   job.StartedAt.Format(time.RFC3339),
-		"completedAt": formatTimePtr(job.CompletedAt),
-		"error":       job.Error,
+		"success":    true,
+		"statusCode": 200,
+		"message":    "Reindex job started successfully",
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data": map[string]interface{}{
+			"jobId":       job.JobID,
+			"index":       job.Index,
+			"status":      job.Status,
+			"startedAt":   job.StartedAt.Format(time.RFC3339),
+			"completedAt": formatTimePtr(job.CompletedAt),
+			"error":       job.Error,
+		},
 	}, nil
 }
 
@@ -379,25 +406,35 @@ func buildPaginationInput(input map[string]interface{}) search.PaginationInput {
 	return search.PaginationInput{}
 }
 
-func mapSearchResult[T any](res search.SearchResult[T]) map[string]interface{} {
+func mapSearchResult[T any](res search.SearchResult[T], message string) map[string]interface{} {
 	items := make([]interface{}, 0, len(res.Items))
 	for _, item := range res.Items {
 		items = append(items, mapToInterface(item))
 	}
 
+	var nextPage *int
+	if res.PageInfo.HasNextPage {
+		np := 2
+		nextPage = &np
+	}
+
 	return map[string]interface{}{
-		"items": items,
-		"pageInfo": map[string]interface{}{
-			"hasNextPage": res.PageInfo.HasNextPage,
-			"cursor":      res.PageInfo.Cursor,
-			"total":       res.PageInfo.Total,
+		"success":    true,
+		"statusCode": 200,
+		"message":    message,
+		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
+		"data": map[string]interface{}{
+			"paginationInfo": map[string]interface{}{
+				"totalItems":  int(res.PageInfo.Total),
+				"currentPage": 1,
+				"nextPage":    nextPage,
+			},
+			"items": items,
 		},
 	}
 }
 
 func mapToInterface(v interface{}) map[string]interface{} {
-	// Use JSON marshaling for automatic conversion
-	// This is a simple approach; for production consider a proper mapper
 	switch doc := v.(type) {
 	case search.DeliveryDocument:
 		return map[string]interface{}{
@@ -448,7 +485,6 @@ func mapToInterface(v interface{}) map[string]interface{} {
 }
 
 func mapGeoAddress(addr search.GeoAddress) map[string]interface{} {
-	// addr.Location is a value, need to pass pointer
 	loc := addr.Location
 	return map[string]interface{}{
 		"city":     addr.City,

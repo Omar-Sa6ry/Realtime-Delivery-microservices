@@ -7,6 +7,7 @@ service UserService {
   rpc GetUserByEmail (GetUserByEmailRequest) returns (GetUserResponse);
   rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
   rpc GetUserPermissions (GetUserPermissionsRequest) returns (GetUserPermissionsResponse);
+  rpc UpdateUserRole (UpdateUserRoleRequest) returns (UpdateUserRoleResponse);
 }
 
 message GetUserRequest {
@@ -42,4 +43,14 @@ message GetUserPermissionsRequest {
 
 message GetUserPermissionsResponse {
   repeated string permissions = 1;
+}
+
+message UpdateUserRoleRequest {
+  string user_id = 1;
+  string role = 2; // e.g. "DRIVER"
+}
+
+message UpdateUserRoleResponse {
+  bool success = 1;
+  string message = 2;
 }

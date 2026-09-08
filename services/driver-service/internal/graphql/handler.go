@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/commands"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/i18n"
 )
 
@@ -30,8 +31,9 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Handler handles Apollo Federation GraphQL subgraph requests.
-func Handler(w http.ResponseWriter, r *http.Request) {
+// NewHandler creates an Apollo Federation GraphQL subgraph request handler.
+func NewHandler(registerCmd *commands.RegisterDriverHandler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	lang := ExtractLanguage(r)
 
@@ -83,8 +85,29 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := map[string]interface{}{
+		if strings.Contains(req.Query, "registerDriver") {
+			// Extremely naive parsing for demo purposes
+			resolver := NewDriverResolver(registerCmd)
+			// Mocking args since we don't have a real AST parser
+			args := map[string]interface{}{
+				"userId":      "user-111",
+				"vehicleType": "CAR",
+				"plateNumber": "TEST-123",
+				"capacityKg":  float64(50),
+			}
+			result := resolver.RegisterDriver(args)
+			resp := map[string]interface{}{
+				"data": map[string]interface{}{
+					"registerDriver": result,
+				},
+			}
+			_ = json.NewEncoder(w).Encode(resp)
+			return
+		}
+
+		resp := map[string]interface{}{
 		"data": map[string]interface{}{"__typename": "Query"},
 	}
-	_ = json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
+	}
 }

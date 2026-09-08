@@ -18,6 +18,7 @@ var (
 	ErrDriverAlreadyReserved   = &Error{Code: "driver_already_reserved", Message: "driver is already reserved"}
 	ErrInvalidTransition       = &Error{Code: "invalid_transition", Message: "invalid state transition"}
 	ErrInvalidArgument         = &Error{Code: "invalid_argument", Message: "invalid argument"}
+	ErrMaxAttemptsReached      = &Error{Code: "max_attempts_reached", Message: "maximum attempts reached"}
 	ErrInternal                = &Error{Code: "internal_error", Message: "internal error"}
 )
 

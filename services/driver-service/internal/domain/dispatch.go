@@ -101,29 +101,17 @@ func (p *DispatchPolicy) RankCandidates(candidates []Candidate) []Candidate {
 	return ranked[:min(p.candidateCount, len(ranked))]
 }
 
-// AttemptReservation attempts to atomically reserve a driver for a delivery.
-// It acquires a distributed lock, checks driver state, and conditionally updates MongoDB.
-func (p *DispatchPolicy) AttemptReservation(driverID string, deliveryID string) (bool, error) {
-	// Validate attempt count
-	// In a real implementation, this would:
-	// 1. Acquire Redis lock: lock:driver:{driverID}
-	// 2. Read current driver state from MongoDB
-	// 3. Conditionally update: status = BUSY WHERE status = AVAILABLE
-	// 4. Create assignment record as OFFERED
-	// 5. Release lock
-	// 6. Return success/failure
-
-	// For now, validate basic criteria
-	if driverID == "" {
+// AttemptReservation verifies if the maximum attempt limit has been reached for a driver.
+// The actual atomic reservation (Redis locking, MongoDB updates) is handled by the Application Layer (DispatchService.ReserveDriver).
+func (p *DispatchPolicy) AttemptReservation(driverID string, deliveryID string, currentAttempts int) (bool, error) {
+	if driverID == "" || deliveryID == "" {
 		return false, ErrInvalidArgument
 	}
 
-	if deliveryID == "" {
-		return false, ErrInvalidArgument
+	if currentAttempts >= p.maxAttempts {
+		return false, ErrMaxAttemptsReached
 	}
 
-	// Simulate: check if driver is available (would be MongoDB check in real impl)
-	// This is a placeholder for the atomic reservation logic
 	return true, nil
 }
 

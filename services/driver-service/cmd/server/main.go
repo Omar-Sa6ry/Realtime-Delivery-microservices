@@ -16,14 +16,18 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	adaptergrpc "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/grpc"
+	adaptergrpcproto "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/grpc/proto"
 	adapterkafka "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/kafka"
 	adaptermongo "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/mongodb"
 	adapterredis "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/redis"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/commands"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/services"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/config"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
 	internalgql "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/graphql"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/workers"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -75,6 +79,19 @@ func main() {
 		dispatchPolicy,
 	)
 
+	// ─── gRPC Clients ─────────────────────────────────────────────────────────
+	userSvcConn, err := grpc.NewClient(cfg.UserServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("failed to dial user-service: %v", err)
+	}
+	defer userSvcConn.Close()
+	userClient := adaptergrpcproto.NewUserServiceClient(userSvcConn)
+
+	// ─── Application Commands ─────────────────────────────────────────────────
+	registerDriverHandler := commands.NewRegisterDriverHandler(driverRepo, eventPublisher, userClient)
+	_ = registerDriverHandler // TODO: Inject into GraphQL handler
+
+
 	// ─── Background Workers ───────────────────────────────────────────────────
 	wp := workers.NewWorkerPool(3)
 	expiryWorker := workers.NewAssignmentExpiryWorker(assignmentRepo, dispatchSvc)
@@ -105,8 +122,8 @@ func main() {
 	mux.HandleFunc("/health/live", internalgql.HealthHandler)
 	mux.HandleFunc("/health/ready", internalgql.HealthHandler)
 	mux.HandleFunc("/healthz", internalgql.HealthHandler)
-	mux.HandleFunc("/driver/graphql", internalgql.Handler)
-	mux.HandleFunc("/graphql", internalgql.Handler)
+	mux.HandleFunc("/driver/graphql", internalgql.NewHandler(registerDriverHandler))
+	mux.HandleFunc("/graphql", internalgql.NewHandler(registerDriverHandler))
 
 	gqlServer := &http.Server{
 		Addr:         ":" + cfg.PortGraphQL,

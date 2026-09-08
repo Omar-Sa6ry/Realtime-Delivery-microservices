@@ -1,7 +1,23 @@
 package graphql
 
+import (
+	"context"
+
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/commands"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
+)
+
 // DriverResolver resolves driver query fields.
-type DriverResolver struct{}
+type DriverResolver struct {
+	registerHandler *commands.RegisterDriverHandler
+}
+
+// NewDriverResolver creates a new DriverResolver
+func NewDriverResolver(registerHandler *commands.RegisterDriverHandler) *DriverResolver {
+	return &DriverResolver{
+		registerHandler: registerHandler,
+	}
+}
 
 // ResolveDriver resolves the driver query field.
 func (r *DriverResolver) ResolveDriver(args map[string]interface{}) interface{} {
@@ -292,10 +308,48 @@ func (r *DriverResolver) RegisterDriver(args map[string]interface{}) interface{}
 		serviceArea = sa.(string)
 	}
 
+	if r.registerHandler != nil {
+		cmd := commands.RegisterDriverCommand{
+			UserID:       userID,
+			VehicleType:  domain.VehicleType(vehicleType),
+			PlateNumber:  plateNumber,
+			CapacityKg:   int64(capacityKg),
+			Capabilities: capabilities,
+			ServiceArea:  serviceArea,
+		}
+		driver, err := r.registerHandler.Execute(context.Background(), cmd)
+		if err != nil {
+			return map[string]interface{}{
+				"success":    false,
+				"statusCode": 500,
+				"message":    err.Error(),
+				"timeStamp":  "2026-09-02T12:00:00Z",
+				"data":       nil,
+			}
+		}
+		return map[string]interface{}{
+			"success":    true,
+			"statusCode": 200,
+			"message":    "Success",
+			"timeStamp":  "2026-09-02T12:00:00Z",
+			"data": map[string]interface{}{
+				"id":           driver.ID,
+				"userId":       driver.UserID,
+				"status":       string(driver.Status),
+				"vehicleType":  string(driver.Vehicle.Type),
+				"plateNumber":  driver.Vehicle.PlateNumber,
+				"capacityKg":   driver.Vehicle.CapacityKg,
+				"capabilities": driver.Capabilities,
+				"serviceArea":  driver.ServiceArea,
+				"createdAt":    "2026-09-02T10:00:00Z",
+			},
+		}
+	}
+
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Success",
+		"message":    "Success (Mocked, handler nil)",
 		"timeStamp":  "2026-09-02T12:00:00Z",
 		"data": map[string]interface{}{
 			"id":           "driver-123",

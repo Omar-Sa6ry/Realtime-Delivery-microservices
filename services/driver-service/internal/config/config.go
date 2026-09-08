@@ -21,6 +21,7 @@ type Config struct {
 	LocationStaleSeconds string
 	LockTTLMs            string
 	MaxDispatchAttempts  string
+	UserServiceURL       string
 }
 
 func Load() *Config {
@@ -41,6 +42,7 @@ func Load() *Config {
 		LocationStaleSeconds: getEnv("LOCATION_STALE_SECONDS", "30"),
 		LockTTLMs:            getEnv("LOCK_TTL_MS", "5000"),
 		MaxDispatchAttempts:  getEnv("MAX_DISPATCH_ATTEMPTS", "5"),
+		UserServiceURL:       getEnv("USER_SERVICE_URL", "user-service:50051"),
 	}
 }
 

@@ -4,11 +4,19 @@ package graphql
 const DriverSubgraphSDL = `extend schema
   @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key", "@shareable"])
 
+enum VehicleType {
+  CAR
+  MOTORCYCLE
+  TRUCK
+  BICYCLE
+  VAN
+}
+
 type Driver @key(fields: "id") {
   id: ID!
   userId: String!
   status: String!
-  vehicleType: String
+  vehicleType: VehicleType
   plateNumber: String
   capacityKg: Int
   capabilities: [String!]
@@ -45,7 +53,7 @@ type NearbyDriverItem {
   driverId: String!
   distanceMeters: Float!
   status: String!
-  vehicleType: String
+  vehicleType: VehicleType
   latitude: Float!
   longitude: Float!
 }
@@ -81,13 +89,13 @@ input NearbyDriversInput {
   latitude: Float!
   longitude: Float!
   radiusKm: Float!
-  vehicleType: String
+  vehicleType: VehicleType
   limit: Int
 }
 
 input RegisterDriverInput {
   userId: String!
-  vehicleType: String!
+  vehicleType: VehicleType!
   plateNumber: String!
   capacityKg: Int!
   capabilities: [String!]
@@ -95,7 +103,7 @@ input RegisterDriverInput {
 }
 
 input UpdateDriverProfileInput {
-  vehicleType: String
+  vehicleType: VehicleType
   plateNumber: String
   capacityKg: Int
   capabilities: [String!]

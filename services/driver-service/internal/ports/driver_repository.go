@@ -9,7 +9,7 @@ import (
 type DriverRepository interface {
 	FindByID(ctx context.Context, id string) (*domain.Driver, error)
 	FindByUserID(ctx context.Context, userID string) (*domain.Driver, error)
-	FindAvailableByLocation(ctx context.Context, lat, lng, radiusKm float64, vehicleType string) ([]*domain.Driver, error)
+	FindAvailableByLocation(ctx context.Context, lat, lng, radiusKm float64, vehicleType domain.VehicleType) ([]*domain.Driver, error)
 	FindByStatus(ctx context.Context, status string) ([]*domain.Driver, error)
 	Save(ctx context.Context, driver *domain.Driver) error
 }

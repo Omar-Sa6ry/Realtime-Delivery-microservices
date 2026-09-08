@@ -40,7 +40,7 @@ func NewDispatchService(
 }
 
 // FindAvailableDrivers finds drivers available near the given coordinates.
-func (s *DispatchService) FindAvailableDrivers(ctx context.Context, lat, lng, radiusKm float64, vehicleType string, deliveryID string) ([]domain.Candidate, error) {
+func (s *DispatchService) FindAvailableDrivers(ctx context.Context, lat, lng, radiusKm float64, vehicleType domain.VehicleType, deliveryID string) ([]domain.Candidate, error) {
 	drivers, err := s.driverRepo.FindAvailableByLocation(ctx, lat, lng, radiusKm, vehicleType)
 	if err != nil {
 		log.Printf("dispatch service: find available by location failed: %v", err)

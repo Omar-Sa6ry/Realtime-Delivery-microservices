@@ -12,13 +12,26 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// ─── Enums ─────────────────────────────────────────────────────────────────
+
+type VehicleType int32
+
+const (
+	VehicleType_VEHICLE_TYPE_UNKNOWN VehicleType = 0
+	VehicleType_CAR                  VehicleType = 1
+	VehicleType_MOTORCYCLE           VehicleType = 2
+	VehicleType_TRUCK                VehicleType = 3
+	VehicleType_BICYCLE              VehicleType = 4
+	VehicleType_VAN                  VehicleType = 5
+)
+
 // ─── Messages ──────────────────────────────────────────────────────────────
 
 type FindAvailableDriversRequest struct {
 	Latitude    float64 `json:"latitude"`
 	Longitude   float64 `json:"longitude"`
 	RadiusKm    float64 `json:"radiusKm"`
-	VehicleType string  `json:"vehicleType"`
+	VehicleType VehicleType `json:"vehicleType"`
 	DeliveryId  string  `json:"deliveryId"`
 	CorrelationId string `json:"correlationId"`
 }
@@ -26,7 +39,7 @@ type FindAvailableDriversRequest struct {
 type DriverCandidate struct {
 	DriverId       string  `json:"driverId"`
 	DistanceMeters float64 `json:"distanceMeters"`
-	VehicleType    string  `json:"vehicleType"`
+	VehicleType    VehicleType  `json:"vehicleType"`
 	Latitude       float64 `json:"latitude"`
 	Longitude      float64 `json:"longitude"`
 }
@@ -83,7 +96,7 @@ type GetDriverResponse struct {
 	DriverId    string `json:"driverId"`
 	UserId      string `json:"userId"`
 	Status      string `json:"status"`
-	VehicleType string `json:"vehicleType"`
+	VehicleType VehicleType `json:"vehicleType"`
 }
 
 type GetDriverStatusRequest struct {

@@ -48,7 +48,7 @@ type FindAvailableDriversPolicy struct {
 	PickupLatitude  float64
 	PickupLongitude float64
 	RadiusKm        float64
-	VehicleType     string
+	VehicleType     VehicleType
 	DeliveryID      string
 	ExcludeDriverIDs []string
 }
@@ -71,7 +71,7 @@ func (f *FindAvailableDriversPolicy) Validate() error {
 type Candidate struct {
 	DriverID       string
 	DistanceMeters float64
-	VehicleType    string
+	VehicleType    VehicleType
 	Status         DriverStatus
 	RankingScore   float64
 }

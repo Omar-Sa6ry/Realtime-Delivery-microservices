@@ -1,4 +1,4 @@
-﻿syntax = "proto3";
+syntax = "proto3";
 package driver;
 
 service DriverService {
@@ -9,6 +9,15 @@ service DriverService {
   rpc GetDriverStatus      (GetDriverStatusRequest)      returns (GetDriverStatusResponse);
   rpc AssignDriver         (AssignDriverRequest)         returns (AssignDriverResponse);
   rpc ValidateID           (ValidateIDRequest)         returns (ValidateIDResponse);
+}
+
+enum VehicleType {
+  VEHICLE_TYPE_UNKNOWN = 0;
+  CAR = 1;
+  MOTORCYCLE = 2;
+  TRUCK = 3;
+  BICYCLE = 4;
+  VAN = 5;
 }
 
 message ValidateIDRequest {
@@ -28,7 +37,7 @@ message FindAvailableDriversRequest {
   double latitude      = 1;
   double longitude     = 2;
   double radiusKm      = 3;
-  string vehicleType   = 4;
+  VehicleType vehicleType   = 4;
   string deliveryId    = 5;
   string correlationId = 6;
 }
@@ -36,7 +45,7 @@ message FindAvailableDriversRequest {
 message DriverCandidate {
   string driverId       = 1;
   double distanceMeters = 2;
-  string vehicleType    = 3;
+  VehicleType vehicleType    = 3;
   double latitude       = 4;
   double longitude      = 5;
 }
@@ -91,7 +100,7 @@ message GetDriverResponse {
   string driverId    = 2;
   string userId      = 3;
   string status      = 4;
-  string vehicleType = 5;
+  VehicleType vehicleType = 5;
 }
 
 message GetDriverStatusRequest  { string driverId = 1; }

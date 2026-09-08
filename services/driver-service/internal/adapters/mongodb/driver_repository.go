@@ -52,7 +52,7 @@ func (r *DriverRepository) FindByUserID(ctx context.Context, userID string) (*do
 
 // FindAvailableByLocation finds available drivers near given coordinates,
 // optionally filtered by vehicle type.
-func (r *DriverRepository) FindAvailableByLocation(ctx context.Context, lat, lng, radiusKm float64, vehicleType string) ([]*domain.Driver, error) {
+func (r *DriverRepository) FindAvailableByLocation(ctx context.Context, lat, lng, radiusKm float64, vehicleType domain.VehicleType) ([]*domain.Driver, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	filter := bson.M{"status": "AVAILABLE"}
 	if vehicleType != "" {

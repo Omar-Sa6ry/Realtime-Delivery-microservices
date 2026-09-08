@@ -20,7 +20,7 @@ export interface GetDriverResponse {
   driverId: string;
   userId: string;
   status: string;
-  vehicleType: string;
+  vehicleType: 'CAR' | 'MOTORCYCLE' | 'TRUCK' | 'BICYCLE' | 'VAN' | 'VEHICLE_TYPE_UNKNOWN';
 }
 
 export interface GetDriverStatusRequest {

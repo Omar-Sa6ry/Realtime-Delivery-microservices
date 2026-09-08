@@ -89,13 +89,46 @@ func translateError(lang string, err error) error {
 	return status.Errorf(codes.Internal, "%s: %v", i18n.T(lang, "error.internal"), err)
 }
 
+func toProtoVehicleType(vt domain.VehicleType) pb.VehicleType {
+	switch vt {
+	case domain.VehicleTypeCar:
+		return pb.VehicleType_CAR
+	case domain.VehicleTypeMotorcycle:
+		return pb.VehicleType_MOTORCYCLE
+	case domain.VehicleTypeTruck:
+		return pb.VehicleType_TRUCK
+	case domain.VehicleTypeBicycle:
+		return pb.VehicleType_BICYCLE
+	case domain.VehicleTypeVan:
+		return pb.VehicleType_VAN
+	default:
+		return pb.VehicleType_VEHICLE_TYPE_UNKNOWN
+	}
+}
+
 // FindAvailableDrivers finds available drivers near a pickup point.
 func (s *DriverGRPCServer) FindAvailableDrivers(ctx context.Context, req *pb.FindAvailableDriversRequest) (*pb.FindAvailableDriversResponse, error) {
 	lang := extractLanguage(ctx)
 	if req.DeliveryId == "" {
 		return nil, status.Error(codes.InvalidArgument, i18n.T(lang, "validation.delivery_id_required"))
 	}
-	candidates, err := s.dispatch.FindAvailableDrivers(ctx, req.Latitude, req.Longitude, req.RadiusKm, req.VehicleType, req.DeliveryId)
+	var vType domain.VehicleType
+	switch req.VehicleType {
+	case pb.VehicleType_CAR:
+		vType = domain.VehicleTypeCar
+	case pb.VehicleType_MOTORCYCLE:
+		vType = domain.VehicleTypeMotorcycle
+	case pb.VehicleType_TRUCK:
+		vType = domain.VehicleTypeTruck
+	case pb.VehicleType_BICYCLE:
+		vType = domain.VehicleTypeBicycle
+	case pb.VehicleType_VAN:
+		vType = domain.VehicleTypeVan
+	default:
+		vType = ""
+	}
+
+	candidates, err := s.dispatch.FindAvailableDrivers(ctx, req.Latitude, req.Longitude, req.RadiusKm, vType, req.DeliveryId)
 	if err != nil {
 		log.Printf("grpc: FindAvailableDrivers error: %v", err)
 		return nil, translateError(lang, err)
@@ -105,7 +138,7 @@ func (s *DriverGRPCServer) FindAvailableDrivers(ctx context.Context, req *pb.Fin
 		pbCandidates = append(pbCandidates, &pb.DriverCandidate{
 			DriverId:       c.DriverID,
 			DistanceMeters: c.DistanceMeters,
-			VehicleType:    c.VehicleType,
+			VehicleType:    toProtoVehicleType(c.VehicleType),
 		})
 	}
 	return &pb.FindAvailableDriversResponse{Candidates: pbCandidates}, nil
@@ -193,7 +226,7 @@ func (s *DriverGRPCServer) GetDriver(ctx context.Context, req *pb.GetDriverReque
 		DriverId:    driver.ID,
 		UserId:      driver.UserID,
 		Status:      string(driver.Status),
-		VehicleType: driver.Vehicle.Type,
+		VehicleType: toProtoVehicleType(driver.Vehicle.Type),
 	}, nil
 }
 

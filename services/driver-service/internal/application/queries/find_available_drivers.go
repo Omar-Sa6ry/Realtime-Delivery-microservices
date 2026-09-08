@@ -13,14 +13,14 @@ type FindAvailableDriversQuery struct {
 	Lat          float64
 	Lng          float64
 	RadiusKm     float64
-	VehicleType  string
+	VehicleType  domain.VehicleType
 	DeliveryID   string
 	driverRepo   ports.DriverRepository
 	locationStore ports.LocationStore
 }
 
 // NewFindAvailableDriversQuery creates a new FindAvailableDriversQuery.
-func NewFindAvailableDriversQuery(lat, lng, radiusKm float64, vehicleType, deliveryID string,
+func NewFindAvailableDriversQuery(lat, lng, radiusKm float64, vehicleType domain.VehicleType, deliveryID string,
 	driverRepo ports.DriverRepository, locationStore ports.LocationStore) *FindAvailableDriversQuery {
 
 	return &FindAvailableDriversQuery{

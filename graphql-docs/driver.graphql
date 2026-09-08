@@ -109,7 +109,7 @@ query GetNearbyDrivers {
     latitude: 30.0444
     longitude: 31.2357
     radiusKm: 5.0
-    vehicleType: "CAR"
+    vehicleType: CAR
     limit: 10
   }) {
     success

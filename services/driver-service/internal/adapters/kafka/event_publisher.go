@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/events"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 	"github.com/google/uuid"
 )
@@ -41,10 +42,10 @@ func (a *EventPublisherAdapter) PublishDriverCreated(ctx context.Context, driver
 	return a.publish(ctx, string(events.DriverCreated), driverID, payload)
 }
 
-func (a *EventPublisherAdapter) PublishDriverUpdated(ctx context.Context, driverID string, vehicleType string, capabilities []string) error {
+func (a *EventPublisherAdapter) PublishDriverUpdated(ctx context.Context, driverID string, vehicleType domain.VehicleType, capabilities []string) error {
 	payload := events.DriverUpdatedPayload{
 		DriverID:      driverID,
-		VehicleType:   vehicleType,
+		VehicleType:   string(vehicleType),
 		UpdatedAt:     time.Now().UTC(),
 		SourceVersion: 1,
 	}

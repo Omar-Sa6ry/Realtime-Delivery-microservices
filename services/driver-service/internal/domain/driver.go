@@ -129,11 +129,21 @@ func (d *Driver) String() string {
 	return string(d.Status)
 }
 
+type VehicleType string
+
+const (
+	VehicleTypeCar        VehicleType = "CAR"
+	VehicleTypeMotorcycle VehicleType = "MOTORCYCLE"
+	VehicleTypeTruck      VehicleType = "TRUCK"
+	VehicleTypeBicycle    VehicleType = "BICYCLE"
+	VehicleTypeVan        VehicleType = "VAN"
+)
+
 // VehicleInfo represents vehicle details for a driver.
 type VehicleInfo struct {
-	Type       string `json:"type"`        // CAR, MOTORCYCLE, TRUCK
-	PlateNumber string `json:"plateNumber"`
-	CapacityKg  int64  `json:"capacityKg"`
+	Type        VehicleType `json:"type"`        // CAR, MOTORCYCLE, TRUCK, BICYCLE, VAN
+	PlateNumber string      `json:"plateNumber"`
+	CapacityKg  int64       `json:"capacityKg"`
 }
 
 // IsValid checks if the driver status is a valid public state.

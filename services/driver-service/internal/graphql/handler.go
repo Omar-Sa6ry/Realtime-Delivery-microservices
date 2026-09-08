@@ -45,18 +45,19 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 
 // GraphQLHandler wraps the parsed GraphQL schema into an http.HandlerFunc.
 type GraphQLHandler struct {
-	schema *gql.Schema
+	schema  *gql.Schema
+	loaders *Loaders
 }
 
 // NewHandler creates a real Apollo Federation-compatible GraphQL subgraph HTTP handler.
-func NewHandler(rootResolver *RootResolver) http.HandlerFunc {
+func NewHandler(rootResolver *RootResolver, loaders *Loaders) http.HandlerFunc {
 	// Parse schema with Federation options (schema definition)
 	schema, err := gql.ParseSchema(DriverSubgraphSDL, rootResolver, gql.UseStringDescriptions())
 	if err != nil {
 		log.Fatalf("Failed to parse GraphQL schema: %v", err)
 	}
 
-	h := &GraphQLHandler{schema: schema}
+	h := &GraphQLHandler{schema: schema, loaders: loaders}
 	return h.ServeHTTP
 }
 
@@ -101,6 +102,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Attach request contextual metadata (e.g., user ID, language)
 	ctx := context.WithValue(r.Context(), "userID", ExtractUserID(r))
 	ctx = context.WithValue(ctx, "lang", lang)
+	if h.loaders != nil {
+		ctx = WithLoaders(ctx, h.loaders)
+	}
 
 	response := h.schema.Exec(ctx, params.Query, params.OperationName, params.Variables)
 	_ = json.NewEncoder(w).Encode(response)

@@ -133,7 +133,8 @@ func main() {
 		getDriverReviewsHandler,
 		eventPublisher,
 	)
-	gqlHandler := internalgql.NewHandler(rootResolver)
+	loaders := internalgql.NewLoaders(driverRepo)
+	gqlHandler := internalgql.NewHandler(rootResolver, loaders)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health/live", internalgql.HealthHandler)

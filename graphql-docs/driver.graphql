@@ -15,8 +15,7 @@ query GetDriverServiceInfo {
   }
 }
 
-# Get Driver by ID - WRAPPED response (no nested driver{} wrapper)
-# Fields appear under data { ... } { driver { ... } }
+# Get Driver by ID - WRAPPED response
 query GetDriver {
   driver(id: "driver-123") {
     success
@@ -25,14 +24,17 @@ query GetDriver {
     timeStamp
     data {
       id
-      userId
+      user {
+        id
+      }
       status        # OFFLINE | AVAILABLE | BUSY
-      vehicleType   # CAR | MOTORCYCLE | TRUCK
+      vehicleType   # CAR | MOTORCYCLE | TRUCK | BICYCLE | VAN
       plateNumber
       capacityKg
       capabilities
       serviceArea
       rating
+      isBlocked
       createdAt
       updatedAt
     }
@@ -48,7 +50,9 @@ query GetMyDriverProfile {
     timeStamp
     data {
       id
-      userId
+      user {
+        id
+      }
       status
       vehicleType
       plateNumber
@@ -56,6 +60,7 @@ query GetMyDriverProfile {
       capabilities
       serviceArea
       rating
+      isBlocked
       createdAt
       updatedAt
     }
@@ -71,8 +76,12 @@ query GetDriverActiveAssignment {
     timeStamp
     data {
       id
-      deliveryId
-      driverId
+      delivery {
+        id
+      }
+      driver {
+        id
+      }
       status        # OFFERED|ACCEPTED|ACTIVE|COMPLETED|REJECTED|EXPIRED|CANCELLED
       attemptNumber
       offeredAt
@@ -94,16 +103,20 @@ query GetDriverStatus {
     message
     timeStamp
     data {
-      driverId
+      driver {
+        id
+      }
       status
       hasActiveAssignment
-      activeDeliveryId
+      activeDelivery {
+        id
+      }
       lastSeenAt
     }
   }
 }
 
-# Get Nearby Drivers - WRAPPED response (items under data { items })
+# Get Nearby Drivers - WRAPPED response
 query GetNearbyDrivers {
   nearbyDrivers(input: {
     latitude: 30.0444
@@ -123,12 +136,18 @@ query GetNearbyDrivers {
         nextPage
       }
       items {
-        driverId
+        driver {
+          id
+          rating
+          isBlocked
+        }
         distanceMeters
         status
         vehicleType
         latitude
         longitude
+        rating
+        isBlocked
       }
     }
   }
@@ -143,8 +162,12 @@ query GetAssignment {
     timeStamp
     data {
       id
-      deliveryId
-      driverId
+      delivery {
+        id
+      }
+      driver {
+        id
+      }
       status
       attemptNumber
       offeredAt
@@ -154,6 +177,37 @@ query GetAssignment {
       completedAt
       createdAt
       updatedAt
+    }
+  }
+}
+
+# Get Dispatch Attempts for a Delivery - WRAPPED response
+query GetDispatchAttempts {
+  dispatchAttempts(deliveryId: "delivery-123") {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        id
+        delivery {
+          id
+        }
+        driver {
+          id
+        }
+        distanceMeters
+        attemptNumber
+        result
+        reason
+        createdAt
+      }
     }
   }
 }
@@ -168,7 +222,7 @@ mutation GoOnline {
     message
     timeStamp
     data {
-      driverId
+      id
       status
       updatedAt
     }
@@ -183,7 +237,7 @@ mutation GoOffline {
     message
     timeStamp
     data {
-      driverId
+      id
       status
       updatedAt
     }
@@ -202,8 +256,12 @@ mutation AcceptAssignment {
     timeStamp
     data {
       id
-      deliveryId
-      driverId
+      delivery {
+        id
+      }
+      driver {
+        id
+      }
       status
       acceptedAt
       updatedAt
@@ -224,8 +282,12 @@ mutation RejectAssignment {
     timeStamp
     data {
       id
-      deliveryId
-      driverId
+      delivery {
+        id
+      }
+      driver {
+        id
+      }
       status
       rejectedAt
       updatedAt
@@ -249,7 +311,9 @@ mutation RegisterDriver {
     timeStamp
     data {
       id
-      userId
+      user {
+        id
+      }
       status
       vehicleType
       plateNumber
@@ -300,7 +364,9 @@ mutation BlockDriver {
     timeStamp
     data {
       id
-      userId
+      user {
+        id
+      }
       status
       isBlocked
       updatedAt
@@ -320,7 +386,9 @@ mutation UnblockDriver {
     timeStamp
     data {
       id
-      userId
+      user {
+        id
+      }
       status
       isBlocked
       updatedAt
@@ -339,7 +407,7 @@ mutation SuspendDriver {
     message
     timeStamp
     data {
-      driverId
+      id
       status
       updatedAt
     }
@@ -354,117 +422,8 @@ mutation ActivateDriver {
     message
     timeStamp
     data {
-      driverId
-      status
-      updatedAt
-    }
-  }
-}
-
-# ─── SUBSCRIPTIONS ─────────────────────────────────────────
-
-# Subscribe to driver location updates - WRAPPED response
-subscription DriverLocationUpdated {
-  driverLocationUpdated {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      driverId
-      latitude
-      longitude
-    }
-  }
-}
-
-# Subscribe to assignment offer events - WRAPPED response
-subscription DriverAssignmentOffered {
-  driverAssignmentOffered(assignmentId: "assignment-123") {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
       id
-      deliveryId
-      driverId
       status
-      offeredAt
-      expiresAt
-    }
-  }
-}
-
-# Subscribe to assignment acceptance events - WRAPPED response
-subscription DriverAssignmentAccepted {
-  driverAssignmentAccepted(assignmentId: "assignment-123") {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      id
-      deliveryId
-      driverId
-      status
-      acceptedAt
-      updatedAt
-    }
-  }
-}
-
-# Subscribe to driver status updates - WRAPPED response
-subscription DriverStatusUpdated {
-  driverStatusUpdated(driverId: "driver-123") {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      driverId
-      status
-      updatedAt
-    }
-  }
-}
-
-# ─── SUBSCRIPTIONS — REALTIME EVENTS ───────────────────────
-
-# Subscribe to driver location.updated via NATS realtime - WRAPPED response
-subscription DriverLocationRealtimeUpdated {
-  driverLocationRealtimeUpdated {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      driverId
-      latitude
-      longitude
-      timestamp
-    }
-  }
-}
-
-# Subscribe to assignment status changes via NATS - WRAPPED response
-subscription DriverAssignmentRealtimeUpdated {
-  driverAssignmentRealtimeUpdated(assignmentId: "assignment-123") {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      id
-      deliveryId
-      driverId
-      status
-      attemptNumber
-      offeredAt
-      expiresAt
-      acceptedAt
-      rejectedAt
-      completedAt
       updatedAt
     }
   }
@@ -486,9 +445,15 @@ mutation RateDriver {
     timeStamp
     data {
       id
-      driverId
-      userId
-      deliveryId
+      driver {
+        id
+      }
+      user {
+        id
+      }
+      delivery {
+        id
+      }
       rating
       comment
       createdAt
@@ -511,8 +476,12 @@ query GetDriverReviews {
       }
       items {
         id
-        userId
-        deliveryId
+        user {
+          id
+        }
+        delivery {
+          id
+        }
         rating
         comment
         createdAt

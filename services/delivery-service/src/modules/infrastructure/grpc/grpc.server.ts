@@ -44,7 +44,7 @@ export class GrpcServer implements OnModuleInit {
         this.driverService.GetDriver({ driverId }),
       );
     } catch {
-      return { found: false, driverId, userId: '', status: '', vehicleType: '' };
+      return { found: false, driverId, userId: '', status: '', vehicleType: 'VEHICLE_TYPE_UNKNOWN' };
     }
   }
 

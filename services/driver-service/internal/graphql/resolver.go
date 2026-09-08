@@ -482,9 +482,18 @@ type ServiceResolver struct {
 
 func (r *ServiceResolver) Sdl() string { return r.sdl }
 
-// ──────────────────────────────────────────────
-// Queries
-// ──────────────────────────────────────────────
+
+func (r *AssignmentResolver) Driver(ctx context.Context) (*DriverResolver, error) {
+	loaders := GetLoaders(ctx)
+	if loaders == nil || loaders.DriverLoader == nil {
+		return &DriverResolver{driver: &domain.Driver{ID: r.assignment.DriverID}}, nil
+	}
+	driver, err := loaders.DriverLoader.Load(ctx, r.assignment.DriverID)()
+	if err != nil {
+		return nil, err
+	}
+	return &DriverResolver{driver: driver}, nil
+}
 
 func (r *RootResolver) Service() ServiceResolver {
 	return ServiceResolver{sdl: DriverSubgraphSDL}
@@ -718,13 +727,35 @@ func (r *RootResolver) NearbyDrivers(ctx context.Context, args struct{ Input Nea
 	}
 
 	var items []*NearbyDriverItemResolver
+	loaders := GetLoaders(ctx)
+
+	// Collect IDs to fetch in bulk if loaders is available
+	var driverIDs []string
+	var driverCandidates []domain.Candidate
 	for i, c := range candidates {
 		if i >= limit {
 			break
 		}
+		driverIDs = append(driverIDs, c.DriverID)
+		driverCandidates = append(driverCandidates, c)
+	}
+
+	var loadedDrivers []*domain.Driver
+	if loaders != nil && loaders.DriverLoader != nil {
+		loadedDrivers, _ = loaders.DriverLoader.LoadMany(ctx, driverIDs)()
+	}
+
+	for i, c := range driverCandidates {
 		vt := string(c.VehicleType)
-		// Fetch driver details for rating and block status if available
-		driver, _ := r.driverRepo.FindByID(ctx, c.DriverID)
+		
+		var driver *domain.Driver
+		if i < len(loadedDrivers) && loadedDrivers[i] != nil {
+			driver = loadedDrivers[i]
+		} else {
+			// Fallback if no loader or loaded failed
+			driver, _ = r.driverRepo.FindByID(ctx, c.DriverID)
+		}
+		
 		rating := 0.0
 		isBlocked := false
 		if driver != nil {

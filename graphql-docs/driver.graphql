@@ -261,15 +261,13 @@ mutation RegisterDriver {
   }
 }
 
-# Update Driver Profile (Admin) - WRAPPED response
+# Update Driver Profile (Admin / Driver) - WRAPPED response
 mutation UpdateDriverProfile {
   updateDriverProfile(
-    driverId: "driver-123"
     input: {
       vehicleType: MOTORCYCLE
       plateNumber: "XYZ-456"
       capacityKg: 20
-      capabilities: ["STANDARD", "FRAGILE"]
       serviceArea: "Giza"
     }
   ) {
@@ -285,6 +283,46 @@ mutation UpdateDriverProfile {
       capacityKg
       capabilities
       serviceArea
+      updatedAt
+    }
+  }
+}
+
+# Block Driver (Admin) - WRAPPED response
+mutation BlockDriver {
+  blockDriver(
+    driverId: "driver-123"
+    reason: "Suspicious activity detected"
+  ) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      id
+      userId
+      status
+      isBlocked
+      updatedAt
+    }
+  }
+}
+
+# Unblock Driver (Admin) - WRAPPED response
+mutation UnblockDriver {
+  unblockDriver(
+    driverId: "driver-123"
+    reason: "Verification completed"
+  ) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      id
+      userId
+      status
+      isBlocked
       updatedAt
     }
   }
@@ -428,6 +466,59 @@ subscription DriverAssignmentRealtimeUpdated {
       rejectedAt
       completedAt
       updatedAt
+    }
+  }
+}
+
+# ─── REVIEWS & RATINGS ─────────────────────────────────────
+
+# Rate a Driver - WRAPPED response
+mutation RateDriver {
+  rateDriver(input: {
+    driverId: "driver-123"
+    deliveryId: "delivery-456"
+    rating: 4.5
+    comment: "Excellent service!"
+  }) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      id
+      driverId
+      userId
+      deliveryId
+      rating
+      comment
+      createdAt
+    }
+  }
+}
+
+# Get Driver Reviews (Admin) - WRAPPED response
+query GetDriverReviews {
+  driverReviews(driverId: "driver-123", page: 1, limit: 10) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        id
+        userId
+        deliveryId
+        rating
+        comment
+        createdAt
+      }
+      averageRating
+      totalReviews
     }
   }
 }

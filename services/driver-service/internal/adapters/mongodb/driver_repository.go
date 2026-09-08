@@ -118,5 +118,19 @@ func (r *DriverRepository) DeleteExpiredLocations(ctx context.Context, olderThan
 	return result.ModifiedCount, nil
 }
 
+// UpdateRating updates only the driver's rating and rating count.
+func (r *DriverRepository) UpdateRating(ctx context.Context, driverID string, averageRating float64, totalReviews int64) error {
+	col := r.client.Database(r.database).Collection(r.collection)
+	update := bson.M{
+		"$set": bson.M{
+			"rating":      averageRating,
+			"ratingcount": totalReviews,
+			"updatedat":   time.Now(),
+		},
+	}
+	_, err := col.UpdateByID(ctx, driverID, update)
+	return err
+}
+
 // Compile-time interface check
 var _ ports.DriverRepository = (*DriverRepository)(nil)

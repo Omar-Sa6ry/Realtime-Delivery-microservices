@@ -109,8 +109,14 @@ input UpdateDriverProfileInput {
   vehicleType: VehicleType
   plateNumber: String
   capacityKg: Int
-  capabilities: [String!]
-  serviceArea: String
+	serviceArea: String
+}
+
+input RateDriverInput {
+  driverId: ID!
+  deliveryId: ID!
+  rating: Float!
+  comment: String
 }
 
 type DriverResponse {
@@ -162,8 +168,40 @@ type DriverLocationUpdatedResponse {
   success: Boolean!
   statusCode: Int!
   message: String!
-  timeStamp: String!
   data: Driver
+}
+
+type Review {
+  id: ID!
+  driverId: String!
+  userId: String!
+  deliveryId: String!
+  rating: Float!
+  comment: String
+  createdAt: String!
+}
+
+type ReviewResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: Review
+}
+
+type DriverReviewsData {
+  paginationInfo: PaginationInfo!
+  items: [Review!]!
+  averageRating: Float!
+  totalReviews: Int!
+}
+
+type DriverReviewsResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: DriverReviewsData
 }
 
 type Query {
@@ -176,6 +214,7 @@ type Query {
   nearbyDrivers(input: NearbyDriversInput!): NearbyDriversResponse
   assignment(id: ID!): AssignmentResponse
   dispatchAttempts(deliveryId: ID!): DispatchAttemptsResponse
+  driverReviews(driverId: ID!, page: Int, limit: Int): DriverReviewsResponse
 }
 
 type Mutation {
@@ -189,6 +228,7 @@ type Mutation {
   activateDriver(driverId: ID!): DriverResponse
   blockDriver(driverId: ID!, reason: String): DriverResponse
   unblockDriver(driverId: ID!, reason: String): DriverResponse
+  rateDriver(input: RateDriverInput!): ReviewResponse
 }
 
 type Subscription {

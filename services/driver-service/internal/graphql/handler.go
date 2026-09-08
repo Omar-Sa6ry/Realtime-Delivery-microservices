@@ -1,12 +1,13 @@
 package graphql
 
 import (
+	"context"
 	"encoding/json"
+	"log"
 	"net/http"
-	"strings"
-	"time"
 
-	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/commands"
+	gql "github.com/graph-gophers/graphql-go"
+
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/i18n"
 )
 
@@ -17,6 +18,17 @@ func ExtractLanguage(r *http.Request) string {
 	}
 	accept := r.Header.Get("Accept-Language")
 	return i18n.NormalizeLang(accept)
+}
+
+// ExtractUserID retrieves the user ID from headers (e.g., set by API gateway/ingress).
+func ExtractUserID(r *http.Request) string {
+	if uid := r.Header.Get("x-user-id"); uid != "" {
+		return uid
+	}
+	if uid := r.Header.Get("X-User-ID"); uid != "" {
+		return uid
+	}
+	return ""
 }
 
 // HealthHandler serves liveness and readiness probe requests.
@@ -31,21 +43,37 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// NewHandler creates an Apollo Federation GraphQL subgraph request handler.
-func NewHandler(
-	registerCmd *commands.RegisterDriverHandler,
-	blockCmd *commands.BlockDriverHandler,
-	unblockCmd *commands.UnblockDriverHandler,
-) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// GraphQLHandler wraps the parsed GraphQL schema into an http.HandlerFunc.
+type GraphQLHandler struct {
+	schema *gql.Schema
+}
+
+// NewHandler creates a real Apollo Federation-compatible GraphQL subgraph HTTP handler.
+func NewHandler(rootResolver *RootResolver) http.HandlerFunc {
+	// Parse schema with Federation options (schema definition)
+	schema, err := gql.ParseSchema(DriverSubgraphSDL, rootResolver, gql.UseStringDescriptions())
+	if err != nil {
+		log.Fatalf("Failed to parse GraphQL schema: %v", err)
+	}
+
+	h := &GraphQLHandler{schema: schema}
+	return h.ServeHTTP
+}
+
+func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	lang := ExtractLanguage(r)
 
 	if r.Method == http.MethodGet {
-		resp := map[string]interface{}{"data": map[string]interface{}{"__typename": "Query"}}
+		// Respond with basic service information on GET
+		resp := map[string]interface{}{
+			"status":  "healthy",
+			"service": "driver-subgraph",
+		}
 		_ = json.NewEncoder(w).Encode(resp)
 		return
 	}
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
@@ -54,96 +82,26 @@ func NewHandler(
 		return
 	}
 
-	var req struct {
-		Query string `json:"query"`
+	var params struct {
+		Query         string                 `json:"query"`
+		OperationName string                 `json:"operationName"`
+		Variables     map[string]interface{} `json:"variables"`
 	}
-	_ = json.NewDecoder(r.Body).Decode(&req)
 
-	if strings.Contains(req.Query, "_service") {
-		resp := map[string]interface{}{
-			"data": map[string]interface{}{
-				"_service": map[string]interface{}{"sdl": DriverSubgraphSDL},
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"errors": []map[string]string{
+				{"message": "Invalid JSON body"},
 			},
-		}
-		_ = json.NewEncoder(w).Encode(resp)
+		})
 		return
 	}
 
-	if strings.Contains(req.Query, "driverServiceInfo") {
-		resp := map[string]interface{}{
-			"data": map[string]interface{}{
-				"driverServiceInfo": map[string]interface{}{
-					"success":    true,
-					"statusCode": 200,
-					"message":    i18n.T(lang, "server.running"),
-					"timeStamp":  time.Now().UTC().Format(time.RFC3339),
-					"data": map[string]interface{}{
-						"name":    "driver-service",
-						"version": "1.0.0",
-						"status":  i18n.T(lang, "server.healthy"),
-					},
-				},
-			},
-		}
-		_ = json.NewEncoder(w).Encode(resp)
-		return
-	}
+	// Attach request contextual metadata (e.g., user ID, language)
+	ctx := context.WithValue(r.Context(), "userID", ExtractUserID(r))
+	ctx = context.WithValue(ctx, "lang", lang)
 
-		if strings.Contains(req.Query, "registerDriver") {
-			// Extremely naive parsing for demo purposes
-			resolver := NewDriverResolver(registerCmd, blockCmd, unblockCmd)
-			// Mocking args since we don't have a real AST parser
-			args := map[string]interface{}{
-				"userId":      "user-111",
-				"vehicleType": "CAR",
-				"plateNumber": "TEST-123",
-				"capacityKg":  float64(50),
-			}
-			result := resolver.RegisterDriver(args)
-			resp := map[string]interface{}{
-				"data": map[string]interface{}{
-					"registerDriver": result,
-				},
-			}
-			_ = json.NewEncoder(w).Encode(resp)
-			return
-		}
-
-		if strings.Contains(req.Query, "blockDriver") && !strings.Contains(req.Query, "unblock") {
-			resolver := NewDriverResolver(registerCmd, blockCmd, unblockCmd)
-			args := map[string]interface{}{
-				"driverId": "driver-123", // In a real system, extract from query variables
-				"reason":   "Admin blocked",
-			}
-			result := resolver.BlockDriver(args)
-			resp := map[string]interface{}{
-				"data": map[string]interface{}{
-					"blockDriver": result,
-				},
-			}
-			_ = json.NewEncoder(w).Encode(resp)
-			return
-		}
-
-		if strings.Contains(req.Query, "unblockDriver") {
-			resolver := NewDriverResolver(registerCmd, blockCmd, unblockCmd)
-			args := map[string]interface{}{
-				"driverId": "driver-123", // In a real system, extract from query variables
-				"reason":   "Admin unblocked",
-			}
-			result := resolver.UnblockDriver(args)
-			resp := map[string]interface{}{
-				"data": map[string]interface{}{
-					"unblockDriver": result,
-				},
-			}
-			_ = json.NewEncoder(w).Encode(resp)
-			return
-		}
-
-		resp := map[string]interface{}{
-		"data": map[string]interface{}{"__typename": "Query"},
-	}
-		_ = json.NewEncoder(w).Encode(resp)
-	}
+	response := h.schema.Exec(ctx, params.Query, params.OperationName, params.Variables)
+	_ = json.NewEncoder(w).Encode(response)
 }

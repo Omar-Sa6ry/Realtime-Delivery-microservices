@@ -15,6 +15,8 @@ type Driver struct {
 	Vehicle    VehicleInfo
 	Capabilities []string
 	ServiceArea string
+	Rating      float64
+	RatingCount int64
 	Version     int
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
@@ -147,6 +149,15 @@ func (d *Driver) Unblock() error {
 	d.IsBlocked = false
 	d.UpdatedAt = time.Now()
 	return nil
+}
+
+// UpdateRating updates the driver's overall rating.
+func (d *Driver) UpdateRating(averageRating float64, totalReviews int64) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.Rating = averageRating
+	d.RatingCount = totalReviews
+	d.UpdatedAt = time.Now()
 }
 
 // String returns the human-readable status.

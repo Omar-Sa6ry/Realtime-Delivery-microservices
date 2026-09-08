@@ -21,6 +21,7 @@ import (
 	adaptermongo "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/mongodb"
 	adapterredis "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/redis"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/commands"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/queries"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/services"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/config"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
@@ -55,6 +56,7 @@ func main() {
 	driverRepo := adaptermongo.NewDriverRepository(mongoClient, cfg.MongoDBDatabase, "drivers")
 	assignmentRepo := adaptermongo.NewAssignmentRepository(mongoClient, cfg.MongoDBDatabase, "assignments")
 	idempotencyRepo := adaptermongo.NewIdempotencyRepository(mongoClient, cfg.MongoDBDatabase, "idempotency")
+	reviewRepo := adaptermongo.NewReviewRepository(mongoClient, cfg.MongoDBDatabase, "reviews")
 	_ = idempotencyRepo
 
 	// ─── Redis ────────────────────────────────────────────────────────────────
@@ -91,6 +93,8 @@ func main() {
 	registerDriverHandler := commands.NewRegisterDriverHandler(driverRepo, eventPublisher, userClient)
 	blockDriverHandler := commands.NewBlockDriverHandler(driverRepo, eventPublisher)
 	unblockDriverHandler := commands.NewUnblockDriverHandler(driverRepo, eventPublisher)
+	rateDriverHandler := commands.NewRateDriverHandler(driverRepo, reviewRepo)
+	getDriverReviewsHandler := queries.NewGetDriverReviewsHandler(reviewRepo, driverRepo)
 
 	// ─── Background Workers ───────────────────────────────────────────────────
 	wp := workers.NewWorkerPool(3)
@@ -118,12 +122,25 @@ func main() {
 	}()
 
 	// ─── GraphQL & Health HTTP Server ─────────────────────────────────────────
+	rootResolver := internalgql.NewRootResolver(
+		driverRepo,
+		assignmentRepo,
+		dispatchSvc,
+		registerDriverHandler,
+		blockDriverHandler,
+		unblockDriverHandler,
+		rateDriverHandler,
+		getDriverReviewsHandler,
+		eventPublisher,
+	)
+	gqlHandler := internalgql.NewHandler(rootResolver)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health/live", internalgql.HealthHandler)
 	mux.HandleFunc("/health/ready", internalgql.HealthHandler)
 	mux.HandleFunc("/healthz", internalgql.HealthHandler)
-	mux.HandleFunc("/driver/graphql", internalgql.NewHandler(registerDriverHandler, blockDriverHandler, unblockDriverHandler))
-	mux.HandleFunc("/graphql", internalgql.NewHandler(registerDriverHandler, blockDriverHandler, unblockDriverHandler))
+	mux.HandleFunc("/driver/graphql", gqlHandler)
+	mux.HandleFunc("/graphql", gqlHandler)
 
 	gqlServer := &http.Server{
 		Addr:         ":" + cfg.PortGraphQL,

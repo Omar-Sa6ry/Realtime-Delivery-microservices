@@ -12,4 +12,5 @@ type DriverRepository interface {
 	FindAvailableByLocation(ctx context.Context, lat, lng, radiusKm float64, vehicleType domain.VehicleType) ([]*domain.Driver, error)
 	FindByStatus(ctx context.Context, status string) ([]*domain.Driver, error)
 	Save(ctx context.Context, driver *domain.Driver) error
+	UpdateRating(ctx context.Context, driverID string, averageRating float64, totalReviews int64) error
 }

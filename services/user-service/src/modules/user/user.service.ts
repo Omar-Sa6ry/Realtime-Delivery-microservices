@@ -65,6 +65,12 @@ export class UserService {
     await this.refreshCache(updatedUser);
   }
 
+  async updateUserRole(id: string, role: string): Promise<void> {
+    const updatedUser = await this.dbUserService.updateUserRole(id, role);
+    await this.refreshCache(updatedUser);
+  }
+
+
   async toggleUserActive(id: string, isActive: boolean): Promise<void> {
     const updatedUser = await this.dbUserService.toggleUserActive(id, isActive);
     await this.refreshCache(updatedUser);

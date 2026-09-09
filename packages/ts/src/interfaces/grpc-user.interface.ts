@@ -37,3 +37,14 @@ export interface GetUserPermissionsRequest {
 export interface GetUserPermissionsResponse {
   permissions: string[];
 }
+
+export interface UpdateUserRoleRequest {
+  user_id: string;
+  role: string;
+}
+
+export interface UpdateUserRoleResponse {
+  success: boolean;
+  message: string;
+}
+

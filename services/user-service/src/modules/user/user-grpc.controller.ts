@@ -10,6 +10,8 @@ import type {
   ValidateTokenResponse,
   GetUserPermissionsRequest,
   GetUserPermissionsResponse,
+  UpdateUserRoleRequest,
+  UpdateUserRoleResponse,
 } from '@delivery/common';
 
 @Controller()
@@ -60,4 +62,21 @@ export class UserGrpcController {
       return { permissions: [] };
     }
   }
+
+  @GrpcMethod(USER_SERVICE_NAME, 'UpdateUserRole')
+  async updateUserRole(data: UpdateUserRoleRequest): Promise<UpdateUserRoleResponse> {
+    try {
+      await this.userService.updateUserRole(data.user_id, data.role);
+      return {
+        success: true,
+        message: `Role updated to ${data.role}`,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err?.message || 'Failed to update user role',
+      };
+    }
+  }
 }
+

@@ -172,6 +172,20 @@ export class DbUserService {
     return saved;
   }
 
+  async updateUserRole(id: string, role: string): Promise<User> {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException(this.i18n.t('user.NOT_FOUND'));
+    }
+
+    const normalizedRole = role.toLowerCase() as Role;
+    user.role = Object.values(Role).includes(normalizedRole) ? normalizedRole : (role as any);
+    const saved = await this.userRepo.save(user);
+    await this.emitUserUpdated(saved);
+    return saved;
+  }
+
+
   async toggleUserActive(id: string, isActive: boolean): Promise<User> {
     const user = await this.findById(id);
     if (!user) {

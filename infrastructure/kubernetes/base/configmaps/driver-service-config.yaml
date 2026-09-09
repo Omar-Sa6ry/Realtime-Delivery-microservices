@@ -29,6 +29,9 @@ data:
   # Jaeger
   JAEGER_ENDPOINT: "jaeger:6831"
 
+  # Services
+  USER_SERVICE_URL: "user-srv:50051"
+
   # Dispatch configuration
   DISPATCH_SEARCH_RADIUS_KM: "5"
   ASSIGNMENT_TIMEOUT_SECONDS: "20"

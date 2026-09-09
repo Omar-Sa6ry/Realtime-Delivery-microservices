@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: user
-          image: delivery/user 
+          image: delivery/user
           imagePullPolicy: IfNotPresent
           resources:
             requests:
@@ -24,7 +24,7 @@ spec:
               cpu: "1000m"
               memory: "1Gi"
           ports:
-            - containerPort: 4001 
+            - containerPort: 4001
             - containerPort: 50051
           startupProbe:
             httpGet:
@@ -51,22 +51,22 @@ spec:
             - name: NODE_OPTIONS
               value: "--max-old-space-size=768"
             - name: PORT_USER
-              value: '4001'
-              
+              value: "4001"
+
             - name: DB_HOST
-              value: 'user-db-srv'
+              value: "user-db-srv"
 
             - name: DB_PORT
-              value: '5432'
+              value: "5432"
 
             - name: DB_NAME
-              value: 'delivery_user_db'
+              value: "delivery_user_db"
 
             - name: NODE_ENV
-              value: 'development'
+              value: "development"
 
             - name: JWT_EXPIRE
-              value: '36000s'
+              value: "36000s"
 
             - name: JWT_SECRET
               valueFrom:
@@ -85,21 +85,21 @@ spec:
                 secretKeyRef:
                   name: secrets
                   key: POSTGRES_PASSWORD
-          
+
             - name: REDIS_HOST
-              value: 'redis-srv'
+              value: "redis-srv"
 
             - name: REDIS_PORT
-              value: '6379'
+              value: "6379"
 
             - name: REDIS_DB
-              value: '0'
+              value: "0"
 
             - name: NATS_URL
-              value: 'nats://nats-srv:4222'
+              value: "nats://nats-srv:4222"
 
             - name: KAFKA_BROKERS
-              value: 'kafka-srv:9092'
+              value: "kafka-srv:9092"
 ---
 apiVersion: v1
 kind: Service
@@ -117,5 +117,3 @@ spec:
       protocol: TCP
       port: 50051
       targetPort: 50051
-
-

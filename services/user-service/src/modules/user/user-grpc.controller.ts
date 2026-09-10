@@ -65,13 +65,16 @@ export class UserGrpcController {
 
   @GrpcMethod(USER_SERVICE_NAME, 'UpdateUserRole')
   async updateUserRole(data: UpdateUserRoleRequest): Promise<UpdateUserRoleResponse> {
+    console.log('[gRPC] UpdateUserRole received data:', JSON.stringify(data));
     try {
       await this.userService.updateUserRole(data.user_id, data.role);
+      console.log(`[gRPC] UpdateUserRole success for user ${data.user_id}`);
       return {
         success: true,
         message: `Role updated to ${data.role}`,
       };
     } catch (err: any) {
+      console.error('[gRPC] UpdateUserRole error:', err);
       return {
         success: false,
         message: err?.message || 'Failed to update user role',

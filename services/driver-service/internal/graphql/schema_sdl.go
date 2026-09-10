@@ -3,9 +3,10 @@ package graphql
 // DriverSubgraphSDL is the GraphQL SDL for the driver subgraph (Apollo Federation v2).
 const DriverSubgraphSDL = `directive @key(fields: String!) repeatable on OBJECT | INTERFACE
 directive @shareable on OBJECT | FIELD_DEFINITION
+directive @external on FIELD_DEFINITION
 
 extend schema
-  @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key", "@shareable"])
+  @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key", "@shareable", "@external"])
 
 enum VehicleType {
   CAR
@@ -15,9 +16,14 @@ enum VehicleType {
   VAN
 }
 
+type User @key(fields: "id") {
+  id: ID!
+}
+
 type Driver @key(fields: "id") {
   id: ID!
   userId: String!
+  user: User
   status: String!
   vehicleType: VehicleType
   plateNumber: String

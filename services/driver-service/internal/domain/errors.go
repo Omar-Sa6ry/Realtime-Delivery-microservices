@@ -22,6 +22,7 @@ var (
 	ErrDriverBlocked           = &Error{Code: "driver_blocked", Message: "driver is blocked by admin"}
 	ErrInvalidRating           = &Error{Code: "invalid_rating", Message: "rating must be between 1.0 and 5.0"}
 	ErrDuplicateReview         = &Error{Code: "duplicate_review", Message: "driver has already been reviewed for this delivery"}
+	ErrDriverAlreadyExists     = &Error{Code: "driver_already_exists", Message: "driver is already registered"}
 	ErrInternal                = &Error{Code: "internal_error", Message: "internal error"}
 )
 

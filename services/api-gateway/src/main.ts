@@ -121,7 +121,7 @@ async function bootstrap() {
 
 function runBootstrap() {
   bootstrap().catch((err) => {
-    console.error('Bootstrap failed, retrying in 10s...', err.message);
+    console.error('Bootstrap failed, retrying in 10s...', err?.stack || err?.message || err);
     setTimeout(() => runBootstrap(), 10000);
   });
 }

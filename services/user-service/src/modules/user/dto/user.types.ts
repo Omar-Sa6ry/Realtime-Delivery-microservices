@@ -41,7 +41,7 @@ export class AddressType {
 }
 
 @Directive('@key(fields: "id")')
-@ObjectType()
+@ObjectType('User')
 export class UserType {
   @Field(() => ID)
   id: string;

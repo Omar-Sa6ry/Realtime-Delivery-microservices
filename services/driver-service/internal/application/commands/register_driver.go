@@ -42,15 +42,26 @@ func NewRegisterDriverHandler(
 
 // Execute performs the registration.
 func (h *RegisterDriverHandler) Execute(ctx context.Context, cmd RegisterDriverCommand) (*domain.Driver, error) {
-	// 1. Update user role to DRIVER via User Service gRPC
+	// 0. Check if driver profile already exists for this userID
+	existingDriver, err := h.driverRepo.FindByUserID(ctx, cmd.UserID)
+	if err == nil && existingDriver != nil {
+		return nil, domain.ErrDriverAlreadyExists
+	}
+
+	// 1. Check user role and update user role to DRIVER via User Service gRPC
 	if h.userClient != nil {
+		userResp, err := h.userClient.GetUser(ctx, &proto.GetUserRequest{Id: cmd.UserID})
+		if err == nil && userResp != nil && userResp.Role == "driver" {
+			return nil, domain.ErrDriverAlreadyExists
+		}
+
 		req := &proto.UpdateUserRoleRequest{
 			UserId: cmd.UserID,
 			Role:   "DRIVER",
 		}
 		resp, err := h.userClient.UpdateUserRole(ctx, req)
 		if err != nil || !resp.Success {
-			log.Printf("failed to update user role to DRIVER for user %s: %v", cmd.UserID, err)
+			log.Printf("failed to update user role to DRIVER for user %s: err=%v, resp=%+v", cmd.UserID, err, resp)
 			return nil, domain.ErrInternal
 		}
 	} else {

@@ -175,7 +175,7 @@ export class DbUserService {
   async updateUserRole(id: string, role: string): Promise<User> {
     const user = await this.findById(id);
     if (!user) {
-      throw new NotFoundException(this.i18n.t('user.NOT_FOUND'));
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
 
     const normalizedRole = role.toLowerCase() as Role;

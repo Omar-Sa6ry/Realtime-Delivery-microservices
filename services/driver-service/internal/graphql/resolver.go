@@ -63,6 +63,14 @@ func (r *PaginationInfoResolver) TotalItems() int32 { return r.totalItems }
 func (r *PaginationInfoResolver) CurrentPage() int32 { return r.currentPage }
 func (r *PaginationInfoResolver) NextPage() *int32  { return r.nextPage }
 
+// UserResolver for Apollo Federation reference representation
+type UserResolver struct {
+	id string
+}
+
+func (r *UserResolver) ID() gql.ID { return gql.ID(r.id) }
+
+
 // DriverResolver
 type DriverResolver struct {
 	driver *domain.Driver
@@ -70,6 +78,13 @@ type DriverResolver struct {
 
 func (r *DriverResolver) ID() gql.ID { return gql.ID(r.driver.ID) }
 func (r *DriverResolver) UserId() string { return r.driver.UserID }
+func (r *DriverResolver) User() *UserResolver {
+	if r.driver.UserID != "" {
+		return &UserResolver{id: r.driver.UserID}
+	}
+	return nil
+}
+
 func (r *DriverResolver) Status() string { return string(r.driver.Status) }
 func (r *DriverResolver) VehicleType() *string {
 	if r.driver.Vehicle.Type != "" {
@@ -1122,9 +1137,13 @@ func (r *RootResolver) RegisterDriver(ctx context.Context, args struct{ Input Re
 
 	driver, err := r.registerHandler.Execute(ctx, cmd)
 	if err != nil {
+		statusCode := int32(500)
+		if domainErr, ok := err.(*domain.Error); ok && domainErr.Code == domain.ErrDriverAlreadyExists.Code {
+			statusCode = 400
+		}
 		return &DriverResponseResolver{
 			success:    false,
-			statusCode: 500,
+			statusCode: statusCode,
 			message:    err.Error(),
 			timeStamp:  now,
 			data:       nil,

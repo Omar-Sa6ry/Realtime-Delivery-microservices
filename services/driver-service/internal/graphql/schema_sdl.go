@@ -20,6 +20,10 @@ type User @key(fields: "id") {
   id: ID!
 }
 
+type Delivery @key(fields: "id") {
+  id: ID!
+}
+
 type Driver @key(fields: "id") {
   id: ID!
   userId: String!
@@ -52,10 +56,10 @@ type Assignment {
 }
 
 type DriverStatus {
-  driverId: String!
+  driver: Driver!
   status: String!
   hasActiveAssignment: Boolean!
-  activeDeliveryId: String
+  activeDelivery: Delivery
   lastSeenAt: String
 }
 

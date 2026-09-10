@@ -241,9 +241,16 @@ func (r *AssignmentResponseResolver) Data() *AssignmentResolver {
 	return &AssignmentResolver{assignment: r.data}
 }
 
+// DeliveryResolver
+type DeliveryResolver struct {
+	id string
+}
+
+func (r *DeliveryResolver) ID() gql.ID { return gql.ID(r.id) }
+
 // DriverStatusResolver
 type DriverStatusData struct {
-	DriverID            string
+	Driver              *domain.Driver
 	Status              string
 	HasActiveAssignment bool
 	ActiveDeliveryID    *string
@@ -254,10 +261,20 @@ type DriverStatusResolver struct {
 	data DriverStatusData
 }
 
-func (r *DriverStatusResolver) DriverId() string               { return r.data.DriverID }
+func (r *DriverStatusResolver) Driver() *DriverResolver {
+	if r.data.Driver == nil {
+		return nil
+	}
+	return &DriverResolver{driver: r.data.Driver}
+}
 func (r *DriverStatusResolver) Status() string                 { return r.data.Status }
 func (r *DriverStatusResolver) HasActiveAssignment() bool      { return r.data.HasActiveAssignment }
-func (r *DriverStatusResolver) ActiveDeliveryId() *string      { return r.data.ActiveDeliveryID }
+func (r *DriverStatusResolver) ActiveDelivery() *DeliveryResolver {
+	if r.data.ActiveDeliveryID == nil {
+		return nil
+	}
+	return &DeliveryResolver{id: *r.data.ActiveDeliveryID}
+}
 func (r *DriverStatusResolver) LastSeenAt() *string            { return r.data.LastSeenAt }
 
 // DriverStatusResponseResolver
@@ -670,7 +687,7 @@ func (r *RootResolver) DriverStatus(ctx context.Context, args struct{ DriverId g
 		message:    "Driver status fetched successfully",
 		timeStamp:  now,
 		data: &DriverStatusData{
-			DriverID:            driver.ID,
+			Driver:              driver,
 			Status:              string(driver.Status),
 			HasActiveAssignment: hasActive,
 			ActiveDeliveryID:    deliveryID,
@@ -943,28 +960,29 @@ func (r *RootResolver) DriverReviews(ctx context.Context, args struct {
 	}, nil
 }
 
-// ──────────────────────────────────────────────
-// Mutations
-// ──────────────────────────────────────────────
-
-func (r *RootResolver) GoOnline(ctx context.Context, args struct{ IdempotencyKey string }) (*DriverResponseResolver, error) {
-	now := time.Now().UTC().Format(time.RFC3339)
+func (r *RootResolver) authorizeActiveDriver(ctx context.Context) (*domain.Driver, error) {
 	userID, _ := ctx.Value("userID").(string)
 	if userID == "" {
-		return &DriverResponseResolver{
-			success:    false,
-			statusCode: 401,
-			message:    "Unauthorized",
-			timeStamp:  now,
-			data:       nil,
-		}, nil
+		return nil, fmt.Errorf("Unauthorized")
 	}
 	driver, err := r.driverRepo.FindByUserID(ctx, userID)
 	if err != nil || driver == nil {
+		return nil, fmt.Errorf("Driver profile not found")
+	}
+	if driver.IsBlocked || driver.Status == domain.DriverStatusSuspended {
+		return nil, fmt.Errorf("Driver is blocked or suspended and cannot perform this action")
+	}
+	return driver, nil
+}
+
+func (r *RootResolver) GoOnline(ctx context.Context, args struct{ IdempotencyKey string }) (*DriverResponseResolver, error) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	driver, err := r.authorizeActiveDriver(ctx)
+	if err != nil {
 		return &DriverResponseResolver{
 			success:    false,
-			statusCode: 404,
-			message:    "Driver profile not found",
+			statusCode: 403,
+			message:    err.Error(),
 			timeStamp:  now,
 			data:       nil,
 		}, nil
@@ -991,22 +1009,12 @@ func (r *RootResolver) GoOnline(ctx context.Context, args struct{ IdempotencyKey
 
 func (r *RootResolver) GoOffline(ctx context.Context, args struct{ IdempotencyKey string }) (*DriverResponseResolver, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
-	userID, _ := ctx.Value("userID").(string)
-	if userID == "" {
+	driver, err := r.authorizeActiveDriver(ctx)
+	if err != nil {
 		return &DriverResponseResolver{
 			success:    false,
-			statusCode: 401,
-			message:    "Unauthorized",
-			timeStamp:  now,
-			data:       nil,
-		}, nil
-	}
-	driver, err := r.driverRepo.FindByUserID(ctx, userID)
-	if err != nil || driver == nil {
-		return &DriverResponseResolver{
-			success:    false,
-			statusCode: 404,
-			message:    "Driver profile not found",
+			statusCode: 403,
+			message:    err.Error(),
 			timeStamp:  now,
 			data:       nil,
 		}, nil
@@ -1036,8 +1044,19 @@ func (r *RootResolver) AcceptAssignment(ctx context.Context, args struct {
 	IdempotencyKey string
 }) (*AssignmentResponseResolver, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
+	driver, err := r.authorizeActiveDriver(ctx)
+	if err != nil {
+		return &AssignmentResponseResolver{
+			success:    false,
+			statusCode: 403,
+			message:    err.Error(),
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
 	assignment, err := r.assignmentRepo.FindByID(ctx, string(args.AssignmentId))
-	if err != nil || assignment == nil {
+	if err != nil || assignment == nil || assignment.DriverID != driver.ID {
 		return &AssignmentResponseResolver{
 			success:    false,
 			statusCode: 404,
@@ -1072,8 +1091,19 @@ func (r *RootResolver) RejectAssignment(ctx context.Context, args struct {
 	IdempotencyKey string
 }) (*AssignmentResponseResolver, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
+	driver, err := r.authorizeActiveDriver(ctx)
+	if err != nil {
+		return &AssignmentResponseResolver{
+			success:    false,
+			statusCode: 403,
+			message:    err.Error(),
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
 	assignment, err := r.assignmentRepo.FindByID(ctx, string(args.AssignmentId))
-	if err != nil || assignment == nil {
+	if err != nil || assignment == nil || assignment.DriverID != driver.ID {
 		return &AssignmentResponseResolver{
 			success:    false,
 			statusCode: 404,

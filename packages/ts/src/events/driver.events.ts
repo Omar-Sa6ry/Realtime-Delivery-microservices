@@ -84,6 +84,7 @@ export interface DriverAssignmentOfferedPayload {
 // DriverAssignmentAcceptedPayload is emitted when a driver accepts an assignment.
 export interface DriverAssignmentAcceptedPayload {
   assignmentId: string;
+  deliveryId?: string;
   driverId: string;
   acceptedAt: string; // ISO 8601
 }

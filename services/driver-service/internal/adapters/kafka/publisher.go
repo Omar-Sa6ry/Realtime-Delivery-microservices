@@ -18,7 +18,6 @@ func NewKafkaPublisher(brokers []string, defaultTopic string) *KafkaPublisher {
 	return &KafkaPublisher{
 		writer: &kafka.Writer{
 			Addr:         kafka.TCP(brokers...),
-			Topic:        defaultTopic,
 			Balancer:     &kafka.LeastBytes{},
 			RequiredAcks: kafka.RequireAll,
 			WriteTimeout: 10 * time.Second,

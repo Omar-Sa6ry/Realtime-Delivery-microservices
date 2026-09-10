@@ -96,11 +96,12 @@ func main() {
 	rateDriverHandler := commands.NewRateDriverHandler(driverRepo, reviewRepo)
 	getDriverReviewsHandler := queries.NewGetDriverReviewsHandler(reviewRepo, driverRepo)
 
-	// ─── Background Workers ───────────────────────────────────────────────────
-	wp := workers.NewWorkerPool(3)
+	// ─── Background Workers & Consumers ──────────────────────────────────────────
+	wp := workers.NewWorkerPool(4)
 	expiryWorker := workers.NewAssignmentExpiryWorker(assignmentRepo, dispatchSvc)
 	reconcileWorker := workers.NewReconciliationWorker(driverRepo, assignmentRepo)
 	heartbeatWorker := workers.NewHeartbeatMonitor(driverRepo)
+	deliveryConsumer := adapterkafka.NewDeliveryCreatedConsumer(kafkaBrokers, cfg.KafkaGroupID+"-delivery-created", dispatchSvc)
 
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	defer workerCancel()
@@ -108,6 +109,11 @@ func main() {
 	wp.Submit(func() { expiryWorker.Run(workerCtx, 15*time.Second) })
 	wp.Submit(func() { reconcileWorker.Run(workerCtx, 60*time.Second) })
 	wp.Submit(func() { heartbeatWorker.Run(workerCtx, 30*time.Second) })
+	wp.Submit(func() {
+		if err := deliveryConsumer.Start(workerCtx); err != nil {
+			log.Printf("delivery consumer stopped: %v", err)
+		}
+	})
 
 	// ─── gRPC Server ──────────────────────────────────────────────────────────
 	grpcListener, err := net.Listen("tcp", ":"+cfg.PortGRPC)

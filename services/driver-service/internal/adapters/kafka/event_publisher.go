@@ -73,6 +73,7 @@ func (a *EventPublisherAdapter) PublishAssignmentOffered(ctx context.Context, as
 func (a *EventPublisherAdapter) PublishAssignmentAccepted(ctx context.Context, assignmentID, deliveryID, driverID string) error {
 	payload := events.DriverAssignmentAcceptedPayload{
 		AssignmentID: assignmentID,
+		DeliveryID:   deliveryID,
 		DriverID:     driverID,
 		AcceptedAt:   time.Now().UTC().Format(time.RFC3339),
 	}

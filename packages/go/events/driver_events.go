@@ -88,6 +88,7 @@ type DriverAssignmentOfferedPayload struct {
 // DriverAssignmentAcceptedPayload is emitted when a driver accepts an assignment.
 type DriverAssignmentAcceptedPayload struct {
 	AssignmentID string `json:"assignmentId"`
+	DeliveryID   string `json:"deliveryId,omitempty"`
 	DriverID     string `json:"driverId"`
 	AcceptedAt   string `json:"acceptedAt"`
 }

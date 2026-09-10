@@ -12,6 +12,8 @@ import {
   PaymentKafkaTopics,
   PaymentCompletedPayload,
   PaymentFailedPayload,
+  DriverEventType,
+  DriverAssignmentAcceptedPayload,
 } from '@delivery/common';
 import { DeliveryCommandService } from '../../delivery/services/delivery-command.service';
 import { PaymentStatus } from '../../delivery/enums/payment-status.enum';
@@ -39,6 +41,7 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
         topics: [
           PaymentKafkaTopics.PAYMENT_COMPLETED,
           PaymentKafkaTopics.PAYMENT_FAILED,
+          DriverEventType.AssignmentAccepted,
         ],
         fromBeginning: false,
       });
@@ -63,6 +66,16 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
       }
 
       switch (envelope.eventType) {
+        case DriverEventType.AssignmentAccepted: {
+          const data = envelope.payload as DriverAssignmentAcceptedPayload;
+          const deliveryId = data?.deliveryId || (data?.assignmentId ? data.assignmentId.split('-')[0] : undefined);
+          if (deliveryId && data?.driverId) {
+            this.logger.log(`Driver ${data.driverId} accepted assignment for delivery: ${deliveryId}`);
+            await this.commands.acceptDriver(deliveryId, data.driverId);
+          }
+          break;
+        }
+
         case PaymentKafkaTopics.PAYMENT_COMPLETED: {
           const data = envelope.payload as PaymentCompletedPayload;
           if (data?.deliveryId) {

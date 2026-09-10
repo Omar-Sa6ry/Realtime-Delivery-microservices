@@ -162,6 +162,25 @@ export class DeliveryCommandService implements OnModuleInit {
     return this.repository.save(delivery);
   }
 
+  async assignDriver(id: string, driverId: string): Promise<Delivery> {
+    const delivery = await this.repository.findById(id);
+    delivery.driverId = driverId;
+    await this.repository.save(delivery);
+    return this.transition(id, DeliveryStatus.DRIVER_ASSIGNED, driverId, `Driver ${driverId} assigned`);
+  }
+
+  async acceptDriver(id: string, driverId: string): Promise<Delivery> {
+    const delivery = await this.repository.findById(id);
+    if (!delivery.driverId) {
+      delivery.driverId = driverId;
+      await this.repository.save(delivery);
+    }
+    if (delivery.status === DeliveryStatus.PAYMENT_CONFIRMED) {
+      await this.transition(id, DeliveryStatus.DRIVER_ASSIGNED, driverId, `Driver ${driverId} assigned`);
+    }
+    return this.transition(id, DeliveryStatus.DRIVER_ACCEPTED, driverId, `Driver ${driverId} accepted`);
+  }
+
   cancel(id: string, changedBy?: string, note?: string): Promise<Delivery> {
     return this.transition(id, DeliveryStatus.CANCELLED, changedBy, note);
   }

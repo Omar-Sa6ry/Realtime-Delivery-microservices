@@ -313,6 +313,12 @@ type NearbyDriverItemResolver struct {
 	item NearbyDriverItemData
 }
 
+func (r *NearbyDriverItemResolver) DriverId() string {
+	if r.item.Driver != nil {
+		return r.item.Driver.ID
+	}
+	return ""
+}
 func (r *NearbyDriverItemResolver) Driver() (*DriverResolver, error) {
 	if r.item.Driver == nil {
 		return nil, nil
@@ -364,6 +370,27 @@ func (r *ReviewResolver) ID() gql.ID         { return gql.ID(r.review.ID) }
 func (r *ReviewResolver) DriverId() string   { return r.review.DriverID }
 func (r *ReviewResolver) UserId() string     { return r.review.UserID }
 func (r *ReviewResolver) DeliveryId() string { return r.review.DeliveryID }
+
+func (r *ReviewResolver) Driver(ctx context.Context) (*DriverResolver, error) {
+	loaders := GetLoaders(ctx)
+	if loaders == nil || loaders.DriverLoader == nil {
+		return &DriverResolver{driver: &domain.Driver{ID: r.review.DriverID}}, nil
+	}
+	driver, err := loaders.DriverLoader.Load(ctx, r.review.DriverID)()
+	if err != nil {
+		return nil, err
+	}
+	return &DriverResolver{driver: driver}, nil
+}
+
+func (r *ReviewResolver) User() *UserResolver {
+	return &UserResolver{id: r.review.UserID}
+}
+
+func (r *ReviewResolver) Delivery() *DeliveryResolver {
+	return &DeliveryResolver{id: r.review.DeliveryID}
+}
+
 func (r *ReviewResolver) Rating() float64    { return r.review.Rating }
 func (r *ReviewResolver) Comment() *string {
 	if r.review.Comment != "" {
@@ -478,6 +505,20 @@ type DispatchAttemptItemResolver struct {
 func (r *DispatchAttemptItemResolver) ID() gql.ID               { return gql.ID(r.item.ID) }
 func (r *DispatchAttemptItemResolver) DeliveryId() string       { return r.item.DeliveryID }
 func (r *DispatchAttemptItemResolver) DriverId() string         { return r.item.DriverID }
+func (r *DispatchAttemptItemResolver) Delivery() *DeliveryResolver {
+	return &DeliveryResolver{id: r.item.DeliveryID}
+}
+func (r *DispatchAttemptItemResolver) Driver(ctx context.Context) (*DriverResolver, error) {
+	loaders := GetLoaders(ctx)
+	if loaders == nil || loaders.DriverLoader == nil {
+		return &DriverResolver{driver: &domain.Driver{ID: r.item.DriverID}}, nil
+	}
+	driver, err := loaders.DriverLoader.Load(ctx, r.item.DriverID)()
+	if err != nil {
+		return nil, err
+	}
+	return &DriverResolver{driver: driver}, nil
+}
 func (r *DispatchAttemptItemResolver) DistanceMeters() float64 { return r.item.DistanceMeters }
 func (r *DispatchAttemptItemResolver) AttemptNumber() int32    { return r.item.AttemptNumber }
 func (r *DispatchAttemptItemResolver) Result() string           { return r.item.Result }
@@ -519,6 +560,10 @@ type ServiceResolver struct {
 
 func (r *ServiceResolver) Sdl() string { return r.sdl }
 
+
+func (r *AssignmentResolver) Delivery() *DeliveryResolver {
+	return &DeliveryResolver{id: r.assignment.DeliveryID}
+}
 
 func (r *AssignmentResolver) Driver(ctx context.Context) (*DriverResolver, error) {
 	loaders := GetLoaders(ctx)

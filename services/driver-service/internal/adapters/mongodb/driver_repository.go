@@ -42,6 +42,23 @@ func (r *DriverRepository) FindByID(ctx context.Context, id string) (*domain.Dri
 	return &result, nil
 }
 
+// FindByIDs retrieves multiple drivers in a single query by their IDs.
+func (r *DriverRepository) FindByIDs(ctx context.Context, ids []string) ([]*domain.Driver, error) {
+	if len(ids) == 0 {
+		return []*domain.Driver{}, nil
+	}
+	col := r.client.Database(r.database).Collection(r.collection)
+	cursor, err := col.Find(ctx, bson.M{"_id": bson.M{"$in": ids}})
+	if err != nil {
+		return nil, err
+	}
+	var drivers []*domain.Driver
+	if err = cursor.All(ctx, &drivers); err != nil {
+		return nil, err
+	}
+	return drivers, nil
+}
+
 // FindByUserID retrieves a driver by linked user ID (for gRPC validation).
 func (r *DriverRepository) FindByUserID(ctx context.Context, userID string) (*domain.Driver, error) {
 	col := r.client.Database(r.database).Collection(r.collection)

@@ -44,6 +44,8 @@ type Assignment {
   id: ID!
   deliveryId: String!
   driverId: String!
+  delivery: Delivery!
+  driver: Driver!
   status: String!
   attemptNumber: Int
   offeredAt: String
@@ -65,6 +67,7 @@ type DriverStatus {
 
 type NearbyDriverItem {
   driverId: String!
+  driver: Driver
   distanceMeters: Float!
   status: String!
   vehicleType: VehicleType
@@ -83,6 +86,8 @@ type DispatchAttemptItem {
   id: ID!
   deliveryId: String!
   driverId: String!
+  delivery: Delivery!
+  driver: Driver!
   distanceMeters: Float!
   attemptNumber: Int!
   result: String!
@@ -190,6 +195,9 @@ type Review {
   driverId: String!
   userId: String!
   deliveryId: String!
+  driver: Driver!
+  user: User!
+  delivery: Delivery!
   rating: Float!
   comment: String
   createdAt: String!

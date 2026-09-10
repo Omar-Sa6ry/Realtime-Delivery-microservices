@@ -15,15 +15,31 @@ type Loaders struct {
 func NewLoaders(driverRepo ports.DriverRepository) *Loaders {
 	batchGetDrivers := func(ctx context.Context, keys []string) []*dataloader.Result[*domain.Driver] {
 		results := make([]*dataloader.Result[*domain.Driver], len(keys))
-		
-		for i, id := range keys {
-			driver, err := driverRepo.FindByID(ctx, id)
-			results[i] = &dataloader.Result[*domain.Driver]{
-				Data:  driver,
-				Error: err,
+		if len(keys) == 0 {
+			return results
+		}
+
+		drivers, err := driverRepo.FindByIDs(ctx, keys)
+		if err != nil {
+			for i := range keys {
+				results[i] = &dataloader.Result[*domain.Driver]{Error: err}
+			}
+			return results
+		}
+
+		driverMap := make(map[string]*domain.Driver, len(drivers))
+		for _, d := range drivers {
+			if d != nil {
+				driverMap[d.ID] = d
 			}
 		}
-		
+
+		for i, id := range keys {
+			results[i] = &dataloader.Result[*domain.Driver]{
+				Data: driverMap[id],
+			}
+		}
+
 		return results
 	}
 

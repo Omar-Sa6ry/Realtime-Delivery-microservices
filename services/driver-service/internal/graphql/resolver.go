@@ -299,7 +299,7 @@ func (r *DriverStatusResponseResolver) Data() *DriverStatusResolver {
 
 // NearbyDriverItemResolver
 type NearbyDriverItemData struct {
-	DriverID       string
+	Driver         *domain.Driver
 	DistanceMeters float64
 	Status         string
 	VehicleType    *string
@@ -313,7 +313,12 @@ type NearbyDriverItemResolver struct {
 	item NearbyDriverItemData
 }
 
-func (r *NearbyDriverItemResolver) DriverId() string       { return r.item.DriverID }
+func (r *NearbyDriverItemResolver) Driver() (*DriverResolver, error) {
+	if r.item.Driver == nil {
+		return nil, nil
+	}
+	return &DriverResolver{driver: r.item.Driver}, nil
+}
 func (r *NearbyDriverItemResolver) DistanceMeters() float64 { return r.item.DistanceMeters }
 func (r *NearbyDriverItemResolver) Status() string         { return r.item.Status }
 func (r *NearbyDriverItemResolver) VehicleType() *string   { return r.item.VehicleType }
@@ -796,7 +801,7 @@ func (r *RootResolver) NearbyDrivers(ctx context.Context, args struct{ Input Nea
 		}
 		items = append(items, &NearbyDriverItemResolver{
 			item: NearbyDriverItemData{
-				DriverID:       c.DriverID,
+				Driver:         driver,
 				DistanceMeters: c.DistanceMeters,
 				Status:         string(c.Status),
 				VehicleType:    &vt,

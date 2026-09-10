@@ -67,3 +67,17 @@
 #     "speed": 35.5
 #   }
 # }
+
+# ------------------------------------------------------------------------------
+# 6. GENERAL DRIVER LOCATION UPDATE (For Driver when NOT in a delivery)
+# ------------------------------------------------------------------------------
+# This is crucial so the system can find the driver for new orders.
+# {
+#   "type": "GENERAL_LOCATION_UPDATE",
+#   "data": {
+#     "latitude": 30.0444,
+#     "longitude": 31.2357,
+#     "heading": 90.0,
+#     "speed": 35.5
+#   }
+# }

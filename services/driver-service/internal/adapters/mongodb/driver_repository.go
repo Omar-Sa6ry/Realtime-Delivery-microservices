@@ -34,6 +34,9 @@ func (r *DriverRepository) FindByID(ctx context.Context, id string) (*domain.Dri
 	var result domain.Driver
 	err := col.FindOne(ctx, bson.M{"_id": id}).Decode(&result)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &result, nil
@@ -43,8 +46,11 @@ func (r *DriverRepository) FindByID(ctx context.Context, id string) (*domain.Dri
 func (r *DriverRepository) FindByUserID(ctx context.Context, userID string) (*domain.Driver, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	var result domain.Driver
-	err := col.FindOne(ctx, bson.M{"userId": userID}).Decode(&result)
+	err := col.FindOne(ctx, bson.M{"$or": []bson.M{{"userId": userID}, {"userid": userID}}}).Decode(&result)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &result, nil
@@ -56,7 +62,10 @@ func (r *DriverRepository) FindAvailableByLocation(ctx context.Context, lat, lng
 	col := r.client.Database(r.database).Collection(r.collection)
 	filter := bson.M{"status": "AVAILABLE"}
 	if vehicleType != "" {
-		filter["vehicle.type"] = vehicleType
+		filter["$or"] = []bson.M{
+			{"vehicle.type": vehicleType},
+			{"vehicle.type": string(vehicleType)},
+		}
 	}
 	cursor, err := col.Find(ctx, filter)
 	if err != nil {

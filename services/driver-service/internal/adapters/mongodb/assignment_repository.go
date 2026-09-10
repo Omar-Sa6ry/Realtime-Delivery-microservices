@@ -34,6 +34,9 @@ func (r *AssignmentRepository) FindByID(ctx context.Context, id string) (*domain
 	var result domain.Assignment
 	err := col.FindOne(ctx, bson.M{"_id": id}).Decode(&result)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &result, nil
@@ -44,10 +47,13 @@ func (r *AssignmentRepository) FindActiveByDriver(ctx context.Context, driverID 
 	col := r.client.Database(r.database).Collection(r.collection)
 	var result domain.Assignment
 	err := col.FindOne(ctx, bson.M{
-		"driverId": driverID,
+		"$or": []bson.M{{"driverId": driverID}, {"driverid": driverID}},
 		"status":   bson.M{"$in": []string{"OFFERED", "ACCEPTED", "ACTIVE"}},
 	}).Decode(&result)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &result, nil
@@ -57,8 +63,13 @@ func (r *AssignmentRepository) FindActiveByDriver(ctx context.Context, driverID 
 func (r *AssignmentRepository) FindByDeliveryID(ctx context.Context, deliveryID string) (*domain.Assignment, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	var result domain.Assignment
-	err := col.FindOne(ctx, bson.M{"deliveryId": deliveryID}).Decode(&result)
+	err := col.FindOne(ctx, bson.M{
+		"$or": []bson.M{{"deliveryId": deliveryID}, {"deliveryid": deliveryID}},
+	}).Decode(&result)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &result, nil

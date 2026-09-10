@@ -325,10 +325,11 @@ mutation RegisterDriver {
   }
 }
 
-# Update Driver Profile (Admin / Driver) - WRAPPED response
+# Update Driver Profile (Admin Only) - WRAPPED response
 mutation UpdateDriverProfile {
   updateDriverProfile(
     input: {
+      driverId: "some-driver-id"
       vehicleType: MOTORCYCLE
       plateNumber: "XYZ-456"
       capacityKg: 20

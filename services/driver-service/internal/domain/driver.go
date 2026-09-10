@@ -7,19 +7,19 @@ import (
 
 // Driver represents a driver aggregate root with its state machine.
 type Driver struct {
-	mu         sync.Mutex
-	ID         string
-	UserID     string
-	Status     DriverStatus
-	IsBlocked  bool
-	Vehicle    VehicleInfo
-	Capabilities []string
-	ServiceArea string
-	Rating      float64
-	RatingCount int64
-	Version     int
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	mu           sync.Mutex
+	ID           string       `json:"id" bson:"_id"`
+	UserID       string       `json:"userId" bson:"userId"`
+	Status       DriverStatus `json:"status" bson:"status"`
+	IsBlocked    bool         `json:"isBlocked" bson:"isBlocked"`
+	Vehicle      VehicleInfo  `json:"vehicle" bson:"vehicle"`
+	Capabilities []string     `json:"capabilities" bson:"capabilities"`
+	ServiceArea  string       `json:"serviceArea" bson:"serviceArea"`
+	Rating       float64      `json:"rating" bson:"rating"`
+	RatingCount  int64        `json:"ratingCount" bson:"ratingCount"`
+	Version      int          `json:"version" bson:"version"`
+	CreatedAt    time.Time    `json:"createdAt" bson:"createdAt"`
+	UpdatedAt    time.Time    `json:"updatedAt" bson:"updatedAt"`
 }
 
 // DriverStatus represents the operational state of a driver.
@@ -177,9 +177,9 @@ const (
 
 // VehicleInfo represents vehicle details for a driver.
 type VehicleInfo struct {
-	Type        VehicleType `json:"type"`        // CAR, MOTORCYCLE, TRUCK, BICYCLE, VAN
-	PlateNumber string      `json:"plateNumber"`
-	CapacityKg  int64       `json:"capacityKg"`
+	Type        VehicleType `json:"type" bson:"type"` // CAR, MOTORCYCLE, TRUCK, BICYCLE, VAN
+	PlateNumber string      `json:"plateNumber" bson:"plateNumber"`
+	CapacityKg  int64       `json:"capacityKg" bson:"capacityKg"`
 }
 
 // IsValid checks if the driver status is a valid public state.

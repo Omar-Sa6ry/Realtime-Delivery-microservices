@@ -31,6 +31,17 @@ func ExtractUserID(r *http.Request) string {
 	return ""
 }
 
+// ExtractUserRole retrieves the user role from headers.
+func ExtractUserRole(r *http.Request) string {
+	if role := r.Header.Get("x-user-role"); role != "" {
+		return role
+	}
+	if role := r.Header.Get("X-User-Role"); role != "" {
+		return role
+	}
+	return ""
+}
+
 // HealthHandler serves liveness and readiness probe requests.
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	lang := ExtractLanguage(r)
@@ -99,8 +110,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Attach request contextual metadata (e.g., user ID, language)
+	// Attach request contextual metadata (e.g., user ID, language, role)
 	ctx := context.WithValue(r.Context(), "userID", ExtractUserID(r))
+	ctx = context.WithValue(ctx, "role", ExtractUserRole(r))
 	ctx = context.WithValue(ctx, "lang", lang)
 	if h.loaders != nil {
 		ctx = WithLoaders(ctx, h.loaders)

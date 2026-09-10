@@ -115,6 +115,7 @@ input RegisterDriverInput {
 }
 
 input UpdateDriverProfileInput {
+  driverId: ID!
   vehicleType: VehicleType
   plateNumber: String
   capacityKg: Int

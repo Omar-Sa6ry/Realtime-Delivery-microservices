@@ -1160,6 +1160,7 @@ func (r *RootResolver) RegisterDriver(ctx context.Context, args struct{ Input Re
 }
 
 type UpdateDriverProfileInput struct {
+	DriverId    gql.ID
 	VehicleType *string
 	PlateNumber *string
 	CapacityKg  *int32
@@ -1168,17 +1169,17 @@ type UpdateDriverProfileInput struct {
 
 func (r *RootResolver) UpdateDriverProfile(ctx context.Context, args struct{ Input UpdateDriverProfileInput }) (*DriverResponseResolver, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
-	userID, _ := ctx.Value("userID").(string)
-	if userID == "" {
+	role, _ := ctx.Value("role").(string)
+	if role != "admin" {
 		return &DriverResponseResolver{
 			success:    false,
-			statusCode: 401,
-			message:    "Unauthorized",
+			statusCode: 403,
+			message:    "Forbidden: Only admin can update driver profile",
 			timeStamp:  now,
 			data:       nil,
 		}, nil
 	}
-	driver, err := r.driverRepo.FindByUserID(ctx, userID)
+	driver, err := r.driverRepo.FindByID(ctx, string(args.Input.DriverId))
 	if err != nil || driver == nil {
 		return &DriverResponseResolver{
 			success:    false,
@@ -1298,6 +1299,16 @@ func (r *RootResolver) BlockDriver(ctx context.Context, args struct {
 	Reason   *string
 }) (*DriverResponseResolver, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
+	role, _ := ctx.Value("role").(string)
+	if role != "admin" {
+		return &DriverResponseResolver{
+			success:    false,
+			statusCode: 403,
+			message:    "Forbidden: Only admin can block driver",
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
 	reason := ""
 	if args.Reason != nil {
 		reason = *args.Reason
@@ -1330,6 +1341,16 @@ func (r *RootResolver) UnblockDriver(ctx context.Context, args struct {
 	Reason   *string
 }) (*DriverResponseResolver, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
+	role, _ := ctx.Value("role").(string)
+	if role != "admin" {
+		return &DriverResponseResolver{
+			success:    false,
+			statusCode: 403,
+			message:    "Forbidden: Only admin can unblock driver",
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
 	reason := ""
 	if args.Reason != nil {
 		reason = *args.Reason

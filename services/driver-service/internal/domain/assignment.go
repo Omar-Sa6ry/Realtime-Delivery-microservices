@@ -8,19 +8,19 @@ import (
 
 // Assignment represents a driver assignment aggregate root with its state machine.
 type Assignment struct {
-	mu         sync.Mutex
-	ID         string
-	DriverID   string
-	DeliveryID string
-	Status     AssignmentStatus
-	AttemptNumber int
-	OfferedAt   time.Time
-	ExpiresAt   time.Time
-	AcceptedAt  *time.Time
-	RejectedAt  *time.Time
-	CompletedAt *time.Time
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	mu            sync.Mutex
+	ID            string           `json:"id" bson:"_id"`
+	DriverID      string           `json:"driverId" bson:"driverId"`
+	DeliveryID    string           `json:"deliveryId" bson:"deliveryId"`
+	Status        AssignmentStatus `json:"status" bson:"status"`
+	AttemptNumber int              `json:"attemptNumber" bson:"attemptNumber"`
+	OfferedAt     time.Time        `json:"offeredAt" bson:"offeredAt"`
+	ExpiresAt     time.Time        `json:"expiresAt" bson:"expiresAt"`
+	AcceptedAt    *time.Time       `json:"acceptedAt,omitempty" bson:"acceptedAt,omitempty"`
+	RejectedAt    *time.Time       `json:"rejectedAt,omitempty" bson:"rejectedAt,omitempty"`
+	CompletedAt   *time.Time       `json:"completedAt,omitempty" bson:"completedAt,omitempty"`
+	CreatedAt     time.Time        `json:"createdAt" bson:"createdAt"`
+	UpdatedAt     time.Time        `json:"updatedAt" bson:"updatedAt"`
 }
 
 // AssignmentStatus represents the state of a driver assignment.

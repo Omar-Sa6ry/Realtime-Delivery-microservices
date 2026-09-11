@@ -111,11 +111,19 @@ func main() {
 	defer userSvcConn.Close()
 	userClient := adaptergrpcproto.NewUserServiceClient(userSvcConn)
 
+	deliverySvcConn, err := grpc.NewClient(cfg.DeliveryServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Printf("WARNING: failed to dial delivery-service: %v", err)
+	}
+	defer deliverySvcConn.Close()
+	deliveryProtoClient := adaptergrpcproto.NewDeliveryServiceClient(deliverySvcConn)
+	deliveryClient := adaptergrpc.NewDeliveryServiceClientAdapter(deliveryProtoClient)
+
 	// ─── Application Commands ─────────────────────────────────────────────────
 	registerDriverHandler := commands.NewRegisterDriverHandler(driverRepo, eventPublisher, userClient)
 	blockDriverHandler := commands.NewBlockDriverHandler(driverRepo, eventPublisher)
 	unblockDriverHandler := commands.NewUnblockDriverHandler(driverRepo, eventPublisher)
-	rateDriverHandler := commands.NewRateDriverHandler(driverRepo, reviewRepo)
+	rateDriverHandler := commands.NewRateDriverHandler(driverRepo, reviewRepo, deliveryClient, assignmentRepo)
 	getDriverReviewsHandler := queries.NewGetDriverReviewsHandler(reviewRepo, driverRepo)
 
 	// ─── Background Workers & Consumers ──────────────────────────────────────────

@@ -1,5 +1,7 @@
-﻿syntax = "proto3";
+syntax = "proto3";
 package delivery;
+
+option go_package = "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/grpc/proto";
 
 service DeliveryService {
   rpc IsParticipant (ParticipantRequest) returns (ParticipantResponse);

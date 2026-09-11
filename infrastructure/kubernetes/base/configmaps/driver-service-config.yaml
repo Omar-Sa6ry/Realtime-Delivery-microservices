@@ -31,6 +31,7 @@ data:
 
   # Services
   USER_SERVICE_URL: "user-srv:50051"
+  DELIVERY_SERVICE_URL: "delivery-srv:50054"
 
   # Dispatch configuration
   DISPATCH_SEARCH_RADIUS_KM: "5"

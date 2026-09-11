@@ -3,11 +3,14 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { GrpcServer } from './grpc.server';
+import { DeliveryGrpcController } from './delivery-grpc.controller';
+import { DeliveryModule } from '../../delivery/delivery.module';
 
 @Global()
 @Module({
   imports: [
     ConfigModule,
+    DeliveryModule,
     ClientsModule.registerAsync([
       {
         name: 'DRIVER_SERVICE',
@@ -31,6 +34,7 @@ import { GrpcServer } from './grpc.server';
       },
     ]),
   ],
+  controllers: [DeliveryGrpcController],
   providers: [GrpcServer],
   exports: [GrpcServer],
 })

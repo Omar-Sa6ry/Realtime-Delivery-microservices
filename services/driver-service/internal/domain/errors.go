@@ -24,6 +24,9 @@ var (
 	ErrInvalidRating           = &Error{Code: "invalid_rating", Message: "rating must be between 1.0 and 5.0"}
 	ErrDuplicateReview         = &Error{Code: "duplicate_review", Message: "driver has already been reviewed for this delivery"}
 	ErrDriverAlreadyExists     = &Error{Code: "driver_already_exists", Message: "driver is already registered"}
+	ErrDeliveryNotFound        = &Error{Code: "delivery_not_found", Message: "delivery not found"}
+	ErrNotDeliveryOwner        = &Error{Code: "not_delivery_owner", Message: "only the customer who created this delivery can rate the driver"}
+	ErrNotAssignedDriver       = &Error{Code: "not_assigned_driver", Message: "this driver was not assigned to this delivery"}
 	ErrInternal                = &Error{Code: "internal_error", Message: "internal error"}
 )
 

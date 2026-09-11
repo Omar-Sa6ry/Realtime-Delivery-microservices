@@ -1610,10 +1610,23 @@ func (r *RootResolver) RateDriver(ctx context.Context, args struct{ Input RateDr
 		Comment:    comment,
 	})
 	if err != nil {
+		statusCode := int32(500)
+		msg := err.Error()
+		if domErr, ok := err.(*domain.Error); ok {
+			switch domErr.Code {
+			case "not_delivery_owner", "not_assigned_driver":
+				statusCode = 403
+			case "delivery_not_found", "driver_not_found":
+				statusCode = 404
+			case "duplicate_review", "invalid_rating", "invalid_argument":
+				statusCode = 400
+			}
+			msg = domErr.Message
+		}
 		return &ReviewResponseResolver{
 			success:    false,
-			statusCode: 500,
-			message:    err.Error(),
+			statusCode: statusCode,
+			message:    msg,
 			timeStamp:  now,
 			data:       nil,
 		}, nil

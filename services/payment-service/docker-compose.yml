@@ -1,0 +1,96 @@
+services:
+  payment-db-srv:
+    image: postgres:15
+    container_name: payment-db-srv
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: payment_db
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5436:5432"
+    volumes:
+      - payment_db_data:/var/lib/postgresql/data
+
+  redis-srv:
+    image: redis:alpine
+    container_name: payment-redis-srv
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  kafka-srv:
+    image: apache/kafka:3.8.0
+    container_name: payment-kafka-srv
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: CONTROLLER://:9093,PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-srv:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-srv:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
+
+  nats-srv:
+    image: nats:2-alpine
+    container_name: payment-nats-srv
+    restart: unless-stopped
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["-js", "-m", "8222"]
+
+  payment-service:
+    build:
+      context: ../..
+      dockerfile: services/payment-service/Dockerfile
+    container_name: payment-service
+    restart: unless-stopped
+    ports:
+      - "4002:4002"
+      - "50056:50056"
+      - "9106:9106"
+      - "4012:4012"
+    environment:
+      PORT_GRAPHQL: "4002"
+      PORT_GRPC: "50056"
+      PORT_METRICS: "9106"
+      PORT_WEBHOOK: "4012"
+      POSTGRES_DSN: "postgres://postgres:postgres@payment-db-srv:5432/payment_db?sslmode=disable"
+      REDIS_HOST: "redis-srv"
+      REDIS_PORT: "6379"
+      KAFKA_BROKERS: "kafka-srv:9092"
+      KAFKA_GROUP_ID: "payment-service"
+      KAFKA_CLIENT_ID: "payment-service"
+      NATS_URL: "nats://nats-srv:4222"
+      SNOWFLAKE_WORKER_ID: "2"
+      RECONCILE_INTERVAL_SEC: "60"
+      STUCK_THRESHOLD_SEC: "30"
+      OUTBOX_BATCH_SIZE: "100"
+      PROVIDER_MOCK_MODE: "success"
+      WEBHOOK_SECRET: "dev-webhook-secret"
+      OTEL_ENDPOINT: ""
+    depends_on:
+      - payment-db-srv
+      - redis-srv
+      - kafka-srv
+      - nats-srv
+    volumes:
+      - ./internal:/workspace/services/payment-service/internal
+      - ../../packages/go:/workspace/packages/go
+      - ./migrations:/workspace/services/payment-service/migrations
+
+volumes:
+  payment_db_data:

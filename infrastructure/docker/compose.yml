@@ -10,10 +10,10 @@ services:
       - "6379:6379"
 
   nats-srv:
-    image: nats-streaming:0.17.0
+    image: nats:2-alpine
     pull_policy: missing
     container_name: nats-srv
-    command: ["-p", "4222", "-m", "8222", "-hbi", "5s", "-hbt", "5s", "-hbf", "2", "-SD", "-cid", "ticketing"]
+    command: ["-js", "-m", "8222"]
     ports:
       - "4222:4222"
       - "8222:8222"
@@ -386,6 +386,7 @@ services:
       REALTIME_SERVICE_URL: "http://realtime-srv:4006/realtime/graphql"
       SEARCH_SERVICE_URL: "http://search-srv:4007/search/graphql"
       DELIVERY_SERVICE_URL: "http://delivery-srv:4003/delivery/graphql"
+      PAYMENT_SERVICE_URL: "http://payment-srv:4002/payment/graphql"
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - redis-srv
@@ -449,6 +450,7 @@ services:
       KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka-srv:9092}
       KAFKA_CLIENT_ID: delivery-service
       KAFKA_GROUP_ID: delivery-service-group
+      PAYMENT_SERVICE_GRPC_URL: ${PAYMENT_SERVICE_GRPC_URL:-payment-srv:50056}
     depends_on:
       - delivery-db-srv
       - redis-srv
@@ -509,11 +511,74 @@ services:
       - ../../packages/go:/app/packages/go
       - ../../protos:/usr/src/app/protos
 
+# --- Payment Service ---
+  payment-db-srv:
+    image: postgres:15
+    container_name: payment-db-srv
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${PAYMENT_DB_NAME:-payment_db}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5436:5432"
+    volumes:
+      - payment_db_data:/var/lib/postgresql/data
+
+  payment-service:
+    build:
+      context: ../..
+      dockerfile: services/payment-service/Dockerfile
+    container_name: payment-service
+    restart: unless-stopped
+    ports:
+      - "4002:4002"
+      - "50056:50056"
+      - "9106:9106"
+      - "4012:4012"
+    networks:
+      default:
+        aliases:
+          - payment-srv
+    env_file:
+      - ../../config/env/.env.${APP_ENV:-development}
+    environment:
+      PORT_GRAPHQL: ${PORT_PAYMENT_GRAPHQL:-4002}
+      PORT_GRPC: ${PORT_PAYMENT_GRPC:-50056}
+      PORT_METRICS: ${PORT_PAYMENT_METRICS:-9106}
+      PORT_WEBHOOK: ${PORT_PAYMENT_WEBHOOK:-4012}
+      POSTGRES_DSN: "postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@payment-db-srv:5432/${PAYMENT_DB_NAME:-payment_db}?sslmode=disable"
+      REDIS_HOST: "redis-srv"
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka-srv:9092}
+      KAFKA_GROUP_ID: ${KAFKA_GROUP_ID:-payment-service}
+      KAFKA_CLIENT_ID: "payment-service"
+      NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
+      SNOWFLAKE_WORKER_ID: "2"
+      RECONCILE_INTERVAL_SEC: "60"
+      STUCK_THRESHOLD_SEC: "30"
+      OUTBOX_BATCH_SIZE: "100"
+      PROVIDER_MOCK_MODE: ${PROVIDER_MOCK_MODE:-success}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-dev-webhook-secret}
+      OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
+      DELIVERY_SERVICE_URL: "http://delivery-srv:4003"
+    depends_on:
+      - payment-db-srv
+      - redis-srv
+      - nats-srv
+      - kafka-srv
+    volumes:
+      - ../../services/payment-service/internal:/workspace/services/payment-service/internal
+      - ../../packages/go:/workspace/packages/go
+      - ../../services/payment-service/migrations:/workspace/services/payment-service/migrations
+
 volumes:
   delivery_db_data:
   user_db_data:
   notification_db_data:
   opensearch_data:
+  payment_db_data:
 
 
 

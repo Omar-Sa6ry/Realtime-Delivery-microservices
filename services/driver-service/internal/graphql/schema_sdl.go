@@ -231,7 +231,7 @@ type Query {
   driverServiceInfo: DriverServiceInfoResponse
   driver(id: ID!): DriverResponse
   myDriverProfile: DriverResponse
-  driverActiveAssignment(driverId: ID!): AssignmentResponse
+  driverActiveAssignment(driverId: ID): AssignmentResponse
   driverStatus(driverId: ID!): DriverStatusResponse
   nearbyDrivers(input: NearbyDriversInput!): NearbyDriversResponse
   assignment(id: ID!): AssignmentResponse

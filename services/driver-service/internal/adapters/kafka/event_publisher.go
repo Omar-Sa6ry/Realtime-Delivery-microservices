@@ -65,7 +65,7 @@ func (a *EventPublisherAdapter) PublishAssignmentOffered(ctx context.Context, as
 		AssignmentID: assignmentID,
 		DeliveryID:   deliveryID,
 		DriverID:     driverID,
-		ExpiresAt:    time.Now().UTC().Add(20 * time.Second).Format(time.RFC3339),
+		ExpiresAt:    time.Now().UTC().Add(10 * time.Minute).Format(time.RFC3339),
 	}
 	return a.publish(ctx, string(events.DriverAssignmentOffered), assignmentID, payload)
 }

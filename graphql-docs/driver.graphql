@@ -67,9 +67,9 @@ query GetMyDriverProfile {
   }
 }
 
-# Get Driver Active Assignment - WRAPPED response
+# Get Driver Active Assignment (as Authenticated Driver - No driverId needed) - WRAPPED response
 query GetDriverActiveAssignment {
-  driverActiveAssignment(driverId: "driver-123") {
+  driverActiveAssignment {
     success
     statusCode
     message
@@ -83,6 +83,34 @@ query GetDriverActiveAssignment {
         id
       }
       status        # OFFERED|ACCEPTED|ACTIVE|COMPLETED|REJECTED|EXPIRED|CANCELLED
+      attemptNumber
+      offeredAt
+      expiresAt
+      acceptedAt
+      rejectedAt
+      completedAt
+      createdAt
+      updatedAt
+    }
+  }
+}
+
+# Get Driver Active Assignment (by specific driverId - Optional) - WRAPPED response
+query GetDriverActiveAssignmentById {
+  driverActiveAssignment(driverId: "c4c53144-d916-4fbd-b007-c4192c8ab858") {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      id
+      delivery {
+        id
+      }
+      driver {
+        id
+      }
+      status
       attemptNumber
       offeredAt
       expiresAt

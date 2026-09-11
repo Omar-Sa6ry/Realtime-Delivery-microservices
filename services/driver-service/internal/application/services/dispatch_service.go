@@ -102,7 +102,7 @@ func (s *DispatchService) ReserveDriver(ctx context.Context, driverID, deliveryI
 		Status:        domain.AssignmentStatusOffered,
 		AttemptNumber: 1,
 		OfferedAt:     now,
-		ExpiresAt:     now.Add(20 * time.Second),
+		ExpiresAt:     now.Add(10 * time.Minute),
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}

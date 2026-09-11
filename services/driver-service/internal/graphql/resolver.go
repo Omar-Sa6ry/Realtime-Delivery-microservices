@@ -667,9 +667,26 @@ func (r *RootResolver) MyDriverProfile(ctx context.Context) (*DriverResponseReso
 	}, nil
 }
 
-func (r *RootResolver) DriverActiveAssignment(ctx context.Context, args struct{ DriverId gql.ID }) (*AssignmentResponseResolver, error) {
+func (r *RootResolver) DriverActiveAssignment(ctx context.Context, args struct{ DriverId *gql.ID }) (*AssignmentResponseResolver, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
-	assignment, err := r.assignmentRepo.FindActiveByDriver(ctx, string(args.DriverId))
+	var targetDriverID string
+	if args.DriverId != nil && *args.DriverId != "" {
+		targetDriverID = string(*args.DriverId)
+	} else {
+		driver, err := r.authorizeActiveDriver(ctx)
+		if err != nil {
+			return &AssignmentResponseResolver{
+				success:    false,
+				statusCode: 401,
+				message:    "Unauthorized: driver profile not found for authenticated user",
+				timeStamp:  now,
+				data:       nil,
+			}, nil
+		}
+		targetDriverID = driver.ID
+	}
+
+	assignment, err := r.assignmentRepo.FindActiveByDriver(ctx, targetDriverID)
 	if err != nil {
 		return &AssignmentResponseResolver{
 			success:    false,

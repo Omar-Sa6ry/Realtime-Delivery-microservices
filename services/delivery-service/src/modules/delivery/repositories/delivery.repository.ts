@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Delivery } from '../entities/delivery.entity';
 import { DeliveryStatusHistory } from '../entities/delivery-status-history.entity';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
@@ -42,6 +42,17 @@ export class DeliveryRepository {
       order: { createdAt: 'DESC' },
       skip,
       take,
+    });
+  }
+
+  async findUnassignedPendingDeliveries(): Promise<Delivery[]> {
+    return this.deliveries.find({
+      where: {
+        status: DeliveryStatus.CREATED,
+        driverId: IsNull(),
+      },
+      order: { createdAt: 'ASC' },
+      take: 100,
     });
   }
   

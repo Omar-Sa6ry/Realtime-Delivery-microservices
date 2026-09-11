@@ -11,6 +11,7 @@ import { DeliveryStateMachine } from './services/delivery.state-machine';
 import { DeliveryCommandService } from './services/delivery-command.service';
 import { DeliveryQueryService } from './services/delivery-query.service';
 import { IdempotencyService } from './services/idempotency.service';
+import { DriverDispatchSchedulerService } from './services/driver-dispatch-scheduler.service';
 import { DeliveryResolver } from './graphql/delivery.resolver';
 import { DeliveryQueryResolver } from './graphql/delivery.query.resolver';
 import { AppResolver } from './graphql/app.resolver';
@@ -54,6 +55,7 @@ import { DeliveryNatsModule } from '../infrastructure/nats/nats.module';
     DeliveryCommandService,
     DeliveryQueryService,
     IdempotencyService,
+    DriverDispatchSchedulerService,
     DeliveryResolver,
     DeliveryQueryResolver,
     AppResolver,
@@ -75,6 +77,7 @@ import { DeliveryNatsModule } from '../infrastructure/nats/nats.module';
     DeliveryCommandService,
     DeliveryQueryService,
     IdempotencyService,
+    DriverDispatchSchedulerService,
     OutboxRepository,
     OutboxPublisherService,
     KafkaProducer,

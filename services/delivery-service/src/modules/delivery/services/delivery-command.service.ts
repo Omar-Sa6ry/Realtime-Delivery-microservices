@@ -203,6 +203,40 @@ export class DeliveryCommandService implements OnModuleInit {
     return updated;
   }
 
+  async retryDriverDispatch(delivery: Delivery): Promise<void> {
+    if (!delivery || delivery.status !== DeliveryStatus.CREATED || delivery.driverId) {
+      return;
+    }
+
+    const elapsedMs = Date.now() - new Date(delivery.createdAt).getTime();
+    const tenMinutesMs = 10 * 60 * 1000;
+
+    if (elapsedMs >= tenMinutesMs) {
+      await this.handleDriverSearchTimeout(delivery.id);
+      return;
+    }
+
+    this.logger.log(`Periodic retry: searching for available driver for delivery ${delivery.id}...`);
+    await this.outbox.save(
+      this.outbox.createEvent({
+        eventId: randomUUID(),
+        eventType: DeliveryKafkaTopics.DELIVERY_CREATED,
+        aggregateId: delivery.id,
+        payload: {
+          deliveryId: delivery.id,
+          customerId: delivery.customerId,
+          driverId: null,
+          status: delivery.status,
+          amount: delivery.amount,
+          currency: delivery.currency,
+          pickup: delivery.pickupAddress,
+          dropoff: delivery.dropoffAddress,
+          createdAt: delivery.createdAt?.toISOString() ?? new Date().toISOString(),
+        },
+      }),
+    );
+  }
+
   async handleDriverRejectedOrExpired(id: string, reason: string): Promise<void> {
     const delivery = await this.repository.findById(id);
     if (!delivery || delivery.status === DeliveryStatus.DRIVER_ACCEPTED || delivery.status === DeliveryStatus.CANCELLED || delivery.status === DeliveryStatus.FAILED || delivery.status === DeliveryStatus.COMPLETED) {
@@ -244,6 +278,7 @@ export class DeliveryCommandService implements OnModuleInit {
     if (!delivery || delivery.status === DeliveryStatus.DRIVER_ACCEPTED || delivery.status === DeliveryStatus.CANCELLED || delivery.status === DeliveryStatus.FAILED || delivery.status === DeliveryStatus.COMPLETED) {
       return;
     }
+
 
     this.logger.warn(`No driver found within 10 minutes for delivery ${id}. Cancelling and notifying customer...`);
     const cancelled = await this.cancel(id, 'system', 'No driver found within 10 minutes');

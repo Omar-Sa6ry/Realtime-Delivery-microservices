@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-service-config
+  namespace: default
+data:
+  # Server
+  PORT_GRAPHQL: "4002"
+  PORT_GRPC: "50056"
+  PORT_METRICS: "9106"
+  PORT_WEBHOOK: "4012"
+  NODE_ENV: "development"
+
+  # PostgreSQL
+  POSTGRES_DSN: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@payment-db-srv:5432/payment_db?sslmode=disable"
+
+  # Redis
+  REDIS_HOST: "redis-srv"
+  REDIS_PORT: "6379"
+
+  # Kafka
+  KAFKA_BROKERS: "kafka-srv:9092"
+  KAFKA_GROUP_ID: "payment-service"
+  KAFKA_CLIENT_ID: "payment-service"
+
+  # NATS (JetStream)
+  NATS_URL: "nats://nats-srv:4222"
+
+  # Snowflake
+  SNOWFLAKE_WORKER_ID: "2"
+
+  # Workers
+  RECONCILE_INTERVAL_SEC: "60"
+  STUCK_THRESHOLD_SEC: "30"
+  OUTBOX_BATCH_SIZE: "100"
+
+  # Provider (mock for dev, stripe for prod)
+  PROVIDER_MOCK_MODE: "success"
+
+  # Observability
+  OTEL_ENDPOINT: ""
+  DELIVERY_SERVICE_URL: "http://delivery-srv:4003"

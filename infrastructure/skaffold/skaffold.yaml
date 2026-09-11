@@ -4,7 +4,7 @@ kind: Config
 manifests:
   kustomize:
     paths:
-      - infrastructure/kubernetes/overlays/development
+      - ../../kubernetes/overlays/development
 
 deploy:
   statusCheckDeadlineSeconds: 900
@@ -18,10 +18,18 @@ build:
 
   artifacts:
 
-    - image: delivery/driver
+    - image: delivery/payment
       context: .
       docker:
-        dockerfile: services/driver-service/Dockerfile
+        dockerfile: services/payment-service/Dockerfile
+      sync:
+        manual:
+          - src: "services/payment-service/internal/**/*.go"
+            dest: /workspace/services/payment-service/internal
+          - src: "packages/go/**/*.go"
+            dest: /workspace/packages/go
+          - src: "services/payment-service/migrations/**/*.sql"
+            dest: /workspace/services/payment-service/migrations
 
     - image: delivery/notification
       context: .
@@ -85,6 +93,11 @@ build:
           - src: 'packages/ts/dist/**/*.js'
             dest: /usr/src/app/packages/ts/dist
 
+    - image: delivery/driver
+      context: .
+      docker:
+        dockerfile: services/driver-service/Dockerfile
+
     - image: delivery/api-gateway
       context: .
       docker:
@@ -103,12 +116,12 @@ profiles:
     manifests:
       kustomize:
         paths:
-          - infrastructure/kubernetes/overlays/test
+          - ../../kubernetes/overlays/test
   - name: production
     manifests:
       kustomize:
         paths:
-          - infrastructure/kubernetes/overlays/production
+          - ../../kubernetes/overlays/production
 
 portForward:
 

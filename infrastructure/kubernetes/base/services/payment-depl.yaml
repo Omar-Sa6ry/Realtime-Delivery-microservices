@@ -1,0 +1,161 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-depl
+  namespace: default
+  labels:
+    app: payment
+    version: "1.0.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: payment
+        version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9106"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: payment-service-sa
+      containers:
+      - name: payment-service
+        image: delivery/payment
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: graphql
+          containerPort: 4002
+        - name: grpc
+          containerPort: 50056
+        - name: metrics
+          containerPort: 9106
+        - name: webhook
+          containerPort: 4012
+        envFrom:
+        - configMapRef:
+            name: payment-service-config
+        - secretRef:
+            name: payment-secrets
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: graphql
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: graphql
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: graphql
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
+        env:
+        - name: PORT_GRAPHQL
+          value: "4002"
+        - name: PORT_GRPC
+          value: "50056"
+        - name: PORT_METRICS
+          value: "9106"
+        - name: PORT_WEBHOOK
+          value: "4012"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: payment-depl-pdb
+  namespace: default
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: payment
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-depl
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-depl
+  minReplicas: 2
+  maxReplicas: 5
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 25
+        periodSeconds: 60
+      selectPolicy: Max
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-srv
+  namespace: default
+  labels:
+    app: payment
+spec:
+  selector:
+    app: payment
+  ports:
+  - name: graphql
+    port: 4002
+    targetPort: 4002
+    protocol: TCP
+  - name: grpc
+    port: 50056
+    targetPort: 50056
+    protocol: TCP
+  - name: metrics
+    port: 9106
+    targetPort: 9106
+    protocol: TCP
+  - name: webhook
+    port: 4012
+    targetPort: 4012
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: payment-service-sa
+  namespace: default

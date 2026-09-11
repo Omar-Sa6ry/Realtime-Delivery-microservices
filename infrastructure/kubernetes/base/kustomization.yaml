@@ -2,6 +2,10 @@
 kind: Kustomization
 
 resources:
+  - secrets/payment-secret.yaml
+  - configmaps/payment-service-config.yaml
+  - services/payment-depl.yaml
+  - infrastructure/payment-db-depl.yaml
   - secrets/delivery-secrets.yaml
   - configmaps/media-service-config.yaml
   - services/api-gateway-depl.yaml

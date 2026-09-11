@@ -24,6 +24,14 @@ spec:
                 name: api-gateway-srv
                 port:
                   number: 4000
+          # payment-service webhook (Stripe)
+          - path: /webhook/payment
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-srv
+                port:
+                  number: 4012
           # media-service WebSocket
           - path: /ws
             pathType: Prefix

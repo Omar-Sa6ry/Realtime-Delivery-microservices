@@ -8,7 +8,7 @@ import { DeliveryRepository } from '../repositories/delivery.repository';
 import { DeliveryStateMachine } from './delivery.state-machine';
 import { IdempotencyService } from './idempotency.service';
 import { OutboxRepository } from '../outbox/outbox.repository';
-import { DeliveryKafkaTopics, NatsService, RealtimeNatsSubjects } from '@delivery/common';
+import { DeliveryKafkaTopics, NatsService, NotificationNatsSubjects, RealtimeNatsSubjects } from '@delivery/common';
 
 export interface CreateDeliveryInput {
   customerId: string;
@@ -175,10 +175,90 @@ export class DeliveryCommandService implements OnModuleInit {
       delivery.driverId = driverId;
       await this.repository.save(delivery);
     }
-    if (delivery.status === DeliveryStatus.PAYMENT_CONFIRMED) {
+    if (delivery.status === DeliveryStatus.PAYMENT_CONFIRMED || delivery.status === DeliveryStatus.CREATED) {
       await this.transition(id, DeliveryStatus.DRIVER_ASSIGNED, driverId, `Driver ${driverId} assigned`);
     }
-    return this.transition(id, DeliveryStatus.DRIVER_ACCEPTED, driverId, `Driver ${driverId} accepted`);
+    const updated = await this.transition(id, DeliveryStatus.DRIVER_ACCEPTED, driverId, `Driver ${driverId} accepted`);
+
+    // Notify customer via NATS notification channel
+    this.publishNats(`${NotificationNatsSubjects.NOTIFICATION_USER}.${updated.customerId}`, {
+      type: 'DRIVER_ACCEPTED',
+      title: 'Driver Found!',
+      body: `A driver has accepted your delivery request #${updated.id}.`,
+      data: {
+        deliveryId: updated.id,
+        driverId,
+        status: updated.status,
+      },
+    });
+
+    // Notify customer via Realtime driver assignment channel
+    this.publishNats(RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED, {
+      deliveryId: updated.id,
+      driverId,
+      status: 'ACCEPTED',
+      timestamp: Date.now(),
+    });
+
+    return updated;
+  }
+
+  async handleDriverRejectedOrExpired(id: string, reason: string): Promise<void> {
+    const delivery = await this.repository.findById(id);
+    if (!delivery || delivery.status === DeliveryStatus.DRIVER_ACCEPTED || delivery.status === DeliveryStatus.CANCELLED || delivery.status === DeliveryStatus.FAILED || delivery.status === DeliveryStatus.COMPLETED) {
+      return;
+    }
+
+    const elapsedMs = Date.now() - new Date(delivery.createdAt).getTime();
+    const tenMinutesMs = 10 * 60 * 1000;
+
+    if (elapsedMs >= tenMinutesMs) {
+      await this.handleDriverSearchTimeout(id);
+      return;
+    }
+
+    this.logger.log(`Driver rejected/expired for delivery ${id} (${reason}). Re-triggering driver dispatch...`);
+    // Re-publish DELIVERY_CREATED event to outbox to find next available driver
+    await this.outbox.save(
+      this.outbox.createEvent({
+        eventId: randomUUID(),
+        eventType: DeliveryKafkaTopics.DELIVERY_CREATED,
+        aggregateId: delivery.id,
+        payload: {
+          deliveryId: delivery.id,
+          customerId: delivery.customerId,
+          driverId: null,
+          status: delivery.status,
+          amount: delivery.amount,
+          currency: delivery.currency,
+          pickup: delivery.pickupAddress,
+          dropoff: delivery.dropoffAddress,
+          createdAt: delivery.createdAt?.toISOString() ?? new Date().toISOString(),
+        },
+      }),
+    );
+  }
+
+  async handleDriverSearchTimeout(id: string): Promise<void> {
+    const delivery = await this.repository.findById(id);
+    if (!delivery || delivery.status === DeliveryStatus.DRIVER_ACCEPTED || delivery.status === DeliveryStatus.CANCELLED || delivery.status === DeliveryStatus.FAILED || delivery.status === DeliveryStatus.COMPLETED) {
+      return;
+    }
+
+    this.logger.warn(`No driver found within 10 minutes for delivery ${id}. Cancelling and notifying customer...`);
+    const cancelled = await this.cancel(id, 'system', 'No driver found within 10 minutes');
+
+    // Notify customer
+    this.publishNats(`${NotificationNatsSubjects.NOTIFICATION_USER}.${cancelled.customerId}`, {
+      type: 'DELIVERY_CANCELLED',
+      title: 'No Driver Found',
+      body: `We were unable to find an available driver for your delivery request #${cancelled.id} within 10 minutes. The request has been cancelled.`,
+      data: {
+        deliveryId: cancelled.id,
+        status: cancelled.status,
+        reason: 'NO_DRIVER_FOUND_TIMEOUT',
+      },
+    });
   }
 
   cancel(id: string, changedBy?: string, note?: string): Promise<Delivery> {

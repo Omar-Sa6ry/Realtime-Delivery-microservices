@@ -10,7 +10,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/events"
 	pkgKafka "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/kafka"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/services"
-	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
 	kafkago "github.com/segmentio/kafka-go"
 )
 
@@ -137,32 +136,34 @@ func (c *DeliveryCreatedConsumer) handleMessage(ctx context.Context, msg kafkago
 		return nil
 	}
 
-	// 2. Select the top ranked candidate and reserve driver (creates OFFERED assignment)
-	chosen := candidates[0]
-	slog.Info("DeliveryCreatedConsumer: reserving driver for delivery",
-		"deliveryId", payload.DeliveryID,
-		"driverId", chosen.DriverID,
-	)
+	// 2. Iterate candidates to reserve the first available driver (creates OFFERED assignment)
+	var reserved bool
+	for _, candidate := range candidates {
+		slog.Info("DeliveryCreatedConsumer: attempting to reserve driver for delivery",
+			"deliveryId", payload.DeliveryID,
+			"driverId", candidate.DriverID,
+		)
 
-	reserved, err := c.dispatchSvc.ReserveDriver(ctx, chosen.DriverID, payload.DeliveryID)
-	if err != nil {
-		if err == domain.ErrDriverAlreadyReserved || err == domain.ErrDriverNotAvailableForAssignment {
-			slog.Warn("DeliveryCreatedConsumer: chosen driver no longer available, will retry next message or candidate",
-				"driverId", chosen.DriverID,
+		var err error
+		reserved, err = c.dispatchSvc.ReserveDriver(ctx, candidate.DriverID, payload.DeliveryID)
+		if err != nil {
+			slog.Warn("DeliveryCreatedConsumer: candidate could not be reserved, trying next",
+				"driverId", candidate.DriverID,
 				"error", err,
 			)
-			// Non-fatal or retry
-			return nil
+			continue
 		}
-		slog.Error("DeliveryCreatedConsumer: failed to reserve driver", "driverId", chosen.DriverID, "error", err)
-		return err
+		if reserved {
+			slog.Info("DeliveryCreatedConsumer: successfully assigned and offered delivery to driver",
+				"deliveryId", payload.DeliveryID,
+				"driverId", candidate.DriverID,
+			)
+			break
+		}
 	}
 
-	if reserved {
-		slog.Info("DeliveryCreatedConsumer: successfully assigned and offered delivery to driver",
-			"deliveryId", payload.DeliveryID,
-			"driverId", chosen.DriverID,
-		)
+	if !reserved {
+		slog.Warn("DeliveryCreatedConsumer: no candidates could be reserved at this moment for delivery", "deliveryId", payload.DeliveryID)
 	}
 
 	return nil

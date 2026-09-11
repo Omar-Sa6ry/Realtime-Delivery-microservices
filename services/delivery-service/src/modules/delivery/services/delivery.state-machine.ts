@@ -11,6 +11,7 @@ export class DeliveryStateMachine {
     [DeliveryStatus.CREATED]: [
       DeliveryStatus.PENDING_PAYMENT,
       DeliveryStatus.PAYMENT_CONFIRMED,
+      DeliveryStatus.DRIVER_ASSIGNED,
       DeliveryStatus.CANCELLED,
     ],
     [DeliveryStatus.PENDING_PAYMENT]: [

@@ -24,10 +24,6 @@ spec:
                 echo "Removing stale mongod.lock file";
                 rm -f /data/db/mongod.lock;
               fi
-              if [ -f /data/db/WiredTiger.wt ] && [ -d /data/db/journal ]; then
-                echo "Resetting corrupted MongoDB data files for clean startup";
-                rm -rf /data/db/*;
-              fi
               exit 0
           volumeMounts:
             - name: data

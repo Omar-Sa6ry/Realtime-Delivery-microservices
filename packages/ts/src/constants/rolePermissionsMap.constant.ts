@@ -1,4 +1,4 @@
-﻿import { Permission, Role } from "./enum.constant";
+import { Permission, Role } from "./enum.constant";
 
 export const rolePermissionsMap: Record<Role, Permission[]> = {
   [Role.ADMIN]: [
@@ -15,7 +15,6 @@ export const rolePermissionsMap: Record<Role, Permission[]> = {
     Permission.UPDATE_NOTIFICATION,
     Permission.DELETE_NOTIFICATION,
     Permission.MANAGE_NOTIFICATION_PREFERENCES,
-    Permission.CREATE_DELIVERY,
     Permission.VIEW_DELIVERY,
     Permission.UPDATE_DELIVERY_STATUS,
     Permission.CANCEL_DELIVERY,

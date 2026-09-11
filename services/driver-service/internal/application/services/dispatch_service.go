@@ -278,6 +278,16 @@ func (s *DispatchService) ReleaseDriverByAssignment(ctx context.Context, assignm
 		}
 	}
 
+	if newStatus == domain.AssignmentStatusExpired {
+		if err = s.eventPublisher.PublishAssignmentExpired(ctx, assignmentID, assignment.DeliveryID); err != nil {
+			log.Printf("dispatch service: failed to publish assignment expired event: %v", err)
+		}
+	} else {
+		if err = s.eventPublisher.PublishAssignmentReleased(ctx, assignmentID); err != nil {
+			log.Printf("dispatch service: failed to publish assignment released event: %v", err)
+		}
+	}
+
 	log.Printf("dispatch service: assignment %s released", assignmentID)
 	return nil
 }

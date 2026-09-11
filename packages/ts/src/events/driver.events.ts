@@ -92,15 +92,17 @@ export interface DriverAssignmentAcceptedPayload {
 // DriverAssignmentRejectedPayload is emitted when a driver rejects an assignment.
 export interface DriverAssignmentRejectedPayload {
   assignmentId: string;
+  deliveryId?: string;
   driverId: string;
   reason: string;
-  rejectedAt: string; // ISO 8601
+  rejectedAt?: string; // ISO 8601
 }
 
 // DriverAssignmentExpiredPayload is emitted when a driver assignment offer expires.
 export interface DriverAssignmentExpiredPayload {
   assignmentId: string;
-  driverId: string;
+  deliveryId?: string;
+  driverId?: string;
   expiredAt: string; // ISO 8601
 }
 

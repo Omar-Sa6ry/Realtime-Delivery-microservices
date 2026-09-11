@@ -12,9 +12,8 @@ export class DeliverySagaOrchestrator {
   constructor(
     private readonly repository: DeliveryRepository,
     paymentStep: PaymentConfirmationStep,
-    driverStep: DriverAssignmentStep,
   ) {
-    this.steps = [paymentStep, driverStep];
+    this.steps = [paymentStep];
   }
   
   async execute(deliveryId: string): Promise<Delivery> {

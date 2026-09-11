@@ -84,7 +84,6 @@ var RolePermissionsMap = map[Role][]Permission{
 		PermissionUpdateNotification,
 		PermissionDeleteNotification,
 		PermissionManageNotificationPreferences,
-		PermissionCreateDelivery,
 		PermissionViewDelivery,
 		PermissionUpdateDeliveryStatus,
 		PermissionCancelDelivery,

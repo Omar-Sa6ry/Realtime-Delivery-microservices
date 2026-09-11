@@ -27,6 +27,8 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
 	internalgql "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/graphql"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/workers"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/events"
+	pkgKafka "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/kafka"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -67,6 +69,26 @@ func main() {
 
 	// ─── Kafka Publisher ──────────────────────────────────────────────────────
 	kafkaBrokers := strings.Split(cfg.KafkaBrokers, ",")
+
+	driverTopics := []string{
+		"delivery.created",
+		string(events.DriverCreated),
+		string(events.DriverUpdated),
+		string(events.DriverDeleted),
+		string(events.DriverAvailable),
+		string(events.DriverUnavailable),
+		string(events.DriverAssignmentOffered),
+		string(events.DriverAssignmentAccepted),
+		string(events.DriverAssignmentRejected),
+		string(events.DriverAssignmentExpired),
+		string(events.DriverAssignmentReleased),
+		string(events.DriverAssignmentCompleted),
+		"driver.location.updated",
+	}
+	if err := pkgKafka.EnsureTopics(kafkaBrokers, driverTopics, 1, 1); err != nil {
+		log.Printf("WARNING: Failed to ensure Kafka topics: %v", err)
+	}
+
 	kafkaPub := adapterkafka.NewKafkaPublisher(kafkaBrokers, "driver-events")
 
 	// ─── Application Service ──────────────────────────────────────────────────

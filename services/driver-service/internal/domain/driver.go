@@ -11,6 +11,7 @@ type Driver struct {
 	ID           string       `json:"id" bson:"_id"`
 	UserID       string       `json:"userId" bson:"userId"`
 	Status       DriverStatus `json:"status" bson:"status"`
+	IsActive     bool         `json:"isActive" bson:"isActive"`
 	IsBlocked    bool         `json:"isBlocked" bson:"isBlocked"`
 	Vehicle      VehicleInfo  `json:"vehicle" bson:"vehicle"`
 	Capabilities []string     `json:"capabilities" bson:"capabilities"`
@@ -83,6 +84,9 @@ func (d *Driver) GoOnline() error {
 	if d.IsBlocked {
 		return ErrDriverBlocked
 	}
+	if !d.IsActive {
+		return ErrDriverNotActive
+	}
 	if !IsValidDriverTransition(d.Status, DriverStatusAvailable, "GoOnline") {
 		return ErrInvalidTransition
 	}
@@ -111,6 +115,9 @@ func (d *Driver) Reserve() error {
 
 	if d.IsBlocked {
 		return ErrDriverBlocked
+	}
+	if !d.IsActive {
+		return ErrDriverNotActive
 	}
 	if !IsValidDriverTransition(d.Status, DriverStatusBusy, "Reserve") {
 		return ErrInvalidTransition
@@ -147,6 +154,27 @@ func (d *Driver) Unblock() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.IsBlocked = false
+	d.UpdatedAt = time.Now()
+	return nil
+}
+
+// Activate enables the driver.
+func (d *Driver) Activate() error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.IsActive = true
+	d.UpdatedAt = time.Now()
+	return nil
+}
+
+// Deactivate disables the driver.
+func (d *Driver) Deactivate() error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.IsActive = false
+	if d.Status == DriverStatusAvailable {
+		d.Status = DriverStatusOffline
+	}
 	d.UpdatedAt = time.Now()
 	return nil
 }

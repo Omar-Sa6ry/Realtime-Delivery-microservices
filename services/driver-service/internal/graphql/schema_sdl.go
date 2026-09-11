@@ -35,6 +35,7 @@ type Driver @key(fields: "id") {
   capabilities: [String!]
   serviceArea: String
   rating: Float
+  isActive: Boolean!
   isBlocked: Boolean!
   createdAt: String
   updatedAt: String
@@ -115,7 +116,7 @@ input NearbyDriversInput {
 }
 
 input RegisterDriverInput {
-  userId: String!
+  userId: String
   vehicleType: VehicleType!
   plateNumber: String!
   capacityKg: Int!
@@ -248,6 +249,7 @@ type Mutation {
   updateDriverProfile(input: UpdateDriverProfileInput!): DriverResponse
   suspendDriver(driverId: ID!, reason: String!): DriverResponse
   activateDriver(driverId: ID!): DriverResponse
+  deactivateDriver(driverId: ID!): DriverResponse
   blockDriver(driverId: ID!, reason: String): DriverResponse
   unblockDriver(driverId: ID!, reason: String): DriverResponse
   rateDriver(input: RateDriverInput!): ReviewResponse

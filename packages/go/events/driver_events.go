@@ -96,6 +96,7 @@ type DriverAssignmentAcceptedPayload struct {
 // DriverAssignmentRejectedPayload is emitted when a driver rejects an assignment.
 type DriverAssignmentRejectedPayload struct {
 	AssignmentID string `json:"assignmentId"`
+	DeliveryID   string `json:"deliveryId,omitempty"`
 	DriverID     string `json:"driverId"`
 	Reason       string `json:"reason"`
 }
@@ -103,6 +104,7 @@ type DriverAssignmentRejectedPayload struct {
 // DriverAssignmentExpiredPayload is emitted when a driver assignment offer expires.
 type DriverAssignmentExpiredPayload struct {
 	AssignmentID string `json:"assignmentId"`
+	DeliveryID   string `json:"deliveryId,omitempty"`
 	DriverID     string `json:"driverId"`
 	ExpiredAt    string `json:"expiredAt"`
 }

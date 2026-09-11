@@ -20,6 +20,7 @@ var (
 	ErrInvalidArgument         = &Error{Code: "invalid_argument", Message: "invalid argument"}
 	ErrMaxAttemptsReached      = &Error{Code: "max_attempts_reached", Message: "maximum attempts reached"}
 	ErrDriverBlocked           = &Error{Code: "driver_blocked", Message: "driver is blocked by admin"}
+	ErrDriverNotActive         = &Error{Code: "driver_not_active", Message: "driver is not active"}
 	ErrInvalidRating           = &Error{Code: "invalid_rating", Message: "rating must be between 1.0 and 5.0"}
 	ErrDuplicateReview         = &Error{Code: "duplicate_review", Message: "driver has already been reviewed for this delivery"}
 	ErrDriverAlreadyExists     = &Error{Code: "driver_already_exists", Message: "driver is already registered"}

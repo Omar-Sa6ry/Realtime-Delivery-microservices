@@ -18,6 +18,7 @@ type RegisterDriverCommand struct {
 	CapacityKg   int64
 	Capabilities []string
 	ServiceArea  string
+	IsActive     bool
 }
 
 // RegisterDriverHandler handles driver registration.
@@ -73,6 +74,7 @@ func (h *RegisterDriverHandler) Execute(ctx context.Context, cmd RegisterDriverC
 		ID:           uuid.New().String(),
 		UserID:       cmd.UserID,
 		Status:       domain.DriverStatusOffline, // Starts offline
+		IsActive:     cmd.IsActive,
 		Capabilities: cmd.Capabilities,
 		ServiceArea:  cmd.ServiceArea,
 		Vehicle: domain.VehicleInfo{

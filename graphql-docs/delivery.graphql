@@ -19,7 +19,6 @@ mutation CreateDelivery {
     input: {
       amount: "25.50"
       currency: "USD"
-      # customerId:"354267546792235009"
       pickupAddress: {
         line1: "1 Main Street"
         line2: "Floor 3, Apt 12"

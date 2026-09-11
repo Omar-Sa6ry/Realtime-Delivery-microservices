@@ -13,7 +13,7 @@ type EventPublisher interface {
 	PublishAssignmentOffered(ctx context.Context, assignmentID, deliveryID, driverID string) error
 	PublishAssignmentAccepted(ctx context.Context, assignmentID, deliveryID, driverID string) error
 	PublishAssignmentRejected(ctx context.Context, assignmentID, deliveryID, driverID, reason string) error
-	PublishAssignmentExpired(ctx context.Context, assignmentID string) error
+	PublishAssignmentExpired(ctx context.Context, assignmentID, deliveryID string) error
 	PublishAssignmentReleased(ctx context.Context, assignmentID string) error
 	PublishDriverAvailable(ctx context.Context, driverID string) error
 	PublishDriverUnavailable(ctx context.Context, driverID string) error

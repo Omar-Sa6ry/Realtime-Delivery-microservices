@@ -37,13 +37,13 @@ export class DeliveryResolver {
     @Context() ctx: GraphqlContext,
   ): Promise<DeliveryResponse> {
     const tokenUserId = ctx.req?.user?.id ?? ctx.req?.headers?.['x-user-id'];
-    const userRole = (ctx.req?.user as any)?.role ?? ctx.req?.headers?.['x-user-role'];
+    const userRole = ((ctx.req?.user as any)?.role ?? ctx.req?.headers?.['x-user-role'])?.toLowerCase();
 
-    let customerId = tokenUserId;
-    if (userRole === 'ADMIN' || userRole === 'admin') {
-      customerId = input.customerId ?? tokenUserId;
+    if (userRole === 'admin') {
+      throw new ForbiddenException('Only regular users can create deliveries');
     }
 
+    const customerId = tokenUserId;
     if (!customerId) {
       throw new BadRequestException(
         await this.i18n.t('delivery.customerIdRequired', {
@@ -67,6 +67,13 @@ export class DeliveryResolver {
         this.logger.error(`Saga failed for delivery [${delivery.id}]: ${err.message}`);
       });
     });
+
+    // Schedule 10-minute timeout check for driver acceptance
+    setTimeout(() => {
+      this.commands.handleDriverSearchTimeout(delivery.id).catch((err: Error) => {
+        this.logger.error(`Driver search timeout check failed for delivery [${delivery.id}]: ${err.message}`);
+      });
+    }, 10 * 60 * 1000);
 
     return {
       success: true,

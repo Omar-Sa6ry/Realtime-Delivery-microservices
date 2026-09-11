@@ -120,6 +120,9 @@ func (r *DriverResolver) ServiceArea() *string {
 func (r *DriverResolver) Rating() *float64 {
 	return &r.driver.Rating
 }
+func (r *DriverResolver) IsActive() bool {
+	return r.driver.IsActive
+}
 func (r *DriverResolver) IsBlocked() bool {
 	return r.driver.IsBlocked
 }
@@ -1036,8 +1039,8 @@ func (r *RootResolver) authorizeActiveDriver(ctx context.Context) (*domain.Drive
 	if err != nil || driver == nil {
 		return nil, fmt.Errorf("Driver profile not found")
 	}
-	if driver.IsBlocked || driver.Status == domain.DriverStatusSuspended {
-		return nil, fmt.Errorf("Driver is blocked or suspended and cannot perform this action")
+	if !driver.IsActive || driver.IsBlocked || driver.Status == domain.DriverStatusSuspended {
+		return nil, fmt.Errorf("Driver is not active, blocked, or suspended and cannot perform this action")
 	}
 	return driver, nil
 }
@@ -1204,7 +1207,7 @@ func (r *RootResolver) RejectAssignment(ctx context.Context, args struct {
 }
 
 type RegisterDriverInput struct {
-	UserId       string
+	UserId       *string
 	VehicleType  string
 	PlateNumber  string
 	CapacityKg   int32
@@ -1214,6 +1217,36 @@ type RegisterDriverInput struct {
 
 func (r *RootResolver) RegisterDriver(ctx context.Context, args struct{ Input RegisterDriverInput }) (*DriverResponseResolver, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
+	currentUserID, _ := ctx.Value("userID").(string)
+	role, _ := ctx.Value("role").(string)
+
+	targetUserID := ""
+	isActive := false
+
+	if role == "admin" || role == "ADMIN" {
+		if args.Input.UserId != nil && *args.Input.UserId != "" {
+			targetUserID = *args.Input.UserId
+		} else {
+			targetUserID = currentUserID
+		}
+		// Admin registering a driver makes them active immediately
+		isActive = true
+	} else {
+		// Normal user applying to be a driver
+		if currentUserID == "" {
+			return &DriverResponseResolver{
+				success:    false,
+				statusCode: 401,
+				message:    "Unauthorized: Login required to apply as driver",
+				timeStamp:  now,
+				data:       nil,
+			}, nil
+		}
+		targetUserID = currentUserID
+		// Driver application starts inactive waiting for admin approval
+		isActive = false
+	}
+
 	var capabilities []string
 	if args.Input.Capabilities != nil {
 		capabilities = *args.Input.Capabilities
@@ -1224,12 +1257,13 @@ func (r *RootResolver) RegisterDriver(ctx context.Context, args struct{ Input Re
 	}
 
 	cmd := commands.RegisterDriverCommand{
-		UserID:       args.Input.UserId,
+		UserID:       targetUserID,
 		VehicleType:  domain.VehicleType(args.Input.VehicleType),
 		PlateNumber:  args.Input.PlateNumber,
 		CapacityKg:   int64(args.Input.CapacityKg),
 		Capabilities: capabilities,
 		ServiceArea:  serviceArea,
+		IsActive:     isActive,
 	}
 
 	driver, err := r.registerHandler.Execute(ctx, cmd)
@@ -1247,10 +1281,15 @@ func (r *RootResolver) RegisterDriver(ctx context.Context, args struct{ Input Re
 		}, nil
 	}
 
+	msg := "Driver registered successfully"
+	if !isActive {
+		msg = "Driver application submitted successfully, waiting for admin approval"
+	}
+
 	return &DriverResponseResolver{
 		success:    true,
 		statusCode: 201,
-		message:    "Driver registered successfully",
+		message:    msg,
 		timeStamp:  now,
 		data:       driver,
 	}, nil
@@ -1359,6 +1398,17 @@ func (r *RootResolver) SuspendDriver(ctx context.Context, args struct {
 
 func (r *RootResolver) ActivateDriver(ctx context.Context, args struct{ DriverId gql.ID }) (*DriverResponseResolver, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
+	role, _ := ctx.Value("role").(string)
+	if role != "admin" && role != "ADMIN" {
+		return &DriverResponseResolver{
+			success:    false,
+			statusCode: 403,
+			message:    "Forbidden: Only admin can activate driver",
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
 	driver, err := r.driverRepo.FindByID(ctx, string(args.DriverId))
 	if err != nil || driver == nil {
 		return &DriverResponseResolver{
@@ -1370,7 +1420,7 @@ func (r *RootResolver) ActivateDriver(ctx context.Context, args struct{ DriverId
 		}, nil
 	}
 
-	driver.Status = domain.DriverStatusAvailable
+	driver.IsActive = true
 	driver.UpdatedAt = time.Now().UTC()
 	if err := r.driverRepo.Save(ctx, driver); err != nil {
 		return &DriverResponseResolver{
@@ -1386,6 +1436,54 @@ func (r *RootResolver) ActivateDriver(ctx context.Context, args struct{ DriverId
 		success:    true,
 		statusCode: 200,
 		message:    "Driver activated successfully",
+		timeStamp:  now,
+		data:       driver,
+	}, nil
+}
+
+func (r *RootResolver) DeactivateDriver(ctx context.Context, args struct{ DriverId gql.ID }) (*DriverResponseResolver, error) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	role, _ := ctx.Value("role").(string)
+	if role != "admin" && role != "ADMIN" {
+		return &DriverResponseResolver{
+			success:    false,
+			statusCode: 403,
+			message:    "Forbidden: Only admin can deactivate driver",
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
+	driver, err := r.driverRepo.FindByID(ctx, string(args.DriverId))
+	if err != nil || driver == nil {
+		return &DriverResponseResolver{
+			success:    false,
+			statusCode: 404,
+			message:    "Driver not found",
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
+	driver.IsActive = false
+	if driver.Status == domain.DriverStatusAvailable {
+		driver.Status = domain.DriverStatusOffline
+	}
+	driver.UpdatedAt = time.Now().UTC()
+	if err := r.driverRepo.Save(ctx, driver); err != nil {
+		return &DriverResponseResolver{
+			success:    false,
+			statusCode: 500,
+			message:    err.Error(),
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
+	return &DriverResponseResolver{
+		success:    true,
+		statusCode: 200,
+		message:    "Driver deactivated successfully",
 		timeStamp:  now,
 		data:       driver,
 	}, nil

@@ -83,15 +83,17 @@ func (a *EventPublisherAdapter) PublishAssignmentAccepted(ctx context.Context, a
 func (a *EventPublisherAdapter) PublishAssignmentRejected(ctx context.Context, assignmentID, deliveryID, driverID, reason string) error {
 	payload := events.DriverAssignmentRejectedPayload{
 		AssignmentID: assignmentID,
+		DeliveryID:   deliveryID,
 		DriverID:     driverID,
 		Reason:       reason,
 	}
 	return a.publish(ctx, string(events.DriverAssignmentRejected), assignmentID, payload)
 }
 
-func (a *EventPublisherAdapter) PublishAssignmentExpired(ctx context.Context, assignmentID string) error {
+func (a *EventPublisherAdapter) PublishAssignmentExpired(ctx context.Context, assignmentID, deliveryID string) error {
 	payload := events.DriverAssignmentExpiredPayload{
 		AssignmentID: assignmentID,
+		DeliveryID:   deliveryID,
 		ExpiredAt:    time.Now().UTC().Format(time.RFC3339),
 	}
 	return a.publish(ctx, string(events.DriverAssignmentExpired), assignmentID, payload)

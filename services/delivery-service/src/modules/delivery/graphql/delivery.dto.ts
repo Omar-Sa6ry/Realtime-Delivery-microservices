@@ -48,11 +48,6 @@ export class AddressInput {
 
 @InputType()
 export class CreateDeliveryInputDto {
-  @Field(() => String, { nullable: true })
-  @IsString()
-  @IsOptional()
-  customerId?: string;
-
   @Field(() => String)
   @IsString()
   @IsNotEmpty()

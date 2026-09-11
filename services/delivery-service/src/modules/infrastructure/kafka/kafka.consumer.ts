@@ -42,6 +42,8 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
           PaymentKafkaTopics.PAYMENT_COMPLETED,
           PaymentKafkaTopics.PAYMENT_FAILED,
           DriverEventType.AssignmentAccepted,
+          DriverEventType.AssignmentRejected,
+          DriverEventType.AssignmentExpired,
         ],
         fromBeginning: false,
       });
@@ -72,6 +74,26 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
           if (deliveryId && data?.driverId) {
             this.logger.log(`Driver ${data.driverId} accepted assignment for delivery: ${deliveryId}`);
             await this.commands.acceptDriver(deliveryId, data.driverId);
+          }
+          break;
+        }
+
+        case DriverEventType.AssignmentRejected: {
+          const data = envelope.payload as any;
+          const deliveryId = data?.deliveryId || (data?.assignmentId ? data.assignmentId.split('-')[0] : undefined);
+          if (deliveryId) {
+            this.logger.log(`Driver rejected assignment for delivery: ${deliveryId}. Retrying next available driver...`);
+            await this.commands.handleDriverRejectedOrExpired(deliveryId, data?.reason || 'Driver rejected assignment');
+          }
+          break;
+        }
+
+        case DriverEventType.AssignmentExpired: {
+          const data = envelope.payload as any;
+          const deliveryId = data?.deliveryId || (data?.assignmentId ? data.assignmentId.split('-')[0] : undefined);
+          if (deliveryId) {
+            this.logger.log(`Driver assignment expired for delivery: ${deliveryId}. Retrying next available driver...`);
+            await this.commands.handleDriverRejectedOrExpired(deliveryId, 'Driver assignment offer expired');
           }
           break;
         }

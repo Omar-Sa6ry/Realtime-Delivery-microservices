@@ -1,6 +1,19 @@
 # ==============================================================================
-# REALTIME WEBSOCKETS TESTING GUIDE (POSTMAN)
+# REALTIME WEBSOCKETS TESTING GUIDE (POSTMAN & CLIENT APPS)
 # ==============================================================================
+#
+# SECURITY & AUTHORIZATION RULES (RBAC + ABAC Architecture):
+# ------------------------------------------------------------------------------
+# 1. Zero-Trust Handshake:
+#    - All WebSocket connections MUST provide a valid JWT token (via query `?token=...` or `Authorization: Bearer ...`).
+# 2. Strict Delivery Subscription Access Control:
+#    - Only ADMIN or the OWNER OF THE DELIVERY (Customer `customerId`) or the ASSIGNED DRIVER (`driverId`) can subscribe.
+#    - Anyone else attempting to subscribe to a delivery receives:
+#      { "type": "ERROR", "code": "FORBIDDEN", "message": "You are not authorized to access this delivery" }
+# 3. Location Update Security:
+#    - Only the ASSIGNED DRIVER of the specific delivery can send LOCATION_UPDATE.
+#    - The location is validated, cached in Redis, and broadcasted via NATS fan-out ONLY to authorized subscribers of that delivery (Admin & Delivery Owner).
+# ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
 # 1. CONNECTION & AUTHENTICATION (Handshake)
@@ -36,12 +49,22 @@
 # ------------------------------------------------------------------------------
 # 3. SUBSCRIBE TO DELIVERY UPDATES
 # ------------------------------------------------------------------------------
+# Security Policy:
+# - Allowed Roles: ADMIN, or CUSTOMER (Delivery Owner), or ASSIGNED DRIVER.
+# - Any other user will be rejected with FORBIDDEN (403).
+#
 # Send this message to subscribe to real-time events for a specific delivery:
 # {
 #   "type": "SUBSCRIBE_DELIVERY",
 #   "data": {
 #     "deliveryId": "YOUR_DELIVERY_ID_HERE"
 #   }
+# }
+#
+# Response on success:
+# {
+#   "type": "SUBSCRIBED",
+#   "data": { "deliveryId": "YOUR_DELIVERY_ID_HERE" }
 # }
 
 # ------------------------------------------------------------------------------
@@ -53,10 +76,20 @@
 #     "deliveryId": "YOUR_DELIVERY_ID_HERE"
 #   }
 # }
+#
+# Response on success:
+# {
+#   "type": "UNSUBSCRIBED",
+#   "data": { "deliveryId": "YOUR_DELIVERY_ID_HERE" }
+# }
 
 # ------------------------------------------------------------------------------
-# 5. DRIVER LOCATION UPDATE (For Driver)
+# 5. DRIVER LOCATION UPDATE (Active Delivery Tracking)
 # ------------------------------------------------------------------------------
+# Security Policy:
+# - Sender MUST be role DRIVER and MUST be assigned to this specific deliveryId.
+# - Only ADMIN and the Delivery Owner (Customer) who subscribed to this delivery will receive the updates.
+#
 # {
 #   "type": "LOCATION_UPDATE",
 #   "data": {
@@ -69,15 +102,29 @@
 # }
 
 # ------------------------------------------------------------------------------
-# 6. GENERAL DRIVER LOCATION UPDATE (For Driver when NOT in a delivery)
+# 6. ASSIGNMENT COMMANDS (Driver Only)
 # ------------------------------------------------------------------------------
-# This is crucial so the system can find the driver for new orders.
+# Accept Assignment:
 # {
-#   "type": "GENERAL_LOCATION_UPDATE",
+#   "type": "ACCEPT_ASSIGNMENT",
 #   "data": {
-#     "latitude": 30.0444,
-#     "longitude": 31.2357,
-#     "heading": 90.0,
-#     "speed": 35.5
+#     "deliveryId": "YOUR_DELIVERY_ID_HERE"
+#   }
+# }
+#
+# Reject Assignment:
+# {
+#   "type": "REJECT_ASSIGNMENT",
+#   "data": {
+#     "deliveryId": "YOUR_DELIVERY_ID_HERE",
+#     "reason": "Vehicle issue"
+#   }
+# }
+#
+# Complete Delivery:
+# {
+#   "type": "COMPLETE_DELIVERY",
+#   "data": {
+#     "deliveryId": "YOUR_DELIVERY_ID_HERE"
 #   }
 # }

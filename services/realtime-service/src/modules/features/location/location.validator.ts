@@ -14,15 +14,15 @@ export class LocationValidator {
       errors.push('deliveryId must be a valid ID');
     }
 
-    const lat = payload?.lat;
-    const lng = payload?.lng;
+    const lat = payload?.lat ?? (payload as any)?.latitude;
+    const lng = payload?.lng ?? (payload as any)?.longitude;
     if (
       typeof lat !== 'number' ||
       !Number.isFinite(lat) ||
       lat < -90 ||
       lat > 90
     ) {
-      errors.push('lat must be a finite number between -90 and 90');
+      errors.push('lat/latitude must be a finite number between -90 and 90');
     }
     if (
       typeof lng !== 'number' ||
@@ -30,7 +30,7 @@ export class LocationValidator {
       lng < -180 ||
       lng > 180
     ) {
-      errors.push('lng must be a finite number between -180 and 180');
+      errors.push('lng/longitude must be a finite number between -180 and 180');
     }
 
     for (const field of ['accuracy', 'speed', 'heading'] as const) {
@@ -44,7 +44,7 @@ export class LocationValidator {
     }
 
     let timestamp: number | undefined;
-    const rawTs = payload?.timestamp;
+    const rawTs = payload?.timestamp || new Date().toISOString();
     if (typeof rawTs !== 'string' || Number.isNaN(Date.parse(rawTs))) {
       errors.push('timestamp must be a valid ISO date string');
     } else {

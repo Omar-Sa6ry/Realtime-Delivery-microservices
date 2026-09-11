@@ -91,6 +91,12 @@ spec:
             - name: WS_ALLOWED_ORIGINS
               value: '*'
 
+            - name: DELIVERY_SERVICE_GRPC_URL
+              value: 'delivery-srv:50054'
+
+            - name: DRIVER_SERVICE_GRPC_URL
+              value: 'driver-srv:50055'
+
 ---
 apiVersion: v1
 kind: Service

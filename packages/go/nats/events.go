@@ -22,13 +22,23 @@ const (
 	DeliveryTopicInTransit      = "delivery.in_transit"
 	DeliveryTopicCompleted      = "delivery.completed"
 	DeliveryTopicCancelled      = "delivery.cancelled"
+	DeliveryTopicDeleted        = "delivery.deleted"
 )
 
 // PaymentKafkaTopics defines the Kafka topics emitted by the payment domain.
 const (
-	PaymentTopicCompleted = "payment.completed"
-	PaymentTopicFailed    = "payment.failed"
-	PaymentTopicRefunded  = "payment.refunded"
+	PaymentTopicCreated                = "payment.created"
+	PaymentTopicAuthorizationStarted   = "payment.authorization.started"
+	PaymentTopicAuthorized             = "payment.authorized"
+	PaymentTopicAuthorizationFailed    = "payment.authorization.failed"
+	PaymentTopicCaptureStarted         = "payment.capture.started"
+	PaymentTopicCaptured               = "payment.captured"
+	PaymentTopicCaptureFailed          = "payment.capture.failed"
+	PaymentTopicCancelled              = "payment.cancelled"
+	PaymentTopicRefundStarted          = "payment.refund.started"
+	PaymentTopicRefunded               = "payment.refunded"
+	PaymentTopicRefundFailed           = "payment.refund.failed"
+	PaymentTopicFailed                 = "payment.failed"
 )
 
 // MediaKafkaTopics defines the Kafka topics emitted by the media domain.

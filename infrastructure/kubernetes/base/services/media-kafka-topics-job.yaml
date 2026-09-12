@@ -39,9 +39,18 @@ spec:
           driver.created
           driver.updated
           driver.deleted
-          payment.completed
-          payment.failed
+          payment.created
+          payment.authorization.started
+          payment.authorized
+          payment.authorization.failed
+          payment.capture.started
+          payment.captured
+          payment.capture.failed
+          payment.cancelled
+          payment.refund.started
           payment.refunded
+          payment.refund.failed
+          payment.failed
           user.created
           user.updated
           user.deleted

@@ -85,28 +85,38 @@ type MediaScanCompletedPayload struct {
 	Threat   string `json:"threat,omitempty"`
 }
 
+// EventEnvelope is the canonical Kafka/NATS event envelope.
+// All durable events should preserve correlation and causation information.
 type EventEnvelope struct {
-	EventID   string          `json:"eventId"`
-	EventType string          `json:"eventType"` // e.g. "delivery.created", "media.ready"
-	TraceID   string          `json:"traceId,omitempty"`
-	Timestamp int64           `json:"timestamp"` // unix milliseconds
-	Payload   json.RawMessage `json:"payload"`
+	EventID       string          `json:"eventId"`
+	EventType     string          `json:"eventType"`      // e.g. "payment.authorized", "media.ready"
+	EventVersion  int             `json:"eventVersion"`   // schema version
+	OccurredAt    int64           `json:"occurredAt"`     // unix milliseconds
+	Producer      string          `json:"producer"`       // service name that produced the event
+	AggregateType string          `json:"aggregateType"`  // e.g. "payment", "media"
+	AggregateID   string          `json:"aggregateId"`    // ID of the aggregate
+	CorrelationID string          `json:"correlationId"`  // ID linking related events across services
+	CausationID   string          `json:"causationId"`    // ID of the command that caused this event
+	Payload       json.RawMessage `json:"payload"`
 }
 
+// NewEventEnvelope creates a new EventEnvelope.
 func NewEventEnvelope(eventID string, eventType string, traceID string, payload interface{}) (*EventEnvelope, error) {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("marshal event payload: %w", err)
 	}
 	return &EventEnvelope{
-		EventID:   eventID,
-		EventType: eventType,
-		TraceID:   traceID,
-		Timestamp: time.Now().UnixMilli(),
-		Payload:   payloadBytes,
+		EventID:       eventID,
+		EventType:     eventType,
+		EventVersion:  1,
+		OccurredAt:    time.Now().UnixMilli(),
+		Producer:      "unknown",
+		Payload:       payloadBytes,
 	}, nil
 }
 
+// NewMediaEventEnvelope is a backward-compatible wrapper for media events.
 func NewMediaEventEnvelope(eventID string, eventType MediaEventType, traceID string, payload interface{}) (*EventEnvelope, error) {
 	return NewEventEnvelope(eventID, string(eventType), traceID, payload)
 }

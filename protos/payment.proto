@@ -1,35 +1,138 @@
 ﻿syntax = "proto3";
-package payment;
+package payment.v1;
+option go_package = "github.com/omar487/Realtime-Delivery/microservices/protos/payment/v1;paymentpb";
 
 service PaymentService {
-  rpc AuthorizePayment (PaymentRequest) returns (PaymentResponse);
-  rpc RefundPayment (RefundPaymentRequest) returns (PaymentResponse);
-  rpc GetPaymentStatus (PaymentStatusRequest) returns (PaymentResponse);
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+  rpc AuthorizePayment(AuthorizePaymentRequest) returns (AuthorizePaymentResponse);
+  rpc CapturePayment(CapturePaymentRequest) returns (CapturePaymentResponse);
+  rpc CancelAuthorization(CancelAuthorizationRequest) returns (CancelAuthorizationResponse);
+  rpc CreateRefund(CreateRefundRequest) returns (CreateRefundResponse);
+  rpc GetPayment(GetPaymentRequest) returns (GetPaymentResponse);
+  rpc GetPaymentStatus(GetPaymentStatusRequest) returns (GetPaymentStatusResponse);
 }
 
-message PaymentRequest { 
-  string deliveryId = 1; 
-  string customerId = 2; 
-  double amount = 3; 
-  string currency = 4; 
-  string idempotencyKey = 5; 
+// Payment ID and correlation/causation tracking
+message PaymentID {
+  string value = 1;
 }
 
-message RefundPaymentRequest { 
-  string deliveryId = 1; 
-  string reason = 2; 
+// Base request with common fields
+message BaseRequest {
+  string correlation_id = 1;
+  string request_id = 2;
+  string idempotency_key = 3;
 }
 
-message PaymentStatusRequest { 
-  string deliveryId = 1; 
+// Base response with common fields
+message BaseResponse {
+  bool success = 1;
+  string payment_id = 2;
+  string correlation_id = 3;
+  string request_id = 4;
+  string status = 5;
 }
 
-message PaymentResponse { 
-  bool success = 1; 
-  string paymentId = 2; 
-  string deliveryId = 3; 
-  string status = 4; 
-  double amount = 5; 
-  string currency = 6; 
-  string failureReason = 7; 
+// === CreatePayment ===
+
+message CreatePaymentRequest {
+  string delivery_id = 1;
+  string user_id = 2;
+  int64 amount_minor = 3;
+  string currency = 4;
+  string idempotency_key = 5;
+}
+
+message CreatePaymentResponse {
+  PaymentID payment_id = 1;
+  string status = 2;
+  string payment_link = 3;
+  string gateway_reference = 4;
+}
+
+// === AuthorizePayment ===
+
+message AuthorizePaymentRequest {
+  string payment_id = 1;
+  string delivery_id = 2;
+  string idempotency_key = 3;
+}
+
+message AuthorizePaymentResponse {
+  PaymentID payment_id = 1;
+  string authorization_id = 2;
+  string status = 3;
+}
+
+// === CapturePayment ===
+
+message CapturePaymentRequest {
+  string payment_id = 1;
+  string delivery_id = 2;
+  int64 amount_minor = 3;
+  string idempotency_key = 4;
+}
+
+message CapturePaymentResponse {
+  PaymentID payment_id = 1;
+  string capture_id = 2;
+  string status = 3;
+}
+
+// === CancelAuthorization ===
+
+message CancelAuthorizationRequest {
+  string payment_id = 1;
+  string idempotency_key = 2;
+}
+
+message CancelAuthorizationResponse {
+  PaymentID payment_id = 1;
+  string status = 2;
+}
+
+// === CreateRefund ===
+
+message CreateRefundRequest {
+  string payment_id = 1;
+  string reason = 2;
+  int64 amount_minor = 3;
+  string idempotency_key = 4;
+}
+
+message CreateRefundResponse {
+  PaymentID payment_id = 1;
+  string refund_id = 2;
+  string status = 3;
+}
+
+// === GetPayment ===
+
+message GetPaymentRequest {
+  string payment_id = 1;
+}
+
+message GetPaymentResponse {
+  PaymentID payment_id = 1;
+  string delivery_id = 2;
+  string user_id = 3;
+  int64 amount_minor = 4;
+  string currency = 5;
+  string status = 6;
+  string gateway_payment_id = 7;
+  string created_at = 8;
+  string completed_at = 9;
+}
+
+// === GetPaymentStatus ===
+
+message GetPaymentStatusRequest {
+  string payment_id = 1;
+}
+
+message GetPaymentStatusResponse {
+  PaymentID payment_id = 1;
+  string status = 2;
+  string error = 3;
+  string failure_reason = 4;
 }

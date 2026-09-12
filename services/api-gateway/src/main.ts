@@ -39,6 +39,7 @@ async function bootstrap() {
   await waitForRedis();
 
   const subgraphs = [
+    'http://payment-srv:4002/payment/graphql',
     'http://realtime-srv:4006/realtime/graphql',
     'http://notification-srv:4004/notification/graphql',
     'http://media-srv:4005/media/graphql',

@@ -76,6 +76,8 @@ spec:
                 secretKeyRef:
                   name: secrets
                   key: JWT_SECRET
+            - name: PAYMENT_SUBGRAPH_URL
+              value: "http://payment-srv:4002/payment/graphql"
             - name: MEDIA_SUBGRAPH_URL
               value: "http://media-srv:4005/media/graphql"
             - name: NOTIFICATION_SERVICE_URL

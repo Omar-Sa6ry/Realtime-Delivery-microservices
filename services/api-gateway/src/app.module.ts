@@ -34,7 +34,10 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [join(process.cwd(), '.env'), join(process.cwd(), '../../config/.env')],
+      envFilePath: [
+        join(process.cwd(), '.env'),
+        join(process.cwd(), '../../config/.env'),
+      ],
     }),
 
     JwtModule.register({
@@ -47,12 +50,18 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
       driver: ApolloGatewayDriver,
       server: {
         context: ({ req }: any) => {
-          if (req && !req.user && req.headers?.authorization?.startsWith('Bearer ')) {
+          if (
+            req &&
+            !req.user &&
+            req.headers?.authorization?.startsWith('Bearer ')
+          ) {
             try {
               const token = req.headers.authorization.split(' ')[1];
               const parts = token.split('.');
               if (parts.length === 3) {
-                const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+                const payload = JSON.parse(
+                  Buffer.from(parts[1], 'base64').toString('utf-8'),
+                );
                 req.user = {
                   userId: payload.sub || payload.userId || payload.id,
                   role: payload.role || 'USER',
@@ -72,7 +81,11 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
           // Handle subgraph errors (new format: extensions directly on error)
           const subgraphError = error.extensions;
 
-          if (subgraphError && subgraphError.success === false && subgraphError.statusCode) {
+          if (
+            subgraphError &&
+            subgraphError.success === false &&
+            subgraphError.statusCode
+          ) {
             return {
               success: false,
               statusCode: subgraphError.statusCode,
@@ -83,13 +96,15 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
           }
 
           // Handle legacy subgraph error format (if any)
-          const legacySubgraphError = error.extensions?.response?.body?.errors?.[0];
+          const legacySubgraphError =
+            error.extensions?.response?.body?.errors?.[0];
           if (legacySubgraphError) {
             return {
               success: false,
               statusCode: legacySubgraphError.statusCode || 400,
               message: legacySubgraphError.message,
-              timeStamp: legacySubgraphError.timeStamp || new Date().toISOString(),
+              timeStamp:
+                legacySubgraphError.timeStamp || new Date().toISOString(),
             } as any;
           }
 
@@ -110,6 +125,12 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
       gateway: {
         supergraphSdl: new IntrospectAndCompose({
           subgraphs: [
+            {
+              name: 'payment',
+              url:
+                process.env.PAYMENT_SUBGRAPH_URL ||
+                'http://payment-srv:4005/payment/graphql',
+            },
             {
               name: 'media',
               url:
@@ -139,7 +160,8 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
               url:
                 process.env.USER_SERVICE_URL ||
                 'http://user-srv:4001/user/graphql',
-            },     {
+            },
+            {
               name: 'delivery',
               url:
                 process.env.DELIVERY_SERVICE_URL ||
@@ -159,12 +181,17 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
             url,
             willSendRequest({ request, context }: any) {
               let user = context.req?.user;
-              if (!user && context.req?.headers?.authorization?.startsWith('Bearer ')) {
+              if (
+                !user &&
+                context.req?.headers?.authorization?.startsWith('Bearer ')
+              ) {
                 try {
                   const token = context.req.headers.authorization.split(' ')[1];
                   const parts = token.split('.');
                   if (parts.length === 3) {
-                    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+                    const payload = JSON.parse(
+                      Buffer.from(parts[1], 'base64').toString('utf-8'),
+                    );
                     user = {
                       userId: payload.sub || payload.userId || payload.id,
                       role: payload.role || 'USER',
@@ -177,19 +204,10 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
               }
 
               if (user) {
-                request.http.headers.set(
-                  'x-user-id',
-                  user.userId || '',
-                );
-                request.http.headers.set(
-                  'x-user-role',
-                  user.role || '',
-                );
+                request.http.headers.set('x-user-id', user.userId || '');
+                request.http.headers.set('x-user-role', user.role || '');
                 if (user.sessionId) {
-                  request.http.headers.set(
-                    'x-user-session',
-                    user.sessionId,
-                  );
+                  request.http.headers.set('x-user-session', user.sessionId);
                 }
               }
               if (context.req?.headers?.[CORRELATION_ID_HEADER]) {

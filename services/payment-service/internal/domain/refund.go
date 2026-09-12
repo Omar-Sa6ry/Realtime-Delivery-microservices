@@ -1,5 +1,10 @@
 package domain
 
+import (
+	"fmt"
+	"time"
+)
+
 // Refund represents a refund request for a payment.
 type Refund struct {
 	ID         string
@@ -7,7 +12,7 @@ type Refund struct {
 	Amount     int64
 	Currency   string
 	Reason     string
-	Status     string
+	Status     RefundStatus
 	CreatedAt  int64
 	CompletedAt int64
 	Error      string

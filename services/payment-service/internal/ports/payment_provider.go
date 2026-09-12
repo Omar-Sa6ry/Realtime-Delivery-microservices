@@ -1,6 +1,7 @@
 package ports
 
 import (
+	"context"
 	"github.com/realtime-delivery/payment-service/internal/domain"
 )
 
@@ -14,6 +15,9 @@ type PaymentProvider interface {
 	GetRefund(string) (*domain.Refund, error)
 	ProcessAttempt(*domain.Attempt) error
 	GetAttempt(string) (*domain.Attempt, error)
+	AuthorizePayment(context.Context, *domain.Payment) error
+	CapturePayment(context.Context, *domain.Payment, int64) error
+	CancelAuthorization(string) error
 }
 
 // StripeProvider implements PaymentProvider using Stripe SDK.
@@ -74,4 +78,22 @@ func (p *StripeProvider) ProcessAttempt(attempt *domain.Attempt) error {
 func (p *StripeProvider) GetAttempt(id string) (*domain.Attempt, error) {
 	// Stripe-specific implementation
 	return nil, nil
+}
+
+// AuthorizePayment implements PaymentProvider.AuthorizePayment for Stripe.
+func (p *StripeProvider) AuthorizePayment(ctx context.Context, payment *domain.Payment) error {
+	// Stripe-specific implementation
+	return nil
+}
+
+// CapturePayment implements PaymentProvider.CapturePayment for Stripe.
+func (p *StripeProvider) CapturePayment(ctx context.Context, payment *domain.Payment, amount int64) error {
+	// Stripe-specific implementation
+	return nil
+}
+
+// CancelAuthorization implements PaymentProvider.CancelAuthorization for Stripe.
+func (p *StripeProvider) CancelAuthorization(id string) error {
+	// Stripe-specific implementation
+	return nil
 }

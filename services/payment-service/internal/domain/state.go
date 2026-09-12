@@ -1,9 +1,6 @@
 package domain
 
-import (
-	"sync"
-)
-
+// State represents the domain state for payment processing.
 type State struct {
 	mu        sync.RWMutex
 	payments  map[string]*Payment
@@ -17,7 +14,6 @@ func NewState() *State {
 		payments: make(map[string]*Payment),
 		attempts: make(map[string]*Attempt),
 		refunds:  make(map[string]*Refund),
-	}
 }
 
 // GetPayment retrieves a payment by ID.

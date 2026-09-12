@@ -46,7 +46,13 @@ type Config struct {
 	WebhookSecret string
 
 	// Observability
-	OTLPEndpoint string
+	OTELEndpoint string
+
+	// Stripe
+	StripeSecretKey       string
+	StripeWebhookSecret   string
+	StripeSuccessURL      string
+	StripeFailURL         string
 
 	// Delivery Service
 	DeliveryServiceURL string
@@ -108,7 +114,11 @@ func Load() (*Config, error) {
 		OutboxBatchSize:      getEnvInt("OUTBOX_BATCH_SIZE", 100),
 		ProviderMockMode:     getEnv("PROVIDER_MOCK_MODE", "success"),
 		WebhookSecret:        getEnv("WEBHOOK_SECRET", "dev-webhook-secret"),
-		OTLPEndpoint:         getEnv("OTEL_ENDPOINT", ""),
+		OTELEndpoint:         getEnv("OTEL_ENDPOINT", ""),
+		StripeSecretKey:      getEnv("STRIPE_SECRET_KEY", ""),
+		StripeWebhookSecret:  getEnv("STRIPE_WEBHOOK_SECRET", ""),
+		StripeSuccessURL:     getEnv("STRIPE_WEBHOOK_SUCCESSURL", ""),
+		StripeFailURL:        getEnv("STRIPE_WEBHOOK_FAILURL", ""),
 		DeliveryServiceURL:   getEnv("DELIVERY_SERVICE_URL", "http://localhost:4003"),
 	}, nil
 }

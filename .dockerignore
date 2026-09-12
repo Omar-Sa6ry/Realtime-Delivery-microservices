@@ -1,3 +1,40 @@
+# Build artifacts
+**/bin/
+**/dist/
+**/node_modules/
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# Test files
+*_test.go
+
+# Documentation
+*.md
+docs/
+
+# Local config
+.env*
+config/
+
+# OS
 # Dependency directories
 node_modules/
 **/node_modules/
@@ -67,3 +104,11 @@ docker-compose.yml
 # Skaffold
 skaffold.yaml
 .skaffold/
+
+
+# Go
+go.work
+vendor/
+
+# Kubernetes
+infrastructure/kubernetes/overlays/

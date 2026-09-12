@@ -1,0 +1,13 @@
+schema:
+  - internal/graphql/schema.graphqls
+exec:
+  filename: internal/graphql/generated/generated.go
+  package: generated
+model:
+  filename: internal/graphql/generated/models.go
+  package: generated
+resolver:
+  filename: internal/graphql/resolver.go
+  type: Resolver
+autobind:
+  - github.com/realtime-delivery/payment-service/internal/graphql

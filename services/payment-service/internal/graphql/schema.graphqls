@@ -1,0 +1,17 @@
+type PaymentServiceInfo {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: ServiceData!
+}
+
+type ServiceData {
+  name: String!
+  version: String!
+  status: String!
+}
+
+type Query {
+  paymentServiceInfo: PaymentServiceInfo!
+}

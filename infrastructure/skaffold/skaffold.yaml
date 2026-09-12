@@ -4,7 +4,7 @@ kind: Config
 manifests:
   kustomize:
     paths:
-      - ../../kubernetes/overlays/development
+      - infrastructure/kubernetes/overlays/development
 
 deploy:
   statusCheckDeadlineSeconds: 900
@@ -116,12 +116,12 @@ profiles:
     manifests:
       kustomize:
         paths:
-          - ../../kubernetes/overlays/test
+          - infrastructure/kubernetes/overlays/test
   - name: production
     manifests:
       kustomize:
         paths:
-          - ../../kubernetes/overlays/production
+          - infrastructure/kubernetes/overlays/production
 
 portForward:
 

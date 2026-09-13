@@ -1,8 +1,5 @@
 package graphql
 
-// Payment subgraph Schema Definition Language
-// This file defines the GraphQL schema for the payment service subgraph.
-
 const PaymentSubgraphSDL = `
 	type PaymentServiceInfo {
 		success: Boolean!
@@ -150,5 +147,4 @@ const PaymentSubgraphSDL = `
 	schema {
 		query: Query
 	}
-`
 `

@@ -197,9 +197,7 @@ func (s *PaymentService) CreateRefund(ctx context.Context, paymentID, reason str
 	}
 
 	// Update payment status
-	if err := payment.MarkRefunded(); err != nil {
-		return nil, err
-	}
+	payment.MarkRefunded()
 	if err := s.paymentRepo.Update(payment); err != nil {
 		return nil, fmt.Errorf("failed to update payment: %w", err)
 	}

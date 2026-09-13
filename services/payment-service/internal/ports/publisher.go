@@ -61,15 +61,3 @@ func (p *NATSPublisher) PublishPaymentRefunded(ctx context.Context, eventType st
 func (p *NATSPublisher) PublishPaymentFailed(ctx context.Context, eventType string, payload string) error {
 	return p.nc.Publish(p.subject+"."+eventType, []byte(payload))
 }
-
-// IdempotencyStore defines the interface for idempotency key storage.
-type IdempotencyStore interface {
-	// Store saves an idempotency key with its result.
-	Store(key string, result string) error
-	// Retrieve retrieves a previously stored result for a key.
-	Retrieve(key string) (string, bool)
-	// Delete removes a stored result.
-	Delete(key string) error
-	// Exists checks if a key exists.
-	Exists(key string) (bool, error)
-}

@@ -4,6 +4,7 @@ metadata:
   name: realtime-depl
 spec:
   replicas: 1
+  progressDeadlineSeconds: 900
   selector:
     matchLabels:
       app: realtime
@@ -29,9 +30,9 @@ spec:
             httpGet:
               path: /realtime/health
               port: 4006
-            initialDelaySeconds: 30
+            initialDelaySeconds: 10
             periodSeconds: 10
-            failureThreshold: 30
+            failureThreshold: 60
             timeoutSeconds: 10
           readinessProbe:
             httpGet:

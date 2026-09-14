@@ -44,13 +44,35 @@ func HealthHandler() gin.HandlerFunc {
 func GraphQLHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
-			Query         string `json:"query"`
-			OperationName string `json:"operationName"`
-			Variables     string `json:"variables"`
+			Query         string      `json:"query"`
+			OperationName string      `json:"operationName"`
+			Variables     interface{} `json:"variables"`
 		}
 
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Check for Federation _service query (__ApolloGetServiceDefinition__)
+		if strings.Contains(req.Query, "_service") {
+			c.JSON(http.StatusOK, gin.H{
+				"data": gin.H{
+					"_service": gin.H{
+						"sdl": PaymentSubgraphSDL,
+					},
+				},
+			})
+			return
+		}
+
+		// Check for __typename query
+		if strings.Contains(req.Query, "__typename") {
+			c.JSON(http.StatusOK, gin.H{
+				"data": gin.H{
+					"__typename": "Query",
+				},
+			})
 			return
 		}
 

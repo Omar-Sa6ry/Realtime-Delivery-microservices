@@ -129,7 +129,7 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
               name: 'payment',
               url:
                 process.env.PAYMENT_SUBGRAPH_URL ||
-                'http://payment-srv:4005/payment/graphql',
+                'http://payment-srv:4002/payment/graphql',
             },
             {
               name: 'media',

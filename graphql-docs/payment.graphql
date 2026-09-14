@@ -1,0 +1,131 @@
+# ==========================================
+# Payment Service - Queries
+# ==========================================
+
+# 1. Get Payment Service Info
+query GetPaymentServiceInfo {
+  paymentServiceInfo {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      name
+      version
+      status
+    }
+  }
+}
+
+# 2. Get Payment by ID
+query GetPaymentById {
+  payment(id: "12345678-1234-1234-1234-123456789abc") {
+    id
+    deliveryId
+    userId
+    amountMinor
+    currency
+    status
+    correlationId
+    causationId
+    createdAt
+  }
+}
+
+
+# ==========================================
+# Payment Service - Mutations
+# ==========================================
+
+# 1. Create Payment
+mutation CreatePayment {
+  createPayment(
+    input: {
+      deliveryId: "del-987654"
+      userId: "usr-123456"
+      amountMinor: 5000       # e.g., 50.00 in minor units
+      currency: "EGP"
+      correlationId: "corr-1111"
+      causationId: "cause-1111"
+    }
+  ) {
+    id
+    status
+    correlationId
+    causationId
+    createdAt
+  }
+}
+
+# 2. Authorize Payment
+mutation AuthorizePayment {
+  authorizePayment(
+    input: {
+      paymentId: "12345678-1234-1234-1234-123456789abc"
+      correlationId: "corr-2222"
+      causationId: "cause-2222"
+    }
+  ) {
+    id
+    authorizationId
+    status
+    correlationId
+    causationId
+    createdAt
+  }
+}
+
+# 3. Capture Payment
+mutation CapturePayment {
+  capturePayment(
+    input: {
+      paymentId: "12345678-1234-1234-1234-123456789abc"
+      amountMinor: 5000
+      correlationId: "corr-3333"
+      causationId: "cause-3333"
+    }
+  ) {
+    id
+    captureId
+    status
+    correlationId
+    causationId
+    createdAt
+  }
+}
+
+# 4. Cancel Authorization
+mutation CancelAuthorization {
+  cancelAuthorization(
+    input: {
+      paymentId: "12345678-1234-1234-1234-123456789abc"
+      correlationId: "corr-4444"
+    }
+  ) {
+    id
+    status
+    correlationId
+    causationId
+    createdAt
+  }
+}
+
+# 5. Create Refund
+mutation CreateRefund {
+  createRefund(
+    input: {
+      paymentId: "12345678-1234-1234-1234-123456789abc"
+      amountMinor: 5000
+      reason: "Customer requested cancellation"
+      correlationId: "corr-5555"
+      causationId: "cause-5555"
+    }
+  ) {
+    id
+    refundId
+    status
+    correlationId
+    causationId
+    createdAt
+  }
+}

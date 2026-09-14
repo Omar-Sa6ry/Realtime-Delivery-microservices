@@ -4,6 +4,9 @@ metadata:
   name: opensearch-depl
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
+  progressDeadlineSeconds: 900
   selector:
     matchLabels:
       app: opensearch
@@ -17,11 +20,11 @@ spec:
           image: opensearchproject/opensearch:2.18.0
           resources:
             requests:
-              cpu: "200m"
-              memory: "512Mi"
+              cpu: "500m"
+              memory: "1Gi"
             limits:
-              cpu: "1000m"
-              memory: "1.5Gi"
+              cpu: "2000m"
+              memory: "2Gi"
           ports:
             - containerPort: 9200
               name: http
@@ -43,9 +46,9 @@ spec:
           startupProbe:
             tcpSocket:
               port: 9200
-            initialDelaySeconds: 15
+            initialDelaySeconds: 30
             periodSeconds: 10
-            failureThreshold: 60
+            failureThreshold: 120
           readinessProbe:
             tcpSocket:
               port: 9200

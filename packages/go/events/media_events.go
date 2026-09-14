@@ -91,6 +91,8 @@ type EventEnvelope struct {
 	EventID       string          `json:"eventId"`
 	EventType     string          `json:"eventType"`      // e.g. "payment.authorized", "media.ready"
 	EventVersion  int             `json:"eventVersion"`   // schema version
+	TraceID       string          `json:"traceId,omitempty"`
+	Timestamp     int64           `json:"timestamp,omitempty"` // unix milliseconds
 	OccurredAt    int64           `json:"occurredAt"`     // unix milliseconds
 	Producer      string          `json:"producer"`       // service name that produced the event
 	AggregateType string          `json:"aggregateType"`  // e.g. "payment", "media"
@@ -106,11 +108,14 @@ func NewEventEnvelope(eventID string, eventType string, traceID string, payload 
 	if err != nil {
 		return nil, fmt.Errorf("marshal event payload: %w", err)
 	}
+	now := time.Now().UnixMilli()
 	return &EventEnvelope{
 		EventID:       eventID,
 		EventType:     eventType,
 		EventVersion:  1,
-		OccurredAt:    time.Now().UnixMilli(),
+		TraceID:       traceID,
+		Timestamp:     now,
+		OccurredAt:    now,
 		Producer:      "unknown",
 		Payload:       payloadBytes,
 	}, nil

@@ -7,7 +7,7 @@ metadata:
     app: payment
     version: "1.0.0"
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: payment
@@ -107,7 +107,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: payment-depl
-  minReplicas: 2
+  minReplicas: 1
   maxReplicas: 5
   behavior:
     scaleUp:

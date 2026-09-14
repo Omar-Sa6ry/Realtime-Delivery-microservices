@@ -1,6 +1,7 @@
 package graphql
 
-const PaymentSubgraphSDL = `
+const PaymentSubgraphSDL = `extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@shareable"])
+
 	type PaymentServiceInfo {
 		success: Boolean!
 		statusCode: Int!
@@ -132,6 +133,7 @@ const PaymentSubgraphSDL = `
 	}
 
 	type Query {
+		_service: _Service!
 		paymentServiceInfo: PaymentServiceInfo!
 		payment(id: ID!): Payment
 	}
@@ -144,7 +146,7 @@ const PaymentSubgraphSDL = `
 		createRefund(input: PaymentRefundInput): PaymentRefundedPayload
 	}
 
-	schema {
-		query: Query
+	type _Service {
+		sdl: String!
 	}
 `

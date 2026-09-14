@@ -4,6 +4,7 @@ metadata:
   name: search-depl
 spec:
   replicas: 1
+  progressDeadlineSeconds: 900
   selector:
     matchLabels:
       app: search
@@ -51,9 +52,9 @@ spec:
             httpGet:
               path: /health/live
               port: 4007
-            initialDelaySeconds: 5
+            initialDelaySeconds: 10
             periodSeconds: 5
-            failureThreshold: 60
+            failureThreshold: 120
             timeoutSeconds: 5
           readinessProbe:
             httpGet:

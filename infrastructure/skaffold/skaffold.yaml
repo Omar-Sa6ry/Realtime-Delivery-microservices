@@ -22,14 +22,6 @@ build:
       context: .
       docker:
         dockerfile: services/payment-service/Dockerfile
-      sync:
-        manual:
-          - src: "services/payment-service/internal/**/*.go"
-            dest: /workspace/services/payment-service/internal
-          - src: "packages/go/**/*.go"
-            dest: /workspace/packages/go
-          - src: "services/payment-service/migrations/**/*.sql"
-            dest: /workspace/services/payment-service/migrations
 
     - image: delivery/notification
       context: .

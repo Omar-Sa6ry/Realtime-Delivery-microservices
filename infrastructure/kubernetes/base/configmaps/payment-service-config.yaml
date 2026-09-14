@@ -12,7 +12,10 @@ data:
   NODE_ENV: "development"
 
   # PostgreSQL
-  POSTGRES_DSN: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@payment-db-srv:5432/payment_db?sslmode=disable"
+  DB_HOST: "payment-db-srv"
+  DB_PORT: "5432"
+  DB_NAME: "delivery_payment_db"
+  DB_SSLMODE: "disable"
 
   # Redis
   REDIS_HOST: "redis-srv"
@@ -33,9 +36,6 @@ data:
   RECONCILE_INTERVAL_SEC: "60"
   STUCK_THRESHOLD_SEC: "30"
   OUTBOX_BATCH_SIZE: "100"
-
-  # Provider (mock for dev, stripe for prod)
-  PROVIDER_MOCK_MODE: "success"
 
   # Observability
   OTEL_ENDPOINT: ""

@@ -559,7 +559,6 @@ services:
       RECONCILE_INTERVAL_SEC: "60"
       STUCK_THRESHOLD_SEC: "30"
       OUTBOX_BATCH_SIZE: "100"
-      PROVIDER_MOCK_MODE: ${PROVIDER_MOCK_MODE:-success}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-dev-webhook-secret}
       OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
       DELIVERY_SERVICE_URL: "http://delivery-srv:4003"
@@ -571,7 +570,6 @@ services:
     volumes:
       - ../../services/payment-service/internal:/workspace/services/payment-service/internal
       - ../../packages/go:/workspace/packages/go
-      - ../../services/payment-service/migrations:/workspace/services/payment-service/migrations
 
 volumes:
   delivery_db_data:

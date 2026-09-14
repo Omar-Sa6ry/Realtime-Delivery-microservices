@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 )
@@ -81,11 +82,12 @@ func (r *OutboxRepository) MarkFailed(ctx context.Context, id string, reason str
 }
 
 func (r *OutboxRepository) Cleanup(ctx context.Context, olderThanDays int) (int64, error) {
+	cutoff := time.Now().UTC().AddDate(0, 0, -olderThanDays)
 	result, err := r.db.ExecContext(ctx,
 		`DELETE FROM payment_events_outbox
 		 WHERE published_at IS NOT NULL
-		   AND published_at < NOW() - ($1 || ' days')::INTERVAL`,
-		olderThanDays,
+		   AND published_at < $1`,
+		cutoff,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("outbox_repo.Cleanup: %w", err)

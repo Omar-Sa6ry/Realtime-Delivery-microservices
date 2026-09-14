@@ -37,8 +37,9 @@ func NewPayment(id, deliveryID, userID string, amountMinor int64, currency, corr
 	if amountMinor <= 0 {
 		return nil, ErrInvalidAmount
 	}
-	if currency == "" {
-		return nil, ErrInvalidCurrency
+	curr, err := ParseCurrency(currency)
+	if err != nil {
+		return nil, err
 	}
 	now := time.Now().UTC()
 	return &Payment{
@@ -46,7 +47,7 @@ func NewPayment(id, deliveryID, userID string, amountMinor int64, currency, corr
 		DeliveryID:    deliveryID,
 		UserID:        userID,
 		AmountMinor:   amountMinor,
-		Currency:      currency,
+		Currency:      string(curr),
 		Status:        PaymentStatusPending,
 		Provider:      "stripe",
 		Version:       0,

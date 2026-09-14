@@ -11,12 +11,10 @@ import (
 	"github.com/lib/pq"
 )
 
-// PaymentRepository implements ports.PaymentRepository using PostgreSQL.
 type PaymentRepository struct {
 	db *sql.DB
 }
 
-// NewPaymentRepository creates a new PaymentRepository.
 func NewPaymentRepository(db *sql.DB) *PaymentRepository {
 	return &PaymentRepository{db: db}
 }
@@ -27,7 +25,6 @@ const paymentCols = `id, delivery_id, user_id, amount_minor, currency, status,
 	version, correlation_id, causation_id,
 	created_at, updated_at, authorized_at, captured_at, cancelled_at, failed_at`
 
-// Create inserts a new payment record.
 func (r *PaymentRepository) Create(ctx context.Context, p *domain.Payment) error {
 	query := `INSERT INTO payments (` + paymentCols + `) VALUES
 		($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`
@@ -45,7 +42,6 @@ func (r *PaymentRepository) Create(ctx context.Context, p *domain.Payment) error
 	return nil
 }
 
-// FindByID retrieves a payment by Snowflake ID.
 func (r *PaymentRepository) FindByID(ctx context.Context, id string) (*domain.Payment, error) {
 	query := `SELECT ` + paymentCols + ` FROM payments WHERE id = $1`
 	row := r.db.QueryRowContext(ctx, query, id)
@@ -59,7 +55,6 @@ func (r *PaymentRepository) FindByID(ctx context.Context, id string) (*domain.Pa
 	return p, nil
 }
 
-// FindByDeliveryID retrieves a payment by delivery ID.
 func (r *PaymentRepository) FindByDeliveryID(ctx context.Context, deliveryID string) (*domain.Payment, error) {
 	query := `SELECT ` + paymentCols + ` FROM payments WHERE delivery_id = $1`
 	row := r.db.QueryRowContext(ctx, query, deliveryID)
@@ -73,7 +68,6 @@ func (r *PaymentRepository) FindByDeliveryID(ctx context.Context, deliveryID str
 	return p, nil
 }
 
-// FindByProviderPaymentID retrieves a payment by Stripe PaymentIntent ID.
 func (r *PaymentRepository) FindByProviderPaymentID(ctx context.Context, providerPaymentID string) (*domain.Payment, error) {
 	query := `SELECT ` + paymentCols + ` FROM payments WHERE provider_payment_id = $1`
 	row := r.db.QueryRowContext(ctx, query, providerPaymentID)
@@ -87,7 +81,6 @@ func (r *PaymentRepository) FindByProviderPaymentID(ctx context.Context, provide
 	return p, nil
 }
 
-// FindByUserID retrieves all payments for a user (paginated by created_at DESC).
 func (r *PaymentRepository) FindByUserID(ctx context.Context, userID string) ([]*domain.Payment, error) {
 	query := `SELECT ` + paymentCols + ` FROM payments WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100`
 	rows, err := r.db.QueryContext(ctx, query, userID)
@@ -98,7 +91,49 @@ func (r *PaymentRepository) FindByUserID(ctx context.Context, userID string) ([]
 	return scanPayments(rows)
 }
 
-// FindByIDs retrieves multiple payments by ID in one query (used by DataLoader).
+func (r *PaymentRepository) List(ctx context.Context, page, limit int, userID string) ([]*domain.Payment, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+
+	var total int
+	var err error
+	var rows *sql.Rows
+
+	if userID != "" {
+		countQuery := `SELECT COUNT(*) FROM payments WHERE user_id = $1`
+		if err := r.db.QueryRowContext(ctx, countQuery, userID).Scan(&total); err != nil {
+			return nil, 0, fmt.Errorf("payment_repo.List count: %w", err)
+		}
+
+		query := `SELECT ` + paymentCols + ` FROM payments WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+		rows, err = r.db.QueryContext(ctx, query, userID, limit, offset)
+	} else {
+		countQuery := `SELECT COUNT(*) FROM payments`
+		if err := r.db.QueryRowContext(ctx, countQuery).Scan(&total); err != nil {
+			return nil, 0, fmt.Errorf("payment_repo.List count: %w", err)
+		}
+
+		query := `SELECT ` + paymentCols + ` FROM payments ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+		rows, err = r.db.QueryContext(ctx, query, limit, offset)
+	}
+
+	if err != nil {
+		return nil, 0, fmt.Errorf("payment_repo.List: %w", err)
+	}
+	defer rows.Close()
+
+	payments, err := scanPayments(rows)
+	if err != nil {
+		return nil, 0, err
+	}
+	return payments, total, nil
+}
+
 func (r *PaymentRepository) FindByIDs(ctx context.Context, ids []string) ([]*domain.Payment, error) {
 	if len(ids) == 0 {
 		return nil, nil
@@ -112,7 +147,6 @@ func (r *PaymentRepository) FindByIDs(ctx context.Context, ids []string) ([]*dom
 	return scanPayments(rows)
 }
 
-// UpdateConditional updates a payment only if version == expectedVersion (optimistic lock).
 func (r *PaymentRepository) UpdateConditional(ctx context.Context, p *domain.Payment, expectedVersion int64) error {
 	query := `UPDATE payments SET
 		status=$1, provider_payment_id=$2, gateway_session_id=$3,
@@ -140,7 +174,6 @@ func (r *PaymentRepository) UpdateConditional(ctx context.Context, p *domain.Pay
 	return nil
 }
 
-// scanPayment scans a single row into a Payment.
 func scanPayment(row *sql.Row) (*domain.Payment, error) {
 	p := &domain.Payment{}
 	var status string
@@ -158,7 +191,6 @@ func scanPayment(row *sql.Row) (*domain.Payment, error) {
 	return p, nil
 }
 
-// scanPayments scans multiple rows.
 func scanPayments(rows *sql.Rows) ([]*domain.Payment, error) {
 	var payments []*domain.Payment
 	for rows.Next() {
@@ -183,7 +215,6 @@ func scanPayments(rows *sql.Rows) ([]*domain.Payment, error) {
 	return payments, nil
 }
 
-// nullTime is a helper for optional time fields.
 type nullTime struct {
 	Time  time.Time
 	Valid bool

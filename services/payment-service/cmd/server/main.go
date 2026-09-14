@@ -61,7 +61,15 @@ func main() {
 	_ = sf // passed to application services
 
 	// PostgreSQL 
-	db, err := pgadapter.Connect(cfg.PostgresDSN)
+	db, err := pgadapter.Connect(
+		cfg.PostgresDSN,
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBHost,
+		cfg.DBPort,
+		cfg.DBName,
+		cfg.DBSSLMode,
+	)
 	if err != nil {
 		slog.Error("failed to connect to PostgreSQL", "error", err)
 		os.Exit(1)
@@ -204,16 +212,17 @@ func main() {
 	router.GET("/health/live", gql.HealthHandler())
 	router.GET("/health/ready", gql.ReadyHandler(db))
 
-	// GraphQL endpoint with auth + DataLoader middleware
+	// GraphQL endpoint with auth + DataLoader middleware + Language middleware
 	gqlGroup := router.Group("/")
+	gqlGroup.Use(gql.LanguageMiddleware())
 	gqlGroup.Use(gql.AuthMiddleware())
 	gqlGroup.Use(gql.DataLoaderMiddleware(paymentRepo))
-	gqlGroup.POST("/payment/graphql", gql.GraphQLHandler())
+	gqlGroup.POST("/payment/graphql", gql.GraphQLHandler(paymentSvc))
 	gqlGroup.GET("/payment/graphql", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Payment GraphQL. Use POST with query."})
 	})
 	// Also serve on /graphql for API Gateway compatibility
-	gqlGroup.POST("/graphql", gql.GraphQLHandler())
+	gqlGroup.POST("/graphql", gql.GraphQLHandler(paymentSvc))
 
 	mainSrv := &http.Server{
 		Addr:         ":" + cfg.PortGraphQL,

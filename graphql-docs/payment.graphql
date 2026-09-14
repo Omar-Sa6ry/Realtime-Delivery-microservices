@@ -1,5 +1,7 @@
 # ==========================================
-# Payment Service - Queries
+# Payment Service - GraphQL Documentation
+# Standard Response Envelope:
+# success, statusCode, message, timeStamp, data
 # ==========================================
 
 # 1. Get Payment Service Info
@@ -17,43 +19,112 @@ query GetPaymentServiceInfo {
   }
 }
 
-# 2. Get Payment by ID
+# 2. Get Payment by ID (with federated User & Delivery stubs)
 query GetPaymentById {
   payment(id: "12345678-1234-1234-1234-123456789abc") {
-    id
-    deliveryId
-    userId
-    amountMinor
-    currency
-    status
-    correlationId
-    causationId
-    createdAt
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      id
+      deliveryId
+      delivery {
+        id
+      }
+      userId
+      user {
+        id
+      }
+      amountMinor
+      currency
+      status
+      provider
+      providerPaymentId
+      correlationId
+      causationId
+      createdAt
+      updatedAt
+      authorizedAt
+      capturedAt
+    }
   }
 }
 
+# 3. List Payments (Paginated with paginationInfo)
+query GetPaymentsList {
+  payments(page: 1, limit: 10) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        totalPages
+        hasNextPage
+        hasPreviousPage
+        nextPage
+        previousPage
+      }
+      items {
+        id
+        deliveryId
+        delivery {
+          id
+        }
+        userId
+        user {
+          id
+        }
+        amountMinor
+        currency
+        status
+        createdAt
+      }
+    }
+  }
+}
 
 # ==========================================
 # Payment Service - Mutations
 # ==========================================
 
-# 1. Create Payment
+# 1. Create Payment (Using Currency Enum: EGP, USD, EUR, SAR, AED)
 mutation CreatePayment {
   createPayment(
     input: {
       deliveryId: "del-987654"
       userId: "usr-123456"
       amountMinor: 5000       # e.g., 50.00 in minor units
-      currency: "EGP"
+      currency: EGP
+      idempotencyKey: "idem-key-1111"
       correlationId: "corr-1111"
       causationId: "cause-1111"
     }
   ) {
-    id
-    status
-    correlationId
-    causationId
-    createdAt
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      id
+      status
+      deliveryId
+      delivery {
+        id
+      }
+      userId
+      user {
+        id
+      }
+      amountMinor
+      currency
+      checkoutUrl
+      clientSecret
+      createdAt
+    }
   }
 }
 
@@ -62,16 +133,22 @@ mutation AuthorizePayment {
   authorizePayment(
     input: {
       paymentId: "12345678-1234-1234-1234-123456789abc"
+      idempotencyKey: "idem-key-2222"
       correlationId: "corr-2222"
       causationId: "cause-2222"
     }
   ) {
-    id
-    authorizationId
-    status
-    correlationId
-    causationId
-    createdAt
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      id
+      status
+      authorizedAt
+      correlationId
+      causationId
+    }
   }
 }
 
@@ -81,16 +158,22 @@ mutation CapturePayment {
     input: {
       paymentId: "12345678-1234-1234-1234-123456789abc"
       amountMinor: 5000
+      idempotencyKey: "idem-key-3333"
       correlationId: "corr-3333"
       causationId: "cause-3333"
     }
   ) {
-    id
-    captureId
-    status
-    correlationId
-    causationId
-    createdAt
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      id
+      status
+      capturedAt
+      correlationId
+      causationId
+    }
   }
 }
 
@@ -99,14 +182,21 @@ mutation CancelAuthorization {
   cancelAuthorization(
     input: {
       paymentId: "12345678-1234-1234-1234-123456789abc"
+      idempotencyKey: "idem-key-4444"
       correlationId: "corr-4444"
+      causationId: "cause-4444"
     }
   ) {
-    id
-    status
-    correlationId
-    causationId
-    createdAt
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      id
+      status
+      correlationId
+      causationId
+    }
   }
 }
 
@@ -117,15 +207,22 @@ mutation CreateRefund {
       paymentId: "12345678-1234-1234-1234-123456789abc"
       amountMinor: 5000
       reason: "Customer requested cancellation"
+      idempotencyKey: "idem-key-5555"
       correlationId: "corr-5555"
       causationId: "cause-5555"
     }
   ) {
-    id
-    refundId
-    status
-    correlationId
-    causationId
-    createdAt
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      id
+      paymentId
+      amountMinor
+      status
+      reason
+      createdAt
+    }
   }
 }

@@ -1,152 +1,181 @@
 package graphql
 
-const PaymentSubgraphSDL = `extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@shareable"])
+const PaymentSubgraphSDL = `directive @key(fields: String!) repeatable on OBJECT | INTERFACE
+directive @shareable on OBJECT | FIELD_DEFINITION
+directive @external on FIELD_DEFINITION
 
-	type PaymentServiceInfo {
-		success: Boolean!
-		statusCode: Int!
-		message: String!
-		timeStamp: String!
-		data: ServiceData!
-	}
+extend schema
+	@link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key", "@shareable", "@external"])
 
-	type ServiceData {
-		name: String!
-		version: String!
-		status: String!
-	}
+enum Currency {
+	EGP
+	USD
+	EUR
+	SAR
+	AED
+}
 
-	type Payment {
-		id: ID!
-		deliveryId: String!
-		userId: String!
-		amountMinor: Int!
-		currency: String!
-		status: String!
-		correlationId: String
-		causationId: String
-		createdAt: String
-	}
+enum PaymentStatus {
+	PENDING
+	AUTHORIZED
+	CAPTURED
+	CANCELLED
+	FAILED
+	REFUNDED
+}
 
-	type PaymentCreatedPayload {
-		id: ID!
-		status: String!
-		correlationId: String
-		causationId: String
-		createdAt: String
-	}
+enum RefundStatus {
+	REFUND_PENDING
+	REFUNDED
+	REFUND_FAILED
+}
 
-	type PaymentAuthorizedPayload {
-		id: ID!
-		authorizationId: String!
-		status: String!
-		correlationId: String
-		causationId: String
-		createdAt: String
-	}
+type User @key(fields: "id") {
+	id: ID!
+}
 
-	type PaymentCapturedPayload {
-		id: ID!
-		captureId: String!
-		status: String!
-		correlationId: String
-		causationId: String
-		createdAt: String
-	}
+type Delivery @key(fields: "id") {
+	id: ID!
+}
 
-	type PaymentCancelledPayload {
-		id: ID!
-		status: String!
-		correlationId: String
-		causationId: String
-		createdAt: String
-	}
+type PaymentServiceInfo @shareable {
+	name: String!
+	version: String!
+	status: String!
+}
 
-	type PaymentRefundStartedPayload {
-		id: ID!
-		status: String!
-		correlationId: String
-		causationId: String
-		createdAt: String
-	}
+type PaymentServiceInfoResponse {
+	success: Boolean!
+	statusCode: Int!
+	message: String!
+	timeStamp: String!
+	data: PaymentServiceInfo
+}
 
-	type PaymentRefundedPayload {
-		id: ID!
-		refundId: String!
-		status: String!
-		correlationId: String
-		causationId: String
-		createdAt: String
-	}
+type PaginationInfo @shareable {
+	totalItems: Int!
+	currentPage: Int!
+	nextPage: Int
+}
 
-	type PaymentRefundFailedPayload {
-		id: ID!
-		status: String!
-		error: String
-		correlationId: String
-		causationId: String
-		createdAt: String
-	}
+type Payment @key(fields: "id") {
+	id: ID!
+	deliveryId: String!
+	userId: String!
+	delivery: Delivery
+	user: User
+	amountMinor: Int!
+	currency: Currency!
+	status: PaymentStatus!
+	provider: String!
+	authorizedAmountMinor: Int
+	capturedAmountMinor: Int
+	refundedAmountMinor: Int
+	correlationId: String
+	causationId: String
+	createdAt: String!
+	updatedAt: String!
+	authorizedAt: String
+	capturedAt: String
+	cancelledAt: String
+	failedAt: String
+}
 
-	type PaymentFailedPayload {
-		id: ID!
-		status: String!
-		error: String
-		correlationId: String
-		causationId: String
-		createdAt: String
-	}
+type Refund {
+	id: ID!
+	paymentId: String!
+	deliveryId: String!
+	amountMinor: Int!
+	currency: Currency!
+	status: RefundStatus!
+	reason: String!
+	providerRefundId: String
+	correlationId: String
+	causationId: String
+	createdAt: String!
+	updatedAt: String!
+}
 
-	input PaymentCreatedInput {
-		deliveryId: String!
-		userId: String!
-		amountMinor: Int!
-		currency: String!
-		correlationId: String
-		causationId: String
-	}
+type PaymentResponse {
+	success: Boolean!
+	statusCode: Int!
+	message: String!
+	timeStamp: String!
+	data: Payment
+}
 
-	input PaymentAuthorizationInput {
-		paymentId: String!
-		correlationId: String
-		causationId: String
-	}
+type PaymentListData {
+	paginationInfo: PaginationInfo!
+	items: [Payment!]!
+}
 
-	input PaymentCaptureInput {
-		paymentId: String!
-		amountMinor: Int!
-		correlationId: String
-		causationId: String
-	}
+type PaymentListResponse {
+	success: Boolean!
+	statusCode: Int!
+	message: String!
+	timeStamp: String!
+	data: PaymentListData
+}
 
-	input PaymentCancelInput {
-		paymentId: String!
-		correlationId: String
-	}
+type RefundResponse {
+	success: Boolean!
+	statusCode: Int!
+	message: String!
+	timeStamp: String!
+	data: Refund
+}
 
-	input PaymentRefundInput {
-		paymentId: String!
-		amountMinor: Int!
-		reason: String!
-		correlationId: String
-		causationId: String
-	}
+input CreatePaymentInput {
+	deliveryId: String!
+	userId: String!
+	amountMinor: Int!
+	currency: Currency!
+	correlationId: String
+	causationId: String
+}
 
-	type Query {
-		_service: _Service!
-		paymentServiceInfo: PaymentServiceInfo!
-		payment(id: ID!): Payment
-	}
+input AuthorizePaymentInput {
+	paymentId: ID!
+	correlationId: String
+	causationId: String
+}
 
-	type Mutation {
-		createPayment(input: PaymentCreatedInput): PaymentCreatedPayload
-		authorizePayment(input: PaymentAuthorizationInput): PaymentAuthorizedPayload
-		capturePayment(input: PaymentCaptureInput): PaymentCapturedPayload
-		cancelAuthorization(input: PaymentCancelInput): PaymentCancelledPayload
-		createRefund(input: PaymentRefundInput): PaymentRefundedPayload
-	}
+input CapturePaymentInput {
+	paymentId: ID!
+	amountMinor: Int!
+	correlationId: String
+	causationId: String
+}
 
-	type _Service {
-		sdl: String!
-	}
+input CancelPaymentInput {
+	paymentId: ID!
+	correlationId: String
+}
+
+input CreateRefundInput {
+	paymentId: ID!
+	amountMinor: Int!
+	reason: String!
+	correlationId: String
+	causationId: String
+}
+
+type Query {
+	_service: _Service!
+	paymentServiceInfo: PaymentServiceInfoResponse!
+	payment(id: ID!): PaymentResponse
+	payments(page: Int, limit: Int, userId: String): PaymentListResponse
+}
+
+type Mutation {
+	createPayment(input: CreatePaymentInput!): PaymentResponse
+	authorizePayment(input: AuthorizePaymentInput!): PaymentResponse
+	capturePayment(input: CapturePaymentInput!): PaymentResponse
+	cancelAuthorization(input: CancelPaymentInput!): PaymentResponse
+	createRefund(input: CreateRefundInput!): RefundResponse
+}
+
+type _Service {
+	sdl: String!
+}
 `

@@ -7,12 +7,26 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 
 	paymentpb "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/grpc/proto"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/application/services"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/i18n"
 )
+
+func extractLanguage(ctx context.Context) string {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		if langs := md.Get("x-lang"); len(langs) > 0 && langs[0] != "" {
+			return i18n.NormalizeLang(langs[0])
+		}
+		if langs := md.Get("accept-language"); len(langs) > 0 && langs[0] != "" {
+			return i18n.NormalizeLang(langs[0])
+		}
+	}
+	return i18n.FromContext(ctx)
+}
 
 type GRPCServer struct {
 	server   *grpc.Server
@@ -57,6 +71,7 @@ func newPaymentServer(service *services.PaymentService) *paymentServer {
 }
 
 func (s *paymentServer) CreatePayment(ctx context.Context, req *paymentpb.CreatePaymentRequest) (*paymentpb.CreatePaymentResponse, error) {
+	lang := extractLanguage(ctx)
 	res, err := s.service.CreatePayment(ctx, services.CreatePaymentInput{
 		DeliveryID:     req.GetDeliveryId(),
 		UserID:         req.GetUserId(),
@@ -65,7 +80,7 @@ func (s *paymentServer) CreatePayment(ctx context.Context, req *paymentpb.Create
 		IdempotencyKey: req.GetIdempotencyKey(),
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "create payment failed: %v", err)
+		return nil, status.Errorf(codes.Internal, "%s: %v", i18n.T(lang, "error.internal"), err)
 	}
 
 	return &paymentpb.CreatePaymentResponse{
@@ -77,12 +92,13 @@ func (s *paymentServer) CreatePayment(ctx context.Context, req *paymentpb.Create
 }
 
 func (s *paymentServer) AuthorizePayment(ctx context.Context, req *paymentpb.AuthorizePaymentRequest) (*paymentpb.AuthorizePaymentResponse, error) {
+	lang := extractLanguage(ctx)
 	payment, err := s.service.AuthorizePayment(ctx, services.AuthorizePaymentInput{
 		PaymentID:      req.GetPaymentId(),
 		IdempotencyKey: req.GetIdempotencyKey(),
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "authorize payment failed: %v", err)
+		return nil, status.Errorf(codes.Internal, "%s: %v", i18n.T(lang, "error.internal"), err)
 	}
 
 	return &paymentpb.AuthorizePaymentResponse{
@@ -93,13 +109,14 @@ func (s *paymentServer) AuthorizePayment(ctx context.Context, req *paymentpb.Aut
 }
 
 func (s *paymentServer) CapturePayment(ctx context.Context, req *paymentpb.CapturePaymentRequest) (*paymentpb.CapturePaymentResponse, error) {
+	lang := extractLanguage(ctx)
 	payment, err := s.service.CapturePayment(ctx, services.CapturePaymentInput{
 		PaymentID:      req.GetPaymentId(),
 		AmountMinor:    req.GetAmountMinor(),
 		IdempotencyKey: req.GetIdempotencyKey(),
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "capture payment failed: %v", err)
+		return nil, status.Errorf(codes.Internal, "%s: %v", i18n.T(lang, "error.internal"), err)
 	}
 
 	return &paymentpb.CapturePaymentResponse{
@@ -110,9 +127,10 @@ func (s *paymentServer) CapturePayment(ctx context.Context, req *paymentpb.Captu
 }
 
 func (s *paymentServer) CancelAuthorization(ctx context.Context, req *paymentpb.CancelAuthorizationRequest) (*paymentpb.CancelAuthorizationResponse, error) {
+	lang := extractLanguage(ctx)
 	payment, err := s.service.CancelAuthorization(ctx, req.GetPaymentId(), req.GetIdempotencyKey())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "cancel authorization failed: %v", err)
+		return nil, status.Errorf(codes.Internal, "%s: %v", i18n.T(lang, "error.internal"), err)
 	}
 
 	return &paymentpb.CancelAuthorizationResponse{
@@ -122,6 +140,7 @@ func (s *paymentServer) CancelAuthorization(ctx context.Context, req *paymentpb.
 }
 
 func (s *paymentServer) CreateRefund(ctx context.Context, req *paymentpb.CreateRefundRequest) (*paymentpb.CreateRefundResponse, error) {
+	lang := extractLanguage(ctx)
 	refund, err := s.service.CreateRefund(ctx, services.CreateRefundInput{
 		PaymentID:      req.GetPaymentId(),
 		AmountMinor:    req.GetAmountMinor(),
@@ -129,7 +148,7 @@ func (s *paymentServer) CreateRefund(ctx context.Context, req *paymentpb.CreateR
 		IdempotencyKey: req.GetIdempotencyKey(),
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "create refund failed: %v", err)
+		return nil, status.Errorf(codes.Internal, "%s: %v", i18n.T(lang, "error.internal"), err)
 	}
 
 	return &paymentpb.CreateRefundResponse{
@@ -140,9 +159,10 @@ func (s *paymentServer) CreateRefund(ctx context.Context, req *paymentpb.CreateR
 }
 
 func (s *paymentServer) GetPayment(ctx context.Context, req *paymentpb.GetPaymentRequest) (*paymentpb.GetPaymentResponse, error) {
+	lang := extractLanguage(ctx)
 	payment, err := s.service.GetPayment(ctx, req.GetPaymentId())
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "payment not found: %v", err)
+		return nil, status.Errorf(codes.NotFound, "%s: %v", i18n.T(lang, "payment.not_found"), err)
 	}
 
 	var completedAt string
@@ -164,9 +184,10 @@ func (s *paymentServer) GetPayment(ctx context.Context, req *paymentpb.GetPaymen
 }
 
 func (s *paymentServer) GetPaymentStatus(ctx context.Context, req *paymentpb.GetPaymentStatusRequest) (*paymentpb.GetPaymentStatusResponse, error) {
+	lang := extractLanguage(ctx)
 	statusVal, err := s.service.GetPaymentStatus(ctx, req.GetPaymentId())
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "payment not found: %v", err)
+		return nil, status.Errorf(codes.NotFound, "%s: %v", i18n.T(lang, "payment.not_found"), err)
 	}
 
 	return &paymentpb.GetPaymentStatusResponse{

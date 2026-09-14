@@ -1,8 +1,11 @@
 package config
 
 import (
+	"fmt"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -18,6 +21,12 @@ type Config struct {
 
 	// PostgreSQL
 	PostgresDSN string
+	DBUser      string
+	DBPassword  string
+	DBHost      string
+	DBPort      string
+	DBName      string
+	DBSSLMode   string
 
 	// Redis
 	RedisHost string
@@ -38,9 +47,6 @@ type Config struct {
 	ReconcileIntervalSec time.Duration
 	StuckThresholdSec    time.Duration
 	OutboxBatchSize      int
-
-	// Provider
-	ProviderMockMode string
 
 	// Webhook
 	WebhookSecret string
@@ -95,13 +101,34 @@ func Load() (*Config, error) {
 		return defaultValue
 	}
 
+	dbUser := getEnv("DB_USER", getEnv("POSTGRES_USER", "postgres"))
+	dbPass := getEnv("DB_PASSWORD", getEnv("POSTGRES_PASSWORD", "postgres"))
+	dbHost := getEnv("DB_HOST", getEnv("POSTGRES_HOST", "payment-db-srv"))
+	dbPort := getEnv("DB_PORT", getEnv("POSTGRES_PORT", "5432"))
+	dbName := getEnv("DB_NAME", getEnv("POSTGRES_DB", "delivery_payment_db"))
+	dbSSL := getEnv("DB_SSLMODE", getEnv("POSTGRES_SSLMODE", "disable"))
+
 	return &Config{
 		PortGraphQL:       getEnv("PORT_GRAPHQL", "4002"),
 		PortGRPC:          getEnv("PORT_GRPC", "50056"),
 		PortMetrics:       getEnv("PORT_METRICS", "9106"),
 		PortWebhook:       getEnv("PORT_WEBHOOK", "4012"),
 		NodeEnv:           getEnv("NODE_ENV", "development"),
-		PostgresDSN:       getEnv("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5432/payment_db?sslmode=disable"),
+		DBUser:            dbUser,
+		DBPassword:        dbPass,
+		DBHost:            dbHost,
+		DBPort:            dbPort,
+		DBName:            dbName,
+		DBSSLMode:         dbSSL,
+		PostgresDSN: func() string {
+			rawDSN := os.Getenv("POSTGRES_DSN")
+			// If POSTGRES_DSN is provided and does not contain unresolved placeholders like $(POSTGRES_USER)
+			if rawDSN != "" && !strings.Contains(rawDSN, "$(") {
+				return rawDSN
+			}
+			userInfo := url.UserPassword(dbUser, dbPass)
+			return fmt.Sprintf("postgres://%s@%s:%s/%s?sslmode=%s", userInfo.String(), dbHost, dbPort, dbName, dbSSL)
+		}(),
 		RedisHost:         getEnv("REDIS_HOST", "localhost"),
 		RedisPort:         getEnv("REDIS_PORT", "6379"),
 		KafkaBrokers:      getEnv("KAFKA_BROKERS", "localhost:9092"),
@@ -112,7 +139,6 @@ func Load() (*Config, error) {
 		ReconcileIntervalSec: getEnvDuration("RECONCILE_INTERVAL_SEC", 60*time.Second),
 		StuckThresholdSec:    getEnvDuration("STUCK_THRESHOLD_SEC", 30*time.Second),
 		OutboxBatchSize:      getEnvInt("OUTBOX_BATCH_SIZE", 100),
-		ProviderMockMode:     getEnv("PROVIDER_MOCK_MODE", "success"),
 		WebhookSecret:        getEnv("WEBHOOK_SECRET", "dev-webhook-secret"),
 		OTELEndpoint:         getEnv("OTEL_ENDPOINT", ""),
 		StripeSecretKey:      getEnv("STRIPE_SECRET_KEY", ""),

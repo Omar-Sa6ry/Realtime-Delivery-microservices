@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 )
@@ -72,12 +73,13 @@ func (r *AttemptRepository) UpdateStatus(ctx context.Context, id string, status 
 }
 
 func (r *AttemptRepository) FindStuck(ctx context.Context, thresholdSeconds int) ([]*domain.Attempt, error) {
+	cutoff := time.Now().UTC().Add(-time.Duration(thresholdSeconds) * time.Second)
 	query := `SELECT id, payment_id, operation, provider, provider_idempotency_key, provider_transaction_id
 			  FROM payment_attempts
 			  WHERE status = 'PROCESSING'
-			    AND started_at < NOW() - ($1 || ' seconds')::INTERVAL
+			    AND started_at < $1
 			  LIMIT 50`
-	rows, err := r.db.QueryContext(ctx, query, thresholdSeconds)
+	rows, err := r.db.QueryContext(ctx, query, cutoff)
 	if err != nil {
 		return nil, fmt.Errorf("attempt_repo.FindStuck: %w", err)
 	}

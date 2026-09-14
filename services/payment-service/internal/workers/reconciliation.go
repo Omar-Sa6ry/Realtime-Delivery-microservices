@@ -5,20 +5,20 @@ import (
 	"log/slog"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/postgres"
-	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/providers"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/ports"
 )
 
 type ReconciliationWorker struct {
 	attemptRepo *postgres.AttemptRepository
 	paymentRepo *postgres.PaymentRepository
-	provider    providers.PaymentProvider
+	provider    ports.PaymentProvider
 }
 
 func NewReconciliationWorker(
 	attemptRepo *postgres.AttemptRepository,
 	paymentRepo *postgres.PaymentRepository,
-	provider providers.PaymentProvider,
+	provider ports.PaymentProvider,
 ) *ReconciliationWorker {
 	return &ReconciliationWorker{
 		attemptRepo: attemptRepo,

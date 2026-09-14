@@ -13,7 +13,6 @@ import (
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/nats"
 	pgadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/postgres"
-	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/providers"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/ports"
 )
@@ -23,7 +22,7 @@ type PaymentService struct {
 	refundRepo   *pgadapter.RefundRepository
 	attemptRepo  *pgadapter.AttemptRepository
 	outboxRepo   *pgadapter.OutboxRepository
-	provider     providers.PaymentProvider
+	provider     ports.PaymentProvider
 	nats         *nats.RealtimePublisher // may be nil if NATS is unavailable
 	snowflake    *pkgsnowflake.Snowflake
 }
@@ -33,7 +32,7 @@ func NewPaymentService(
 	refundRepo *pgadapter.RefundRepository,
 	attemptRepo *pgadapter.AttemptRepository,
 	outboxRepo *pgadapter.OutboxRepository,
-	provider providers.PaymentProvider,
+	provider ports.PaymentProvider,
 	nats *nats.RealtimePublisher,
 	snowflake *pkgsnowflake.Snowflake,
 ) *PaymentService {
@@ -100,7 +99,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, input CreatePaymentI
 	attempt := domain.NewAttempt(attemptID, paymentID, "AUTHORIZE", "stripe", input.IdempotencyKey+"-auth", 1)
 	_ = s.attemptRepo.Create(ctx, attempt)
 
-	authResult, authErr := s.provider.Authorize(ctx, providers.AuthorizeRequest{
+	authResult, authErr := s.provider.Authorize(ctx, ports.AuthorizeRequest{
 		PaymentID:      paymentID,
 		AmountMinor:    input.AmountMinor,
 		Currency:       input.Currency,
@@ -109,7 +108,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, input CreatePaymentI
 	})
 
 	if authErr != nil {
-		if authErr.Category == providers.ErrCategoryTimeout {
+		if authErr.Category == ports.ErrCategoryTimeout {
 			attempt.MarkUnknown()
 			_ = s.attemptRepo.UpdateStatus(ctx, attemptID, domain.OperationStatusUnknown, "")
 			slog.Warn("create_payment: provider timeout — reconciliation required", "paymentID", paymentID)
@@ -192,14 +191,14 @@ func (s *PaymentService) CapturePayment(ctx context.Context, input CapturePaymen
 	attempt := domain.NewAttempt(attemptID, payment.ID, "CAPTURE", "stripe", input.IdempotencyKey+"-cap", 1)
 	_ = s.attemptRepo.Create(ctx, attempt)
 
-	captureResult, captureErr := s.provider.Capture(ctx, providers.CaptureRequest{
+	captureResult, captureErr := s.provider.Capture(ctx, ports.CaptureRequest{
 		ProviderPaymentID: payment.ProviderPaymentID,
 		AmountMinor:       input.AmountMinor,
 		IdempotencyKey:    input.IdempotencyKey,
 	})
 
 	if captureErr != nil {
-		if captureErr.Category == providers.ErrCategoryTimeout {
+		if captureErr.Category == ports.ErrCategoryTimeout {
 			attempt.MarkUnknown()
 			_ = s.attemptRepo.UpdateStatus(ctx, attemptID, domain.OperationStatusUnknown, "")
 			return nil, domain.ErrProviderUnknownOutcome
@@ -258,7 +257,7 @@ func (s *PaymentService) AuthorizePayment(ctx context.Context, input AuthorizePa
 	attempt := domain.NewAttempt(attemptID, payment.ID, "AUTHORIZE", "stripe", input.IdempotencyKey+"-auth", 1)
 	_ = s.attemptRepo.Create(ctx, attempt)
 
-	authResult, authErr := s.provider.Authorize(ctx, providers.AuthorizeRequest{
+	authResult, authErr := s.provider.Authorize(ctx, ports.AuthorizeRequest{
 		PaymentID:      payment.ID,
 		AmountMinor:    payment.AmountMinor,
 		Currency:       payment.Currency,
@@ -266,7 +265,7 @@ func (s *PaymentService) AuthorizePayment(ctx context.Context, input AuthorizePa
 		Description:    fmt.Sprintf("Delivery %s", payment.DeliveryID),
 	})
 	if authErr != nil {
-		if authErr.Category == providers.ErrCategoryTimeout {
+		if authErr.Category == ports.ErrCategoryTimeout {
 			attempt.MarkUnknown()
 			_ = s.attemptRepo.UpdateStatus(ctx, attemptID, domain.OperationStatusUnknown, "")
 			return nil, domain.ErrProviderUnknownOutcome
@@ -319,12 +318,12 @@ func (s *PaymentService) CancelAuthorization(ctx context.Context, paymentID, ide
 	attempt := domain.NewAttempt(attemptID, payment.ID, "CANCEL", "stripe", idempotencyKey+"-void", 1)
 	_ = s.attemptRepo.Create(ctx, attempt)
 
-	voidResult, voidErr := s.provider.Void(ctx, providers.VoidRequest{
+	voidResult, voidErr := s.provider.Void(ctx, ports.VoidRequest{
 		ProviderPaymentID: payment.ProviderPaymentID,
 		IdempotencyKey:    idempotencyKey,
 	})
 	if voidErr != nil {
-		if voidErr.Category == providers.ErrCategoryTimeout {
+		if voidErr.Category == ports.ErrCategoryTimeout {
 			attempt.MarkUnknown()
 			_ = s.attemptRepo.UpdateStatus(ctx, attemptID, domain.OperationStatusUnknown, "")
 			return nil, domain.ErrProviderUnknownOutcome
@@ -398,7 +397,7 @@ func (s *PaymentService) CreateRefund(ctx context.Context, input CreateRefundInp
 		return nil, fmt.Errorf("create_refund: persist refund: %w", err)
 	}
 
-	refResult, refErr := s.provider.Refund(ctx, providers.RefundRequest{
+	refResult, refErr := s.provider.Refund(ctx, ports.RefundRequest{
 		ProviderPaymentID: payment.ProviderPaymentID,
 		AmountMinor:       input.AmountMinor,
 		Reason:            input.Reason,
@@ -448,6 +447,11 @@ func (s *PaymentService) GetPaymentStatus(ctx context.Context, paymentID string)
 		return "", err
 	}
 	return p.Status, nil
+}
+
+// ListPayments retrieves payments with pagination and optional user filter.
+func (s *PaymentService) ListPayments(ctx context.Context, page, limit int, userID string) ([]*domain.Payment, int, error) {
+	return s.paymentRepo.List(ctx, page, limit, userID)
 }
 
 func (s *PaymentService) publishEvent(ctx context.Context, eventType pkgevents.PaymentEventType, aggregateID string, payload interface{}) error {

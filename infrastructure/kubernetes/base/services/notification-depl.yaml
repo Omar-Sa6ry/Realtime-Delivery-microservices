@@ -30,15 +30,18 @@ spec:
             httpGet:
               path: /notification/health
               port: 4004
-            initialDelaySeconds: 5
+            initialDelaySeconds: 15
             periodSeconds: 5
-            failureThreshold: 240
+            failureThreshold: 300
+            timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: /notification/health
               port: 4004
-            periodSeconds: 3
+            initialDelaySeconds: 10
+            periodSeconds: 5
             failureThreshold: 120
+            timeoutSeconds: 5
           livenessProbe:
             httpGet:
               path: /notification/health

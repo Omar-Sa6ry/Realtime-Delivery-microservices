@@ -13,6 +13,7 @@ minikube status
 minikube addons enable ingress
 kubectl delete validatingwebhookconfigurations ingress-nginx-admission
 kubectl apply -k infrastructure\kubernetes\overlays\development
+kubectl kustomize infrastructure/kubernetes/overlays/development
 & minikube -p minikube docker-env | Invoke-Expression
 minikube tunnel
 

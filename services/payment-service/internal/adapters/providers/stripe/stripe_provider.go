@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/providers"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/ports"
 	stripego "github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/paymentintent"
 	"github.com/stripe/stripe-go/v78/refund"
@@ -24,7 +24,7 @@ func NewStripeProvider(secretKey string) *StripeProvider {
 	return &StripeProvider{secretKey: secretKey}
 }
 
-func (p *StripeProvider) Authorize(ctx context.Context, req providers.AuthorizeRequest) (*providers.ProviderResult, *providers.NormalizedError) {
+func (p *StripeProvider) Authorize(ctx context.Context, req ports.AuthorizeRequest) (*ports.ProviderResult, *ports.NormalizedError) {
 	stripego.Key = p.secretKey
 
 	params := &stripego.PaymentIntentParams{
@@ -48,7 +48,7 @@ func (p *StripeProvider) Authorize(ctx context.Context, req providers.AuthorizeR
 		return nil, normalizeStripeError(err, "Authorize")
 	}
 
-	result := &providers.ProviderResult{
+	result := &ports.ProviderResult{
 		ProviderTransactionID: pi.ID,
 		ProviderPaymentID:     pi.ID,
 		Status:                normalizePaymentIntentStatus(pi.Status),
@@ -68,7 +68,7 @@ func (p *StripeProvider) Authorize(ctx context.Context, req providers.AuthorizeR
 	return result, nil
 }
 
-func (p *StripeProvider) Capture(ctx context.Context, req providers.CaptureRequest) (*providers.ProviderResult, *providers.NormalizedError) {
+func (p *StripeProvider) Capture(ctx context.Context, req ports.CaptureRequest) (*ports.ProviderResult, *ports.NormalizedError) {
 	stripego.Key = p.secretKey
 
 	params := &stripego.PaymentIntentCaptureParams{
@@ -84,14 +84,14 @@ func (p *StripeProvider) Capture(ctx context.Context, req providers.CaptureReque
 	}
 
 	slog.Debug("stripe: Capture completed", "piID", req.ProviderPaymentID, "status", pi.Status)
-	return &providers.ProviderResult{
+	return &ports.ProviderResult{
 		ProviderTransactionID: pi.ID,
 		ProviderPaymentID:     pi.ID,
 		Status:                normalizePaymentIntentStatus(pi.Status),
 	}, nil
 }
 
-func (p *StripeProvider) Void(ctx context.Context, req providers.VoidRequest) (*providers.ProviderResult, *providers.NormalizedError) {
+func (p *StripeProvider) Void(ctx context.Context, req ports.VoidRequest) (*ports.ProviderResult, *ports.NormalizedError) {
 	stripego.Key = p.secretKey
 
 	params := &stripego.PaymentIntentCancelParams{}
@@ -105,14 +105,14 @@ func (p *StripeProvider) Void(ctx context.Context, req providers.VoidRequest) (*
 	}
 
 	slog.Debug("stripe: Void completed", "piID", req.ProviderPaymentID, "status", pi.Status)
-	return &providers.ProviderResult{
+	return &ports.ProviderResult{
 		ProviderTransactionID: pi.ID,
 		ProviderPaymentID:     pi.ID,
 		Status:                normalizePaymentIntentStatus(pi.Status),
 	}, nil
 }
 
-func (p *StripeProvider) Refund(ctx context.Context, req providers.RefundRequest) (*providers.ProviderResult, *providers.NormalizedError) {
+func (p *StripeProvider) Refund(ctx context.Context, req ports.RefundRequest) (*ports.ProviderResult, *ports.NormalizedError) {
 	stripego.Key = p.secretKey
 
 	params := &stripego.RefundParams{
@@ -138,14 +138,14 @@ func (p *StripeProvider) Refund(ctx context.Context, req providers.RefundRequest
 	}
 
 	slog.Debug("stripe: Refund completed", "refundID", rf.ID, "piID", piID)
-	return &providers.ProviderResult{
+	return &ports.ProviderResult{
 		ProviderTransactionID: rf.ID,
 		ProviderPaymentID:     piID,
 		Status:                normalizeRefundStatus(rf.Status),
 	}, nil
 }
 
-func (p *StripeProvider) GetStatus(ctx context.Context, providerPaymentID string) (*providers.ProviderResult, *providers.NormalizedError) {
+func (p *StripeProvider) GetStatus(ctx context.Context, providerPaymentID string) (*ports.ProviderResult, *ports.NormalizedError) {
 	stripego.Key = p.secretKey
 
 	pi, err := paymentintent.Get(providerPaymentID, nil)
@@ -153,7 +153,7 @@ func (p *StripeProvider) GetStatus(ctx context.Context, providerPaymentID string
 		return nil, normalizeStripeError(err, "GetStatus")
 	}
 
-	return &providers.ProviderResult{
+	return &ports.ProviderResult{
 		ProviderTransactionID: pi.ID,
 		ProviderPaymentID:     pi.ID,
 		Status:                normalizePaymentIntentStatus(pi.Status),
@@ -205,14 +205,14 @@ func refundReasonToStripe(reason string) string {
 	}
 }
 
-func normalizeStripeError(err error, operation string) *providers.NormalizedError {
+func normalizeStripeError(err error, operation string) *ports.NormalizedError {
 	if err == nil {
 		return nil
 	}
 
 	if errors.Is(err, context.DeadlineExceeded) {
-		return &providers.NormalizedError{
-			Category:  providers.ErrCategoryTimeout,
+		return &ports.NormalizedError{
+			Category:  ports.ErrCategoryTimeout,
 			Message:   fmt.Sprintf("stripe %s timed out — outcome unknown", operation),
 			Retryable: false, // don't retry; let reconciliation handle it
 		}
@@ -220,31 +220,31 @@ func normalizeStripeError(err error, operation string) *providers.NormalizedErro
 
 	stripeErr, ok := err.(*stripego.Error)
 	if !ok {
-		return &providers.NormalizedError{
-			Category:  providers.ErrCategoryUnknown,
+		return &ports.NormalizedError{
+			Category:  ports.ErrCategoryUnknown,
 			Message:   fmt.Sprintf("stripe %s: non-stripe error", operation),
 			Retryable: false,
 		}
 	}
 
-	var category providers.ErrorCategory
+	var category ports.ErrorCategory
 	var retryable bool
 
 	switch string(stripeErr.Type) {
 	case string(stripego.ErrorTypeCard):
-		category = providers.ErrCategoryDeclined
+		category = ports.ErrCategoryDeclined
 		retryable = false
 	case "rate_limit_error":
-		category = providers.ErrCategoryRateLimited
+		category = ports.ErrCategoryRateLimited
 		retryable = true
 	case string(stripego.ErrorTypeInvalidRequest):
-		category = providers.ErrCategoryPermanent
+		category = ports.ErrCategoryPermanent
 		retryable = false
 	case "authentication_error":
-		category = providers.ErrCategoryAuthError
+		category = ports.ErrCategoryAuthError
 		retryable = false
 	case string(stripego.ErrorTypeAPI), "api_connection_error":
-		category = providers.ErrCategoryTemporary
+		category = ports.ErrCategoryTemporary
 		retryable = true
 	default:
 		// Specific codes for card errors
@@ -255,17 +255,17 @@ func normalizeStripeError(err error, operation string) *providers.NormalizedErro
 			stripego.ErrorCodeIncorrectNumber,
 			stripego.ErrorCodeIncorrectZip,
 			stripego.ErrorCodeInsufficientFunds:
-			category = providers.ErrCategoryDeclined
+			category = ports.ErrCategoryDeclined
 			retryable = false
 		default:
-			category = providers.ErrCategoryUnknown
+			category = ports.ErrCategoryUnknown
 			retryable = false
 		}
 	}
 
 	safeMsg := fmt.Sprintf("stripe %s error: type=%s code=%s", operation, stripeErr.Type, stripeErr.Code)
 
-	return &providers.NormalizedError{
+	return &ports.NormalizedError{
 		Category:  category,
 		Message:   safeMsg,
 		Retryable: retryable,

@@ -31,13 +31,17 @@ func NewRefund(id, paymentID, deliveryID string, amountMinor int64, currency, re
 	if amountMinor <= 0 {
 		return nil, ErrInvalidAmount
 	}
+	curr, err := ParseCurrency(currency)
+	if err != nil {
+		return nil, err
+	}
 	now := time.Now().UTC()
 	return &Refund{
 		ID:             id,
 		PaymentID:      paymentID,
 		DeliveryID:     deliveryID,
 		AmountMinor:    amountMinor,
-		Currency:       currency,
+		Currency:       string(curr),
 		Status:         RefundStatusPending,
 		Reason:         reason,
 		IdempotencyKey: idempotencyKey,

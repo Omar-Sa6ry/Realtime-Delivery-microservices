@@ -3,49 +3,45 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"log"
-	"os"
+	"log/slog"
 	"time"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
-type DB struct {
-	*sql.DB
-}
-
-// LoadEnv loads environment variables from .env file.
-func LoadEnv() error {
-	return godotenv.Load()
-}
-
-// Connect establishes a connection to the PostgreSQL database.
-func Connect() (*DB, error) {
-	dsn := os.Getenv("POSTGRES_DSN")
+func Connect(dsn string) (*sql.DB, error) {
 	if dsn == "" {
-		return nil, fmt.Errorf("POSTGRES_DSN environment variable is not set")
+		return nil, fmt.Errorf("postgres: DSN is empty — set POSTGRES_DSN")
 	}
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+		return nil, fmt.Errorf("postgres: failed to open connection: %w", err)
 	}
 
+	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(10)
-	db.SetMaxOpenConns(100)
 	db.SetConnMaxLifetime(5 * time.Minute)
+	db.SetConnMaxIdleTime(1 * time.Minute)
 
-	// Verify connection
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+		db.Close()
+		return nil, fmt.Errorf("postgres: ping failed: %w", err)
 	}
 
-	log.Println("Successfully connected to PostgreSQL")
-	return &DB{db}, nil
+	slog.Info("PostgreSQL connected", "dsn_prefix", dsn[:min(30, len(dsn))])
+	return db, nil
 }
 
-// Close closes the database connection.
-func (d *DB) Close() error {
-	return d.DB.Close()
+func Close(db *sql.DB) {
+	if db != nil {
+		_ = db.Close()
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

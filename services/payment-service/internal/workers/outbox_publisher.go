@@ -2,81 +2,72 @@ package workers
 
 import (
 	"context"
-	"time"
+	"log/slog"
 
-	"github.com/realtime-delivery/payment-service/internal/domain"
-	"github.com/realtime-delivery/payment-service/internal/ports"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/kafka"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/postgres"
+	pkgevents "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/events"
 )
 
-// OutboxPublisherWorker publishes outbox messages to Kafka.
-type OutboxPublisherWorker struct {
-	outboxRepo domain.OutboxRepository
-	publisher  ports.EventPublisher
-	topic      string
+type OutboxPublisher struct {
+	outboxRepo *postgres.OutboxRepository
+	publisher  *kafka.EventPublisher
+	batchSize  int
 }
 
-// NewOutboxPublisherWorker creates a new OutboxPublisherWorker.
-func NewOutboxPublisherWorker(outboxRepo domain.OutboxRepository, publisher ports.EventPublisher, topic string) *OutboxPublisherWorker {
-	return &OutboxPublisherWorker{
+func NewOutboxPublisher(
+	outboxRepo *postgres.OutboxRepository,
+	publisher *kafka.EventPublisher,
+	batchSize int,
+) *OutboxPublisher {
+	return &OutboxPublisher{
 		outboxRepo: outboxRepo,
 		publisher:  publisher,
-		topic:      topic,
+		batchSize:  batchSize,
 	}
 }
 
-func (w *OutboxPublisherWorker) Name() string {
-	return "outbox-publisher"
-}
-
-func (w *OutboxPublisherWorker) Interval() time.Duration {
-	return 5 * time.Second
-}
-
-func (w *OutboxPublisherWorker) Run(ctx context.Context) error {
-	messages, err := w.outboxRepo.GetPendingOutboxMessages(100)
+func (w *OutboxPublisher) Run(ctx context.Context) error {
+	events, err := w.outboxRepo.FetchUnpublished(ctx, w.batchSize)
 	if err != nil {
 		return err
 	}
-
-	if len(messages) == 0 {
+	if len(events) == 0 {
 		return nil
 	}
 
-	ids := make([]string, len(messages))
-	for i, msg := range messages {
-		ids[i] = msg.ID
-	}
+	slog.Debug("outbox_publisher: processing events", "count", len(events))
 
-	if err := w.outboxRepo.MarkAsProcessing(ids); err != nil {
-		return err
-	}
-
-	for _, msg := range messages {
-		if err := w.publishMessage(ctx, msg); err != nil {
-			w.outboxRepo.MarkAsFailed([]string{msg.ID}, err.Error())
+	for _, evt := range events {
+		if err := w.publishOne(ctx, evt); err != nil {
+			slog.Error("outbox_publisher: failed to publish event",
+				"id", evt.ID,
+				"eventType", evt.EventType,
+				"error", err,
+			)
+			// Mark failed for observability, continue with next event.
+			_ = w.outboxRepo.MarkFailed(ctx, evt.ID, err.Error())
 		} else {
-			w.outboxRepo.MarkAsProcessed([]string{msg.ID})
+			if err := w.outboxRepo.MarkPublished(ctx, evt.ID); err != nil {
+				slog.Error("outbox_publisher: failed to mark published",
+					"id", evt.ID, "error", err)
+			}
 		}
 	}
-
 	return nil
 }
 
-func (w *OutboxPublisherWorker) publishMessage(ctx context.Context, msg *domain.OutboxMessage) error {
-	// Publish based on event type
-	switch msg.EventType {
-	case "payment.created":
-		return w.publisher.PublishPaymentCreated(ctx, w.topic, msg.Payload)
-	case "payment.authorized":
-		return w.publisher.PublishPaymentAuthorized(ctx, w.topic, msg.Payload)
-	case "payment.captured":
-		return w.publisher.PublishPaymentCaptured(ctx, w.topic, msg.Payload)
-	case "payment.cancelled":
-		return w.publisher.PublishPaymentCancelled(ctx, w.topic, msg.Payload)
-	case "payment.refunded":
-		return w.publisher.PublishPaymentRefunded(ctx, w.topic, msg.Payload)
-	case "payment.failed":
-		return w.publisher.PublishPaymentFailed(ctx, w.topic, msg.Payload)
+func (w *OutboxPublisher) publishOne(ctx context.Context, evt *postgres.OutboxRow) error {
+	var envelope pkgevents.EventEnvelope
+	key := evt.ID // fallback: use event ID as key
+	if err := parseEnvelopeKey(evt.Payload, &envelope); err == nil && envelope.AggregateID != "" {
+		key = envelope.AggregateID
 	}
-	return nil
+
+	topic := eventTypeToTopic(evt.EventType)
+	return w.publisher.PublishEvent(ctx, topic, key, evt.EventType, evt.Payload)
+}
+
+func eventTypeToTopic(eventType string) string {
+	return "payment-events"
 }

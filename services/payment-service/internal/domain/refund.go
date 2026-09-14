@@ -5,89 +5,70 @@ import (
 	"time"
 )
 
-// Refund represents a refund request for a payment.
 type Refund struct {
-	ID         string
-	PaymentID  string
-	Amount     int64
-	Currency   string
-	Reason     string
-	Status     RefundStatus
-	CreatedAt  int64
-	CompletedAt int64
-	Error      string
+	ID               string
+	PaymentID        string
+	DeliveryID       string
+	AmountMinor      int64
+	Currency         string
+	Status           RefundStatus
+	Reason           string
+	ProviderRefundID string // Stripe Refund ID
+	IdempotencyKey   string
+	CorrelationID    string
+	CausationID      string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	CompletedAt      *time.Time
+	FailedAt         *time.Time
+	FailureReason    string
 }
 
-// RefundStatus represents the status of a refund.
-type RefundStatus string
-
-const (
-	RefundStatusPending   RefundStatus = "pending"
-	RefundStatusProcessed RefundStatus = "processed"
-	RefundStatusCompleted RefundStatus = "completed"
-	RefundStatusFailed    RefundStatus = "failed"
-	RefundStatusCancelled RefundStatus = "cancelled"
-)
-
-// NewRefund creates a new refund request.
-func NewRefund(paymentID string, amount int64, currency string, reason string) *Refund {
-	return &Refund{
-		ID:         generateID(),
-		PaymentID:  paymentID,
-		Amount:     amount,
-		Currency:   currency,
-		Reason:     reason,
-		Status:     RefundStatusPending,
-		CreatedAt:  timeNow(),
-		CompletedAt: 0,
-		Error:      "",
+func NewRefund(id, paymentID, deliveryID string, amountMinor int64, currency, reason, idempotencyKey, correlationID, causationID string) (*Refund, error) {
+	if id == "" {
+		return nil, ErrInvalidAmount
 	}
+	if amountMinor <= 0 {
+		return nil, ErrInvalidAmount
+	}
+	now := time.Now().UTC()
+	return &Refund{
+		ID:             id,
+		PaymentID:      paymentID,
+		DeliveryID:     deliveryID,
+		AmountMinor:    amountMinor,
+		Currency:       currency,
+		Status:         RefundStatusPending,
+		Reason:         reason,
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
+		CausationID:    causationID,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}, nil
 }
 
-// Process processes the refund.
-func (r *Refund) Process() {
-	r.Status = RefundStatusProcessed
-	r.CompletedAt = timeNow()
-}
-
-// Complete completes the refund successfully.
-func (r *Refund) Complete() {
+func (r *Refund) Complete(providerRefundID string) {
+	now := time.Now().UTC()
 	r.Status = RefundStatusCompleted
-	r.CompletedAt = timeNow()
+	r.ProviderRefundID = providerRefundID
+	r.CompletedAt = &now
+	r.UpdatedAt = now
 }
 
-// Fail fails the refund with an error.
-func (r *Refund) Fail(err string) {
+func (r *Refund) Fail(safeReason string) {
+	now := time.Now().UTC()
 	r.Status = RefundStatusFailed
-	r.Error = err
-	r.CompletedAt = timeNow()
+	r.FailureReason = safeReason
+	r.FailedAt = &now
+	r.UpdatedAt = now
 }
 
-// Cancel cancels the refund.
-func (r *Refund) Cancel() {
-	r.Status = RefundStatusCancelled
-	r.CompletedAt = timeNow()
-}
-
-// IsCompleted returns true if the refund is completed or failed.
-func (r *Refund) IsCompleted() bool {
+func (r *Refund) IsTerminal() bool {
 	return r.Status == RefundStatusCompleted || r.Status == RefundStatusFailed
 }
 
-// IsFailed returns true if the refund failed.
-func (r *Refund) IsFailed() bool {
-	return r.Status == RefundStatusFailed
-}
-
-// IsTerminal returns true if the refund is in a terminal state.
-func (r *Refund) IsTerminal() bool {
-	return r.Status == RefundStatusCompleted || r.Status == RefundStatusFailed || r.Status == RefundStatusCancelled
-}
-
-// String returns a string representation of the refund.
 func (r *Refund) String() string {
-	return fmt.Sprintf("Refund[ID=%s, PaymentID=%s, Status=%s, Amount=%d%s]",
-		r.ID, r.PaymentID, r.Status, r.Amount, r.Currency)
+	return fmt.Sprintf("Refund[id=%s payment=%s amount=%d status=%s]",
+		r.ID, r.PaymentID, r.AmountMinor, r.Status)
 }
-
-var refundTimeFunc = func() int64 { return time.Now().Unix() }

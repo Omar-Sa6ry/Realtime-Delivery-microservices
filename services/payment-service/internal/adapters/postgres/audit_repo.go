@@ -3,21 +3,16 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-
-	"github.com/realtime-delivery/payment-service/internal/domain"
 )
 
-// AuditRepository logs audit events for payment lifecycle.
 type AuditRepository struct {
 	db *sql.DB
 }
 
-// NewAuditRepository creates a new AuditRepository.
 func NewAuditRepository(db *sql.DB) *AuditRepository {
 	return &AuditRepository{db: db}
 }
 
-// LogEvent logs an audit event for a payment lifecycle action.
 func (r *AuditRepository) LogEvent(eventType string, paymentID string, details map[string]interface{}) error {
 	query := `INSERT INTO payment_audit (event_type, payment_id, details, created_at)
 			  VALUES ($1, $2, $3, NOW())`

@@ -2,64 +2,60 @@ package nats
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
-	"github.com/nats-io/nats.go"
-	"github.com/realtime-delivery/payment-service/internal/ports"
+	pkgnats "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/nats"
 )
 
-// RealtimePublisher publishes payment status updates to NATS for real-time notifications.
 type RealtimePublisher struct {
-	nc     *nats.Conn
-	subject string
+	client *pkgnats.NatsClient
 }
 
-// NewRealtimePublisher creates a new RealtimePublisher.
-func NewRealtimePublisher(natsURL, subject string) (*RealtimePublisher, error) {
-	nc, err := nats.Connect(natsURL,
-		nats.ReconnectWait(1*time.Second),
-		nats.MaxReconnects(-1),
-	)
+func NewRealtimePublisher(natsURL string) (*RealtimePublisher, error) {
+	client, err := pkgnats.Connect(natsURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
+		return nil, fmt.Errorf("realtime_publisher: %w", err)
 	}
-
-	return &RealtimePublisher{
-		nc:      nc,
-		subject: subject,
-	}, nil
+	return &RealtimePublisher{client: client}, nil
 }
 
-// PublishPaymentStatusUpdated publishes a payment status update to NATS.
+type PaymentStatusUpdate struct {
+	PaymentID  string    `json:"paymentId"`
+	DeliveryID string    `json:"deliveryId"`
+	UserID     string    `json:"userId"`
+	Status     string    `json:"status"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+}
+
 func (p *RealtimePublisher) PublishPaymentStatusUpdated(ctx context.Context, payload []byte) error {
-	subject := "payment.status.updated"
-	return p.nc.Publish(subject, payload)
-}
-
-// Close closes the NATS connection.
-func (p *RealtimePublisher) Close() error {
-	if p.nc != nil {
-		p.nc.Drain()
+	var update PaymentStatusUpdate
+	if err := json.Unmarshal(payload, &update); err != nil {
+		return fmt.Errorf("realtime_publisher: unmarshal payload: %w", err)
 	}
+
+	if err := p.client.PublishNestJS("payment.status.updated", update); err != nil {
+		slog.Warn("realtime_publisher: NATS publish failed (non-critical)",
+			"paymentId", update.PaymentID,
+			"status", update.Status,
+			"error", err,
+		)
+		return nil
+	}
+
+	slog.Debug("realtime_publisher: published payment.status.updated",
+		"paymentId", update.PaymentID,
+		"status", update.Status,
+	)
 	return nil
 }
 
-// Connect connects to NATS and returns a connection.
-func Connect(natsURL string) (*nats.Conn, error) {
-	nc, err := nats.Connect(natsURL,
-		nats.ReconnectWait(1*time.Second),
-		nats.MaxReconnects(-1),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
-	}
-	return nc, nil
+func (p *RealtimePublisher) PublishDirect(pattern string, data interface{}) error {
+	return p.client.PublishNestJS(pattern, data)
 }
 
-// PublishNestJS publishes a message using NestJS envelope format.
-func PublishNestJS(nc *nats.Conn, subject string, data interface{}) error {
-	// NestJS envelope format: { event: string, data: any, timestamp: number }
-	// This matches the NestJS event pattern used by the Realtime Service
-	return nc.Publish(subject, []byte(fmt.Sprintf(`{"event":"%s","data":%v,"timestamp":%d}`, "payment.status.updated", "{}", 0)))
+func (p *RealtimePublisher) Close() {
+	p.client.Close()
 }

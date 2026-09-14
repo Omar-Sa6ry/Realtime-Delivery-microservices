@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-
-	"github.com/realtime-delivery/payment-service/internal/domain"
 )
 
 type IdempotencyRepository struct {

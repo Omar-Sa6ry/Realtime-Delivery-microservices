@@ -1,19 +1,22 @@
 package graphql
 
 import (
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	pkgauth "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/auth"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/ports"
 )
 
-// HealthResponse represents the health check response.
 type HealthResponse struct {
-	Success    bool     `json:"success"`
-	StatusCode int      `json:"statusCode"`
-	Message    string   `json:"message"`
-	TimeStamp  string   `json:"timeStamp"`
+	Success    bool   `json:"success"`
+	StatusCode int    `json:"statusCode"`
+	Message    string `json:"message"`
+	TimeStamp  string `json:"timeStamp"`
 	Data       struct {
 		Name    string `json:"name"`
 		Version string `json:"version"`
@@ -21,7 +24,6 @@ type HealthResponse struct {
 	} `json:"data"`
 }
 
-// HealthHandler returns a Gin handler for the /health/live endpoint.
 func HealthHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		now := time.Now().UTC().Format(time.RFC3339)
@@ -40,7 +42,47 @@ func HealthHandler() gin.HandlerFunc {
 	}
 }
 
-// GraphQLHandler returns a Gin handler for the /payment/graphql endpoint.
+func ReadyHandler(db interface{ Ping() error }) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := db.Ping(); err != nil {
+			slog.Error("health/ready: DB ping failed", "error", err)
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not ready", "error": "db unavailable"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "ready"})
+	}
+}
+
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.Next()
+			return
+		}
+
+		claims, err := pkgauth.Authenticate(authHeader)
+		if err != nil {
+			slog.Warn("auth_middleware: invalid token", "error", err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		c.Set("userID", claims.UserID())
+		c.Set("userRole", claims.Role)
+		c.Next()
+	}
+}
+
+func DataLoaderMiddleware(paymentRepo ports.PaymentRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		loaders := NewLoaders(paymentRepo)
+		ctx := WithLoaders(c.Request.Context(), loaders)
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	}
+}
+
 func GraphQLHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
@@ -54,38 +96,71 @@ func GraphQLHandler() gin.HandlerFunc {
 			return
 		}
 
-		// Check for Federation _service query (__ApolloGetServiceDefinition__)
 		if strings.Contains(req.Query, "_service") {
 			c.JSON(http.StatusOK, gin.H{
 				"data": gin.H{
-					"_service": gin.H{
-						"sdl": PaymentSubgraphSDL,
-					},
+					"_service": gin.H{"sdl": PaymentSubgraphSDL},
 				},
 			})
 			return
 		}
 
-		// Check for __typename query
 		if strings.Contains(req.Query, "__typename") {
 			c.JSON(http.StatusOK, gin.H{
-				"data": gin.H{
-					"__typename": "Query",
-				},
+				"data": gin.H{"__typename": "Query"},
 			})
 			return
 		}
 
-		// Check for health query
-		if strings.Contains(req.Query, "paymentServiceInfo") || strings.Contains(req.Query, "paymentService_info") {
+		if strings.Contains(req.Query, "paymentServiceInfo") {
 			HealthHandler()(c)
 			return
 		}
 
+		if strings.Contains(req.Query, "payment(") && strings.Contains(req.Query, "id:") {
+			handlePaymentQuery(c, req.Variables)
+			return
+		}
+
 		c.JSON(http.StatusOK, gin.H{
-			"errors": []map[string]string{
-				{"message": "Query not supported in minimal setup"},
+			"errors": []gin.H{
+				{"message": "query not yet implemented in payment-service GraphQL handler"},
 			},
 		})
 	}
+}
+
+func handlePaymentQuery(c *gin.Context, variables interface{}) {
+	vars, ok := variables.(map[string]interface{})
+	if !ok {
+		c.JSON(http.StatusOK, gin.H{"errors": []gin.H{{"message": "variables must be an object"}}})
+		return
+	}
+	id, ok := vars["id"].(string)
+	if !ok || id == "" {
+		c.JSON(http.StatusOK, gin.H{"errors": []gin.H{{"message": "id is required"}}})
+		return
+	}
+
+	payment, err := LoadPayment(c.Request.Context(), id)
+	if err != nil {
+		slog.Error("graphql: payment query failed", "id", id, "error", err)
+		c.JSON(http.StatusOK, gin.H{"errors": []gin.H{{"message": err.Error()}}})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"payment": gin.H{
+				"id":          payment.ID,
+				"deliveryId":  payment.DeliveryID,
+				"userId":      payment.UserID,
+				"amountMinor": payment.AmountMinor,
+				"currency":    payment.Currency,
+				"status":      string(payment.Status),
+				"createdAt":   payment.CreatedAt.Format(time.RFC3339),
+				"updatedAt":   payment.UpdatedAt.Format(time.RFC3339),
+			},
+		},
+	})
 }

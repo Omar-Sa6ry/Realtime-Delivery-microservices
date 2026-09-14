@@ -2,53 +2,43 @@ package workers
 
 import (
 	"context"
-	"time"
+	"log/slog"
 
-	"github.com/realtime-delivery/payment-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/postgres"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 )
 
-// StuckRecoveryWorker recovers payments stuck in PROCESSING state.
 type StuckRecoveryWorker struct {
-	paymentRepo domain.PaymentRepo
-	threshold   time.Duration
+	attemptRepo      *postgres.AttemptRepository
+	thresholdSeconds int
 }
 
-// NewStuckRecoveryWorker creates a new StuckRecoveryWorker.
-func NewStuckRecoveryWorker(paymentRepo domain.PaymentRepo, thresholdSec int) *StuckRecoveryWorker {
+func NewStuckRecoveryWorker(attemptRepo *postgres.AttemptRepository, thresholdSeconds int) *StuckRecoveryWorker {
 	return &StuckRecoveryWorker{
-		paymentRepo: paymentRepo,
-		threshold:   time.Duration(thresholdSec) * time.Second,
+		attemptRepo:      attemptRepo,
+		thresholdSeconds: thresholdSeconds,
 	}
-}
-
-func (w *StuckRecoveryWorker) Name() string {
-	return "stuck-recovery"
-}
-
-func (w *StuckRecoveryWorker) Interval() time.Duration {
-	return w.threshold
 }
 
 func (w *StuckRecoveryWorker) Run(ctx context.Context) error {
-	payments, err := w.paymentRepo.List()
+	stuck, err := w.attemptRepo.FindStuck(ctx, w.thresholdSeconds)
 	if err != nil {
 		return err
 	}
-
-	now := time.Now().Unix()
-	for _, payment := range payments {
-		if payment.Status == "processing" || payment.Status == "pending" {
-			elapsed := now - payment.UpdatedAt
-			if elapsed > int64(w.threshold.Seconds()) {
-				// Mark as UNKNOWN for reconciliation
-				payment.Status = "unknown"
-				if err := w.paymentRepo.Update(payment); err != nil {
-					// Log error but continue
-					// logger.Error("stuck recovery update failed", "paymentID", payment.ID, "error", err)
-				}
-			}
-		}
+	if len(stuck) == 0 {
+		return nil
 	}
 
+	slog.Warn("stuck_recovery: found stuck attempts", "count", len(stuck))
+
+	for _, att := range stuck {
+		err := w.attemptRepo.UpdateStatus(ctx, att.ID, domain.OperationStatusUnknown, "")
+		if err != nil {
+			slog.Error("stuck_recovery: failed to mark attempt unknown",
+				"attemptID", att.ID,
+				"error", err,
+			)
+		}
+	}
 	return nil
 }

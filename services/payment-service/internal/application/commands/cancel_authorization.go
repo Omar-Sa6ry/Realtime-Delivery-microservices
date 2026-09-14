@@ -3,27 +3,28 @@ package commands
 import (
 	"context"
 
-	"github.com/realtime-delivery/payment-service/internal/application/services"
-	"github.com/realtime-delivery/payment-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/application/services"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 )
 
 type CancelAuthorizationCommand struct {
-	PaymentID string
+	PaymentID      string
+	IdempotencyKey string
 }
 
-// Handle executes the cancel authorization command.
 func (c *CancelAuthorizationCommand) Handle(
 	service *services.PaymentService,
 ) (*domain.Payment, error) {
 	return service.CancelAuthorization(
 		context.Background(),
 		c.PaymentID,
+		c.IdempotencyKey,
 	)
 }
 
-// CancelAuthorizationCommandFactory creates a CancelAuthorizationCommand.
-func CancelAuthorizationCommandFactory(paymentID string) *CancelAuthorizationCommand {
+func CancelAuthorizationCommandFactory(paymentID, idempotencyKey string) *CancelAuthorizationCommand {
 	return &CancelAuthorizationCommand{
-		PaymentID: paymentID,
+		PaymentID:      paymentID,
+		IdempotencyKey: idempotencyKey,
 	}
 }

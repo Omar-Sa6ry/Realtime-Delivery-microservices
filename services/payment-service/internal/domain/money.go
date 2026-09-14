@@ -1,80 +1,72 @@
 package domain
 
-// Money represents an amount of money with a currency.
+import (
+	"errors"
+	"fmt"
+)
+
 type Money struct {
-	Amount int64 // Amount in minor units (e.g., cents for USD)
-	Currency string
+	AmountMinor int64
+	Currency    string
 }
 
-// NewMoney creates a new Money instance.
-func NewMoney(amount int64, currency string) *Money {
-	if amount < 0 {
-		amount = 0
+func NewMoney(amountMinor int64, currency string) (Money, error) {
+	if amountMinor <= 0 {
+		return Money{}, fmt.Errorf("%w: got %d", ErrInvalidAmount, amountMinor)
 	}
-	return &Money{
-		Amount: amount,
-		Currency: currency,
+	if currency == "" {
+		return Money{}, ErrInvalidCurrency
 	}
+	return Money{AmountMinor: amountMinor, Currency: currency}, nil
 }
 
-// Amount returns the amount in the base unit (e.g., dollars for USD).
-func (m *Money) AmountInBaseUnit() float64 {
-	return float64(m.Amount) / 100.0
+func (m Money) Add(other Money) (Money, error) {
+	if err := m.assertSameCurrency(other); err != nil {
+		return Money{}, err
+	}
+	return Money{AmountMinor: m.AmountMinor + other.AmountMinor, Currency: m.Currency}, nil
 }
 
-// Cents returns the amount in cents.
-func (m *Money) Cents() int64 {
-	return m.Amount
+func (m Money) Sub(other Money) (Money, error) {
+	if err := m.assertSameCurrency(other); err != nil {
+		return Money{}, err
+	}
+	result := m.AmountMinor - other.AmountMinor
+	if result < 0 {
+		return Money{}, fmt.Errorf("%w: subtraction would result in negative amount", ErrInvalidAmount)
+	}
+	return Money{AmountMinor: result, Currency: m.Currency}, nil
 }
 
-// Currency returns the currency code.
-func (m *Money) CurrencyCode() string {
-	return m.Currency
+func (m Money) IsZero() bool {
+	return m.AmountMinor == 0
 }
 
-// Add adds two Money values. Both must have the same currency.
-func (m *Money) Add(other *Money) *Money {
+func (m Money) LessThanOrEqual(other Money) bool {
 	if m.Currency != other.Currency {
-		// In a real implementation, this would use currency conversion
-		panic("cannot add Money with different currencies")
+		return false
 	}
-	return NewMoney(m.Amount+other.Amount, m.Currency)
+	return m.AmountMinor <= other.AmountMinor
 }
 
-// Subtract subtracts another Money value. Both must have the same currency.
-func (m *Money) Subtract(other *Money) *Money {
+func (m Money) GreaterThan(other Money) bool {
 	if m.Currency != other.Currency {
-		panic("cannot subtract Money with different currencies")
+		return false
 	}
-	newAmount := m.Amount - other.Amount
-	if newAmount < 0 {
-		newAmount = 0
-	}
-	return NewMoney(newAmount, m.Currency)
+	return m.AmountMinor > other.AmountMinor
 }
 
-// Multiply multiplies Money by an integer factor.
-func (m *Money) Multiply(factor int64) *Money {
-	return NewMoney(m.Amount*factor, m.Currency)
+func (m Money) Equal(other Money) bool {
+	return m.Currency == other.Currency && m.AmountMinor == other.AmountMinor
 }
 
-// IsZero returns true if the money amount is zero.
-func (m *Money) IsZero() bool {
-	return m.Amount == 0
+func (m Money) String() string {
+	return fmt.Sprintf("%d %s", m.AmountMinor, m.Currency)
 }
 
-// GreaterThan returns true if m > other.
-func (m *Money) GreaterThan(other *Money) bool {
+func (m Money) assertSameCurrency(other Money) error {
 	if m.Currency != other.Currency {
-		panic("cannot compare Money with different currencies")
+		return errors.New(fmt.Sprintf("%v: %s vs %s", ErrCurrencyMismatch, m.Currency, other.Currency))
 	}
-	return m.Amount > other.Amount
-}
-
-// EqualTo returns true if m == other.
-func (m *Money) EqualTo(other *Money) bool {
-	if m.Currency != other.Currency {
-		panic("cannot compare Money with different currencies")
-	}
-	return m.Amount == other.Amount
+	return nil
 }

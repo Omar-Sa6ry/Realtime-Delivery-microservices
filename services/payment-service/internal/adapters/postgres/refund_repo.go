@@ -1,161 +1,105 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 
-	"github.com/realtime-delivery/payment-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 )
 
-// RefundRepository implements domain.RefundRepo using PostgreSQL.
 type RefundRepository struct {
 	db *sql.DB
 }
 
-// NewRefundRepository creates a new RefundRepository.
 func NewRefundRepository(db *sql.DB) *RefundRepository {
 	return &RefundRepository{db: db}
 }
 
-// Create inserts a new refund into the database.
-func (r *RefundRepository) Create(rf *domain.Refund) error {
-	query := `INSERT INTO refunds (id, payment_id, amount, currency, reason, status, created_at, completed_at, error)
-			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-	_, err := r.db.Exec(query,
-		rf.ID,
-		rf.PaymentID,
-		rf.Amount,
-		rf.Currency,
-		rf.Reason,
-		string(rf.Status),
-		rf.CreatedAt,
-		rf.CompletedAt,
-		rf.Error,
+func (r *RefundRepository) Create(ctx context.Context, refund *domain.Refund) error {
+	query := `INSERT INTO refunds
+		(id, payment_id, delivery_id, amount_minor, currency, status, reason,
+		 provider_refund_id, idempotency_key, correlation_id, causation_id, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`
+	_, err := r.db.ExecContext(ctx, query,
+		refund.ID, refund.PaymentID, refund.DeliveryID,
+		refund.AmountMinor, refund.Currency, string(refund.Status),
+		refund.Reason, refund.ProviderRefundID, refund.IdempotencyKey,
+		refund.CorrelationID, refund.CausationID,
+		refund.CreatedAt, refund.UpdatedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create refund: %w", err)
+		return fmt.Errorf("refund_repo.Create: %w", err)
 	}
 	return nil
 }
 
-// Get retrieves a refund by ID.
-func (r *RefundRepository) Get(id string) (*domain.Refund, error) {
-	query := `SELECT id, payment_id, amount, currency, reason, status, created_at, completed_at, error FROM refunds WHERE id = $1`
-	row := r.db.QueryRow(query, id)
-
-	rf := &domain.Refund{}
-	err := row.Scan(
-		&rf.ID,
-		&rf.PaymentID,
-		&rf.Amount,
-		&rf.Currency,
-		&rf.Reason,
-		&rf.Status,
-		&rf.CreatedAt,
-		&rf.CompletedAt,
-		&rf.Error,
-	)
+func (r *RefundRepository) FindByID(ctx context.Context, id string) (*domain.Refund, error) {
+	query := `SELECT id, payment_id, delivery_id, amount_minor, currency, status, reason,
+			  provider_refund_id, idempotency_key, created_at, updated_at, completed_at, failed_at, failure_reason
+			  FROM refunds WHERE id = $1`
+	row := r.db.QueryRowContext(ctx, query, id)
+	refund, err := scanRefund(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("refund not found: %s", id)
+			return nil, domain.ErrRefundNotFound
 		}
-		return nil, fmt.Errorf("failed to get refund: %w", err)
+		return nil, fmt.Errorf("refund_repo.FindByID: %w", err)
 	}
-	return rf, nil
+	return refund, nil
 }
 
-// Update updates an existing refund.
-func (r *RefundRepository) Update(rf *domain.Refund) error {
-	query := `UPDATE refunds SET status = $1, completed_at = $2, error = $3 WHERE id = $4`
-	result, err := r.db.Exec(query,
-		string(rf.Status),
-		rf.CompletedAt,
-		rf.Error,
-		rf.ID,
+func (r *RefundRepository) FindByPaymentID(ctx context.Context, paymentID string) ([]*domain.Refund, error) {
+	query := `SELECT id, payment_id, delivery_id, amount_minor, currency, status, reason,
+			  provider_refund_id, idempotency_key, created_at, updated_at, completed_at, failed_at, failure_reason
+			  FROM refunds WHERE payment_id = $1 ORDER BY created_at DESC`
+	rows, err := r.db.QueryContext(ctx, query, paymentID)
+	if err != nil {
+		return nil, fmt.Errorf("refund_repo.FindByPaymentID: %w", err)
+	}
+	defer rows.Close()
+
+	var refunds []*domain.Refund
+	for rows.Next() {
+		refund := &domain.Refund{}
+		var status string
+		err := rows.Scan(
+			&refund.ID, &refund.PaymentID, &refund.DeliveryID,
+			&refund.AmountMinor, &refund.Currency, &status, &refund.Reason,
+			&refund.ProviderRefundID, &refund.IdempotencyKey,
+			&refund.CreatedAt, &refund.UpdatedAt, &refund.CompletedAt, &refund.FailedAt, &refund.FailureReason,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("refund_repo: scan: %w", err)
+		}
+		refund.Status = domain.RefundStatus(status)
+		refunds = append(refunds, refund)
+	}
+	return refunds, rows.Err()
+}
+
+func (r *RefundRepository) UpdateStatus(ctx context.Context, id string, status domain.RefundStatus, providerRefundID string) error {
+	query := `UPDATE refunds SET status=$1, provider_refund_id=$2, updated_at=NOW() WHERE id=$3`
+	_, err := r.db.ExecContext(ctx, query, string(status), providerRefundID, id)
+	if err != nil {
+		return fmt.Errorf("refund_repo.UpdateStatus: %w", err)
+	}
+	return nil
+}
+
+func scanRefund(row *sql.Row) (*domain.Refund, error) {
+	r := &domain.Refund{}
+	var status string
+	err := row.Scan(
+		&r.ID, &r.PaymentID, &r.DeliveryID,
+		&r.AmountMinor, &r.Currency, &status, &r.Reason,
+		&r.ProviderRefundID, &r.IdempotencyKey,
+		&r.CreatedAt, &r.UpdatedAt, &r.CompletedAt, &r.FailedAt, &r.FailureReason,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to update refund: %w", err)
+		return nil, err
 	}
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		return fmt.Errorf("refund not found: %s", rf.ID)
-	}
-	return nil
-}
-
-// Delete removes a refund from the database.
-func (r *RefundRepository) Delete(id string) error {
-	query := `DELETE FROM refunds WHERE id = $1`
-	result, err := r.db.Exec(query, id)
-	if err != nil {
-		return fmt.Errorf("failed to delete refund: %w", err)
-	}
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		return fmt.Errorf("refund not found: %s", id)
-	}
-	return nil
-}
-
-// List retrieves all refunds.
-func (r *RefundRepository) List() ([]*domain.Refund, error) {
-	query := `SELECT id, payment_id, amount, currency, reason, status, created_at, completed_at, error FROM refunds`
-	rows, err := r.db.Query(query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list refunds: %w", err)
-	}
-	defer rows.Close()
-
-	var refunds []*domain.Refund
-	for rows.Next() {
-		rf := &domain.Refund{}
-		err := rows.Scan(
-			&rf.ID,
-			&rf.PaymentID,
-			&rf.Amount,
-			&rf.Currency,
-			&rf.Reason,
-			&rf.Status,
-			&rf.CreatedAt,
-			&rf.CompletedAt,
-			&rf.Error,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan refund: %w", err)
-		}
-		refunds = append(refunds, rf)
-	}
-	return refunds, nil
-}
-
-// FindByPaymentID retrieves refunds by payment ID.
-func (r *RefundRepository) FindByPaymentID(paymentID string) ([]*domain.Refund, error) {
-	query := `SELECT id, payment_id, amount, currency, reason, status, created_at, completed_at, error FROM refunds WHERE payment_id = $1`
-	rows, err := r.db.Query(query, paymentID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find refunds by payment ID: %w", err)
-	}
-	defer rows.Close()
-
-	var refunds []*domain.Refund
-	for rows.Next() {
-		rf := &domain.Refund{}
-		err := rows.Scan(
-			&rf.ID,
-			&rf.PaymentID,
-			&rf.Amount,
-			&rf.Currency,
-			&rf.Reason,
-			&rf.Status,
-			&rf.CreatedAt,
-			&rf.CompletedAt,
-			&rf.Error,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan refund: %w", err)
-		}
-		refunds = append(refunds, rf)
-	}
-	return refunds, nil
+	r.Status = domain.RefundStatus(status)
+	return r, nil
 }

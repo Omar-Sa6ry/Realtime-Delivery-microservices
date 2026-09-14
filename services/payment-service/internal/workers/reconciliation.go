@@ -2,75 +2,64 @@ package workers
 
 import (
 	"context"
-	"time"
+	"log/slog"
 
-	"github.com/realtime-delivery/payment-service/internal/domain"
-	"github.com/realtime-delivery/payment-service/internal/ports"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/postgres"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/providers"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 )
 
-// ReconciliationWorker reconciles payment states with the provider.
 type ReconciliationWorker struct {
-	paymentRepo  domain.PaymentRepo
-	provider     ports.PaymentProvider
-	intervalSec  int
-	stuckSec     int
+	attemptRepo *postgres.AttemptRepository
+	paymentRepo *postgres.PaymentRepository
+	provider    providers.PaymentProvider
 }
 
-// NewReconciliationWorker creates a new ReconciliationWorker.
-func NewReconciliationWorker(paymentRepo domain.PaymentRepo, provider ports.PaymentProvider, intervalSec, stuckSec int) *ReconciliationWorker {
+func NewReconciliationWorker(
+	attemptRepo *postgres.AttemptRepository,
+	paymentRepo *postgres.PaymentRepository,
+	provider providers.PaymentProvider,
+) *ReconciliationWorker {
 	return &ReconciliationWorker{
+		attemptRepo: attemptRepo,
 		paymentRepo: paymentRepo,
 		provider:    provider,
-		intervalSec: intervalSec,
-		stuckSec:    stuckSec,
 	}
-}
-
-func (w *ReconciliationWorker) Name() string {
-	return "reconciliation"
-}
-
-func (w *ReconciliationWorker) Interval() time.Duration {
-	return time.Duration(w.intervalSec) * time.Second
 }
 
 func (w *ReconciliationWorker) Run(ctx context.Context) error {
-	payments, err := w.paymentRepo.List()
+	attempts, err := w.attemptRepo.FindUnknown(ctx, 20)
 	if err != nil {
 		return err
 	}
-
-	for _, payment := range payments {
-		if err := w.reconcilePayment(ctx, payment); err != nil {
-			// Log error but continue with other payments
-			// logger.Error("reconciliation error", "paymentID", payment.ID, "error", err)
-		}
-	}
-
-	return nil
-}
-
-func (w *ReconciliationWorker) reconcilePayment(ctx context.Context, payment *domain.Payment) error {
-	// Skip terminal states
-	if payment.IsTerminal() {
+	if len(attempts) == 0 {
 		return nil
 	}
 
-	// Check if payment is stuck in PROCESSING state
-	if payment.Status == "processing" || payment.Status == "pending" {
-		elapsed := time.Now().Unix() - payment.UpdatedAt
-		if elapsed > int64(w.stuckSec) {
-			// Mark as UNKNOWN for reconciliation
-			payment.Status = "unknown"
-			// Note: In a real implementation, you'd update the repo here
-			// w.paymentRepo.Update(payment)
+	slog.Info("reconciliation_worker: reconciling attempts", "count", len(attempts))
+
+	for _, att := range attempts {
+		if err := w.reconcileOne(ctx, att); err != nil {
+			slog.Error("reconciliation_worker: failed to reconcile attempt",
+				"attemptID", att.ID,
+				"paymentID", att.PaymentID,
+				"error", err,
+			)
 		}
 	}
+	return nil
+}
 
-	// Query provider for current state
-	// This would call the provider's GetPayment or similar method
-	// For now, we'll skip the actual provider call
-	// providerPayment, err := w.provider.GetPayment(ctx, payment.ID)
+func (w *ReconciliationWorker) reconcileOne(ctx context.Context, att *domain.Attempt) error {
+	res, nErr := w.provider.GetStatus(ctx, att.ProviderTransactionID)
+	if nErr != nil {
+		return nErr
+	}
 
+	if res.Status == "SUCCEEDED" || res.Status == "AUTHORIZED" {
+		_ = w.attemptRepo.UpdateStatus(ctx, att.ID, domain.OperationStatusSucceeded, res.ProviderTransactionID)
+	} else if res.Status == "FAILED" || res.Status == "CANCELED" {
+		_ = w.attemptRepo.UpdateStatus(ctx, att.ID, domain.OperationStatusFailed, res.ProviderTransactionID)
+	}
 	return nil
 }

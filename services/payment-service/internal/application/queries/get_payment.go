@@ -3,8 +3,8 @@ package queries
 import (
 	"context"
 
-	"github.com/realtime-delivery/payment-service/internal/application/services"
-	"github.com/realtime-delivery/payment-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/application/services"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 )
 
 // GetPaymentQuery represents the query to retrieve a payment.

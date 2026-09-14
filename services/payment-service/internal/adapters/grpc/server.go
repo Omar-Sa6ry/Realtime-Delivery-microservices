@@ -2,25 +2,24 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 	"net"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 
-	"github.com/realtime-delivery/payment-service/internal/application/services"
-	"github.com/realtime-delivery/payment-service/internal/ports"
+	paymentpb "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/grpc/proto"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/application/services"
 )
 
-// GRPCServer wraps the gRPC server.
 type GRPCServer struct {
 	server   *grpc.Server
-	listener net.Listener
 	port     string
 	service  *services.PaymentService
 }
 
-// NewGRPCServer creates a new gRPC server.
 func NewGRPCServer(port string, service *services.PaymentService, interceptor grpc.UnaryServerInterceptor) *GRPCServer {
 	var opts []grpc.ServerOption
 	if interceptor != nil {
@@ -28,7 +27,7 @@ func NewGRPCServer(port string, service *services.PaymentService, interceptor gr
 	}
 
 	server := grpc.NewServer(opts...)
-	// payment.RegisterPaymentServiceServer(server, newPaymentServer())
+	paymentpb.RegisterPaymentServiceServer(server, newPaymentServer(service))
 	reflection.Register(server)
 
 	return &GRPCServer{
@@ -38,88 +37,140 @@ func NewGRPCServer(port string, service *services.PaymentService, interceptor gr
 	}
 }
 
-// Start starts the gRPC server.
-func (s *GRPCServer) Start() error {
-	listener, err := net.Listen("tcp", ":"+s.port)
-	if err != nil {
-		return fmt.Errorf("failed to listen on port %s: %w", s.port, err)
-	}
-	s.listener = listener
-	return s.server.Serve(listener)
+func (s *GRPCServer) Start(lis net.Listener) error {
+	return s.server.Serve(lis)
 }
 
-// Stop stops the gRPC server gracefully.
 func (s *GRPCServer) Stop() {
 	if s.server != nil {
 		s.server.GracefulStop()
 	}
 }
 
-// paymentServer implements the payment protobuf service.
 type paymentServer struct {
-	// payment.UnimplementedPaymentServiceServer
+	paymentpb.UnimplementedPaymentServiceServer
+	service *services.PaymentService
 }
 
-// newPaymentServer creates a new paymentServer.
-func newPaymentServer() *paymentServer {
-	return &paymentServer{}
+func newPaymentServer(service *services.PaymentService) *paymentServer {
+	return &paymentServer{service: service}
 }
 
-// CreatePayment creates a new payment.
-func (s *paymentServer) CreatePayment(ctx context.Context, req interface{}) (interface{}, error) {
-	// TODO: Implement with actual service
-	return map[string]interface{}{
-		"payment_id": "mock_payment_id",
-		"status":     "PENDING",
+func (s *paymentServer) CreatePayment(ctx context.Context, req *paymentpb.CreatePaymentRequest) (*paymentpb.CreatePaymentResponse, error) {
+	res, err := s.service.CreatePayment(ctx, services.CreatePaymentInput{
+		DeliveryID:     req.GetDeliveryId(),
+		UserID:         req.GetUserId(),
+		AmountMinor:    req.GetAmountMinor(),
+		Currency:       req.GetCurrency(),
+		IdempotencyKey: req.GetIdempotencyKey(),
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "create payment failed: %v", err)
+	}
+
+	return &paymentpb.CreatePaymentResponse{
+		PaymentId:        &paymentpb.PaymentID{Value: res.PaymentID},
+		Status:           string(res.Status),
+		PaymentLink:      res.CheckoutURL,
+		GatewayReference: res.ClientSecret,
 	}, nil
 }
 
-// AuthorizePayment authorizes a payment.
-func (s *paymentServer) AuthorizePayment(ctx context.Context, req interface{}) (interface{}, error) {
-	return map[string]interface{}{
-		"payment_id": "mock_payment_id",
-		"status":     "AUTHORIZED",
+func (s *paymentServer) AuthorizePayment(ctx context.Context, req *paymentpb.AuthorizePaymentRequest) (*paymentpb.AuthorizePaymentResponse, error) {
+	payment, err := s.service.AuthorizePayment(ctx, services.AuthorizePaymentInput{
+		PaymentID:      req.GetPaymentId(),
+		IdempotencyKey: req.GetIdempotencyKey(),
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "authorize payment failed: %v", err)
+	}
+
+	return &paymentpb.AuthorizePaymentResponse{
+		PaymentId:       &paymentpb.PaymentID{Value: payment.ID},
+		AuthorizationId: payment.ProviderPaymentID,
+		Status:          string(payment.Status),
 	}, nil
 }
 
-// CapturePayment captures a payment.
-func (s *paymentServer) CapturePayment(ctx context.Context, req interface{}) (interface{}, error) {
-	return map[string]interface{}{
-		"payment_id": "mock_payment_id",
-		"status":     "CAPTURED",
+func (s *paymentServer) CapturePayment(ctx context.Context, req *paymentpb.CapturePaymentRequest) (*paymentpb.CapturePaymentResponse, error) {
+	payment, err := s.service.CapturePayment(ctx, services.CapturePaymentInput{
+		PaymentID:      req.GetPaymentId(),
+		AmountMinor:    req.GetAmountMinor(),
+		IdempotencyKey: req.GetIdempotencyKey(),
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "capture payment failed: %v", err)
+	}
+
+	return &paymentpb.CapturePaymentResponse{
+		PaymentId: &paymentpb.PaymentID{Value: payment.ID},
+		CaptureId: payment.ProviderPaymentID,
+		Status:    string(payment.Status),
 	}, nil
 }
 
-// CancelAuthorization cancels an authorization.
-func (s *paymentServer) CancelAuthorization(ctx context.Context, req interface{}) (interface{}, error) {
-	return map[string]interface{}{
-		"payment_id": "mock_payment_id",
-		"status":     "CANCELLED",
+func (s *paymentServer) CancelAuthorization(ctx context.Context, req *paymentpb.CancelAuthorizationRequest) (*paymentpb.CancelAuthorizationResponse, error) {
+	payment, err := s.service.CancelAuthorization(ctx, req.GetPaymentId(), req.GetIdempotencyKey())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "cancel authorization failed: %v", err)
+	}
+
+	return &paymentpb.CancelAuthorizationResponse{
+		PaymentId: &paymentpb.PaymentID{Value: payment.ID},
+		Status:    string(payment.Status),
 	}, nil
 }
 
-// CreateRefund creates a refund.
-func (s *paymentServer) CreateRefund(ctx context.Context, req interface{}) (interface{}, error) {
-	return map[string]interface{}{
-		"refund_id": "mock_refund_id",
-		"status":    "SUCCEEDED",
+func (s *paymentServer) CreateRefund(ctx context.Context, req *paymentpb.CreateRefundRequest) (*paymentpb.CreateRefundResponse, error) {
+	refund, err := s.service.CreateRefund(ctx, services.CreateRefundInput{
+		PaymentID:      req.GetPaymentId(),
+		AmountMinor:    req.GetAmountMinor(),
+		Reason:         req.GetReason(),
+		IdempotencyKey: req.GetIdempotencyKey(),
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "create refund failed: %v", err)
+	}
+
+	return &paymentpb.CreateRefundResponse{
+		PaymentId: &paymentpb.PaymentID{Value: refund.PaymentID},
+		RefundId:  refund.ID,
+		Status:    string(refund.Status),
 	}, nil
 }
 
-// GetPayment gets a payment by ID.
-func (s *paymentServer) GetPayment(ctx context.Context, req interface{}) (interface{}, error) {
-	return map[string]interface{}{
-		"payment": map[string]interface{}{
-			"payment_id": "mock_payment_id",
-			"status":     "PENDING",
-		},
+func (s *paymentServer) GetPayment(ctx context.Context, req *paymentpb.GetPaymentRequest) (*paymentpb.GetPaymentResponse, error) {
+	payment, err := s.service.GetPayment(ctx, req.GetPaymentId())
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "payment not found: %v", err)
+	}
+
+	var completedAt string
+	if payment.CapturedAt != nil {
+		completedAt = payment.CapturedAt.Format(time.RFC3339)
+	}
+
+	return &paymentpb.GetPaymentResponse{
+		PaymentId:        &paymentpb.PaymentID{Value: payment.ID},
+		DeliveryId:       payment.DeliveryID,
+		UserId:           payment.UserID,
+		AmountMinor:      payment.AmountMinor,
+		Currency:         payment.Currency,
+		Status:           string(payment.Status),
+		GatewayPaymentId: payment.ProviderPaymentID,
+		CreatedAt:        payment.CreatedAt.Format(time.RFC3339),
+		CompletedAt:      completedAt,
 	}, nil
 }
 
-// GetPaymentStatus gets a payment status.
-func (s *paymentServer) GetPaymentStatus(ctx context.Context, req interface{}) (interface{}, error) {
-	return map[string]interface{}{
-		"payment_id": "mock_payment_id",
-		"status":     "PENDING",
+func (s *paymentServer) GetPaymentStatus(ctx context.Context, req *paymentpb.GetPaymentStatusRequest) (*paymentpb.GetPaymentStatusResponse, error) {
+	statusVal, err := s.service.GetPaymentStatus(ctx, req.GetPaymentId())
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "payment not found: %v", err)
+	}
+
+	return &paymentpb.GetPaymentStatusResponse{
+		PaymentId: &paymentpb.PaymentID{Value: req.GetPaymentId()},
+		Status:    string(statusVal),
 	}, nil
 }

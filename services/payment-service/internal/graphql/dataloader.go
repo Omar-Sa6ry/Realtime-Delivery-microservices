@@ -2,41 +2,74 @@ package graphql
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/graph-gophers/dataloader/v7"
+
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/ports"
 )
 
-// PaymentLoader loads Payment entities by ID using DataLoader to prevent N+1 query issues.
-type PaymentLoader struct {
-	base func(ctx context.Context, ids []any) ([]interface{}, error)
+type contextKey string
+
+const loadersKey contextKey = "gql_loaders"
+type Loaders struct {
+	PaymentByID *dataloader.Loader[string, *domain.Payment]
 }
 
-// NewPaymentLoader creates a new PaymentLoader.
-func NewPaymentLoader(loadFn func(ctx context.Context, ids []any) ([]interface{}, error)) *PaymentLoader {
-	return &PaymentLoader{base: loadFn}
-}
-
-// Load loads a Payment by ID.
-func (l *PaymentLoader) Load(ctx context.Context, id any) (interface{}, error) {
-	results, err := l.base(ctx, []any{id})
-	if err != nil {
-		return nil, err
+func NewLoaders(paymentRepo ports.PaymentRepository) *Loaders {
+	return &Loaders{
+		PaymentByID: dataloader.NewBatchedLoader(
+			newPaymentBatchFn(paymentRepo),
+			dataloader.WithCache[string, *domain.Payment](&dataloader.NoCache[string, *domain.Payment]{}),
+		),
 	}
-	if len(results) == 0 {
-		return nil, nil
+}
+
+func newPaymentBatchFn(repo ports.PaymentRepository) dataloader.BatchFunc[string, *domain.Payment] {
+	return func(ctx context.Context, ids []string) []*dataloader.Result[*domain.Payment] {
+		payments, err := repo.FindByIDs(ctx, ids)
+
+		paymentMap := make(map[string]*domain.Payment, len(payments))
+		if err == nil {
+			for _, p := range payments {
+				paymentMap[p.ID] = p
+			}
+		}
+
+		results := make([]*dataloader.Result[*domain.Payment], len(ids))
+		for i, id := range ids {
+			if err != nil {
+				results[i] = &dataloader.Result[*domain.Payment]{Error: fmt.Errorf("payment batch load failed: %w", err)}
+				continue
+			}
+			p, ok := paymentMap[id]
+			if !ok {
+				results[i] = &dataloader.Result[*domain.Payment]{Error: domain.ErrPaymentNotFound}
+			} else {
+				results[i] = &dataloader.Result[*domain.Payment]{Data: p}
+			}
+		}
+		return results
 	}
-	return results[0], nil
 }
 
-// InitializePaymentLoader initializes the PaymentDataLoader with a batch function.
-func InitializePaymentLoader(loadFn func(ctx context.Context, ids []any) ([]interface{}, error)) *PaymentLoader {
-	return &PaymentLoader{base: loadFn}
+func WithLoaders(ctx context.Context, loaders *Loaders) context.Context {
+	return context.WithValue(ctx, loadersKey, loaders)
 }
 
-// LoadPayment loads a single Payment by ID using the DataLoader.
-func LoadPayment(ctx context.Context, loader *PaymentLoader, id any) (interface{}, error) {
-	return loader.Load(ctx, id)
+func For(ctx context.Context) *Loaders {
+	if l, ok := ctx.Value(loadersKey).(*Loaders); ok {
+		return l
+	}
+	return nil
 }
 
-// LoadPaymentBatch loads multiple Payments by IDs using the DataLoader.
-func LoadPaymentBatch(ctx context.Context, loader *PaymentLoader, ids []any) ([]interface{}, error) {
-	return loader.base(ctx, ids)
+func LoadPayment(ctx context.Context, id string) (*domain.Payment, error) {
+	loaders := For(ctx)
+	if loaders == nil {
+		return nil, fmt.Errorf("no dataloaders in context")
+	}
+	thunk := loaders.PaymentByID.Load(ctx, id)
+	return thunk()
 }

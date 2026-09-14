@@ -3,31 +3,36 @@ package commands
 import (
 	"context"
 
-	"github.com/realtime-delivery/payment-service/internal/application/services"
-	"github.com/realtime-delivery/payment-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/application/services"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 )
 
-// CapturePaymentCommand represents the command to capture a payment.
 type CapturePaymentCommand struct {
-	PaymentID string
-	Amount    int64
+	PaymentID      string
+	Amount         int64
+	IdempotencyKey string
+	CorrelationID  string
 }
 
-// Handle executes the capture payment command.
 func (c *CapturePaymentCommand) Handle(
 	service *services.PaymentService,
 ) (*domain.Payment, error) {
 	return service.CapturePayment(
 		context.Background(),
-		c.PaymentID,
-		c.Amount,
+		services.CapturePaymentInput{
+			PaymentID:      c.PaymentID,
+			AmountMinor:    c.Amount,
+			IdempotencyKey: c.IdempotencyKey,
+			CorrelationID:  c.CorrelationID,
+		},
 	)
 }
 
-// CapturePaymentCommandFactory creates a CapturePaymentCommand.
-func CapturePaymentCommandFactory(paymentID string, amount int64) *CapturePaymentCommand {
+func CapturePaymentCommandFactory(paymentID string, amount int64, idempotencyKey, correlationID string) *CapturePaymentCommand {
 	return &CapturePaymentCommand{
-		PaymentID: paymentID,
-		Amount:    amount,
+		PaymentID:      paymentID,
+		Amount:         amount,
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
 	}
 }

@@ -3,36 +3,39 @@ package commands
 import (
 	"context"
 
-	"github.com/realtime-delivery/payment-service/internal/application/services"
-	"github.com/realtime-delivery/payment-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/application/services"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 )
 
-// CreateRefundCommand represents the command to create a refund.
 type CreateRefundCommand struct {
-	PaymentID   string
-	Reason      string
-	Amount      int64
-	CorrelationID string
+	PaymentID      string
+	Reason         string
+	Amount         int64
+	IdempotencyKey string
+	CorrelationID  string
 }
 
-// Handle executes the create refund command.
 func (c *CreateRefundCommand) Handle(
 	service *services.PaymentService,
 ) (*domain.Refund, error) {
 	return service.CreateRefund(
 		context.Background(),
-		c.PaymentID,
-		c.Reason,
-		c.Amount,
+		services.CreateRefundInput{
+			PaymentID:      c.PaymentID,
+			AmountMinor:    c.Amount,
+			Reason:         c.Reason,
+			IdempotencyKey: c.IdempotencyKey,
+			CorrelationID:  c.CorrelationID,
+		},
 	)
 }
 
-// CreateRefundCommandFactory creates a CreateRefundCommand.
-func CreateRefundCommandFactory(paymentID, reason string, amount int64, correlationID string) *CreateRefundCommand {
+func CreateRefundCommandFactory(paymentID, reason string, amount int64, idempotencyKey, correlationID string) *CreateRefundCommand {
 	return &CreateRefundCommand{
-		PaymentID:   paymentID,
-		Reason:      reason,
-		Amount:      amount,
-		CorrelationID: correlationID,
+		PaymentID:      paymentID,
+		Reason:         reason,
+		Amount:         amount,
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
 	}
 }

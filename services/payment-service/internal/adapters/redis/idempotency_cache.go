@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/realtime-delivery/payment-service/internal/domain"
 )
 
 // IdempotencyCache provides fast-path idempotency key checking using Redis.

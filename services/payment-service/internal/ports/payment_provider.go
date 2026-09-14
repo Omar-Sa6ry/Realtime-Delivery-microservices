@@ -2,7 +2,7 @@ package ports
 
 import (
 	"context"
-	"github.com/realtime-delivery/payment-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 )
 
 // PaymentProvider defines the interface for payment service operations.

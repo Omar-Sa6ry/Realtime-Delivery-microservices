@@ -2,209 +2,227 @@ package stripe
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
-	"github.com/realtime-delivery/payment-service/internal/adapters/providers"
-	"github.com/stripe/stripe-go/v78"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/providers"
+	stripego "github.com/stripe/stripe-go/v78"
 	"github.com/stripe/stripe-go/v78/paymentintent"
 	"github.com/stripe/stripe-go/v78/refund"
 )
 
-// StripeProvider implements the PaymentProvider interface using Stripe.
 type StripeProvider struct {
 	secretKey string
 }
 
-// NewStripeProvider creates a new StripeProvider.
 func NewStripeProvider(secretKey string) *StripeProvider {
-	return &StripeProvider{
-		secretKey: secretKey,
+	if secretKey == "" {
+		slog.Warn("stripe_provider: STRIPE_SECRET_KEY is empty — Stripe calls will fail")
 	}
+	return &StripeProvider{secretKey: secretKey}
 }
 
-func (p *StripeProvider) getStripeKey() string {
-	return p.secretKey
-}
-
-// Authorize authorizes a payment using Stripe PaymentIntent.
 func (p *StripeProvider) Authorize(ctx context.Context, req providers.AuthorizeRequest) (*providers.ProviderResult, *providers.NormalizedError) {
-	stripe.Key = p.getStripeKey()
+	stripego.Key = p.secretKey
 
-	params := &stripe.PaymentIntentParams{
-		Amount:          stripe.Int64(req.AmountMinor),
-		Currency:        stripe.String(req.Currency),
-		Description:     stripe.String(req.Description),
-		PaymentMethodTypes: stripe.StringSlice([]string{"card"}),
-		ReceiptEmail:    stripe.String(""), // optional
+	params := &stripego.PaymentIntentParams{
+		Amount:   stripego.Int64(req.AmountMinor),
+		Currency: stripego.String(strings.ToLower(req.Currency)),
+		CaptureMethod:    stripego.String(string(stripego.PaymentIntentCaptureMethodManual)),
+		Description:      stripego.String(req.Description),
+		PaymentMethodTypes: stripego.StringSlice([]string{"card"}),
 		Metadata: map[string]string{
-			"payment_id":  req.PaymentID,
+			"payment_id":      req.PaymentID,
 			"idempotency_key": req.IdempotencyKey,
 		},
 	}
 
-	// Set idempotency key if provided
 	if req.IdempotencyKey != "" {
-		params.IdempotencyKey = stripe.String(req.IdempotencyKey)
+		params.IdempotencyKey = stripego.String("auth-" + req.IdempotencyKey)
 	}
 
 	pi, err := paymentintent.New(params)
 	if err != nil {
-		return nil, normalizeStripeError(err)
+		return nil, normalizeStripeError(err, "Authorize")
 	}
 
 	result := &providers.ProviderResult{
 		ProviderTransactionID: pi.ID,
 		ProviderPaymentID:     pi.ID,
-		Status:                normalizeStripeStatus(pi.Status),
+		Status:                normalizePaymentIntentStatus(pi.Status),
 		ClientSecret:          pi.ClientSecret,
 	}
 
-	if pi.Status == stripe.PaymentIntentStatusRequiresAction {
-		// For 3D Secure, return the next action URL
-		if pi.NextAction != nil && pi.NextAction.RedirectToURL != nil {
-			result.CheckoutURL = pi.NextAction.RedirectToURL.URL
-		}
+	if pi.Status == stripego.PaymentIntentStatusRequiresAction &&
+		pi.NextAction != nil && pi.NextAction.RedirectToURL != nil {
+		result.CheckoutURL = pi.NextAction.RedirectToURL.URL
 	}
 
+	slog.Debug("stripe: Authorize completed",
+		"paymentID", req.PaymentID,
+		"piID", pi.ID,
+		"status", pi.Status,
+	)
 	return result, nil
 }
 
-// Capture captures an authorized payment.
 func (p *StripeProvider) Capture(ctx context.Context, req providers.CaptureRequest) (*providers.ProviderResult, *providers.NormalizedError) {
-	stripe.Key = p.getStripeKey()
+	stripego.Key = p.secretKey
 
-	params := &stripe.PaymentIntentCaptureParams{
-		AmountToCapture: stripe.Int64(req.AmountMinor),
+	params := &stripego.PaymentIntentCaptureParams{
+		AmountToCapture: stripego.Int64(req.AmountMinor),
 	}
-
 	if req.IdempotencyKey != "" {
-		params.IdempotencyKey = stripe.String(req.IdempotencyKey)
+		params.IdempotencyKey = stripego.String("cap-" + req.IdempotencyKey)
 	}
 
 	pi, err := paymentintent.Capture(req.ProviderPaymentID, params)
 	if err != nil {
-		return nil, normalizeStripeError(err)
+		return nil, normalizeStripeError(err, "Capture")
 	}
 
+	slog.Debug("stripe: Capture completed", "piID", req.ProviderPaymentID, "status", pi.Status)
 	return &providers.ProviderResult{
 		ProviderTransactionID: pi.ID,
 		ProviderPaymentID:     pi.ID,
-		Status:                normalizeStripeStatus(pi.Status),
+		Status:                normalizePaymentIntentStatus(pi.Status),
 	}, nil
 }
 
-// Void cancels an authorization.
 func (p *StripeProvider) Void(ctx context.Context, req providers.VoidRequest) (*providers.ProviderResult, *providers.NormalizedError) {
-	stripe.Key = p.getStripeKey()
+	stripego.Key = p.secretKey
 
-	params := &stripe.PaymentIntentCancelParams{}
+	params := &stripego.PaymentIntentCancelParams{}
 	if req.IdempotencyKey != "" {
-		params.IdempotencyKey = stripe.String(req.IdempotencyKey)
+		params.IdempotencyKey = stripego.String("void-" + req.IdempotencyKey)
 	}
 
 	pi, err := paymentintent.Cancel(req.ProviderPaymentID, params)
 	if err != nil {
-		return nil, normalizeStripeError(err)
+		return nil, normalizeStripeError(err, "Void")
 	}
 
+	slog.Debug("stripe: Void completed", "piID", req.ProviderPaymentID, "status", pi.Status)
 	return &providers.ProviderResult{
 		ProviderTransactionID: pi.ID,
 		ProviderPaymentID:     pi.ID,
-		Status:                normalizeStripeStatus(pi.Status),
+		Status:                normalizePaymentIntentStatus(pi.Status),
 	}, nil
 }
 
-// Refund refunds a captured payment.
 func (p *StripeProvider) Refund(ctx context.Context, req providers.RefundRequest) (*providers.ProviderResult, *providers.NormalizedError) {
-	stripe.Key = p.getStripeKey()
+	stripego.Key = p.secretKey
 
-	params := &stripe.RefundParams{
-		PaymentIntent: stripe.String(req.ProviderPaymentID),
-		Amount:        stripe.Int64(req.AmountMinor),
-		Reason:        stripe.String(refundReasonToStripe(req.Reason)),
+	params := &stripego.RefundParams{
+		PaymentIntent: stripego.String(req.ProviderPaymentID),
+		Amount:        stripego.Int64(req.AmountMinor),
+		Reason:        stripego.String(refundReasonToStripe(req.Reason)),
 		Metadata: map[string]string{
 			"refund_reason": req.Reason,
 		},
 	}
-
 	if req.IdempotencyKey != "" {
-		params.IdempotencyKey = stripe.String(req.IdempotencyKey)
+		params.IdempotencyKey = stripego.String("ref-" + req.IdempotencyKey)
 	}
 
 	rf, err := refund.New(params)
 	if err != nil {
-		return nil, normalizeStripeError(err)
+		return nil, normalizeStripeError(err, "Refund")
 	}
 
+	piID := ""
+	if rf.PaymentIntent != nil {
+		piID = rf.PaymentIntent.ID
+	}
+
+	slog.Debug("stripe: Refund completed", "refundID", rf.ID, "piID", piID)
 	return &providers.ProviderResult{
 		ProviderTransactionID: rf.ID,
-		ProviderPaymentID:     rf.PaymentIntent.ID,
-		Status:                normalizeStripeStatus(rf.Status),
+		ProviderPaymentID:     piID,
+		Status:                normalizeRefundStatus(rf.Status),
 	}, nil
 }
 
-// GetStatus retrieves the status of a payment from Stripe.
 func (p *StripeProvider) GetStatus(ctx context.Context, providerPaymentID string) (*providers.ProviderResult, *providers.NormalizedError) {
-	stripe.Key = p.getStripeKey()
+	stripego.Key = p.secretKey
 
 	pi, err := paymentintent.Get(providerPaymentID, nil)
 	if err != nil {
-		return nil, normalizeStripeError(err)
+		return nil, normalizeStripeError(err, "GetStatus")
 	}
 
 	return &providers.ProviderResult{
 		ProviderTransactionID: pi.ID,
 		ProviderPaymentID:     pi.ID,
-		Status:                normalizeStripeStatus(pi.Status),
+		Status:                normalizePaymentIntentStatus(pi.Status),
 		ClientSecret:          pi.ClientSecret,
 	}, nil
 }
 
-// normalizeStripeStatus converts Stripe status to domain OperationStatus.
-func normalizeStripeStatus(status stripe.PaymentIntentStatus) string {
+func normalizePaymentIntentStatus(status stripego.PaymentIntentStatus) string {
 	switch status {
-	case stripe.PaymentIntentStatusRequiresPaymentMethod,
-		stripe.PaymentIntentStatusRequiresConfirmation,
-		stripe.PaymentIntentStatusRequiresAction,
-		stripe.PaymentIntentStatusProcessing:
+	case stripego.PaymentIntentStatusRequiresPaymentMethod,
+		stripego.PaymentIntentStatusRequiresConfirmation,
+		stripego.PaymentIntentStatusRequiresAction,
+		stripego.PaymentIntentStatusProcessing:
 		return "PROCESSING"
-	case stripe.PaymentIntentStatusRequiresCapture:
+	case stripego.PaymentIntentStatusRequiresCapture:
 		return "AUTHORIZED"
-	case stripe.PaymentIntentStatusSucceeded:
+	case stripego.PaymentIntentStatusSucceeded:
 		return "SUCCEEDED"
-	case stripe.PaymentIntentStatusCanceled:
+	case stripego.PaymentIntentStatusCanceled:
 		return "CANCELLED"
 	default:
 		return "UNKNOWN"
 	}
 }
 
-// refundReasonToStripe converts refund reason to Stripe refund reason.
+func normalizeRefundStatus(status stripego.RefundStatus) string {
+	switch status {
+	case stripego.RefundStatusSucceeded:
+		return "SUCCEEDED"
+	case stripego.RefundStatusPending:
+		return "PROCESSING"
+	case stripego.RefundStatusFailed, stripego.RefundStatusCanceled:
+		return "FAILED"
+	default:
+		return "UNKNOWN"
+	}
+}
+
 func refundReasonToStripe(reason string) string {
 	switch strings.ToLower(reason) {
 	case "duplicate":
 		return "duplicate"
-	case "fraudulent":
+	case "fraudulent", "fraud":
 		return "fraudulent"
-	case "requested_by_customer":
+	case "requested_by_customer", "customer_request":
 		return "requested_by_customer"
 	default:
 		return "requested_by_customer"
 	}
 }
 
-// normalizeStripeError converts a Stripe error to a normalized error.
-func normalizeStripeError(err error) *providers.NormalizedError {
+func normalizeStripeError(err error, operation string) *providers.NormalizedError {
 	if err == nil {
 		return nil
 	}
 
-	stripeErr, ok := err.(*stripe.Error)
+	if errors.Is(err, context.DeadlineExceeded) {
+		return &providers.NormalizedError{
+			Category:  providers.ErrCategoryTimeout,
+			Message:   fmt.Sprintf("stripe %s timed out — outcome unknown", operation),
+			Retryable: false, // don't retry; let reconciliation handle it
+		}
+	}
+
+	stripeErr, ok := err.(*stripego.Error)
 	if !ok {
 		return &providers.NormalizedError{
 			Category:  providers.ErrCategoryUnknown,
-			Message:   err.Error(),
+			Message:   fmt.Sprintf("stripe %s: non-stripe error", operation),
 			Retryable: false,
 		}
 	}
@@ -212,51 +230,44 @@ func normalizeStripeError(err error) *providers.NormalizedError {
 	var category providers.ErrorCategory
 	var retryable bool
 
-	switch stripeErr.Code {
-	case stripe.ErrorCodeCardDeclined:
+	switch string(stripeErr.Type) {
+	case string(stripego.ErrorTypeCard):
 		category = providers.ErrCategoryDeclined
 		retryable = false
-	case stripe.ErrorCodeRateLimitError:
+	case "rate_limit_error":
 		category = providers.ErrCategoryRateLimited
 		retryable = true
-	case stripe.ErrorCodeAPIConnectionError:
-		category = providers.ErrCategoryTemporary
-		retryable = true
-	case stripe.ErrorCodeAPIError:
-		category = providers.ErrCategoryTemporary
-		retryable = true
-	case stripe.ErrorCodeAuthenticationError:
-		category = providers.ErrCategoryAuthError
-		retryable = false
-	case stripe.ErrorCodeInvalidRequestError:
+	case string(stripego.ErrorTypeInvalidRequest):
 		category = providers.ErrCategoryPermanent
 		retryable = false
-	case stripe.ErrorCodeCardExpired:
-		category = providers.ErrCategoryDeclined
+	case "authentication_error":
+		category = providers.ErrCategoryAuthError
 		retryable = false
-	case stripe.ErrorCodeIncorrectNumber:
-		category = providers.ErrCategoryDeclined
-		retryable = false
-	case stripe.ErrorCodeIncorrectCVC:
-		category = providers.ErrCategoryDeclined
-		retryable = false
-	case stripe.ErrorCodeExpiredCard:
-		category = providers.ErrCategoryDeclined
-		retryable = false
-	case stripe.ErrorCodeIncorrectZIP:
-		category = providers.ErrCategoryDeclined
-		retryable = false
-	case stripe.ErrorCodeCardDeclined:
-		category = providers.ErrCategoryDeclined
-		retryable = false
+	case string(stripego.ErrorTypeAPI), "api_connection_error":
+		category = providers.ErrCategoryTemporary
+		retryable = true
 	default:
-		category = providers.ErrCategoryUnknown
-		retryable = false
+		// Specific codes for card errors
+		switch stripeErr.Code {
+		case stripego.ErrorCodeCardDeclined,
+			stripego.ErrorCodeExpiredCard,
+			stripego.ErrorCodeIncorrectCVC,
+			stripego.ErrorCodeIncorrectNumber,
+			stripego.ErrorCodeIncorrectZip,
+			stripego.ErrorCodeInsufficientFunds:
+			category = providers.ErrCategoryDeclined
+			retryable = false
+		default:
+			category = providers.ErrCategoryUnknown
+			retryable = false
+		}
 	}
+
+	safeMsg := fmt.Sprintf("stripe %s error: type=%s code=%s", operation, stripeErr.Type, stripeErr.Code)
 
 	return &providers.NormalizedError{
 		Category:  category,
-		Message:   stripeErr.Msg,
+		Message:   safeMsg,
 		Retryable: retryable,
 	}
 }

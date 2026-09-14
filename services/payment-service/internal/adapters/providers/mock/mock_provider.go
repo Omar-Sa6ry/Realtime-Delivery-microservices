@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/realtime-delivery/payment-service/internal/adapters/providers"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/providers"
 )
 
 // MockProvider is a mock implementation of PaymentProvider for testing.
@@ -51,32 +51,32 @@ func (m *MockProvider) SetAuthorizeResult(paymentID string, result *providers.Pr
 func (m *MockProvider) SetCaptureResult(providerPaymentID string, result *providers.ProviderResult, err *providers.NormalizedError) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.captureResults[paymentID] = result
-	m.captureErrors[paymentID] = err
+	m.captureResults[providerPaymentID] = result
+	m.captureErrors[providerPaymentID] = err
 }
 
 // SetVoidResult sets the result for Void.
 func (m *MockProvider) SetVoidResult(providerPaymentID string, result *providers.ProviderResult, err *providers.NormalizedError) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.voidResults[paymentID] = result
-	m.voidErrors[paymentID] = err
+	m.voidResults[providerPaymentID] = result
+	m.voidErrors[providerPaymentID] = err
 }
 
 // SetRefundResult sets the result for Refund.
 func (m *MockProvider) SetRefundResult(providerPaymentID string, result *providers.ProviderResult, err *providers.NormalizedError) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.refundResults[paymentID] = result
-	m.refundErrors[paymentID] = err
+	m.refundResults[providerPaymentID] = result
+	m.refundErrors[providerPaymentID] = err
 }
 
 // SetStatusResult sets the result for GetStatus.
 func (m *MockProvider) SetStatusResult(providerPaymentID string, result *providers.ProviderResult, err *providers.NormalizedError) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.statusResults[paymentID] = result
-	m.statusErrors[paymentID] = err
+	m.statusResults[providerPaymentID] = result
+	m.statusErrors[providerPaymentID] = err
 }
 
 // Authorize authorizes a payment.

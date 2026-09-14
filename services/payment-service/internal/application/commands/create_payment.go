@@ -3,42 +3,45 @@ package commands
 import (
 	"context"
 
-	"github.com/realtime-delivery/payment-service/internal/application/services"
-	"github.com/realtime-delivery/payment-service/internal/domain"
-	"github.com/realtime-delivery/payment-service/internal/ports"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/application/services"
 )
 
-// CreatePaymentCommand represents the command to create a new payment.
 type CreatePaymentCommand struct {
-	DeliveryID  string
-	UserID      string
-	Amount      int64
-	Currency    string
-	CorrelationID string
-	CausationID   string
+	DeliveryID     string
+	UserID         string
+	AmountMinor    int64
+	Currency       string
+	IdempotencyKey string
+	CorrelationID  string
+	CausationID    string
 }
 
-// Handle executes the create payment command.
 func (c *CreatePaymentCommand) Handle(
+	ctx context.Context,
 	service *services.PaymentService,
-) (*domain.Payment, error) {
+) (*services.CreatePaymentResult, error) {
 	return service.CreatePayment(
-		context.Background(),
-		c.DeliveryID,
-		c.UserID,
-		c.Amount,
-		c.Currency,
+		ctx,
+		services.CreatePaymentInput{
+			DeliveryID:     c.DeliveryID,
+			UserID:         c.UserID,
+			AmountMinor:    c.AmountMinor,
+			Currency:       c.Currency,
+			IdempotencyKey: c.IdempotencyKey,
+			CorrelationID:  c.CorrelationID,
+			CausationID:    c.CausationID,
+		},
 	)
 }
 
-// CreatePaymentCommandFactory creates a CreatePaymentCommand from inputs.
-func CreatePaymentCommandFactory(deliveryID, userID string, amount int64, currency string, correlationID, causationID string) *CreatePaymentCommand {
+func CreatePaymentCommandFactory(deliveryID, userID string, amountMinor int64, currency, idempotencyKey, correlationID, causationID string) *CreatePaymentCommand {
 	return &CreatePaymentCommand{
-		DeliveryID:  deliveryID,
-		UserID:      userID,
-		Amount:      amount,
-		Currency:    currency,
-		CorrelationID: correlationID,
-		CausationID: causationID,
+		DeliveryID:     deliveryID,
+		UserID:         userID,
+		AmountMinor:    amountMinor,
+		Currency:       currency,
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
+		CausationID:    causationID,
 	}
 }

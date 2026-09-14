@@ -2,97 +2,65 @@ package workers
 
 import (
 	"context"
-	"sync"
+	"log/slog"
 	"time"
 )
 
-// WorkerPool manages a pool of background workers.
 type WorkerPool struct {
-	workers     []Worker
-	ctx         context.Context
-	cancel      context.CancelFunc
-	wg          sync.WaitGroup
-	mu          sync.Mutex
-	running     bool
-	interval    time.Duration
+	ctx     context.Context
+	cancel  context.CancelFunc
+	workers []namedWorker
+	done    chan struct{}
 }
 
-// Worker defines the interface for a background worker.
-type Worker interface {
-	Run(ctx context.Context) error
-	Name() string
-	Interval() time.Duration
+type namedWorker struct {
+	name     string
+	interval time.Duration
+	fn       func(ctx context.Context) error
 }
 
-// NewWorkerPool creates a new worker pool.
-func NewWorkerPool(interval time.Duration) *WorkerPool {
+func NewWorkerPool() *WorkerPool {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &WorkerPool{
-		ctx:      ctx,
-		cancel:   cancel,
-		interval: interval,
+		ctx:    ctx,
+		cancel: cancel,
+		done:   make(chan struct{}),
 	}
 }
 
-// AddWorker adds a worker to the pool.
-func (p *WorkerPool) AddWorker(worker Worker) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.workers = append(p.workers, worker)
+func (p *WorkerPool) Register(name string, interval time.Duration, fn func(ctx context.Context) error) {
+	p.workers = append(p.workers, namedWorker{name: name, interval: interval, fn: fn})
 }
 
-// Start starts all workers in the pool.
 func (p *WorkerPool) Start() {
-	p.mu.Lock()
-	if p.running {
-		p.mu.Unlock()
-		return
-	}
-	p.running = true
-	p.mu.Unlock()
-
-	for _, worker := range p.workers {
-		p.wg.Add(1)
-		go func(w Worker) {
-			defer p.wg.Done()
-			p.runWorker(p.ctx, w)
-		}(worker)
-	}
-}
-
-// Stop stops all workers gracefully.
-func (p *WorkerPool) Stop() {
-	p.mu.Lock()
-	if !p.running {
-		p.mu.Unlock()
-		return
-	}
-	p.running = false
-	p.mu.Unlock()
-
-	p.cancel()
-	p.wg.Wait()
-}
-
-// runWorker runs a single worker with its interval.
-func (p *WorkerPool) runWorker(ctx context.Context, worker Worker) {
-	ticker := time.NewTicker(worker.Interval())
-	defer ticker.Stop()
-
-	// Run immediately on start
-	if err := worker.Run(ctx); err != nil {
-		// Log error but continue
-		// logger.Error("worker error", "worker", worker.Name(), "error", err)
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			if err := worker.Run(ctx); err != nil {
-				// logger.Error("worker error", "worker", worker.Name(), "error", err)
+	for _, w := range p.workers {
+		w := w // capture loop variable
+		go func() {
+			slog.Info("worker started", "worker", w.name, "interval", w.interval)
+			// Run once immediately.
+			if err := w.fn(p.ctx); err != nil {
+				slog.Error("worker error", "worker", w.name, "error", err)
 			}
-		}
+
+			ticker := time.NewTicker(w.interval)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-p.ctx.Done():
+					slog.Info("worker stopping", "worker", w.name)
+					return
+				case <-ticker.C:
+					if err := w.fn(p.ctx); err != nil {
+						slog.Error("worker error", "worker", w.name, "error", err)
+					}
+				}
+			}
+		}()
 	}
+}
+
+func (p *WorkerPool) Stop() {
+	slog.Info("worker_pool: stopping all workers")
+	p.cancel()
 }

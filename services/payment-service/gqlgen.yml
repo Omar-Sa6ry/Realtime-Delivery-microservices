@@ -10,4 +10,4 @@ resolver:
   filename: internal/graphql/resolver.go
   type: Resolver
 autobind:
-  - github.com/realtime-delivery/payment-service/internal/graphql
+  - github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/graphql

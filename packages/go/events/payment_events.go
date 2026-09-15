@@ -12,6 +12,7 @@ const (
 	PaymentAuthorizationFailed    PaymentEventType = "payment.authorization.failed"
 	PaymentCaptureStarted         PaymentEventType = "payment.capture.started"
 	PaymentCaptured               PaymentEventType = "payment.captured"
+	PaymentCompleted              PaymentEventType = "payment.completed"
 	PaymentCaptureFailed          PaymentEventType = "payment.capture.failed"
 	PaymentCancelled              PaymentEventType = "payment.cancelled"
 	PaymentRefundStarted          PaymentEventType = "payment.refund.started"

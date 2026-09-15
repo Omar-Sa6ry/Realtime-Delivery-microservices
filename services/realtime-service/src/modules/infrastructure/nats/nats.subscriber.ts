@@ -45,6 +45,7 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
       RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
       RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
       RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED,
+      'payment.status.updated',
       `${NotificationNatsSubjects.NOTIFICATION_USER}.*`,
       // Media realtime subjects
       RealtimeNatsSubjects.MEDIA_UPLOAD_PROGRESS,
@@ -91,6 +92,12 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
       if (userId) {
         await this.fanoutToUser(userId, message);
       }
+    } else if (subject === 'payment.status.updated') {
+      const payloadData = (message as any)?.data || (message as any);
+      const userId = String(payloadData?.userId || '');
+      if (userId) {
+        await this.fanoutPaymentStatusToUser(userId, payloadData);
+      }
     } else if (subject === RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED) {
       await this.fanoutToAdmins(message);
     } else if (this.isMediaSubject(subject)) {
@@ -115,6 +122,20 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
         data: message.data,
       },
       message.priority || MessagePriority.NORMAL,
+    );
+  }
+
+  private async fanoutPaymentStatusToUser(userId: string, data: Record<string, unknown>): Promise<void> {
+    const sockets = this.connectionService.getLocalSocketsByUser(userId);
+    if (sockets.length === 0) return;
+
+    this.writer.sendMany(
+      sockets,
+      {
+        type: ServerMessageType.PAYMENT_STATUS_CHANGED,
+        data,
+      },
+      MessagePriority.NORMAL,
     );
   }
 

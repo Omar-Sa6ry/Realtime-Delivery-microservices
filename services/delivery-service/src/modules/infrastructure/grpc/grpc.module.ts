@@ -32,6 +32,26 @@ import { DeliveryModule } from '../../delivery/delivery.module';
         }),
         inject: [ConfigService],
       },
+      {
+        name: 'PAYMENT_SERVICE',
+        imports: [ConfigModule],
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.GRPC,
+          options: {
+            package: 'payment.v1',
+            protoPath: join(process.cwd(), '../../protos/payment.proto'),
+            url: configService.get<string>('PAYMENT_SERVICE_URL') || 'payment-srv:50056',
+            loader: {
+              keepCase: true,
+              longs: String,
+              enums: String,
+              defaults: true,
+              oneofs: true,
+            },
+          },
+        }),
+        inject: [ConfigService],
+      },
     ]),
   ],
   controllers: [DeliveryGrpcController],

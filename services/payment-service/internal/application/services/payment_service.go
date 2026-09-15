@@ -233,6 +233,19 @@ func (s *PaymentService) CapturePayment(ctx context.Context, input CapturePaymen
 		CausationID:           input.PaymentID,
 		CapturedAt:            now,
 	})
+	// Emit canonical payment.completed for inter-service consumers (delivery, notification, analytics)
+	_ = s.publishEvent(ctx, pkgevents.PaymentCompleted, payment.ID, pkgevents.PaymentCapturedPayload{
+		PaymentID:             payment.ID,
+		DeliveryID:            payment.DeliveryID,
+		UserID:                payment.UserID,
+		AmountMinor:           payment.AmountMinor,
+		Currency:              payment.Currency,
+		CapturedAmountMinor:   payment.CapturedAmountMinor,
+		ProviderTransactionID: captureResult.ProviderTransactionID,
+		CorrelationID:         input.CorrelationID,
+		CausationID:           input.PaymentID,
+		CapturedAt:            now,
+	})
 	s.publishRealtime(ctx, payment.ID, payment.DeliveryID, payment.UserID, string(payment.Status))
 
 	return payment, nil

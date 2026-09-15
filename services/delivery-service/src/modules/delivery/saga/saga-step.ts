@@ -1,7 +1,9 @@
-﻿import { Delivery } from '../entities/delivery.entity';
+import { Delivery } from '../entities/delivery.entity';
 
 export interface DeliverySagaContext {
   delivery: Delivery;
+  paymentId?: string;
+  authorizationId?: string;
 }
 
 export interface DeliverySagaStep {

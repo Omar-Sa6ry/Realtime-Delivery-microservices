@@ -56,6 +56,15 @@ import { DeliveryNatsModule } from '../infrastructure/nats/nats.module';
           url: process.env.PAYMENT_SERVICE_URL || 'payment-srv:50056',
         },
       },
+      {
+        name: 'DRIVER_SERVICE',
+        transport: Transport.GRPC,
+        options: {
+          package: 'driver',
+          protoPath: join(process.cwd(), '../../protos/driver.proto'),
+          url: process.env.DRIVER_SERVICE_URL || 'driver-srv:50053',
+        },
+      },
     ]),
   ],
   providers: [

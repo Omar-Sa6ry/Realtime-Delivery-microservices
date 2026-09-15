@@ -23,6 +23,7 @@ export interface CreateDeliveryInput {
 export class DeliveryCommandService implements OnModuleInit {
   private readonly logger = new Logger(DeliveryCommandService.name);
   private userServiceClient: any;
+  private paymentServiceClient: any;
 
   constructor(
     private readonly repository: DeliveryRepository,
@@ -30,11 +31,19 @@ export class DeliveryCommandService implements OnModuleInit {
     private readonly idempotency: IdempotencyService,
     private readonly outbox: OutboxRepository,
     @Inject('USER_SERVICE') private readonly userServiceClientGrpc: any,
+    @Optional() @Inject('PAYMENT_SERVICE') private readonly paymentServiceClientGrpc?: any,
     @Optional() private readonly nats?: NatsService,
   ) {}
 
   onModuleInit() {
     this.userServiceClient = this.userServiceClientGrpc.getService('UserService');
+    if (this.paymentServiceClientGrpc) {
+      try {
+        this.paymentServiceClient = this.paymentServiceClientGrpc.getService('PaymentService');
+      } catch (err: any) {
+        this.logger.warn(`Could not bind PaymentService gRPC in DeliveryCommandService: ${err.message}`);
+      }
+    }
   }
 
   async create(input: CreateDeliveryInput): Promise<Delivery> {
@@ -180,6 +189,26 @@ export class DeliveryCommandService implements OnModuleInit {
     }
     const updated = await this.transition(id, DeliveryStatus.DRIVER_ACCEPTED, driverId, `Driver ${driverId} accepted`);
 
+    // SAGA Step 3: Driver accepted -> Capture payment held in escrow and mark payment COMPLETED
+    if (this.paymentServiceClient && updated.amount) {
+      const amountMinor = Math.round(parseFloat(updated.amount) * 100);
+      this.logger.log(`[SAGA Step 3: Capture] Capturing payment for delivery ${updated.id} (${amountMinor} minor units)`);
+      lastValueFrom(
+        this.paymentServiceClient.CapturePayment({
+          delivery_id: updated.id,
+          amount_minor: amountMinor,
+          idempotency_key: `delivery-${updated.id}-cap`,
+        }),
+      )
+        .then(async (res: any) => {
+          this.logger.log(`[SAGA Step 3] Payment captured for delivery ${updated.id}`);
+          await this.updatePaymentStatus(updated.id, PaymentStatus.COMPLETED);
+        })
+        .catch((err: any) => {
+          this.logger.error(`[SAGA Step 3] Payment capture failed for delivery ${updated.id}: ${err.message}`);
+        });
+    }
+
     // Notify customer via NATS notification channel
     this.publishNats(`${NotificationNatsSubjects.NOTIFICATION_USER}.${updated.customerId}`, {
       type: 'DRIVER_ACCEPTED',
@@ -296,7 +325,46 @@ export class DeliveryCommandService implements OnModuleInit {
     });
   }
 
-  cancel(id: string, changedBy?: string, note?: string): Promise<Delivery> {
+  async cancel(id: string, changedBy?: string, note?: string): Promise<Delivery> {
+    const delivery = await this.repository.findById(id);
+
+    // If payment was authorized or held, cancel authorization via gRPC
+    if (this.paymentServiceClient && delivery) {
+      if (delivery.paymentStatus === PaymentStatus.AUTHORIZED) {
+        this.logger.log(`[SAGA Compensation] Cancelling authorization for delivery ${id}`);
+        lastValueFrom(
+          this.paymentServiceClient.CancelAuthorization({
+            delivery_id: id,
+            idempotency_key: `delivery-${id}-void`,
+          }),
+        )
+          .then(async () => {
+            await this.updatePaymentStatus(id, PaymentStatus.CANCELLED);
+          })
+          .catch((err: any) => {
+            this.logger.warn(`Failed to cancel payment authorization: ${err.message}`);
+          });
+      } else if (delivery.paymentStatus === PaymentStatus.COMPLETED) {
+        // If payment was already captured, issue a refund
+        this.logger.log(`[SAGA Compensation] Refunding captured payment for delivery ${id}`);
+        const amountMinor = Math.round(parseFloat(delivery.amount || '0') * 100);
+        lastValueFrom(
+          this.paymentServiceClient.CreateRefund({
+            delivery_id: id,
+            amount_minor: amountMinor,
+            reason: note || 'Delivery cancelled',
+            idempotency_key: `delivery-${id}-refund`,
+          }),
+        )
+          .then(async () => {
+            await this.updatePaymentStatus(id, PaymentStatus.REFUNDED);
+          })
+          .catch((err: any) => {
+            this.logger.warn(`Failed to refund payment: ${err.message}`);
+          });
+      }
+    }
+
     return this.transition(id, DeliveryStatus.CANCELLED, changedBy, note);
   }
 

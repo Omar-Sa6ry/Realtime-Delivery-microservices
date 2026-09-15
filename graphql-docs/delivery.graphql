@@ -95,7 +95,7 @@ query GetDeliveryNextStatuses {
 }
 
 # Transition Delivery Status (State Machine Progression)
-# Possible statuses: DRIVER_ASSIGNED, DRIVER_ACCEPTED, PICKED_UP, IN_TRANSIT, COMPLETED, CANCELLED
+# Possible statuses: PENDING_PAYMENT, PAYMENT_CONFIRMED, DRIVER_ASSIGNED, DRIVER_ACCEPTED, PICKED_UP, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED
 mutation TransitionDelivery {
   transitionDelivery(
     input: {

@@ -13,11 +13,11 @@ import { IdGenerator } from '@bts-soft/common';
 
 @Entity({ name: 'delivery_saga_states' })
 export class DeliverySagaState {
-  @PrimaryColumn({ type: 'varchar', length: 20 })
+  @PrimaryColumn({ type: 'varchar', length: 64 })
   id: string = IdGenerator.generate('snowflake');
 
   @Index({ unique: true })
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ type: 'varchar', length: 64 })
   deliveryId!: string;
 
   @Column({ type: 'varchar', length: 80, default: 'CREATE_DELIVERY' })

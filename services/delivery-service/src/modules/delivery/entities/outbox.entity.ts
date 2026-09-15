@@ -17,7 +17,7 @@ export enum OutboxStatus {
 
 @Entity({ name: 'outbox_events' })
 export class Outbox {
-  @PrimaryColumn({ type: 'varchar', length: 20 })
+  @PrimaryColumn({ type: 'varchar', length: 64 })
   id: string = IdGenerator.generate('snowflake');
 
   @Index({ unique: true })

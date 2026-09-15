@@ -13,11 +13,11 @@ import { DeliveryStatus } from '../enums/delivery-status.enum';
 
 @Entity({ name: 'delivery_status_history' })
 export class DeliveryStatusHistory {
-  @PrimaryColumn({ type: 'varchar', length: 20 })
+  @PrimaryColumn({ type: 'varchar', length: 64 })
   id: string = IdGenerator.generate('snowflake');
 
   @Index()
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ type: 'varchar', length: 64 })
   deliveryId!: string;
 
   @Column({ type: 'enum', enum: DeliveryStatus })

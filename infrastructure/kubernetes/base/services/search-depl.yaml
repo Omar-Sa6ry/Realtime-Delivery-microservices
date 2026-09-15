@@ -21,8 +21,9 @@ spec:
             - sh
             - -c
             - >-
-              until nc -z kafka-srv 9092;
-              do echo "Waiting for kafka-srv:9092"; sleep 2; done
+              until nc -z -w 3 kafka-srv 9092;
+              do echo "Waiting for kafka-srv:9092 to be ready..."; sleep 3; done;
+              echo "Kafka port is reachable!"
         - name: wait-for-opensearch
           image: busybox:1.36
           imagePullPolicy: IfNotPresent

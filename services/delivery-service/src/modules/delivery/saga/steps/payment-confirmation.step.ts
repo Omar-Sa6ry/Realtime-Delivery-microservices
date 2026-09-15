@@ -28,9 +28,19 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
     const delivery = context.delivery;
     let paymentId: string | undefined;
 
-    if (this.paymentServiceClient && delivery.amount) {
+    if (this.paymentServiceClient) {
+      const rawAmount = delivery.amount;
+      const amountFloat = parseFloat(rawAmount);
+      const amountMinor = Math.round(amountFloat * 100);
+
+      if (!rawAmount || isNaN(amountFloat) || amountMinor <= 0) {
+        const errorMsg = `Invalid delivery amount: "${rawAmount}". Amount must be greater than zero.`;
+        this.logger.error(`[SAGA Step 1 Failed] ${errorMsg}`);
+        await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.FAILED);
+        throw new Error(errorMsg);
+      }
+
       try {
-        const amountMinor = Math.round(parseFloat(delivery.amount) * 100);
         this.logger.log(
           `[SAGA Step 1: Hold/Authorize] Invoking PaymentService.CreatePayment for delivery ${delivery.id} (${amountMinor} minor units)`,
         );

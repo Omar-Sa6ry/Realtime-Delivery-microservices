@@ -162,6 +162,53 @@ export class DeliveryCommandService implements OnModuleInit {
       timestamp: Date.now(),
     });
 
+    // Handle stage-specific actions (escrow capture and user notifications)
+    if (status === DeliveryStatus.PICKED_UP) {
+      this.publishNats(`${NotificationNatsSubjects.NOTIFICATION_USER}.${saved.customerId}`, {
+        type: 'ORDER_PICKED_UP',
+        title: 'Order Picked Up',
+        body: `Your delivery #${saved.id} has been picked up by the driver and is on the way!`,
+        data: {
+          deliveryId: saved.id,
+          driverId: saved.driverId,
+          status: saved.status,
+        },
+      });
+    } else if (status === DeliveryStatus.COMPLETED || status === DeliveryStatus.DELIVERED) {
+      // SAGA Step 3: Capture escrow funds on completion
+      if (this.paymentServiceClient && saved.amount) {
+        const amountMinor = Math.round(parseFloat(saved.amount) * 100);
+        this.logger.log(`[SAGA Step 3: Capture] Capturing escrow payment on delivery completion #${saved.id} (${amountMinor} minor units)`);
+        lastValueFrom(
+          this.paymentServiceClient.CapturePayment({
+            delivery_id: saved.id,
+            amount_minor: amountMinor,
+            idempotency_key: `delivery-${saved.id}-cap`,
+          }),
+        )
+          .then(async () => {
+            this.logger.log(`[SAGA Step 3] Payment captured for completed delivery ${saved.id}`);
+            await this.updatePaymentStatus(saved.id, PaymentStatus.COMPLETED);
+          })
+          .catch((err: any) => {
+            this.logger.error(`[SAGA Step 3] Payment capture failed on completion for delivery ${saved.id}: ${err.message}`);
+          });
+      }
+
+      // Notify customer that delivery is completed
+      this.publishNats(`${NotificationNatsSubjects.NOTIFICATION_USER}.${saved.customerId}`, {
+        type: 'DELIVERY_COMPLETED',
+        title: '🎉 Order Delivered!',
+        body: `Your delivery #${saved.id} has been delivered successfully!`,
+        data: {
+          deliveryId: saved.id,
+          driverId: saved.driverId,
+          status: saved.status,
+          completedAt: saved.completedAt,
+        },
+      });
+    }
+
     return saved;
   }
 
@@ -189,25 +236,8 @@ export class DeliveryCommandService implements OnModuleInit {
     }
     const updated = await this.transition(id, DeliveryStatus.DRIVER_ACCEPTED, driverId, `Driver ${driverId} accepted`);
 
-    // SAGA Step 3: Driver accepted -> Capture payment held in escrow and mark payment COMPLETED
-    if (this.paymentServiceClient && updated.amount) {
-      const amountMinor = Math.round(parseFloat(updated.amount) * 100);
-      this.logger.log(`[SAGA Step 3: Capture] Capturing payment for delivery ${updated.id} (${amountMinor} minor units)`);
-      lastValueFrom(
-        this.paymentServiceClient.CapturePayment({
-          delivery_id: updated.id,
-          amount_minor: amountMinor,
-          idempotency_key: `delivery-${updated.id}-cap`,
-        }),
-      )
-        .then(async (res: any) => {
-          this.logger.log(`[SAGA Step 3] Payment captured for delivery ${updated.id}`);
-          await this.updatePaymentStatus(updated.id, PaymentStatus.COMPLETED);
-        })
-        .catch((err: any) => {
-          this.logger.error(`[SAGA Step 3] Payment capture failed for delivery ${updated.id}: ${err.message}`);
-        });
-    }
+    // SAGA: Funds remain safely AUTHORIZED in escrow until delivery completion.
+    // Driver assignment is confirmed.
 
     // Notify customer via NATS notification channel
     this.publishNats(`${NotificationNatsSubjects.NOTIFICATION_USER}.${updated.customerId}`, {

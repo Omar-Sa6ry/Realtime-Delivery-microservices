@@ -17,15 +17,15 @@ import { DeliverySagaState } from './delivery-saga-state.entity';
 
 @Entity({ name: 'deliveries' })
 export class Delivery {
-  @PrimaryColumn({ type: 'varchar', length: 20 })
+  @PrimaryColumn({ type: 'varchar', length: 64 })
   id: string = IdGenerator.generate('snowflake');
 
   @Index()
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ type: 'varchar', length: 64 })
   customerId!: string;
 
   @Index()
-  @Column({ type: 'varchar', length: 20, nullable: true })
+  @Column({ type: 'varchar', length: 64, nullable: true })
   driverId!: string | null;
 
   @Column({

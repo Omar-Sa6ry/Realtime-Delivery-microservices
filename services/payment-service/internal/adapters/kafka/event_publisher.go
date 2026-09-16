@@ -88,7 +88,7 @@ func EnsureTopics(brokers []string) error {
 		return fmt.Errorf("kafka.EnsureTopics: no brokers provided")
 	}
 
-	conn, err := kafka.DialLeader(context.Background(), "tcp", brokers[0], "payment-events", 0)
+	conn, err := kafka.Dial("tcp", brokers[0])
 	if err != nil {
 		return fmt.Errorf("kafka.EnsureTopics: dial failed: %w", err)
 	}

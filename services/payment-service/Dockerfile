@@ -15,7 +15,7 @@ RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /workspace/bin/payment-service ./cmd/server
 
 # Runtime stage
-FROM alpine:3.19 AS runtime
+FROM alpine:3.20 AS runtime
 
 RUN apk --no-cache add ca-certificates tzdata
 

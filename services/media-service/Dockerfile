@@ -37,7 +37,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     ./cmd/server
 
 # ─── Stage 2: Runtime ──────────────────────────────────────────────────────────
-FROM alpine:3.19 AS runtime
+FROM alpine:3.20 AS runtime
 
 # Install ffmpeg, ffprobe, ClamAV, libavif, and dependencies
 RUN apk add --no-cache ffmpeg clamav clamav-libunrar libavif ca-certificates tzdata

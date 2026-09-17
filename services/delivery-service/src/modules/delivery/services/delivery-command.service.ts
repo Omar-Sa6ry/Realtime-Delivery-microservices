@@ -77,26 +77,6 @@ export class DeliveryCommandService implements OnModuleInit {
         paymentStatus: PaymentStatus.PENDING,
       });
 
-      // Write domain event to transactional outbox
-      await this.outbox.save(
-        this.outbox.createEvent({
-          eventId: randomUUID(),
-          eventType: DeliveryKafkaTopics.DELIVERY_CREATED,
-          aggregateId: delivery.id,
-          payload: {
-            deliveryId: delivery.id,
-            customerId: delivery.customerId,
-            driverId: delivery.driverId,
-            status: delivery.status,
-            amount: delivery.amount,
-            currency: delivery.currency,
-            pickup: delivery.pickupAddress,
-            dropoff: delivery.dropoffAddress,
-            createdAt: delivery.createdAt?.toISOString() ?? new Date().toISOString(),
-          },
-        }),
-      );
-
       // Low-latency NATS notify to realtime service
       this.publishNats(RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED, {
         deliveryId: delivery.id,
@@ -400,6 +380,8 @@ export class DeliveryCommandService implements OnModuleInit {
 
   private statusToKafkaTopic(status: DeliveryStatus): string | null {
     switch (status) {
+      case DeliveryStatus.PAYMENT_CONFIRMED:
+        return DeliveryKafkaTopics.DELIVERY_CREATED;
       case DeliveryStatus.DRIVER_ASSIGNED:
         return DeliveryKafkaTopics.DRIVER_ASSIGNED;
       case DeliveryStatus.DRIVER_ACCEPTED:
@@ -415,6 +397,12 @@ export class DeliveryCommandService implements OnModuleInit {
         return DeliveryKafkaTopics.DELIVERY_CANCELLED;
       default:
         return null;
+    }
+  }
+
+  async clearIdempotency(key: string): Promise<void> {
+    if (key) {
+      await this.idempotency.clear(key);
     }
   }
 

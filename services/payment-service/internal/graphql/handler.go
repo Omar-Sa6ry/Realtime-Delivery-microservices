@@ -75,6 +75,12 @@ func ReadyHandler(db interface{ Ping() error }) gin.HandlerFunc {
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 1. If forwarded by Apollo Gateway via headers
+		if xUserID := c.GetHeader("x-user-id"); xUserID != "" {
+			c.Set("userID", xUserID)
+			c.Set("userRole", c.GetHeader("x-user-role"))
+		}
+
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.Next()
@@ -83,7 +89,12 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		claims, err := pkgauth.Authenticate(authHeader)
 		if err != nil {
-			slog.Warn("auth_middleware: invalid token", "error", err)
+			// If already authenticated via trusted gateway header x-user-id, don't block
+			if _, exists := c.Get("userID"); exists {
+				c.Next()
+				return
+			}
+			slog.Warn("auth_middleware: invalid token", "error", err, "header_len", len(authHeader))
 			lang := ExtractLanguage(c)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"success":    false,
@@ -368,6 +379,11 @@ func GraphQLHandler(paymentSvc *services.PaymentService) gin.HandlerFunc {
 			inputMap := extractInputMap(req.Variables)
 			delID, _ := inputMap["deliveryId"].(string)
 			usrID, _ := inputMap["userId"].(string)
+			if usrID == "" {
+				if uid, exists := c.Get("userID"); exists {
+					usrID, _ = uid.(string)
+				}
+			}
 			curr, _ := inputMap["currency"].(string)
 			corrID, _ := inputMap["correlationId"].(string)
 			causID, _ := inputMap["causationId"].(string)
@@ -402,6 +418,11 @@ func GraphQLHandler(paymentSvc *services.PaymentService) gin.HandlerFunc {
 			}
 
 			createdPayment, _ := paymentSvc.GetPayment(ctx, res.PaymentID)
+			formatted := formatPayment(createdPayment)
+			if formatted != nil && res != nil {
+				formatted["clientSecret"] = res.ClientSecret
+				formatted["checkoutUrl"] = res.CheckoutURL
+			}
 			c.JSON(http.StatusOK, gin.H{
 				"data": gin.H{
 					"createPayment": gin.H{
@@ -409,7 +430,7 @@ func GraphQLHandler(paymentSvc *services.PaymentService) gin.HandlerFunc {
 						"statusCode": 201,
 						"message":    i18n.T(lang, "payment.created"),
 						"timeStamp":  now,
-						"data":       formatPayment(createdPayment),
+						"data":       formatted,
 					},
 				},
 			})

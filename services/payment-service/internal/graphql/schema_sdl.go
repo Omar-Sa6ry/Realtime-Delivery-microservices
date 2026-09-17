@@ -71,6 +71,8 @@ type Payment @key(fields: "id") {
 	authorizedAmountMinor: Int
 	capturedAmountMinor: Int
 	refundedAmountMinor: Int
+	clientSecret: String
+	checkoutUrl: String
 	correlationId: String
 	causationId: String
 	createdAt: String!
@@ -127,11 +129,8 @@ type RefundResponse {
 
 input CreatePaymentInput {
 	deliveryId: String!
-	userId: String!
 	amountMinor: Int!
 	currency: Currency!
-	correlationId: String
-	causationId: String
 }
 
 input AuthorizePaymentInput {

@@ -47,18 +47,30 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
 
         const res: any = await lastValueFrom(
           this.paymentServiceClient.CreatePayment({
+            deliveryId: delivery.id,
             delivery_id: delivery.id,
+            userId: delivery.customerId,
             user_id: delivery.customerId,
+            amountMinor: amountMinor,
             amount_minor: amountMinor,
             currency: delivery.currency || 'USD',
+            idempotencyKey: `delivery-${delivery.id}-auth`,
             idempotency_key: `delivery-${delivery.id}-auth`,
           }),
         );
 
         paymentId = res?.payment_id?.value || res?.payment_id;
+        const status = (res?.status || '').toUpperCase();
         this.logger.log(
-          `[SAGA Step 1] Payment hold/authorization created successfully: ID=${paymentId}, Status=${res?.status}`,
+          `[SAGA Step 1] Payment hold/authorization response: ID=${paymentId}, Status=${status}`,
         );
+
+        if (status !== 'AUTHORIZED' && status !== 'SUCCEEDED') {
+          const errMsg = `Payment authorization incomplete. Current status: ${status || 'REQUIRES_PAYMENT'}. Funds are not held yet.`;
+          this.logger.error(`[SAGA Step 1 Failed] ${errMsg}`);
+          await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.FAILED);
+          throw new Error(errMsg);
+        }
       } catch (err: any) {
         this.logger.error(
           `[SAGA Step 1 Failed] Payment authorization failed for delivery ${delivery.id}: ${err.message}`,

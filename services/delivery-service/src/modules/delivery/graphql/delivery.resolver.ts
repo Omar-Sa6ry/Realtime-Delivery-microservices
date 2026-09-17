@@ -61,12 +61,16 @@ export class DeliveryResolver {
       idempotencyKey: input.idempotencyKey,
     });
 
-    // Run saga workflow asynchronously in the background
-    setImmediate(() => {
-      this.saga.execute(delivery.id).catch((err: Error) => {
-        this.logger.error(`Saga failed for delivery [${delivery.id}]: ${err.message}`);
-      });
-    });
+    // Run saga workflow synchronously to ensure payment is held before returning
+    try {
+      await this.saga.execute(delivery.id);
+    } catch (err: any) {
+      this.logger.error(`Saga failed for delivery [${delivery.id}]: ${err.message}`);
+      if (input.idempotencyKey) {
+        await this.commands.clearIdempotency(input.idempotencyKey);
+      }
+      throw new BadRequestException(`Payment authorization failed: Insufficient funds or invalid card. ${err.message}`);
+    }
 
     // Schedule 10-minute timeout check for driver acceptance
     setTimeout(() => {

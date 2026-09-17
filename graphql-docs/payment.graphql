@@ -96,12 +96,8 @@ mutation CreatePayment {
   createPayment(
     input: {
       deliveryId: "del-987654"
-      userId: "usr-123456"
       amountMinor: 5000       # e.g., 50.00 in minor units
-      currency: EGP
-      idempotencyKey: "idem-key-1111"
-      correlationId: "corr-1111"
-      causationId: "cause-1111"
+      currency: USD
     }
   ) {
     success
@@ -121,8 +117,9 @@ mutation CreatePayment {
       }
       amountMinor
       currency
-      checkoutUrl
-      clientSecret
+      provider
+      authorizedAmountMinor
+      capturedAmountMinor
       createdAt
     }
   }

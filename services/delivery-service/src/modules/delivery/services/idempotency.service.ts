@@ -33,4 +33,8 @@ export class IdempotencyService {
       await this.redis.del(`${storageKey}:lock`);
     }
   }
+
+  async clear(key: string): Promise<void> {
+    await this.redis.del(`delivery:idempotency:${key}`);
+  }
 }

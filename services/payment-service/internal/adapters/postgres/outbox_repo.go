@@ -19,8 +19,8 @@ func NewOutboxRepository(db *sql.DB) *OutboxRepository {
 }
 
 func (r *OutboxRepository) Insert(ctx context.Context, eventType string, payload []byte) error {
-	query := `INSERT INTO payment_events_outbox (event_type, payload, created_at)
-			  VALUES ($1, $2, NOW())`
+	query := `INSERT INTO payment_events_outbox (id, event_type, payload, created_at)
+			  VALUES (gen_random_uuid()::text, $1, $2, NOW())`
 	_, err := r.db.ExecContext(ctx, query, eventType, payload)
 	if err != nil {
 		return fmt.Errorf("outbox_repo.Insert: %w", err)

@@ -1,12 +1,16 @@
 package webhook
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
+	pkgevents "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/events"
 	"github.com/gin-gonic/gin"
 	stripego "github.com/stripe/stripe-go/v78"
 	stripewh "github.com/stripe/stripe-go/v78/webhook"
@@ -81,6 +85,8 @@ func (h *Handler) Handle(c *gin.Context) {
 func (h *Handler) processEvent(c *gin.Context, event stripego.Event) error {
 	ctx := c.Request.Context()
 	switch event.Type {
+	case "checkout.session.completed":
+		return h.handleCheckoutSessionCompleted(ctx, event)
 	case "payment_intent.succeeded":
 		return h.handlePaymentIntentSucceeded(ctx, event)
 	case "payment_intent.payment_failed":
@@ -98,20 +104,108 @@ func (h *Handler) processEvent(c *gin.Context, event stripego.Event) error {
 	}
 }
 
-func (h *Handler) handlePaymentIntentSucceeded(ctx interface{ Done() <-chan struct{} }, event stripego.Event) error {
+func (h *Handler) handleCheckoutSessionCompleted(ctx context.Context, event stripego.Event) error {
+	var sess stripego.CheckoutSession
+	if err := json.Unmarshal(event.Data.Raw, &sess); err != nil {
+		return err
+	}
+
+	paymentID := ""
+	if sess.Metadata != nil {
+		paymentID = sess.Metadata["payment_id"]
+	}
+
+	var p *domain.Payment
+	var err error
+	if paymentID != "" {
+		p, err = h.paymentRepo.FindByID(ctx, paymentID)
+	}
+	if p == nil && sess.PaymentIntent != nil {
+		p, err = h.paymentRepo.FindByProviderPaymentID(ctx, sess.PaymentIntent.ID)
+	}
+
+	if err != nil || p == nil {
+		slog.Warn("webhook: checkout session payment not found", "sessionID", sess.ID, "paymentID", paymentID, "error", err)
+		return nil
+	}
+
+	return h.completePayment(ctx, p, sess.ID)
+}
+
+func (h *Handler) handlePaymentIntentSucceeded(ctx context.Context, event stripego.Event) error {
 	var pi stripego.PaymentIntent
 	if err := json.Unmarshal(event.Data.Raw, &pi); err != nil {
 		return err
 	}
 
-	c, ok := ctx.(interface{ Request() *http.Request })
-	_ = ok
-	_ = c
+	paymentID := ""
+	if pi.Metadata != nil {
+		paymentID = pi.Metadata["payment_id"]
+	}
+
+	var p *domain.Payment
+	var err error
+	if paymentID != "" {
+		p, err = h.paymentRepo.FindByID(ctx, paymentID)
+	}
+	if p == nil {
+		p, err = h.paymentRepo.FindByProviderPaymentID(ctx, pi.ID)
+	}
+
+	if err != nil || p == nil {
+		slog.Warn("webhook: payment intent not found", "piID", pi.ID, "paymentID", paymentID, "error", err)
+		return nil
+	}
+
+	return h.completePayment(ctx, p, pi.ID)
+}
+
+func (h *Handler) completePayment(ctx context.Context, p *domain.Payment, providerTxID string) error {
+	if p.Status == domain.PaymentStatusCaptured || p.Status == domain.PaymentStatusAuthorized {
+		slog.Info("webhook: payment already in confirmed state", "paymentID", p.ID, "status", p.Status)
+		return nil
+	}
+
+	prevVersion := p.Version
+	now := time.Now().UTC()
+	p.Status = domain.PaymentStatusCaptured
+	p.CapturedAmountMinor = p.AmountMinor
+	p.AuthorizedAmountMinor = p.AmountMinor
+	p.CapturedAt = &now
+	p.AuthorizedAt = &now
+	p.UpdatedAt = now
+	p.Version++
+
+	if err := h.paymentRepo.UpdateConditional(ctx, p, prevVersion); err != nil {
+		slog.Error("webhook: failed to update payment", "paymentID", p.ID, "error", err)
+		return err
+	}
+
+	// Insert PaymentCompleted event into outbox so delivery-service is notified!
+	eventID := fmt.Sprintf("%d", time.Now().UnixNano())
+	payload := pkgevents.PaymentCapturedPayload{
+		PaymentID:             p.ID,
+		DeliveryID:            p.DeliveryID,
+		UserID:                p.UserID,
+		AmountMinor:           p.AmountMinor,
+		Currency:              p.Currency,
+		CapturedAmountMinor:   p.CapturedAmountMinor,
+		ProviderTransactionID: providerTxID,
+		CorrelationID:         p.CorrelationID,
+		CausationID:           p.ID,
+		CapturedAt:            now,
+	}
+
+	data, err := pkgevents.MarshalPaymentEnvelope(eventID, pkgevents.PaymentCompleted, "", payload)
+	if err == nil {
+		_ = h.outboxRepo.Insert(ctx, string(pkgevents.PaymentCompleted), data)
+		slog.Info("webhook: payment.completed published to outbox", "deliveryID", p.DeliveryID, "paymentID", p.ID)
+	}
 
 	return nil
 }
 
-func (h *Handler) handlePaymentIntentFailed(ctx interface{ Done() <-chan struct{} }, event stripego.Event) error {
+func (h *Handler) handlePaymentIntentFailed(ctx context.Context, event stripego.Event) error {
 	var pi stripego.PaymentIntent
 	if err := json.Unmarshal(event.Data.Raw, &pi); err != nil {
 		return err
@@ -119,7 +213,7 @@ func (h *Handler) handlePaymentIntentFailed(ctx interface{ Done() <-chan struct{
 	return nil 
 }
 
-func (h *Handler) handlePaymentIntentCanceled(ctx interface{ Done() <-chan struct{} }, event stripego.Event) error {
+func (h *Handler) handlePaymentIntentCanceled(ctx context.Context, event stripego.Event) error {
 	var pi stripego.PaymentIntent
 	if err := json.Unmarshal(event.Data.Raw, &pi); err != nil {
 		return err
@@ -127,7 +221,7 @@ func (h *Handler) handlePaymentIntentCanceled(ctx interface{ Done() <-chan struc
 	return nil 
 }
 
-func (h *Handler) handleChargeRefunded(ctx interface{ Done() <-chan struct{} }, event stripego.Event) error {
+func (h *Handler) handleChargeRefunded(ctx context.Context, event stripego.Event) error {
 	var ch stripego.Charge
 	if err := json.Unmarshal(event.Data.Raw, &ch); err != nil {
 		return err

@@ -83,6 +83,9 @@ export class DeliveryType {
   @Field(() => PaymentStatus)
   paymentStatus: PaymentStatus;
 
+  @Field(() => String, { nullable: true })
+  checkoutUrl?: string;
+
   @Field(() => String)
   amount: string;
 

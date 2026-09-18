@@ -38,6 +38,8 @@ export class Delivery {
   @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
   paymentStatus!: PaymentStatus;
 
+  checkoutUrl?: string | null;
+
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   amount!: string;
 

@@ -48,7 +48,7 @@ export class DeliveryRepository {
   async findUnassignedPendingDeliveries(): Promise<Delivery[]> {
     return this.deliveries.find({
       where: {
-        status: DeliveryStatus.CREATED,
+        status: DeliveryStatus.PAYMENT_CONFIRMED,
         driverId: IsNull(),
       },
       order: { createdAt: 'ASC' },

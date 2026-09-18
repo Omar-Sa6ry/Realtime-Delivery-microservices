@@ -37,6 +37,7 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
         const errorMsg = `Invalid delivery amount: "${rawAmount}". Amount must be greater than zero.`;
         this.logger.error(`[SAGA Step 1 Failed] ${errorMsg}`);
         await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.FAILED);
+        await this.commands.cancel(delivery.id, 'system', errorMsg);
         throw new Error(errorMsg);
       }
 
@@ -59,16 +60,53 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
           }),
         );
 
-        paymentId = res?.payment_id?.value || res?.payment_id;
+        paymentId =
+          res?.paymentId?.value ||
+          res?.payment_id?.value ||
+          res?.paymentId ||
+          res?.payment_id;
         const status = (res?.status || '').toUpperCase();
         this.logger.log(
           `[SAGA Step 1] Payment hold/authorization response: ID=${paymentId}, Status=${status}`,
         );
 
-        if (status !== 'AUTHORIZED' && status !== 'SUCCEEDED') {
-          const errMsg = `Payment authorization incomplete. Current status: ${status || 'REQUIRES_PAYMENT'}. Funds are not held yet.`;
+        const checkoutUrl = res?.paymentLink || res?.payment_link || res?.checkoutUrl || res?.checkout_url;
+        delivery.checkoutUrl = checkoutUrl;
+
+        if (status === 'AUTHORIZED' || status === 'SUCCEEDED') {
+          // Funds held immediately
+          await this.commands.transition(
+            delivery.id,
+            DeliveryStatus.PAYMENT_CONFIRMED,
+            undefined,
+            'Payment authorized & held in escrow',
+          );
+          const updated = await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.AUTHORIZED);
+          updated.checkoutUrl = checkoutUrl;
+          return {
+            delivery: updated,
+            paymentId,
+          };
+        } else if (status === 'PENDING' || status === 'PROCESSING' || status === 'REQUIRES_PAYMENT' || status === 'REQUIRES_ACTION') {
+          // Async checkout required - customer needs to pay via checkoutUrl
+          this.logger.log(`[SAGA Step 1] Payment requires customer completion: ${checkoutUrl}`);
+          await this.commands.transition(
+            delivery.id,
+            DeliveryStatus.PENDING_PAYMENT,
+            undefined,
+            'Awaiting customer checkout payment',
+          );
+          const updated = await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.PENDING);
+          updated.checkoutUrl = checkoutUrl;
+          return {
+            delivery: updated,
+            paymentId,
+          };
+        } else {
+          const errMsg = `Payment authorization incomplete. Current status: ${status || 'FAILED'}.`;
           this.logger.error(`[SAGA Step 1 Failed] ${errMsg}`);
           await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.FAILED);
+          await this.commands.cancel(delivery.id, 'system', errMsg);
           throw new Error(errMsg);
         }
       } catch (err: any) {
@@ -77,21 +115,13 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
         );
         // Mark payment status as failed and cancel delivery
         await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.FAILED);
+        await this.commands.cancel(delivery.id, 'system', `Payment authorization failed: ${err.message}`);
         throw err;
       }
     }
 
-    // Advance delivery status to PAYMENT_CONFIRMED (funds authorized/held)
-    const updated = await this.commands.transition(
-      delivery.id,
-      DeliveryStatus.PAYMENT_CONFIRMED,
-      undefined,
-      'Payment authorized & held in escrow',
-    );
-    await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.AUTHORIZED);
-
     return {
-      delivery: updated,
+      delivery,
       paymentId,
     };
   }

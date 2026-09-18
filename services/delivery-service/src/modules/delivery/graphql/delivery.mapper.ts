@@ -28,6 +28,7 @@ export function deliveryToGraphql(delivery: Delivery): DeliveryType {
     driver: delivery.driverId ? { id: delivery.driverId } : undefined,
     status: delivery.status,
     paymentStatus: delivery.paymentStatus,
+    checkoutUrl: delivery.checkoutUrl ?? undefined,
     amount: delivery.amount,
     currency: delivery.currency,
     pickupAddress: {

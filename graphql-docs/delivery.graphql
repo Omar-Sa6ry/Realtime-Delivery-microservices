@@ -58,6 +58,7 @@ mutation CreateDelivery {
       }
       status
       paymentStatus
+      checkoutUrl
       amount
       currency
       pickupAddress {

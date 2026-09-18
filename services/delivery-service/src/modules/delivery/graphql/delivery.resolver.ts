@@ -52,39 +52,47 @@ export class DeliveryResolver {
       );
     }
 
-    const delivery = await this.commands.create({
-      customerId,
-      amount: input.amount,
-      currency: input.currency,
-      pickupAddress: addressFromInput(input.pickupAddress),
-      dropoffAddress: addressFromInput(input.dropoffAddress),
-      idempotencyKey: input.idempotencyKey,
-    });
-
-    // Run saga workflow synchronously to ensure payment is held before returning
-    try {
-      await this.saga.execute(delivery.id);
-    } catch (err: any) {
-      this.logger.error(`Saga failed for delivery [${delivery.id}]: ${err.message}`);
-      if (input.idempotencyKey) {
-        await this.commands.clearIdempotency(input.idempotencyKey);
-      }
-      throw new BadRequestException(`Payment authorization failed: Insufficient funds or invalid card. ${err.message}`);
-    }
-
-    // Schedule 10-minute timeout check for driver acceptance
-    setTimeout(() => {
-      this.commands.handleDriverSearchTimeout(delivery.id).catch((err: Error) => {
-        this.logger.error(`Driver search timeout check failed for delivery [${delivery.id}]: ${err.message}`);
+    const operation = async () => {
+      const created = await this.commands.create({
+        customerId,
+        amount: input.amount,
+        currency: input.currency,
+        pickupAddress: addressFromInput(input.pickupAddress),
+        dropoffAddress: addressFromInput(input.dropoffAddress),
       });
-    }, 10 * 60 * 1000);
 
-    return {
-      success: true,
-      statusCode: 201,
-      message: await this.i18n.t('delivery.created', { lang: ctx.language }),
-      data: deliveryToGraphql(delivery),
+      // Run saga workflow synchronously to ensure payment is held before returning
+      let confirmedDelivery = created;
+      try {
+        confirmedDelivery = await this.saga.execute(created.id);
+      } catch (err: any) {
+        this.logger.error(`Saga failed for delivery [${created.id}]: ${err.message}`);
+        throw new BadRequestException(
+          `Payment authorization failed: Insufficient funds or invalid card. ${err.message}`,
+        );
+      }
+
+      // Schedule 10-minute timeout check for driver acceptance
+      setTimeout(() => {
+        this.commands.handleDriverSearchTimeout(confirmedDelivery.id).catch((err: Error) => {
+          this.logger.error(
+            `Driver search timeout check failed for delivery [${confirmedDelivery.id}]: ${err.message}`,
+          );
+        });
+      }, 10 * 60 * 1000);
+
+      return {
+        success: true,
+        statusCode: 201,
+        message: await this.i18n.t('delivery.created', { lang: ctx.language }),
+        data: deliveryToGraphql(confirmedDelivery),
+      };
     };
+
+    if (input.idempotencyKey) {
+      return this.commands.executeWithIdempotency(input.idempotencyKey, operation);
+    }
+    return operation();
   }
 
   @Auth([Permission.UPDATE_DELIVERY_STATUS])

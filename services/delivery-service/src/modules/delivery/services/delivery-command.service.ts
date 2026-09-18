@@ -66,32 +66,30 @@ export class DeliveryCommandService implements OnModuleInit {
       }
     }
 
-    const operation = async () => {
-      const delivery = await this.repository.create({
-        customerId: input.customerId,
-        amount: input.amount,
-        currency: input.currency ?? 'USD',
-        pickupAddress: input.pickupAddress,
-        dropoffAddress: input.dropoffAddress,
-        status: DeliveryStatus.CREATED,
-        paymentStatus: PaymentStatus.PENDING,
-      });
+    const delivery = await this.repository.create({
+      customerId: input.customerId,
+      amount: input.amount,
+      currency: input.currency ?? 'USD',
+      pickupAddress: input.pickupAddress,
+      dropoffAddress: input.dropoffAddress,
+      status: DeliveryStatus.CREATED,
+      paymentStatus: PaymentStatus.PENDING,
+    });
 
-      // Low-latency NATS notify to realtime service
-      this.publishNats(RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED, {
-        deliveryId: delivery.id,
-        customerId: delivery.customerId,
-        driverId: delivery.driverId,
-        status: delivery.status,
-        timestamp: Date.now(),
-      });
+    // Low-latency NATS notify to realtime service
+    this.publishNats(RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED, {
+      deliveryId: delivery.id,
+      customerId: delivery.customerId,
+      driverId: delivery.driverId,
+      status: delivery.status,
+      timestamp: Date.now(),
+    });
 
-      return delivery;
-    };
+    return delivery;
+  }
 
-    return input.idempotencyKey
-      ? this.idempotency.execute(input.idempotencyKey, operation)
-      : operation();
+  async executeWithIdempotency<T>(key: string, operation: () => Promise<T>): Promise<T> {
+    return this.idempotency.execute(key, operation);
   }
 
   async transition(
@@ -125,6 +123,10 @@ export class DeliveryCommandService implements OnModuleInit {
             customerId: saved.customerId,
             driverId: saved.driverId,
             status: saved.status,
+            amount: saved.amount,
+            currency: saved.currency,
+            pickup: saved.pickupAddress,
+            dropoff: saved.dropoffAddress,
             changedBy: changedBy ?? null,
             note: note ?? null,
             updatedAt: saved.updatedAt?.toISOString() ?? new Date().toISOString(),
@@ -243,7 +245,7 @@ export class DeliveryCommandService implements OnModuleInit {
   }
 
   async retryDriverDispatch(delivery: Delivery): Promise<void> {
-    if (!delivery || delivery.status !== DeliveryStatus.CREATED || delivery.driverId) {
+    if (!delivery || delivery.status !== DeliveryStatus.PAYMENT_CONFIRMED || delivery.driverId) {
       return;
     }
 

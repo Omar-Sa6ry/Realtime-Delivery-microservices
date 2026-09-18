@@ -87,8 +87,9 @@ mutation CustomerCreateDelivery {
     timeStamp
     data {
       id
-      status          # يبدأ بـ CREATED ثم ينتقل تلقائياً لـ PAYMENT_CONFIRMED
-      paymentStatus   # PENDING ثم AUTHORIZED (محجوز في حساب الضمان Escrow)
+      status          # PENDING_PAYMENT (في انتظار دفع العميل) أو PAYMENT_CONFIRMED
+      paymentStatus   # PENDING ثم COMPLETED / AUTHORIZED
+      checkoutUrl     # رابط صفحة الدفع الحقيقي من Stripe Checkout ليقوم العميل بالدفع
       amount
       currency
       pickupAddress {

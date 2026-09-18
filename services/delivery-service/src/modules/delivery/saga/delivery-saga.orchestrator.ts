@@ -32,6 +32,11 @@ export class DeliverySagaOrchestrator {
     try {
       this.logger.log(`Starting Saga execution for delivery ${deliveryId}...`);
       for (const step of this.steps) {
+        // If delivery is waiting for customer payment, do not execute driver assignment step yet
+        if (context.delivery.status === 'PENDING_PAYMENT' && step.name === 'DRIVER_ASSIGNMENT') {
+          this.logger.log(`Delivery ${deliveryId} is PENDING_PAYMENT. Deferring driver assignment until payment is confirmed.`);
+          break;
+        }
         this.logger.log(`Executing Saga step: ${step.name}`);
         context = await step.execute(context);
         completed.push(step);

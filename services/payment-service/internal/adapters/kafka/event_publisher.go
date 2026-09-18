@@ -14,10 +14,9 @@ type EventPublisher struct {
 	timeout time.Duration
 }
 
-func NewEventPublisher(brokers []string, topic string) *EventPublisher {
+func NewEventPublisher(brokers []string, defaultTopic string) *EventPublisher {
 	writer := &kafka.Writer{
 		Addr:         kafka.TCP(brokers...),
-		Topic:        topic,
 		Balancer:     &kafka.Hash{}, // partition by key for ordering
 		BatchSize:    100,
 		BatchTimeout: 10 * time.Millisecond,
@@ -39,16 +38,17 @@ func (p *EventPublisher) PublishEvent(ctx context.Context, topic, key, eventType
 		{Key: "service", Value: []byte("payment-service")},
 	}
 
+	targetTopic := topic
+	if targetTopic == "" {
+		targetTopic = "payment-events"
+	}
+
 	msg := kafka.Message{
-		Topic:   p.writer.Stats().Topic, // use writer's configured topic
+		Topic:   targetTopic,
 		Key:     []byte(key),
 		Value:   payload,
 		Headers: headers,
 		Time:    time.Now(),
-	}
-
-	if topic != "" && topic != p.writer.Stats().Topic {
-		msg.Topic = topic
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, p.timeout)

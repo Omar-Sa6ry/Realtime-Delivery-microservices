@@ -17,6 +17,7 @@ import {
 } from '@delivery/common';
 import { DeliveryCommandService } from '../../delivery/services/delivery-command.service';
 import { PaymentStatus } from '../../delivery/enums/payment-status.enum';
+import { DeliveryStatus } from '../../delivery/enums/delivery-status.enum';
 
 @Injectable()
 export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
@@ -101,11 +102,21 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
         case PaymentKafkaTopics.PAYMENT_COMPLETED: {
           const data = envelope.payload as PaymentCompletedPayload;
           if (data?.deliveryId) {
-            this.logger.log(`Payment completed for delivery: ${data.deliveryId}`);
+            this.logger.log(`Payment completed for delivery: ${data.deliveryId}. Transitioning to PAYMENT_CONFIRMED...`);
             await this.commands.updatePaymentStatus(
               data.deliveryId,
               PaymentStatus.COMPLETED,
             );
+            try {
+              await this.commands.transition(
+                data.deliveryId,
+                DeliveryStatus.PAYMENT_CONFIRMED,
+                undefined,
+                'Customer completed checkout via Stripe',
+              );
+            } catch (err: any) {
+              this.logger.warn(`Could not transition delivery ${data.deliveryId} to PAYMENT_CONFIRMED: ${err.message}`);
+            }
           }
           break;
         }

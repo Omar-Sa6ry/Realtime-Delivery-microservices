@@ -9,6 +9,7 @@ import (
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/ports"
 	stripego "github.com/stripe/stripe-go/v78"
+	"github.com/stripe/stripe-go/v78/checkout/session"
 	"github.com/stripe/stripe-go/v78/paymentintent"
 	"github.com/stripe/stripe-go/v78/refund"
 )
@@ -58,6 +59,59 @@ func (p *StripeProvider) Authorize(ctx context.Context, req ports.AuthorizeReque
 	if pi.Status == stripego.PaymentIntentStatusRequiresAction &&
 		pi.NextAction != nil && pi.NextAction.RedirectToURL != nil {
 		result.CheckoutURL = pi.NextAction.RedirectToURL.URL
+	}
+
+	// If no redirect checkout URL exists yet (requires payment method / card input),
+	// create a Stripe Checkout Session so the customer gets a hosted payment page to pay!
+	if result.CheckoutURL == "" {
+		successURL := req.SuccessURL
+		if successURL == "" {
+			successURL = "https://checkout.stripe.com/test/success"
+		}
+		cancelURL := req.CancelURL
+		if cancelURL == "" {
+			cancelURL = "https://checkout.stripe.com/test/cancel"
+		}
+
+		sessionParams := &stripego.CheckoutSessionParams{
+			Mode: stripego.String(string(stripego.CheckoutSessionModePayment)),
+			LineItems: []*stripego.CheckoutSessionLineItemParams{
+				{
+					PriceData: &stripego.CheckoutSessionLineItemPriceDataParams{
+						Currency: stripego.String(strings.ToLower(req.Currency)),
+						ProductData: &stripego.CheckoutSessionLineItemPriceDataProductDataParams{
+							Name: stripego.String(fmt.Sprintf("Delivery Service - Order #%s", req.PaymentID)),
+						},
+						UnitAmount: stripego.Int64(req.AmountMinor),
+					},
+					Quantity: stripego.Int64(1),
+				},
+			},
+			PaymentIntentData: &stripego.CheckoutSessionPaymentIntentDataParams{
+				CaptureMethod: stripego.String(string(stripego.PaymentIntentCaptureMethodManual)),
+				Metadata: map[string]string{
+					"payment_id":      req.PaymentID,
+					"idempotency_key": req.IdempotencyKey,
+				},
+			},
+			SuccessURL: stripego.String(successURL),
+			CancelURL:  stripego.String(cancelURL),
+			Metadata: map[string]string{
+				"payment_id": req.PaymentID,
+			},
+		}
+
+		sess, err := session.New(sessionParams)
+		if err != nil {
+			slog.Warn("stripe: checkout session creation failed, falling back to client_secret", "error", err)
+		} else if sess != nil {
+			result.CheckoutURL = sess.URL
+			if sess.PaymentIntent != nil {
+				result.ProviderTransactionID = sess.PaymentIntent.ID
+				result.ProviderPaymentID = sess.PaymentIntent.ID
+			}
+			result.Status = "PROCESSING"
+		}
 	}
 
 	slog.Debug("stripe: Authorize completed",

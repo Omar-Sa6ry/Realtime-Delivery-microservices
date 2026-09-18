@@ -15,6 +15,11 @@ kubectl delete validatingwebhookconfigurations ingress-nginx-admission
 kubectl apply -k infrastructure\kubernetes\overlays\development
 kubectl kustomize infrastructure/kubernetes/overlays/development
 & minikube -p minikube docker-env | Invoke-Expression
+
+kubectl get pods
+kubectl get pvc
+kubectl get pv
+
 minikube tunnel
 
 #----Skaffold----
@@ -60,4 +65,5 @@ protoc -I=proto --go_out=services/auction-service/internal/proto/auction --go_op
 protoc -I=proto --go_out=services/delivery-service/internal/protos/auction --go_opt=paths=source_relative --go-grpc_out=services/delivery-service/internal/protos/auction --go-grpc_opt=paths=source_relative proto/auction.proto
 
 #----Stripe----
-stripe listen --forward-to localhost:5000/payment/webhook/STRIPE
+stripe login
+stripe listen --forward-to localhost:4012/webhook/payment #I Add For Skaffold File(Not Use This)

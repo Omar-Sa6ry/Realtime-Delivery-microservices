@@ -140,8 +140,15 @@ func main() {
 	wp.Submit(func() { reconcileWorker.Run(workerCtx, 60*time.Second) })
 	wp.Submit(func() { heartbeatWorker.Run(workerCtx, 30*time.Second) })
 	wp.Submit(func() {
-		if err := deliveryConsumer.Start(workerCtx); err != nil {
-			log.Printf("delivery consumer stopped: %v", err)
+		for {
+			if err := deliveryConsumer.Start(workerCtx); err != nil {
+				log.Printf("delivery consumer stopped: %v, retrying in 3s...", err)
+			}
+			select {
+			case <-workerCtx.Done():
+				return
+			case <-time.After(3 * time.Second):
+			}
 		}
 	})
 

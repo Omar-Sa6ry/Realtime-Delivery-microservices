@@ -8,7 +8,13 @@ manifests:
 
 deploy:
   statusCheckDeadlineSeconds: 900
-  kubectl: {}
+  kubectl:
+    hooks:
+      after:
+        - host:
+            command: ["powershell", "-Command", "Start-Process stripe -ArgumentList 'listen --forward-to localhost:4012/webhook/payment' -WindowStyle Minimized"]
+        - host:
+            command: ["powershell", "-Command", "Start-Process minikube -ArgumentList 'tunnel' -WindowStyle Minimized"]
 
 build:
   local:
@@ -17,11 +23,6 @@ build:
     concurrency: 1
 
   artifacts:
-
-    - image: delivery/payment
-      context: .
-      docker:
-        dockerfile: services/payment-service/Dockerfile
 
     - image: delivery/notification
       context: .
@@ -49,16 +50,21 @@ build:
           - src: 'packages/ts/dist/**/*.js'
             dest: /usr/src/app/packages/ts/dist
 
-    - image: delivery/search
-      context: .
-      docker:
-        dockerfile: services/search-service/Dockerfile
-
     - image: delivery/media
       context: .
       docker:
         dockerfile: services/media-service/Dockerfile
 
+    - image: delivery/search
+      context: .
+      docker:
+        dockerfile: services/search-service/Dockerfile
+
+    - image: delivery/payment
+      context: .
+      docker:
+        dockerfile: services/payment-service/Dockerfile
+        
     - image: delivery/user
       context: .
       docker:

@@ -12,8 +12,6 @@ deploy:
     hooks:
       after:
         - host:
-            command: ["powershell", "-Command", "Start-Process stripe -ArgumentList 'listen --forward-to localhost:4012/webhook/payment' -WindowStyle Minimized"]
-        - host:
             command: ["powershell", "-Command", "Start-Process minikube -ArgumentList 'tunnel' -WindowStyle Minimized"]
 
 build:
@@ -127,3 +125,8 @@ portForward:
     resourceName: api-gateway-srv
     port: 4000
     localPort: 4000
+
+  - resourceType: service
+    resourceName: payment-srv
+    port: 4012
+    localPort: 4012

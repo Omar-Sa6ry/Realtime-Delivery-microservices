@@ -22,8 +22,9 @@ func NewEventPublisher(brokers []string, defaultTopic string) *EventPublisher {
 		BatchTimeout: 10 * time.Millisecond,
 		RequiredAcks: kafka.RequireOne,
 		Async:        false,
-		// Compression improves throughput at minimal CPU cost.
-		Compression: kafka.Snappy,
+		// Use Gzip compression - compatible with KafkaJS (TypeScript consumers).
+		// Snappy is NOT supported by KafkaJS and causes consumer crashes.
+		Compression: kafka.Gzip,
 	}
 	return &EventPublisher{
 		writer:  writer,

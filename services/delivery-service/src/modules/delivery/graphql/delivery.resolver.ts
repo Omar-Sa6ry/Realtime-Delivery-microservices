@@ -72,14 +72,16 @@ export class DeliveryResolver {
         );
       }
 
-      // Schedule 10-minute timeout check for driver acceptance
-      setTimeout(() => {
-        this.commands.handleDriverSearchTimeout(confirmedDelivery.id).catch((err: Error) => {
-          this.logger.error(
-            `Driver search timeout check failed for delivery [${confirmedDelivery.id}]: ${err.message}`,
-          );
-        });
-      }, 10 * 60 * 1000);
+      // Schedule 10-minute timeout check for driver acceptance (only if not waiting for customer payment)
+      if (confirmedDelivery.status !== DeliveryStatus.PENDING_PAYMENT) {
+        setTimeout(() => {
+          this.commands.handleDriverSearchTimeout(confirmedDelivery.id).catch((err: Error) => {
+            this.logger.error(
+              `Driver search timeout check failed for delivery [${confirmedDelivery.id}]: ${err.message}`,
+            );
+          });
+        }, 10 * 60 * 1000);
+      }
 
       return {
         success: true,

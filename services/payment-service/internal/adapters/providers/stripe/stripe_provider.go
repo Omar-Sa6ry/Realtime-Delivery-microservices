@@ -101,8 +101,7 @@ func (p *StripeProvider) Authorize(ctx context.Context, req ports.AuthorizeReque
 			},
 		}
 
-		sess, err := session.New(sessionParams)
-		if err != nil {
+		if sess, err := session.New(sessionParams); err != nil {
 			slog.Warn("stripe: checkout session creation failed, falling back to client_secret", "error", err)
 		} else if sess != nil {
 			result.CheckoutURL = sess.URL
@@ -112,6 +111,11 @@ func (p *StripeProvider) Authorize(ctx context.Context, req ports.AuthorizeReque
 			}
 			result.Status = "PROCESSING"
 		}
+	}
+
+	// If a Hosted Checkout URL is returned, payment is pending customer action!
+	if result.CheckoutURL != "" {
+		result.Status = "PROCESSING"
 	}
 
 	slog.Debug("stripe: Authorize completed",

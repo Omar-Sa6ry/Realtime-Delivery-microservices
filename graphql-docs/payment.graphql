@@ -1,10 +1,4 @@
-# ==========================================
-# Payment Service - GraphQL Documentation
-# Standard Response Envelope:
-# success, statusCode, message, timeStamp, data
-# ==========================================
-
-# 1. Get Payment Service Info
+# Get Payment Service Info
 query GetPaymentServiceInfo {
   paymentServiceInfo {
     success
@@ -19,7 +13,7 @@ query GetPaymentServiceInfo {
   }
 }
 
-# 2. Get Payment by ID (with federated User & Delivery stubs)
+# Get Payment by ID (with federated User & Delivery stubs)
 query GetPaymentById {
   payment(id: "12345678-1234-1234-1234-123456789abc") {
     success
@@ -51,7 +45,7 @@ query GetPaymentById {
   }
 }
 
-# 3. List Payments (Paginated with paginationInfo)
+# List Payments (Paginated with paginationInfo)
 query GetPaymentsList {
   payments(page: 1, limit: 10) {
     success
@@ -83,143 +77,6 @@ query GetPaymentsList {
         status
         createdAt
       }
-    }
-  }
-}
-
-# ==========================================
-# Payment Service - Mutations
-# ==========================================
-
-# 1. Create Payment (Using Currency Enum: EGP, USD, EUR, SAR, AED)
-mutation CreatePayment {
-  createPayment(
-    input: {
-      deliveryId: "del-987654"
-      amountMinor: 5000       # e.g., 50.00 in minor units
-      currency: USD
-    }
-  ) {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      id
-      status
-      deliveryId
-      delivery {
-        id
-      }
-      userId
-      user {
-        id
-      }
-      amountMinor
-      currency
-      provider
-      authorizedAmountMinor
-      capturedAmountMinor
-      createdAt
-    }
-  }
-}
-
-# 2. Authorize Payment
-mutation AuthorizePayment {
-  authorizePayment(
-    input: {
-      paymentId: "12345678-1234-1234-1234-123456789abc"
-      idempotencyKey: "idem-key-2222"
-      correlationId: "corr-2222"
-      causationId: "cause-2222"
-    }
-  ) {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      id
-      status
-      authorizedAt
-      correlationId
-      causationId
-    }
-  }
-}
-
-# 3. Capture Payment
-mutation CapturePayment {
-  capturePayment(
-    input: {
-      paymentId: "12345678-1234-1234-1234-123456789abc"
-      amountMinor: 5000
-      idempotencyKey: "idem-key-3333"
-      correlationId: "corr-3333"
-      causationId: "cause-3333"
-    }
-  ) {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      id
-      status
-      capturedAt
-      correlationId
-      causationId
-    }
-  }
-}
-
-# 4. Cancel Authorization
-mutation CancelAuthorization {
-  cancelAuthorization(
-    input: {
-      paymentId: "12345678-1234-1234-1234-123456789abc"
-      idempotencyKey: "idem-key-4444"
-      correlationId: "corr-4444"
-      causationId: "cause-4444"
-    }
-  ) {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      id
-      status
-      correlationId
-      causationId
-    }
-  }
-}
-
-# 5. Create Refund
-mutation CreateRefund {
-  createRefund(
-    input: {
-      paymentId: "12345678-1234-1234-1234-123456789abc"
-      amountMinor: 5000
-      reason: "Customer requested cancellation"
-      idempotencyKey: "idem-key-5555"
-      correlationId: "corr-5555"
-      causationId: "cause-5555"
-    }
-  ) {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      id
-      paymentId
-      amountMinor
-      status
-      reason
-      createdAt
     }
   }
 }

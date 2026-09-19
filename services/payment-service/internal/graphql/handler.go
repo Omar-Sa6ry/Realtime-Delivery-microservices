@@ -1,7 +1,6 @@
 package graphql
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -171,25 +170,7 @@ func formatPayment(p *domain.Payment) gin.H {
 	}
 }
 
-func formatRefund(r *domain.Refund) gin.H {
-	if r == nil {
-		return nil
-	}
-	return gin.H{
-		"id":               r.ID,
-		"paymentId":        r.PaymentID,
-		"deliveryId":       r.DeliveryID,
-		"amountMinor":      r.AmountMinor,
-		"currency":         r.Currency,
-		"status":           string(r.Status),
-		"reason":           r.Reason,
-		"providerRefundId": r.ProviderRefundID,
-		"correlationId":    r.CorrelationID,
-		"causationId":      r.CausationID,
-		"createdAt":        r.CreatedAt.Format(time.RFC3339),
-		"updatedAt":        r.UpdatedAt.Format(time.RFC3339),
-	}
-}
+
 
 func GraphQLHandler(paymentSvc *services.PaymentService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -374,235 +355,6 @@ func GraphQLHandler(paymentSvc *services.PaymentService) gin.HandlerFunc {
 			return
 		}
 
-		// 6. Mutation: createPayment(input: CreatePaymentInput!)
-		if strings.Contains(req.Query, "createPayment") {
-			inputMap := extractInputMap(req.Variables)
-			delID, _ := inputMap["deliveryId"].(string)
-			usrID, _ := inputMap["userId"].(string)
-			if usrID == "" {
-				if uid, exists := c.Get("userID"); exists {
-					usrID, _ = uid.(string)
-				}
-			}
-			curr, _ := inputMap["currency"].(string)
-			corrID, _ := inputMap["correlationId"].(string)
-			causID, _ := inputMap["causationId"].(string)
-
-			var amountMinor int64
-			if a, ok := inputMap["amountMinor"].(float64); ok {
-				amountMinor = int64(a)
-			}
-
-			res, err := paymentSvc.CreatePayment(ctx, services.CreatePaymentInput{
-				DeliveryID:     delID,
-				UserID:         usrID,
-				AmountMinor:    amountMinor,
-				Currency:       curr,
-				IdempotencyKey: fmt.Sprintf("create-%s", delID),
-				CorrelationID:  corrID,
-				CausationID:    causID,
-			})
-			if err != nil {
-				c.JSON(http.StatusOK, gin.H{
-					"data": gin.H{
-						"createPayment": gin.H{
-							"success":    false,
-							"statusCode": 400,
-							"message":    err.Error(),
-							"timeStamp":  now,
-							"data":       nil,
-						},
-					},
-				})
-				return
-			}
-
-			createdPayment, _ := paymentSvc.GetPayment(ctx, res.PaymentID)
-			formatted := formatPayment(createdPayment)
-			if formatted != nil && res != nil {
-				formatted["clientSecret"] = res.ClientSecret
-				formatted["checkoutUrl"] = res.CheckoutURL
-			}
-			c.JSON(http.StatusOK, gin.H{
-				"data": gin.H{
-					"createPayment": gin.H{
-						"success":    true,
-						"statusCode": 201,
-						"message":    i18n.T(lang, "payment.created"),
-						"timeStamp":  now,
-						"data":       formatted,
-					},
-				},
-			})
-			return
-		}
-
-		// 7. Mutation: authorizePayment
-		if strings.Contains(req.Query, "authorizePayment") {
-			inputMap := extractInputMap(req.Variables)
-			paymentID, _ := inputMap["paymentId"].(string)
-			corrID, _ := inputMap["correlationId"].(string)
-
-			payment, err := paymentSvc.AuthorizePayment(ctx, services.AuthorizePaymentInput{
-				PaymentID:      paymentID,
-				IdempotencyKey: fmt.Sprintf("auth-%s", paymentID),
-				CorrelationID:  corrID,
-			})
-			if err != nil {
-				c.JSON(http.StatusOK, gin.H{
-					"data": gin.H{
-						"authorizePayment": gin.H{
-							"success":    false,
-							"statusCode": 400,
-							"message":    err.Error(),
-							"timeStamp":  now,
-							"data":       nil,
-						},
-					},
-				})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"data": gin.H{
-					"authorizePayment": gin.H{
-						"success":    true,
-						"statusCode": 200,
-						"message":    i18n.T(lang, "payment.authorized"),
-						"timeStamp":  now,
-						"data":       formatPayment(payment),
-					},
-				},
-			})
-			return
-		}
-
-		// 8. Mutation: capturePayment
-		if strings.Contains(req.Query, "capturePayment") {
-			inputMap := extractInputMap(req.Variables)
-			paymentID, _ := inputMap["paymentId"].(string)
-			corrID, _ := inputMap["correlationId"].(string)
-			var amountMinor int64
-			if a, ok := inputMap["amountMinor"].(float64); ok {
-				amountMinor = int64(a)
-			}
-
-			payment, err := paymentSvc.CapturePayment(ctx, services.CapturePaymentInput{
-				PaymentID:      paymentID,
-				AmountMinor:    amountMinor,
-				IdempotencyKey: fmt.Sprintf("cap-%s", paymentID),
-				CorrelationID:  corrID,
-			})
-			if err != nil {
-				c.JSON(http.StatusOK, gin.H{
-					"data": gin.H{
-						"capturePayment": gin.H{
-							"success":    false,
-							"statusCode": 400,
-							"message":    err.Error(),
-							"timeStamp":  now,
-							"data":       nil,
-						},
-					},
-				})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"data": gin.H{
-					"capturePayment": gin.H{
-						"success":    true,
-						"statusCode": 200,
-						"message":    i18n.T(lang, "payment.captured"),
-						"timeStamp":  now,
-						"data":       formatPayment(payment),
-					},
-				},
-			})
-			return
-		}
-
-		// 9. Mutation: cancelAuthorization
-		if strings.Contains(req.Query, "cancelAuthorization") {
-			inputMap := extractInputMap(req.Variables)
-			paymentID, _ := inputMap["paymentId"].(string)
-
-			payment, err := paymentSvc.CancelAuthorization(ctx, paymentID, fmt.Sprintf("cancel-%s", paymentID))
-			if err != nil {
-				c.JSON(http.StatusOK, gin.H{
-					"data": gin.H{
-						"cancelAuthorization": gin.H{
-							"success":    false,
-							"statusCode": 400,
-							"message":    err.Error(),
-							"timeStamp":  now,
-							"data":       nil,
-						},
-					},
-				})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"data": gin.H{
-					"cancelAuthorization": gin.H{
-						"success":    true,
-						"statusCode": 200,
-						"message":    i18n.T(lang, "payment.cancelled"),
-						"timeStamp":  now,
-						"data":       formatPayment(payment),
-					},
-				},
-			})
-			return
-		}
-
-		// 10. Mutation: createRefund
-		if strings.Contains(req.Query, "createRefund") {
-			inputMap := extractInputMap(req.Variables)
-			paymentID, _ := inputMap["paymentId"].(string)
-			reason, _ := inputMap["reason"].(string)
-			corrID, _ := inputMap["correlationId"].(string)
-			var amountMinor int64
-			if a, ok := inputMap["amountMinor"].(float64); ok {
-				amountMinor = int64(a)
-			}
-
-			refund, err := paymentSvc.CreateRefund(ctx, services.CreateRefundInput{
-				PaymentID:      paymentID,
-				AmountMinor:    amountMinor,
-				Reason:         reason,
-				IdempotencyKey: fmt.Sprintf("refund-%s-%d", paymentID, time.Now().UnixNano()),
-				CorrelationID:  corrID,
-			})
-			if err != nil {
-				c.JSON(http.StatusOK, gin.H{
-					"data": gin.H{
-						"createRefund": gin.H{
-							"success":    false,
-							"statusCode": 400,
-							"message":    err.Error(),
-							"timeStamp":  now,
-							"data":       nil,
-						},
-					},
-				})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"data": gin.H{
-					"createRefund": gin.H{
-						"success":    true,
-						"statusCode": 200,
-						"message":    i18n.T(lang, "payment.refunded"),
-						"timeStamp":  now,
-						"data":       formatRefund(refund),
-					},
-				},
-			})
-			return
-		}
 
 		c.JSON(http.StatusOK, gin.H{
 			"errors": []gin.H{
@@ -612,15 +364,7 @@ func GraphQLHandler(paymentSvc *services.PaymentService) gin.HandlerFunc {
 	}
 }
 
-func extractInputMap(vars map[string]interface{}) map[string]interface{} {
-	if vars == nil {
-		return map[string]interface{}{}
-	}
-	if input, ok := vars["input"].(map[string]interface{}); ok {
-		return input
-	}
-	return vars
-}
+
 
 func extractIDFromQueryOrVars(query string, vars map[string]interface{}) string {
 	if vars != nil {

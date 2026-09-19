@@ -48,7 +48,9 @@ func (h *Handler) Handle(c *gin.Context) {
 
 	// 2. Verify Stripe signature (HMAC-SHA256 + timestamp replay protection).
 	sig := c.GetHeader("Stripe-Signature")
-	event, err := stripewh.ConstructEvent(body, sig, h.webhookSecret)
+	event, err := stripewh.ConstructEventWithOptions(body, sig, h.webhookSecret, stripewh.ConstructEventOptions{
+		IgnoreAPIVersionMismatch: true,
+	})
 	if err != nil {
 		slog.Warn("webhook: invalid stripe signature", "error", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid signature"})
@@ -161,8 +163,8 @@ func (h *Handler) handlePaymentIntentSucceeded(ctx context.Context, event stripe
 }
 
 func (h *Handler) completePayment(ctx context.Context, p *domain.Payment, providerTxID string) error {
-	if p.Status == domain.PaymentStatusCaptured || p.Status == domain.PaymentStatusAuthorized {
-		slog.Info("webhook: payment already in confirmed state", "paymentID", p.ID, "status", p.Status)
+	if p.Status == domain.PaymentStatusCaptured {
+		slog.Info("webhook: payment already captured", "paymentID", p.ID, "status", p.Status)
 		return nil
 	}
 

@@ -69,5 +69,8 @@ func (w *OutboxPublisher) publishOne(ctx context.Context, evt *postgres.OutboxRo
 }
 
 func eventTypeToTopic(eventType string) string {
+	if eventType != "" {
+		return eventType
+	}
 	return "payment-events"
 }

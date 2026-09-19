@@ -73,23 +73,9 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
         const checkoutUrl = res?.paymentLink || res?.payment_link || res?.checkoutUrl || res?.checkout_url;
         delivery.checkoutUrl = checkoutUrl;
 
-        if (status === 'AUTHORIZED' || status === 'SUCCEEDED') {
-          // Funds held immediately
-          await this.commands.transition(
-            delivery.id,
-            DeliveryStatus.PAYMENT_CONFIRMED,
-            undefined,
-            'Payment authorized & held in escrow',
-          );
-          const updated = await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.AUTHORIZED);
-          updated.checkoutUrl = checkoutUrl;
-          return {
-            delivery: updated,
-            paymentId,
-          };
-        } else if (status === 'PENDING' || status === 'PROCESSING' || status === 'REQUIRES_PAYMENT' || status === 'REQUIRES_ACTION') {
-          // Async checkout required - customer needs to pay via checkoutUrl
-          this.logger.log(`[SAGA Step 1] Payment requires customer completion: ${checkoutUrl}`);
+        if (checkoutUrl || status === 'PENDING' || status === 'PROCESSING' || status === 'REQUIRES_PAYMENT' || status === 'REQUIRES_ACTION') {
+          // Async checkout required - customer needs to pay via checkoutUrl before driver dispatch
+          this.logger.log(`[SAGA Step 1] Payment requires customer completion via Checkout URL: ${checkoutUrl}`);
           await this.commands.transition(
             delivery.id,
             DeliveryStatus.PENDING_PAYMENT,
@@ -97,6 +83,20 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
             'Awaiting customer checkout payment',
           );
           const updated = await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.PENDING);
+          updated.checkoutUrl = checkoutUrl;
+          return {
+            delivery: updated,
+            paymentId,
+          };
+        } else if (status === 'AUTHORIZED' || status === 'SUCCEEDED') {
+          // Funds held immediately via pre-saved payment method
+          await this.commands.transition(
+            delivery.id,
+            DeliveryStatus.PAYMENT_CONFIRMED,
+            undefined,
+            'Payment authorized & held in escrow',
+          );
+          const updated = await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.AUTHORIZED);
           updated.checkoutUrl = checkoutUrl;
           return {
             delivery: updated,

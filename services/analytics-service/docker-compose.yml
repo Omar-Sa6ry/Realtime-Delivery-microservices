@@ -1,0 +1,87 @@
+services:
+  kafka-srv:
+    image: apache/kafka:3.8.0
+    container_name: analytics-kafka-srv
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: CONTROLLER://:9093,PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-srv:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-srv:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
+
+  clickhouse-srv:
+    image: clickhouse/clickhouse-server:2.24-alpine
+    container_name: analytics-clickhouse-srv
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: analytics
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: clickhouse
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+
+  redis-srv:
+    image: redis:alpine
+    container_name: analytics-redis-srv
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  analytics-service:
+    build:
+      context: ../..
+      dockerfile: services/analytics-service/Dockerfile
+    container_name: analytics-service-local
+    restart: unless-stopped
+    ports:
+      - "4009:4009"
+      - "50057:50057"
+      - "9107:9107"
+    environment:
+      PORT_GRAPHQL: "4009"
+      PORT_GRPC: "50057"
+      PORT_METRICS: "9107"
+      CLICKHOUSE_HOST: "clickhouse-srv"
+      CLICKHOUSE_PORT: "9000"
+      CLICKHOUSE_DB: "analytics"
+      CLICKHOUSE_USER: "default"
+      CLICKHOUSE_PASSWORD: "clickhouse"
+      REDIS_HOST: "redis-srv"
+      REDIS_PORT: "6379"
+      KAFKA_BROKERS: "kafka-srv:9092"
+      KAFKA_GROUP_ID: "analytics-service"
+      KAFKA_CLIENT_ID: "analytics-service"
+      NATS_URL: "nats://nats-srv:4222"
+      SNOWFLAKE_WORKER_ID: "5"
+      BATCH_SIZE: "500"
+      BATCH_FLUSH_MS: "500"
+      MAX_RETRY_ATTEMPTS: "5"
+      DLQ_TOPIC: "analytics.dlq"
+      CACHE_TTL_SECONDS: "300"
+      OTEL_ENDPOINT: ""
+    depends_on:
+      - kafka-srv
+      - clickhouse-srv
+      - redis-srv
+    volumes:
+      - ./internal:/workspace/services/analytics-service/internal
+      - ../../packages/go:/workspace/packages/go
+
+volumes:
+  clickhouse_data:

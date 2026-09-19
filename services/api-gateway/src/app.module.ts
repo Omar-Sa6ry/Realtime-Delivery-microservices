@@ -126,12 +126,6 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
         supergraphSdl: new IntrospectAndCompose({
           subgraphs: [
             {
-              name: 'payment',
-              url:
-                process.env.PAYMENT_SUBGRAPH_URL ||
-                'http://payment-srv:4002/payment/graphql',
-            },
-            {
               name: 'media',
               url:
                 process.env.MEDIA_SUBGRAPH_URL ||
@@ -156,6 +150,12 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
                 'http://search-srv:4007/search/graphql',
             },
             {
+              name: 'payment',
+              url:
+                process.env.PAYMENT_SUBGRAPH_URL ||
+                'http://payment-srv:4002/payment/graphql',
+            },
+            {
               name: 'user',
               url:
                 process.env.USER_SERVICE_URL ||
@@ -168,10 +168,10 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
                 'http://delivery-srv:4003/delivery/graphql',
             },
             {
-              name: 'driver',
+              name: 'analytics',
               url:
-                process.env.DRIVER_SERVICE_URL ||
-                'http://driver-srv:4008/driver/graphql',
+                process.env.ANALYTICS_SERVICE_URL ||
+                'http://analytics-srv:4009/analytics/graphql',
             },
           ],
           pollIntervalInMs: 5000,

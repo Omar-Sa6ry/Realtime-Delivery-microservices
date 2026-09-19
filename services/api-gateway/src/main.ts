@@ -1,4 +1,4 @@
-import * as http from 'http';
+﻿import * as http from 'http';
 
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -47,6 +47,7 @@ async function bootstrap() {
     'http://user-srv:4001/user/graphql',
     'http://delivery-srv:4003/delivery/graphql',
     'http://driver-srv:4008/driver/graphql',
+    'http://analytics-srv:4009/analytics/graphql',
   ];
 
   console.log('[startup] Waiting for subgraphs to be available...');

@@ -90,6 +90,9 @@ spec:
               value: "http://search-srv:4007/search/graphql"
             - name: DELIVERY_SERVICE_URL
               value: "http://delivery-srv:4003/delivery/graphql"
+            - name: ANALYTICS_SERVICE_URL
+              value: "http://delivery-srv:4009/analytics/graphql"
+            
 ---
 apiVersion: v1
 kind: Service

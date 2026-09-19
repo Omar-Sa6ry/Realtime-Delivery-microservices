@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: clickhouse-sts
+  namespace: default
+spec:
+  serviceName: clickhouse-srv
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clickhouse
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+    spec:
+      containers:
+      - name: clickhouse
+        image: clickhouse/clickhouse-server:2.24-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9000
+        - containerPort: 8123
+        env:
+        - name: CLICKHOUSE_DB
+          value: "analytics"
+        - name: CLICKHOUSE_USER
+          value: "default"
+        - name: CLICKHOUSE_PASSWORD
+          value: "clickhouse"
+        volumeMounts:
+        - name: clickhouse-data
+          mountPath: /var/lib/clickhouse
+      volumes:
+        - name: clickhouse-data
+          persistentVolumeClaim:
+            claimName: clickhouse-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse-srv
+  namespace: default
+  labels:
+    app: clickhouse
+spec:
+  selector:
+    app: clickhouse
+  ports:
+  - name: http
+    port: 8123
+    targetPort: 8123
+    protocol: TCP
+  - name: native
+    port: 9000
+    targetPort: 9000
+    protocol: TCP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clickhouse-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 10Gi

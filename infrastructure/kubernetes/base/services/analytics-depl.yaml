@@ -1,0 +1,174 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-depl
+  namespace: default
+  labels:
+    app: analytics
+    version: "1.0.0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: analytics
+        version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9107"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: analytics-service-sa
+      initContainers:
+        - name: wait-for-kafka
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - >-
+              until nc -z -w 3 kafka-srv 9092;
+              do echo "Waiting for kafka-srv:9092..."; sleep 2; done;
+              echo "Kafka is reachable!"
+        - name: wait-for-clickhouse
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - >-
+              until nc -z -w 3 clickhouse-srv 9000;
+              do echo "Waiting for clickhouse-srv:9000..."; sleep 2; done;
+              echo "ClickHouse is reachable!"
+      containers:
+      - name: analytics-service
+        image: delivery/analytics
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: graphql
+          containerPort: 4009
+        - name: grpc
+          containerPort: 50057
+        - name: metrics
+          containerPort: 9107
+        envFrom:
+        - configMapRef:
+            name: analytics-service-config
+        - secretRef:
+            name: analytics-secrets
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: graphql
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 120
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: graphql
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 120
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: graphql
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
+        env:
+        - name: PORT_GRAPHQL
+          value: "4009"
+        - name: PORT_GRPC
+          value: "50057"
+        - name: PORT_METRICS
+          value: "9107"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: analytics-depl-pdb
+  namespace: default
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: analytics
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: analytics-depl
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: analytics-depl
+  minReplicas: 1
+  maxReplicas: 5
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 25
+        periodSeconds: 60
+      selectPolicy: Max
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-srv
+  namespace: default
+  labels:
+    app: analytics
+spec:
+  selector:
+    app: analytics
+  ports:
+  - name: graphql
+    port: 4009
+    targetPort: 4009
+    protocol: TCP
+  - name: grpc
+    port: 50057
+    targetPort: 50057
+    protocol: TCP
+  - name: metrics
+    port: 9107
+    targetPort: 9107
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: analytics-service-sa
+  namespace: default

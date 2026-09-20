@@ -46,3 +46,5 @@ require (
 	golang.org/x/text v0.40.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240528184218-531527333157 // indirect
 )
+
+replace github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go => ../../packages/go

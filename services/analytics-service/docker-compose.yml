@@ -23,7 +23,7 @@ services:
       KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
 
   clickhouse-srv:
-    image: clickhouse/clickhouse-server:2.24-alpine
+    image: clickhouse/clickhouse-server:24.12-alpine
     container_name: analytics-clickhouse-srv
     restart: unless-stopped
     ports:

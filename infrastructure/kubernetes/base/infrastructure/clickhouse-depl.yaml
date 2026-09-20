@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: clickhouse
-        image: clickhouse/clickhouse-server:2.24-alpine
+        image: clickhouse/clickhouse-server:24.12-alpine
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9000

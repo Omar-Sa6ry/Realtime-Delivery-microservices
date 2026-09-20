@@ -1,7 +1,5 @@
 package events
 
-import "time"
-
 // AnalyticsEventType is the canonical event type for analytics domain Kafka messages.
 type AnalyticsEventType string
 

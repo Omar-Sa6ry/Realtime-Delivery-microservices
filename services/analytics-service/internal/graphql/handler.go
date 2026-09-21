@@ -13,12 +13,12 @@ import (
 )
 
 type gqlRequest struct {
-	Query         string                 `json:"query"`
-	OperationName string                 `json:"operationName"`
-	Variables     map[string]interface{} `json:"variables"`
+	Query         string         `json:"query"`
+	OperationName string         `json:"operationName"`
+	Variables     map[string]any `json:"variables"`
 }
 
-func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
+func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
@@ -44,12 +44,12 @@ func DataLoaderMiddleware(next http.Handler) http.Handler {
 
 func HealthLiveHandler(w http.ResponseWriter, r *http.Request) {
 	lang := i18n.FromContext(r.Context())
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	writeJSON(w, http.StatusOK, map[string]any{
 		"success":    true,
 		"statusCode": 200,
 		"message":    i18n.T(lang, "server.healthy"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"name":    "analytics-service",
 			"version": "1.0.0",
 			"status":  "healthy",
@@ -62,7 +62,7 @@ func HealthReadyHandler(ping func(ctx context.Context) error) http.HandlerFunc {
 		lang := i18n.FromContext(r.Context())
 		if err := ping(r.Context()); err != nil {
 			slog.Error("health/ready: dependency ping failed", "error", err)
-			writeJSON(w, http.StatusServiceUnavailable, map[string]interface{}{
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{
 				"success":    false,
 				"statusCode": 503,
 				"message":    i18n.T(lang, "error.internal"),
@@ -70,7 +70,7 @@ func HealthReadyHandler(ping func(ctx context.Context) error) http.HandlerFunc {
 			})
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		writeJSON(w, http.StatusOK, map[string]any{
 			"success":    true,
 			"statusCode": 200,
 			"message":    i18n.T(lang, "server.healthy"),
@@ -79,12 +79,10 @@ func HealthReadyHandler(ping func(ctx context.Context) error) http.HandlerFunc {
 	}
 }
 
-// GraphQLHandler serves POST /graphql and POST /analytics/graphql following
-// the payment-service pattern: string dispatch into the resolver layer.
 func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
+			writeJSON(w, http.StatusOK, map[string]any{
 				"message": "Analytics GraphQL. Use POST with query.",
 			})
 			return
@@ -93,7 +91,7 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 		var req gqlRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			lang := i18n.FromContext(r.Context())
-			writeJSON(w, http.StatusBadRequest, map[string]interface{}{
+			writeJSON(w, http.StatusBadRequest, map[string]any{
 				"success":    false,
 				"statusCode": 400,
 				"message":    i18n.T(lang, "error.internal"),
@@ -105,16 +103,16 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 		ctx := r.Context()
 		vars := req.Variables
 		if vars == nil {
-			vars = map[string]interface{}{}
+			vars = map[string]any{}
 		}
 		scope := validation.ScopeFromRequest(r)
 		query := req.Query
 
 		// 1. Apollo Federation SDL introspection (gateway composition).
 		if strings.Contains(query, "_service") {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"data": map[string]interface{}{
-					"_service": map[string]interface{}{"sdl": AnalyticsSubgraphSDL},
+			writeJSON(w, http.StatusOK, map[string]any{
+				"data": map[string]any{
+					"_service": map[string]any{"sdl": AnalyticsSubgraphSDL},
 				},
 			})
 			return
@@ -122,17 +120,17 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 
 		// 2. Gateway readiness probe: query { __typename }.
 		if strings.Contains(query, "__typename") && !strings.Contains(query, "analyticsServiceInfo") {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"data": map[string]interface{}{"__typename": "Query"},
+			writeJSON(w, http.StatusOK, map[string]any{
+				"data": map[string]any{"__typename": "Query"},
 			})
 			return
 		}
 
 		// 3. Generic introspection stub.
 		if strings.Contains(query, "__schema") || strings.Contains(query, "__type") {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"data": map[string]interface{}{
-					"__schema": map[string]interface{}{"types": []interface{}{}},
+			writeJSON(w, http.StatusOK, map[string]any{
+				"data": map[string]any{
+					"__schema": map[string]any{"types": []any{}},
 				},
 			})
 			return
@@ -140,8 +138,8 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 
 		// 4. analyticsServiceInfo.
 		if strings.Contains(query, "analyticsServiceInfo") {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"data": map[string]interface{}{
+			writeJSON(w, http.StatusOK, map[string]any{
+				"data": map[string]any{
 					"analyticsServiceInfo": resolver.ServiceInfo(ctx),
 				},
 			})
@@ -155,8 +153,8 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 				writeDataError(w, ctx, err)
 				return
 			}
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"data": map[string]interface{}{
+			writeJSON(w, http.StatusOK, map[string]any{
+				"data": map[string]any{
 					"platformOverview": resolver.PlatformOverview(ctx, tr, scope),
 				},
 			})
@@ -170,8 +168,8 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 				writeDataError(w, ctx, err)
 				return
 			}
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"data": map[string]interface{}{
+			writeJSON(w, http.StatusOK, map[string]any{
+				"data": map[string]any{
 					"deliveryAnalytics": resolver.DeliveryAnalytics(ctx, f, scope),
 				},
 			})
@@ -186,8 +184,8 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 				writeDataError(w, ctx, err)
 				return
 			}
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"data": map[string]interface{}{
+			writeJSON(w, http.StatusOK, map[string]any{
+				"data": map[string]any{
 					"driverAnalytics": resolver.DriverAnalytics(ctx, f, scope),
 				},
 			})
@@ -205,8 +203,8 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 			if v, ok := vars["limit"].(float64); ok {
 				limit = validation.ClampTopLimit(int(v))
 			}
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"data": map[string]interface{}{
+			writeJSON(w, http.StatusOK, map[string]any{
+				"data": map[string]any{
 					"topDrivers": resolver.TopDrivers(ctx, tr, limit, scope),
 				},
 			})
@@ -220,8 +218,8 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 				writeDataError(w, ctx, err)
 				return
 			}
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"data": map[string]interface{}{
+			writeJSON(w, http.StatusOK, map[string]any{
+				"data": map[string]any{
 					"paymentAnalytics": resolver.PaymentAnalytics(ctx, f, scope),
 				},
 			})
@@ -246,8 +244,8 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 					to = &tm
 				}
 			}
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"data": map[string]interface{}{
+			writeJSON(w, http.StatusOK, map[string]any{
+				"data": map[string]any{
 					"rawAnalyticsEvents": resolver.RawAnalyticsEvents(ctx, page, limit, eventType, from, to),
 				},
 			})
@@ -266,23 +264,23 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 					return
 				}
 			}
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"data": map[string]interface{}{
+			writeJSON(w, http.StatusOK, map[string]any{
+				"data": map[string]any{
 					"dataQualityIssues": resolver.DataQualityIssues(ctx, page, limit, severity),
 				},
 			})
 			return
 		}
 
-		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"errors": []map[string]interface{}{{"message": "operation not recognized"}},
+		writeJSON(w, http.StatusOK, map[string]any{
+			"errors": []map[string]any{{"message": "operation not recognized"}},
 		})
 	}
 }
 
 func writeDataError(w http.ResponseWriter, ctx context.Context, err error) {
 	lang := i18n.FromContext(ctx)
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"errors": []map[string]interface{}{{"message": i18n.T(lang, "error.internal") + ": " + err.Error()}},
+	writeJSON(w, http.StatusOK, map[string]any{
+		"errors": []map[string]any{{"message": i18n.T(lang, "error.internal") + ": " + err.Error()}},
 	})
 }

@@ -202,6 +202,7 @@ func (r *QueryRepository) TopDrivers(ctx context.Context, tr ports.TimeRange, li
 	defer rows.Close()
 	page := &ports.DriverAnalyticsPage{}
 	now := time.Now().UTC()
+	driverIDs := make([]string, 0, limit)
 	for rows.Next() {
 		var d ports.DriverAnalytics
 		if err := rows.Scan(&d.DriverID, &d.Offers, &d.Accepted, &d.Rejected, &d.Expired, &d.AverageResponseTimeMs); err != nil {
@@ -212,6 +213,7 @@ func (r *QueryRepository) TopDrivers(ctx context.Context, tr ports.TimeRange, li
 		}
 		d.DataAsOf = now
 		page.Items = append(page.Items, d)
+		driverIDs = append(driverIDs, d.DriverID)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate top drivers: %w", err)
@@ -222,13 +224,50 @@ func (r *QueryRepository) TopDrivers(ctx context.Context, tr ports.TimeRange, li
 		return nil, fmt.Errorf("top drivers total: %w", err)
 	}
 	page.Pagination = paginate(totalDrivers, 1, limit)
-	for i := range page.Items {
-		const completed = `SELECT count() FROM fact_delivery_completed FINAL WHERE driver_id = ? AND completed_at BETWEEN ? AND ?`
-		if err := r.db.QueryRowContext(ctx, completed, page.Items[i].DriverID, tr.From, tr.To).Scan(&page.Items[i].CompletedDeliveries); err != nil {
-			return nil, fmt.Errorf("top driver completed: %w", err)
+
+	// Single batch query for completed deliveries — avoids N+1 per driver.
+	if len(driverIDs) > 0 {
+		completedMap, err := r.batchCompletedByDriver(ctx, driverIDs, tr)
+		if err != nil {
+			return nil, err
+		}
+		for i := range page.Items {
+			page.Items[i].CompletedDeliveries = completedMap[page.Items[i].DriverID]
 		}
 	}
 	return page, nil
+}
+
+func (r *QueryRepository) batchCompletedByDriver(ctx context.Context, driverIDs []string, tr ports.TimeRange) (map[string]int64, error) {
+	if len(driverIDs) == 0 {
+		return nil, nil
+	}
+	args := make([]any, 0, len(driverIDs)+2)
+	args = append(args, tr.From, tr.To)
+	placeholders := make([]byte, 0, len(driverIDs)*2)
+	for i, id := range driverIDs {
+		args = append(args, id)
+		if i > 0 {
+			placeholders = append(placeholders, ',')
+		}
+		placeholders = append(placeholders, '?')
+	}
+	q := `SELECT driver_id, count() FROM fact_delivery_completed FINAL WHERE completed_at BETWEEN ? AND ? AND driver_id IN (` + string(placeholders) + `) GROUP BY driver_id`
+	rows, err := r.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("batch completed by driver: %w", err)
+	}
+	defer rows.Close()
+	out := make(map[string]int64, len(driverIDs))
+	for rows.Next() {
+		var driverID string
+		var n int64
+		if err := rows.Scan(&driverID, &n); err != nil {
+			return nil, fmt.Errorf("scan batch completed: %w", err)
+		}
+		out[driverID] = n
+	}
+	return out, rows.Err()
 }
 
 func (r *QueryRepository) PaymentAnalytics(ctx context.Context, f ports.PaymentAnalyticsFilter) (*ports.PaymentAnalytics, error) {

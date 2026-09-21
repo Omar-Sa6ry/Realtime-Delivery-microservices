@@ -26,7 +26,7 @@ func NormalizeLang(tag string) string {
 	return DefaultLang
 }
 
-func T(lang, key string, args ...interface{}) string {
+func T(lang, key string, args ...any) string {
 	lang = NormalizeLang(lang)
 	dict, exists := messages[lang]
 	if !exists {

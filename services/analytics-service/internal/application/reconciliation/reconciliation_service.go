@@ -77,8 +77,11 @@ func (s *Service) Check(ctx context.Context) (*Report, error) {
 	}
 	if !maxOccurred.IsZero() {
 		rep.FreshnessSeconds = now.Sub(maxOccurred).Seconds()
+		rep.Freshness = gradeFreshness(rep.FreshnessSeconds, s.cfg.FreshWarnSeconds, s.cfg.FreshDegradedSeconds)
+	} else {
+		rep.Freshness = FreshnessHealthy
+		rep.FreshnessSeconds = 0
 	}
-	rep.Freshness = gradeFreshness(rep.FreshnessSeconds, s.cfg.FreshWarnSeconds, s.cfg.FreshDegradedSeconds)
 
 	if rep.RawTotal, err = s.queries.CountRawEvents(ctx, from, to); err != nil {
 		return nil, fmt.Errorf("reconcile raw count: %w", err)

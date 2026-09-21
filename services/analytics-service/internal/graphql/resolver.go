@@ -71,7 +71,7 @@ func (r *Resolver) PlatformOverview(ctx context.Context, tr ports.TimeRange, sco
 	if err != nil {
 		return errEnvelope(lang, 400, err)
 	}
-	return okEnvelope(lang, "analytics.found", map[string]any{
+	return okEnvelope(lang, "platform.overview.found", map[string]any{
 		"totalDeliveries": out.TotalDeliveries, "completedDeliveries": out.CompletedDeliveries,
 		"cancelledDeliveries": out.CancelledDeliveries, "failedDeliveries": out.FailedDeliveries,
 		"completionRate": out.CompletionRate, "averageDeliveryDurationSeconds": out.AverageDeliveryDurationS,
@@ -94,7 +94,7 @@ func (r *Resolver) DeliveryAnalytics(ctx context.Context, f ports.DeliveryAnalyt
 			"avgDurationSeconds": b.AvgDurationSeconds,
 		})
 	}
-	return okEnvelope(lang, "analytics.found", map[string]any{
+	return okEnvelope(lang, "delivery.analytics.found", map[string]any{
 		"total": out.Total, "completed": out.Completed, "cancelled": out.Cancelled, "failed": out.Failed,
 		"completionRate": out.CompletionRate, "averageDurationSeconds": out.AverageDurationSeconds,
 		"p50DurationSeconds": out.P50DurationSeconds, "p95DurationSeconds": out.P95DurationSeconds,
@@ -126,7 +126,7 @@ func (r *Resolver) DriverAnalytics(ctx context.Context, f ports.DriverAnalyticsF
 	if err != nil {
 		return errEnvelope(lang, 400, err)
 	}
-	return okEnvelope(lang, "analytics.found", r.driverShape(ctx, *out))
+	return okEnvelope(lang, "driver.analytics.found", r.driverShape(ctx, *out))
 }
 
 func (r *Resolver) TopDrivers(ctx context.Context, tr ports.TimeRange, limit int, scope string) map[string]any {
@@ -139,7 +139,7 @@ func (r *Resolver) TopDrivers(ctx context.Context, tr ports.TimeRange, limit int
 	for _, d := range page.Items {
 		items = append(items, r.driverShape(ctx, d))
 	}
-	return okEnvelope(lang, "analytics.found", map[string]any{
+	return okEnvelope(lang, "driver.top.found", map[string]any{
 		"paginationInfo": map[string]any{
 			"totalItems": page.Pagination.TotalItems, "currentPage": page.Pagination.CurrentPage, "nextPage": page.Pagination.NextPage,
 		},
@@ -153,7 +153,7 @@ func (r *Resolver) PaymentAnalytics(ctx context.Context, f ports.PaymentAnalytic
 	if err != nil {
 		return errEnvelope(lang, 400, err)
 	}
-	return okEnvelope(lang, "analytics.found", map[string]any{
+	return okEnvelope(lang, "payment.analytics.found", map[string]any{
 		"authorizationCount": out.AuthorizationCount, "authorizationSuccessRate": out.AuthorizationSuccessRate,
 		"captureCount": out.CaptureCount, "capturedAmount": out.CapturedAmount,
 		"refundCount": out.RefundCount, "refundedAmount": out.RefundedAmount, "refundRate": out.RefundRate,
@@ -176,7 +176,7 @@ func (r *Resolver) RawAnalyticsEvents(ctx context.Context, page, limit int, even
 			"correlationId": e.CorrelationID, "sourceTopic": e.SourceTopic,
 		})
 	}
-	return okEnvelope(lang, "analytics.found", map[string]any{
+	return okEnvelope(lang, "raw.events.found", map[string]any{
 		"paginationInfo": map[string]any{
 			"totalItems": p.Pagination.TotalItems, "currentPage": p.Pagination.CurrentPage, "nextPage": p.Pagination.NextPage,
 		},
@@ -198,7 +198,7 @@ func (r *Resolver) DataQualityIssues(ctx context.Context, page, limit int, sever
 			"detectedAt": rfc3339(d.DetectedAt), "severity": string(d.Severity), "details": d.Details,
 		})
 	}
-	return okEnvelope(lang, "analytics.found", map[string]any{
+	return okEnvelope(lang, "data.quality.issues.found", map[string]any{
 		"paginationInfo": map[string]any{
 			"totalItems": p.Pagination.TotalItems, "currentPage": p.Pagination.CurrentPage, "nextPage": p.Pagination.NextPage,
 		},

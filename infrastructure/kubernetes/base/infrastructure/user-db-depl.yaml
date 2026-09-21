@@ -72,16 +72,16 @@ spec:
             exec:
               command: ['/bin/sh', '-c', 'pg_isready -h 127.0.0.1 -U "$POSTGRES_USER" -d delivery_user_db']
             initialDelaySeconds: 5
-            periodSeconds: 5
+            periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 60
           livenessProbe:
             exec:
               command: ['/bin/sh', '-c', 'pg_isready -h 127.0.0.1 -U "$POSTGRES_USER" -d delivery_user_db']
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 5
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 10
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data

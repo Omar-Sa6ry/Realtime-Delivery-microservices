@@ -10,7 +10,7 @@ type EventVersion int
 
 const (
 	MaxSupportedEventVersion EventVersion = 1
-	FutureTimestampTolerance = 5 * time.Minute
+	FutureTimestampTolerance              = 5 * time.Minute
 )
 
 // IsSupported reports whether v can be processed by this service version.

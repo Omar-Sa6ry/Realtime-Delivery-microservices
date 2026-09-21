@@ -10,6 +10,7 @@ import (
 
 	kafkago "github.com/segmentio/kafka-go"
 
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/ingestion"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/domain"
 )
 
@@ -19,6 +20,7 @@ const (
 )
 
 var ErrPermanent = errors.New("permanent processing failure")
+
 type Handler func(ctx context.Context, topic string, msg kafkago.Message) error
 
 type Consumer struct {
@@ -121,7 +123,7 @@ func (c *Consumer) processWithRetry(ctx context.Context, topic string, msg kafka
 		if lastErr == nil {
 			return nil
 		}
-		if errors.Is(lastErr, ErrPermanent) || errors.Is(lastErr, domain.ErrUnsupportedEventVersion) {
+		if errors.Is(lastErr, ErrPermanent) || errors.Is(lastErr, domain.ErrUnsupportedEventVersion) || ingestion.IsPermanent(lastErr) {
 			return lastErr
 		}
 	}
@@ -134,7 +136,7 @@ func (c *Consumer) routeToDLQ(ctx context.Context, topic string, msg kafkago.Mes
 		return
 	}
 	attempts := c.maxRetries + 1
-	if errors.Is(reason, ErrPermanent) {
+	if errors.Is(reason, ErrPermanent) || ingestion.IsPermanent(reason) {
 		attempts = 1
 	}
 	dlqMsg := DLQMessage{

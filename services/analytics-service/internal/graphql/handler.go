@@ -130,6 +130,6 @@ func GraphQLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"errors": []map[string]interface{}{{ "message": "operation not recognized" }},
+		"errors": []map[string]interface{}{{"message": "operation not recognized"}},
 	})
 }

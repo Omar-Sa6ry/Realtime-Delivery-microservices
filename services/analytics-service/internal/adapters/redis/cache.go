@@ -12,7 +12,6 @@ import (
 
 const keyPrefix = "analytics:"
 
-
 type Cache struct {
 	client *goredis.Client
 }

@@ -34,6 +34,8 @@ type Config struct {
 	DLQTopic         string
 	CacheTTLSeconds  int
 
+	ReconcileIntervalSec int
+
 	OTELEndpoint string
 }
 
@@ -91,6 +93,8 @@ func Load() (*Config, error) {
 		MaxRetryAttempts: getEnvInt("MAX_RETRY_ATTEMPTS", 5),
 		DLQTopic:         getEnv("DLQ_TOPIC", "analytics.dlq"),
 		CacheTTLSeconds:  getEnvInt("CACHE_TTL_SECONDS", 300),
+		
+		ReconcileIntervalSec: getEnvInt("RECONCILE_INTERVAL_SEC", 300),
 
 		OTELEndpoint: getEnv("OTEL_ENDPOINT", ""),
 	}, nil

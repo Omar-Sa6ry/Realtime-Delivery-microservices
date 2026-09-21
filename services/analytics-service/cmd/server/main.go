@@ -14,8 +14,10 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/clickhouse"
 	redisadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/redis"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/analytics"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/reconciliation"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/config"
 	gql "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/graphql"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/workers"
 )
 
 func main() {
@@ -64,6 +66,16 @@ func main() {
 		analytics.NewPaymentAnalyticsService(queryRepo, cache, cacheTTL),
 		queryRepo,
 	)
+
+	// Background workers: periodic reconciliation cron (observe-only).
+	pool := workers.NewPool()
+	reconciliationSvc := reconciliation.NewService(queryRepo, reconciliation.Config{WindowHours: 1})
+	pool.Register("reconciliation", time.Duration(cfg.ReconcileIntervalSec)*time.Second,
+		workers.NewReconciliationWorker(reconciliationSvc).Run)
+	workerCtx, stopWorkers := context.WithCancel(context.Background())
+	defer stopWorkers()
+	pool.Start(workerCtx)
+	defer pool.Stop()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health/live", gql.HealthLiveHandler)

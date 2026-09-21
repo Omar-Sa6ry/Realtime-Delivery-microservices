@@ -2,18 +2,25 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	kafkago "github.com/segmentio/kafka-go"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/clickhouse"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/idempotency"
+	kafkaadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/kafka"
 	redisadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/redis"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/analytics"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/ingestion"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/ingestion/handlers"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/reconciliation"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/config"
 	gql "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/graphql"
@@ -23,7 +30,7 @@ import (
 
 func main() {
 	logger := observability.Init()
-	_ = logger 
+	_ = logger
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -32,7 +39,6 @@ func main() {
 	}
 
 	analyticsMetrics := observability.NewMetrics()
-	_ = analyticsMetrics
 	tracer, err := observability.NewTracer(observability.TracerConfig{
 		ServiceName:    "analytics-service",
 		OTLPEndpoint:   cfg.OTELEndpoint,
@@ -50,7 +56,6 @@ func main() {
 		}()
 	}
 
-	// ClickHouse is required: facts, queries, and idempotency live there.
 	chClient, err := clickhouse.NewClient(clickhouse.Config{
 		Host:     cfg.ClickHouseHost,
 		Port:     cfg.ClickHousePort,
@@ -72,9 +77,60 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Redis is optional: query caching degrades to direct ClickHouse reads.
 	cache := redisadapter.NewCache(cfg.RedisHost, cfg.RedisPort)
 	defer cache.Close()
+
+	brokers := splitBrokers(cfg.KafkaBrokers)
+	if err := kafkaadapter.EnsureAnalyticsTopics(brokers, cfg.DLQTopic, 6, 1); err != nil {
+		slog.Warn("kafka topics setup failed (non-fatal)", "error", err)
+	}
+	dlqPublisher := kafkaadapter.NewDLQPublisher(brokers, cfg.DLQTopic, cfg.KafkaGroupID)
+	defer dlqPublisher.Close()
+
+	chWriter := clickhouse.NewMetricsWriter(clickhouse.NewWriter(chClient), analyticsMetrics)
+	idempotencyStore := idempotency.NewStore(chClient.DB())
+
+	batchWriter := ingestion.NewBatchWriter(
+		chWriter, idempotencyStore,
+		cfg.BatchSize, time.Duration(cfg.BatchFlushMS)*time.Millisecond,
+	)
+	ingestCtx, stopIngest := context.WithCancel(context.Background())
+	batchWriter.Start(ingestCtx)
+
+	router := ingestion.NewRouter()
+	router.Register("delivery", &handlers.DeliveryHandler{})
+	router.Register("driver", &handlers.DriverHandler{})
+	router.Register("payment", &handlers.PaymentHandler{})
+	router.Register("notification", &handlers.NotificationHandler{})
+	pipeline := ingestion.NewIngestionPipeline(
+		ingestion.NewValidator(),
+		ingestion.NewDeduplicator(idempotencyStore),
+		router,
+		batchWriter,
+	)
+
+	consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
+		Brokers:    brokers,
+		Topics:     kafkaadapter.AnalyticsTopics(),
+		GroupID:    cfg.KafkaGroupID,
+		MaxRetries: cfg.MaxRetryAttempts,
+		DLQ:        dlqPublisher,
+	})
+	go func() {
+		slog.Info("kafka consumer starting", "topics", kafkaadapter.AnalyticsTopics(), "group", cfg.KafkaGroupID)
+		if err := consumer.Run(ingestCtx, bridgeToPipeline(pipeline, analyticsMetrics)); err != nil {
+			slog.Error("kafka consumer failed", "error", err)
+		}
+	}()
+	defer func() {
+		flushCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := batchWriter.Stop(flushCtx); err != nil {
+			slog.Error("final batch flush failed", "error", err)
+		}
+	}()
+	defer consumer.Close()
+	defer stopIngest()
 
 	queryRepo := clickhouse.NewQueryRepository(chClient)
 	cacheTTL := time.Duration(cfg.CacheTTLSeconds) * time.Second
@@ -87,7 +143,6 @@ func main() {
 		queryRepo,
 	)
 
-	// Background workers: periodic reconciliation cron (observe-only).
 	pool := workers.NewPool()
 	reconciliationSvc := reconciliation.NewService(queryRepo, reconciliation.Config{WindowHours: 1})
 	pool.Register("reconciliation", time.Duration(cfg.ReconcileIntervalSec)*time.Second,
@@ -102,9 +157,6 @@ func main() {
 	mux.HandleFunc("/health/ready", gql.HealthReadyHandler(chClient.Ping))
 	mux.Handle("/metrics", promhttp.Handler())
 
-	// GraphQL endpoints:
-	// - /graphql for direct local testing
-	// - /analytics/graphql for API Gateway (ANALYTICS_SERVICE_URL=http://analytics-srv:4009/analytics/graphql)
 	gqlHandler := gql.DataLoaderMiddleware(gql.GraphQLHandler(resolver))
 	mux.Handle("/graphql", gqlHandler)
 	mux.Handle("/analytics/graphql", gqlHandler)
@@ -119,8 +171,6 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Metrics server (port 9107) — same promhttp handler on a separate port
-	// so Prometheus can scrape without going through the main mux.
 	metricsSrv := &http.Server{
 		Addr:         ":" + cfg.PortMetrics,
 		Handler:      promhttp.Handler(),
@@ -153,4 +203,76 @@ func main() {
 	_ = mainSrv.Shutdown(ctx)
 	_ = metricsSrv.Shutdown(ctx)
 	slog.Info("analytics service stopped")
+}
+
+func splitBrokers(brokers string) []string {
+	if strings.TrimSpace(brokers) == "" {
+		return []string{"localhost:9092"}
+	}
+	parts := strings.Split(brokers, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
+}
+
+type envelopeMeta struct {
+	EventType  string          `json:"eventType"`
+	OccurredAt json.RawMessage `json:"occurredAt"`
+}
+
+func extractMeta(data []byte) (eventType string, occurredAt time.Time) {
+	var meta envelopeMeta
+	if err := json.Unmarshal(data, &meta); err != nil {
+		return "unknown", time.Time{}
+	}
+	s := strings.TrimSpace(string(meta.OccurredAt))
+	if strings.HasPrefix(s, `"`) {
+		var str string
+		if err := json.Unmarshal(meta.OccurredAt, &str); err == nil {
+			if tm, err := time.Parse(time.RFC3339, strings.TrimSpace(str)); err == nil {
+				return meta.EventType, tm
+			}
+		}
+		return meta.EventType, time.Time{}
+	}
+	var num json.Number
+	if err := json.Unmarshal(meta.OccurredAt, &num); err == nil {
+		if ms, err := num.Int64(); err == nil {
+			return meta.EventType, time.UnixMilli(ms).UTC()
+		}
+	}
+	return meta.EventType, time.Time{}
+}
+
+func bridgeToPipeline(pipeline *ingestion.IngestionPipeline, metrics *observability.Metrics) kafkaadapter.Handler {
+	return func(ctx context.Context, topic string, msg kafkago.Message) error {
+		start := time.Now()
+		metrics.RecordConsumed(topic)
+		eventType, occurredAt := extractMeta(msg.Value)
+		if eventType == "" {
+			eventType = "unknown"
+		}
+
+		outcome, err := pipeline.Process(ctx, topic, int32(msg.Partition), msg.Offset, msg.Value)
+		latencyMs := float64(time.Since(start).Milliseconds())
+		if err != nil {
+			metrics.RecordFailed(eventType)
+			observability.RecordError(ctx, err)
+			return err
+		}
+		if !occurredAt.IsZero() {
+			metrics.SetFreshness(time.Since(occurredAt).Seconds())
+		}
+		if outcome == ingestion.OutcomeDuplicate {
+			metrics.RecordDuplicate(topic)
+			metrics.RecordProcessed(eventType, "duplicate", latencyMs)
+		} else {
+			metrics.RecordProcessed(eventType, "success", latencyMs)
+		}
+		return nil
+	}
 }

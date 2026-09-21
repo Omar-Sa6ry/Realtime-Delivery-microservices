@@ -2,6 +2,7 @@ package i18n
 
 import (
 	"context"
+	"fmt"
 	"strings"
 )
 
@@ -13,18 +14,8 @@ const (
 )
 
 var messages = map[string]map[string]string{
-	"en": {
-		"server.healthy":  "Analytics service is healthy",
-		"server.running":  "Analytics service is running",
-		"analytics.found": "Analytics retrieved successfully",
-		"error.internal":  "An internal server error occurred",
-	},
-	"ar": {
-		"server.healthy":  "خدمة التحليلات تعمل بصحة جيدة",
-		"server.running":  "خدمة التحليلات قيد التشغيل بنجاح",
-		"analytics.found": "تم جلب التحليلات بنجاح",
-		"error.internal":  "حدث خطأ داخلي في الخادم",
-	},
+	"en": enMessages,
+	"ar": arMessages,
 }
 
 func NormalizeLang(tag string) string {
@@ -35,25 +26,36 @@ func NormalizeLang(tag string) string {
 	return DefaultLang
 }
 
-func T(lang, key string) string {
+func T(lang, key string, args ...interface{}) string {
 	lang = NormalizeLang(lang)
-	if dict, ok := messages[lang]; ok {
-		if msg, found := dict[key]; found {
-			return msg
+	dict, exists := messages[lang]
+	if !exists {
+		dict = messages[DefaultLang]
+	}
+
+	msg, found := dict[key]
+	if !found {
+		// Fallback to English
+		if fallbackDict, ok := messages[DefaultLang]; ok {
+			msg = fallbackDict[key]
+		}
+		if msg == "" {
+			msg = key
 		}
 	}
-	if msg, found := messages[DefaultLang][key]; found {
-		return msg
+
+	if len(args) > 0 {
+		return fmt.Sprintf(msg, args...)
 	}
-	return key
+	return msg
 }
 
 func FromContext(ctx context.Context) string {
 	if ctx == nil {
 		return DefaultLang
 	}
-	if v := ctx.Value(LangKey); v != nil {
-		if s, ok := v.(string); ok && s != "" {
+	if val := ctx.Value(LangKey); val != nil {
+		if s, ok := val.(string); ok && s != "" {
 			return NormalizeLang(s)
 		}
 	}

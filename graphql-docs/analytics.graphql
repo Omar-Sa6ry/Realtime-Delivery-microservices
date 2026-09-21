@@ -1,0 +1,224 @@
+# Get Analytics Service Info
+query GetAnalyticsServiceInfo {
+  analyticsServiceInfo {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      name
+      version
+      status
+    }
+  }
+}
+
+# Platform Overview (last 7 days, daily buckets)
+query GetPlatformOverview {
+  platformOverview(range: {
+    from: "2026-09-12T00:00:00Z"
+    to: "2026-09-19T23:59:59Z"
+    granularity: DAY
+  }) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      totalDeliveries
+      completedDeliveries
+      cancelledDeliveries
+      failedDeliveries
+      completionRate
+      averageDeliveryDurationSeconds
+      paymentCapturedAmount
+      refundedAmount
+      driverAcceptanceRate
+      dataAsOf
+    }
+  }
+}
+
+# Delivery Analytics
+query GetDeliveryAnalytics {
+  deliveryAnalytics(filter: {
+    range: {
+      from: "2026-09-12T00:00:00Z"
+      to: "2026-09-19T23:59:59Z"
+      granularity: HOUR
+    }
+  }) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      total
+      completed
+      cancelled
+      failed
+      completionRate
+      averageDurationSeconds
+      p50DurationSeconds
+      p95DurationSeconds
+      p99DurationSeconds
+      averageAssignmentTimeSeconds
+      buckets {
+        bucket
+        total
+        completed
+        cancelled
+        failed
+        avgDurationSeconds
+      }
+      dataAsOf
+    }
+  }
+}
+
+# Driver Analytics (specific driver)
+query GetDriverAnalytics($driverId: ID!) {
+  driverAnalytics(filter: {
+    range: {
+      from: "2026-09-12T00:00:00Z"
+      to: "2026-09-19T23:59:59Z"
+      granularity: DAY
+    }
+    driverId: $driverId
+  }) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      driverId
+      driver {
+        id
+      }
+      offers
+      accepted
+      rejected
+      expired
+      acceptanceRate
+      averageResponseTimeMs
+      completedDeliveries
+      dataAsOf
+    }
+  }
+}
+
+# Top Drivers by acceptance rate
+query GetTopDrivers {
+  topDrivers(range: {
+    from: "2026-09-12T00:00:00Z"
+    to: "2026-09-19T23:59:59Z"
+    granularity: DAY
+  }, limit: 10) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        driverId
+        driver {
+          id
+        }
+        offers
+        accepted
+        acceptanceRate
+        completedDeliveries
+        dataAsOf
+      }
+    }
+  }
+}
+
+# Payment Analytics
+query GetPaymentAnalytics {
+  paymentAnalytics(filter: {
+    range: {
+      from: "2026-09-12T00:00:00Z"
+      to: "2026-09-19T23:59:59Z"
+      granularity: DAY
+    }
+    provider: "stripe"
+  }) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      authorizationCount
+      authorizationSuccessRate
+      captureCount
+      capturedAmount
+      refundCount
+      refundedAmount
+      refundRate
+      averageProviderLatencyMs
+      dataAsOf
+    }
+  }
+}
+
+# Raw Events (admin/debug)
+query GetRawAnalyticsEvents {
+  rawAnalyticsEvents(page: 1, limit: 20, eventType: "payment.captured") {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        eventId
+        eventType
+        eventVersion
+        aggregateType
+        aggregateId
+        producer
+        occurredAt
+        ingestedAt
+        correlationId
+        sourceTopic
+      }
+    }
+  }
+}
+
+# Data Quality Issues
+query GetDataQualityIssues {
+  dataQualityIssues(page: 1, limit: 20, severity: "ERROR") {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        issueId
+        eventId
+        issueType
+        aggregateType
+        aggregateId
+        detectedAt
+        severity
+        details
+      }
+    }
+  }
+}

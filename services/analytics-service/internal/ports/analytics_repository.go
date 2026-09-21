@@ -157,3 +157,12 @@ type AnalyticsQueryRepository interface {
 	DataQualityIssues(ctx context.Context, page, limit int, severity string) (*DataQualityIssuesPage, error)
 	Close() error
 }
+
+type ReconciliationQueries interface {
+	MaxRawOccurredAt(ctx context.Context) (time.Time, error)
+	CountRawEvents(ctx context.Context, from, to time.Time) (int64, error)
+	CountFactDeliveryEvents(ctx context.Context, from, to time.Time) (int64, error)
+	CountDataQualityByType(ctx context.Context, issueType string, from, to time.Time) (int64, error)
+	DistinctRawEventTypes(ctx context.Context, from, to time.Time) ([]string, error)
+	CountOpenIssuesBySeverity(ctx context.Context) (map[string]int64, error)
+}

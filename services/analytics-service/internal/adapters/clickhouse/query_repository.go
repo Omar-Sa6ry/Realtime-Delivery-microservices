@@ -354,3 +354,84 @@ func (r *QueryRepository) DataQualityIssues(ctx context.Context, page, limit int
 }
 
 func (r *QueryRepository) Close() error { return nil }
+
+var _ ports.ReconciliationQueries = (*QueryRepository)(nil)
+
+func (r *QueryRepository) MaxRawOccurredAt(ctx context.Context) (time.Time, error) {
+	var max time.Time
+	if err := r.db.QueryRowContext(ctx, "SELECT max(occurred_at) FROM raw_events").Scan(&max); err != nil {
+		return time.Time{}, fmt.Errorf("max occurred_at: %w", err)
+	}
+	return max, nil
+}
+
+func (r *QueryRepository) CountRawEvents(ctx context.Context, from, to time.Time) (int64, error) {
+	var n int64
+	if err := r.db.QueryRowContext(ctx,
+		"SELECT count() FROM raw_events WHERE occurred_at BETWEEN ? AND ?", from, to).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count raw events: %w", err)
+	}
+	return n, nil
+}
+
+func (r *QueryRepository) CountFactDeliveryEvents(ctx context.Context, from, to time.Time) (int64, error) {
+	var n int64
+	if err := r.db.QueryRowContext(ctx,
+		"SELECT count() FROM fact_delivery_events WHERE occurred_at BETWEEN ? AND ?", from, to).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count delivery facts: %w", err)
+	}
+	return n, nil
+}
+
+func (r *QueryRepository) CountDataQualityByType(ctx context.Context, issueType string, from, to time.Time) (int64, error) {
+	var n int64
+	if err := r.db.QueryRowContext(ctx,
+		"SELECT count() FROM analytics_data_quality_issues WHERE issue_type = ? AND detected_at BETWEEN ? AND ?",
+		issueType, from, to).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count data quality: %w", err)
+	}
+	return n, nil
+}
+
+func (r *QueryRepository) DistinctRawEventTypes(ctx context.Context, from, to time.Time) ([]string, error) {
+	rows, err := r.db.QueryContext(ctx,
+		"SELECT DISTINCT event_type FROM raw_events WHERE occurred_at BETWEEN ? AND ?", from, to)
+	if err != nil {
+		return nil, fmt.Errorf("distinct event types: %w", err)
+	}
+	defer rows.Close()
+	var types []string
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			return nil, fmt.Errorf("scan event type: %w", err)
+		}
+		types = append(types, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate event types: %w", err)
+	}
+	return types, nil
+}
+
+func (r *QueryRepository) CountOpenIssuesBySeverity(ctx context.Context) (map[string]int64, error) {
+	rows, err := r.db.QueryContext(ctx,
+		"SELECT severity, count() FROM analytics_data_quality_issues WHERE isNull(resolved_at) GROUP BY severity")
+	if err != nil {
+		return nil, fmt.Errorf("open issues: %w", err)
+	}
+	defer rows.Close()
+	out := map[string]int64{}
+	for rows.Next() {
+		var severity string
+		var n int64
+		if err := rows.Scan(&severity, &n); err != nil {
+			return nil, fmt.Errorf("scan open issues: %w", err)
+		}
+		out[severity] = n
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate open issues: %w", err)
+	}
+	return out, nil
+}

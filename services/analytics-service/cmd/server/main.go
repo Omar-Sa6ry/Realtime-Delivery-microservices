@@ -11,6 +11,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/clickhouse"
+	redisadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/redis"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/analytics"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/config"
 	gql "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/graphql"
 )
@@ -25,16 +28,54 @@ func main() {
 		os.Exit(1)
 	}
 
+	// ClickHouse is required: facts, queries, and idempotency live there.
+	chClient, err := clickhouse.NewClient(clickhouse.Config{
+		Host:     cfg.ClickHouseHost,
+		Port:     cfg.ClickHousePort,
+		Database: cfg.ClickHouseDB,
+		Username: cfg.ClickHouseUser,
+		Password: cfg.ClickHousePassword,
+	})
+	if err != nil {
+		slog.Error("failed to create clickhouse client", "error", err)
+		os.Exit(1)
+	}
+	defer chClient.Close()
+	if err := chClient.Ping(context.Background()); err != nil {
+		slog.Error("clickhouse unreachable", "error", err)
+		os.Exit(1)
+	}
+	if err := clickhouse.Migrate(context.Background(), chClient); err != nil {
+		slog.Error("clickhouse migrations failed", "error", err)
+		os.Exit(1)
+	}
+
+	// Redis is optional: query caching degrades to direct ClickHouse reads.
+	cache := redisadapter.NewCache(cfg.RedisHost, cfg.RedisPort)
+	defer cache.Close()
+
+	queryRepo := clickhouse.NewQueryRepository(chClient)
+	cacheTTL := time.Duration(cfg.CacheTTLSeconds) * time.Second
+
+	resolver := gql.NewResolver(
+		analytics.NewPlatformOverviewService(queryRepo, cache, cacheTTL),
+		analytics.NewDeliveryAnalyticsService(queryRepo, cache, cacheTTL),
+		analytics.NewDriverAnalyticsService(queryRepo, cache, cacheTTL),
+		analytics.NewPaymentAnalyticsService(queryRepo, cache, cacheTTL),
+		queryRepo,
+	)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health/live", gql.HealthLiveHandler)
-	mux.HandleFunc("/health/ready", gql.HealthReadyHandler)
+	mux.HandleFunc("/health/ready", gql.HealthReadyHandler(chClient.Ping))
 	mux.Handle("/metrics", promhttp.Handler())
 
 	// GraphQL endpoints:
 	// - /graphql for direct local testing
 	// - /analytics/graphql for API Gateway (ANALYTICS_SERVICE_URL=http://analytics-srv:4009/analytics/graphql)
-	mux.HandleFunc("/graphql", gql.GraphQLHandler)
-	mux.HandleFunc("/analytics/graphql", gql.GraphQLHandler)
+	gqlHandler := gql.DataLoaderMiddleware(gql.GraphQLHandler(resolver))
+	mux.Handle("/graphql", gqlHandler)
+	mux.Handle("/analytics/graphql", gqlHandler)
 
 	handler := gql.LanguageMiddleware(mux)
 

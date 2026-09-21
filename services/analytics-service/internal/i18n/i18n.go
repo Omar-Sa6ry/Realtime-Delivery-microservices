@@ -14,14 +14,16 @@ const (
 
 var messages = map[string]map[string]string{
 	"en": {
-		"server.healthy": "Analytics service is healthy",
-		"server.running": "Analytics service is running",
-		"error.internal": "An internal server error occurred",
+		"server.healthy":  "Analytics service is healthy",
+		"server.running":  "Analytics service is running",
+		"analytics.found": "Analytics retrieved successfully",
+		"error.internal":  "An internal server error occurred",
 	},
 	"ar": {
-		"server.healthy": "خدمة التحليلات تعمل بصحة جيدة",
-		"server.running": "خدمة التحليلات قيد التشغيل بنجاح",
-		"error.internal": "حدث خطأ داخلي في الخادم",
+		"server.healthy":  "خدمة التحليلات تعمل بصحة جيدة",
+		"server.running":  "خدمة التحليلات قيد التشغيل بنجاح",
+		"analytics.found": "تم جلب التحليلات بنجاح",
+		"error.internal":  "حدث خطأ داخلي في الخادم",
 	},
 }
 

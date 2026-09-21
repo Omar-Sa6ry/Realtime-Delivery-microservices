@@ -22,11 +22,6 @@ build:
 
   artifacts:
 
-    - image: delivery/analytics
-      context: .
-      docker:
-        dockerfile: services/analytics-service/Dockerfile
-        
     - image: delivery/notification
       context: .
       docker:
@@ -98,6 +93,11 @@ build:
       context: .
       docker:
         dockerfile: services/driver-service/Dockerfile
+
+    - image: delivery/analytics
+      context: .
+      docker:
+        dockerfile: services/analytics-service/Dockerfile
 
     - image: delivery/api-gateway
       context: .

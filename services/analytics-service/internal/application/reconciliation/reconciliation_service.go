@@ -75,7 +75,7 @@ func (s *Service) Check(ctx context.Context) (*Report, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reconcile freshness: %w", err)
 	}
-	if !maxOccurred.IsZero() {
+	if !maxOccurred.IsZero() && maxOccurred.Year() > 1970 {
 		rep.FreshnessSeconds = now.Sub(maxOccurred).Seconds()
 		rep.Freshness = gradeFreshness(rep.FreshnessSeconds, s.cfg.FreshWarnSeconds, s.cfg.FreshDegradedSeconds)
 	} else {
@@ -129,6 +129,7 @@ var knownEventTypes = map[string]bool{
 	"delivery.created": true, "delivery.driver.assigned": true, "delivery.driver.accepted": true,
 	"delivery.pickup.started": true, "delivery.picked_up": true, "delivery.in_transit": true,
 	"delivery.completed": true, "delivery.cancelled": true, "delivery.failed": true,
+	"delivery.deleted": true,
 	"driver.available": true, "driver.unavailable": true,
 	"driver.assignment.offered": true, "driver.assignment.accepted": true, "driver.assignment.rejected": true,
 	"driver.assignment.expired": true, "driver.assignment.released": true,

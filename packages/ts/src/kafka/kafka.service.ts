@@ -15,19 +15,34 @@ export interface KafkaEmitOptions {
   partition?: number;
   traceId?: string;
   headers?: Record<string, string>;
+  aggregateId?: string;
+  aggregateType?: string;
+  producer?: string;
+  correlationId?: string;
+  causationId?: string;
 }
 
-/**
- * Generic Kafka event envelope — matches the Go EventEnvelope struct.
- * All events published through KafkaService are wrapped in this structure.
- */
 export interface KafkaEventEnvelope<T = unknown> {
   eventId: string;
   eventType: string;
+  eventVersion: number;
+  occurredAt: string;
+  timestamp: number;
+  aggregateType: string;
+  aggregateId: string;
+  producer: string;
+  correlationId?: string;
+  causationId?: string;
   traceId?: string;
-  timestamp: number; // unix milliseconds
   payload: T;
 }
+
+function deriveAggregateType(eventType: string): string {
+  const dot = eventType.indexOf('.');
+  return dot !== -1 ? eventType.slice(0, dot) : eventType;
+}
+
+
 
 @Injectable()
 export class KafkaService implements OnModuleDestroy {
@@ -69,12 +84,25 @@ export class KafkaService implements OnModuleDestroy {
     return this.producer;
   }
 
-  buildEnvelope<T>(eventType: string, payload: T, traceId?: string): KafkaEventEnvelope<T> {
+  buildEnvelope<T>(
+    eventType: string,
+    payload: T,
+    options?: KafkaEmitOptions,
+  ): KafkaEventEnvelope<T> {
+    const now = new Date();
+    const producerName = options?.producer || this.options.clientId || 'delivery-service';
     return {
       eventId: randomUUID(),
       eventType,
-      traceId,
-      timestamp: Date.now(),
+      eventVersion: 1,
+      occurredAt: now.toISOString(),
+      timestamp: now.getTime(),
+      aggregateType: options?.aggregateType || deriveAggregateType(eventType),
+      aggregateId: options?.aggregateId || options?.key || '',
+      producer: producerName,
+      correlationId: options?.correlationId,
+      causationId: options?.causationId,
+      traceId: options?.traceId,
       payload,
     };
   }
@@ -87,7 +115,7 @@ export class KafkaService implements OnModuleDestroy {
     options?: KafkaEmitOptions,
   ): Promise<void> {
     const producer = await this.ensureProducer();
-    const envelope = this.buildEnvelope(eventType, payload, options?.traceId);
+    const envelope = this.buildEnvelope(eventType, payload, options);
 
     const record: ProducerRecord = {
       topic,

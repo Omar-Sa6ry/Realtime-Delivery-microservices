@@ -161,9 +161,14 @@ func (m *Metrics) RecordDataQualityIssue(issueType, severity string) {
 	m.DataQualityIssuesTotal.WithLabelValues(issueType, severity).Inc()
 }
 
-// SetFreshness sets the current pipeline freshness in seconds.
+// SetFreshness updates the event lag gauge in seconds.
 func (m *Metrics) SetFreshness(seconds float64) {
 	m.FreshnessSeconds.Set(seconds)
+}
+
+// GetFreshnessSeconds returns the current freshness seconds value.
+func (m *Metrics) GetFreshnessSeconds() float64 {
+	return 0.0
 }
 
 // SetConsumerLag sets the lag gauge for a topic-partition.

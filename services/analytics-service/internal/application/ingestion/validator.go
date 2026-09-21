@@ -15,7 +15,8 @@ type rawEnvelope struct {
 	EventID       string          `json:"eventId"`
 	EventType     string          `json:"eventType"`
 	EventVersion  int             `json:"eventVersion"`
-	OccurredAt    json.RawMessage `json:"occurredAt"`
+	OccurredAt    json.RawMessage `json:"occurredAt"` // ISO-8601 or null
+	Timestamp     json.RawMessage `json:"timestamp"`  // unix-ms fallback from TS KafkaService
 	Producer      string          `json:"producer"`
 	AggregateType string          `json:"aggregateType"`
 	AggregateID   string          `json:"aggregateId"`
@@ -30,9 +31,15 @@ func DecodeEnvelope(data []byte) (*domain.EventEnvelope, handlers.Payload, error
 		return nil, handlers.Payload{}, fmt.Errorf("%w: decode: %v", domain.ErrInvalidEnvelope, err)
 	}
 	occurredAt, err := parseFlexTime(raw.OccurredAt)
-	if err != nil {
-		return nil, handlers.Payload{}, fmt.Errorf("%w: occurredAt: %v", domain.ErrInvalidOccurredAt, err)
+	if err != nil || occurredAt.IsZero() {
+		// Try the TS KafkaService `timestamp` field (unix milliseconds).
+		occurredAt, err = parseFlexTime(raw.Timestamp)
+		if err != nil || occurredAt.IsZero() {
+			return nil, handlers.Payload{}, fmt.Errorf("%w: occurredAt/timestamp both missing or invalid", domain.ErrInvalidOccurredAt)
+		}
 	}
+
+	// --- Decode payload -------------------------------------------------------
 	payload := handlers.Payload{Raw: raw.Payload}
 	if len(bytes.TrimSpace(raw.Payload)) > 0 {
 		dec := json.NewDecoder(bytes.NewReader(raw.Payload))
@@ -45,19 +52,53 @@ func DecodeEnvelope(data []byte) (*domain.EventEnvelope, handlers.Payload, error
 	} else {
 		payload.Map = map[string]any{}
 	}
+
+	version := raw.EventVersion
+	if version <= 0 {
+		version = 1
+	}
+
+	aggregateType := raw.AggregateType
+	if strings.TrimSpace(aggregateType) == "" {
+		if i := strings.Index(raw.EventType, "."); i != -1 {
+			aggregateType = raw.EventType[:i]
+		} else {
+			aggregateType = raw.EventType
+		}
+	}
+
+	// aggregateId: fall back to common payload fields when not in envelope.
+	aggregateID := raw.AggregateID
+	if strings.TrimSpace(aggregateID) == "" {
+		for _, key := range []string{"deliveryId", "driverId", "assignmentId", "paymentId", "notificationId", "id"} {
+			if v, ok := payload.Map[key]; ok {
+				if s, isStr := v.(string); isStr && strings.TrimSpace(s) != "" {
+					aggregateID = s
+					break
+				}
+			}
+		}
+	}
+
+	producer := raw.Producer
+	if strings.TrimSpace(producer) == "" {
+		producer = aggregateType + "-service"
+	}
+
 	env := &domain.EventEnvelope{
 		EventID:       raw.EventID,
 		EventType:     raw.EventType,
-		EventVersion:  domain.EventVersion(raw.EventVersion),
+		EventVersion:  domain.EventVersion(version),
 		OccurredAt:    occurredAt,
-		Producer:      raw.Producer,
-		AggregateType: raw.AggregateType,
-		AggregateID:   raw.AggregateID,
+		Producer:      producer,
+		AggregateType: aggregateType,
+		AggregateID:   aggregateID,
 		CorrelationID: raw.CorrelationID,
 		CausationID:   raw.CausationID,
 	}
 	return env, payload, nil
 }
+
 
 func parseFlexTime(raw json.RawMessage) (time.Time, error) {
 	s := strings.TrimSpace(string(raw))
@@ -103,6 +144,7 @@ var requiredPayloadFields = map[string][]string{
 	"delivery.completed":       {"deliveryId"},
 	"delivery.cancelled":       {"deliveryId"},
 	"delivery.failed":          {"deliveryId"},
+	"delivery.deleted":         {"deliveryId"},
 	// Driver domain.
 	"driver.available":           {"driverId"},
 	"driver.unavailable":         {"driverId"},

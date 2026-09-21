@@ -16,16 +16,21 @@ func (h *DeliveryHandler) Handles(eventType string) bool {
 	return domain.KnownDeliveryEventTypes[eventType]
 }
 
-// Handle builds the immutable event row plus the denormalized timeline row
-// carrying this event's observation. Full cross-event timeline assembly uses
-// MergeTimeline once a loader is wired; the single-event row is always safe
-// to write because ReplacingMergeTree keeps the latest ingested state.
 func (h *DeliveryHandler) Handle(ctx context.Context, env *domain.EventEnvelope, payload Payload) (*FactBatch, error) {
 	_ = ctx
 	m := payload.Map
 	deliveryID := firstNonEmpty(GetString(m, "deliveryId"), env.AggregateID)
 	if deliveryID == "" {
 		return nil, fmt.Errorf("%w: deliveryId", domain.ErrInvalidEnvelope)
+	}
+	batch := &FactBatch{}
+	raw := h.NewRawLanding(env)
+	raw.PayloadJSON = string(payload.Raw)
+	batch.Raw = append(batch.Raw, raw)
+	batch.Seen = append(batch.Seen, h.NewSeen(env))
+
+	if env.EventType == domain.DeliveryDeleted {
+		return batch, nil
 	}
 
 	event := &domain.FactDeliveryEvent{
@@ -44,11 +49,6 @@ func (h *DeliveryHandler) Handle(ctx context.Context, env *domain.EventEnvelope,
 	if err := event.Validate(); err != nil {
 		return nil, err
 	}
-
-	batch := &FactBatch{}
-	raw := h.NewRawLanding(env)
-	raw.PayloadJSON = string(payload.Raw)
-	batch.Raw = append(batch.Raw, raw)
 	batch.DeliveryEvents = append(batch.DeliveryEvents, event)
 
 	timeline := MergeTimeline(nil, event, m)
@@ -61,13 +61,9 @@ func (h *DeliveryHandler) Handle(ctx context.Context, env *domain.EventEnvelope,
 	} else {
 		batch.DeliveryCompleted = append(batch.DeliveryCompleted, timeline)
 	}
-	batch.Seen = append(batch.Seen, h.NewSeen(env))
 	return batch, nil
 }
 
-// MergeTimeline folds one delivery event into a timeline row, starting from an
-// existing row when a loader provides it (nil builds from this event alone).
-// Pure function: no I/O, fully unit-testable.
 func MergeTimeline(existing *domain.FactDeliveryCompleted, event *domain.FactDeliveryEvent, payload map[string]any) *domain.FactDeliveryCompleted {
 	var t domain.FactDeliveryCompleted
 	if existing != nil {

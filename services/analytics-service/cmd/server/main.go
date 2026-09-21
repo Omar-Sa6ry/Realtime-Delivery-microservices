@@ -15,8 +15,10 @@ import (
 	kafkago "github.com/segmentio/kafka-go"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/clickhouse"
+	grpcadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/grpc"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/idempotency"
 	kafkaadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/kafka"
+	natsadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/nats"
 	redisadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/redis"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/analytics"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/ingestion"
@@ -25,6 +27,7 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/config"
 	gql "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/graphql"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/observability"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/ports"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/workers"
 )
 
@@ -135,18 +138,67 @@ func main() {
 	queryRepo := clickhouse.NewQueryRepository(chClient)
 	cacheTTL := time.Duration(cfg.CacheTTLSeconds) * time.Second
 
+	platformOverviewSvc := analytics.NewPlatformOverviewService(queryRepo, cache, cacheTTL)
+	deliveryAnalyticsSvc := analytics.NewDeliveryAnalyticsService(queryRepo, cache, cacheTTL)
+	driverAnalyticsSvc := analytics.NewDriverAnalyticsService(queryRepo, cache, cacheTTL)
+	paymentAnalyticsSvc := analytics.NewPaymentAnalyticsService(queryRepo, cache, cacheTTL)
+
 	resolver := gql.NewResolver(
-		analytics.NewPlatformOverviewService(queryRepo, cache, cacheTTL),
-		analytics.NewDeliveryAnalyticsService(queryRepo, cache, cacheTTL),
-		analytics.NewDriverAnalyticsService(queryRepo, cache, cacheTTL),
-		analytics.NewPaymentAnalyticsService(queryRepo, cache, cacheTTL),
+		platformOverviewSvc,
+		deliveryAnalyticsSvc,
+		driverAnalyticsSvc,
+		paymentAnalyticsSvc,
 		queryRepo,
 	)
+
+	// --- Internal gRPC Server for mesh communication ---
+	grpcSrv := grpcadapter.NewServer(cfg.PortGRPC, platformOverviewSvc, driverAnalyticsSvc)
+	go func() {
+		slog.Info("analytics gRPC server starting", "port", cfg.PortGRPC)
+		if err := grpcSrv.Start(); err != nil {
+			slog.Error("analytics gRPC server failed", "error", err)
+		}
+	}()
+	defer grpcSrv.Stop()
+
+	// --- NATS Publisher for live transient ticker to Realtime Service ---
+	natsPublisher, err := natsadapter.NewPublisher(cfg.NATSURL)
+	if err != nil {
+		slog.Warn("nats publisher unavailable (non-fatal)", "error", err)
+	}
+	if natsPublisher != nil {
+		defer natsPublisher.Close()
+	}
 
 	pool := workers.NewPool()
 	reconciliationSvc := reconciliation.NewService(queryRepo, reconciliation.Config{WindowHours: 1})
 	pool.Register("reconciliation", time.Duration(cfg.ReconcileIntervalSec)*time.Second,
 		workers.NewReconciliationWorker(reconciliationSvc).Run)
+
+	if natsPublisher != nil {
+		pool.Register("live_ticker", 10*time.Second, func(ctx context.Context) {
+			now := time.Now().UTC()
+			overview, err := platformOverviewSvc.GetPlatformOverview(ctx, ports.TimeRange{
+				From:        now.Add(-1 * time.Hour),
+				To:          now,
+				Granularity: ports.GranularityHour,
+			}, "nats")
+			if err != nil {
+				return
+			}
+			rate := 0.0
+			if overview.TotalDeliveries > 0 {
+				rate = float64(overview.CompletedDeliveries) / float64(overview.TotalDeliveries)
+			}
+			_ = natsPublisher.PublishRealtimeMetrics(natsadapter.RealtimeMetricPayload{
+				Timestamp:      now.Format(time.RFC3339),
+				ActiveEvents:   overview.TotalDeliveries,
+				CompletionRate: rate,
+				FreshnessSec:   analyticsMetrics.GetFreshnessSeconds(),
+			})
+		})
+	}
+
 	workerCtx, stopWorkers := context.WithCancel(context.Background())
 	defer stopWorkers()
 	pool.Start(workerCtx)
@@ -202,6 +254,7 @@ func main() {
 	defer cancel()
 	_ = mainSrv.Shutdown(ctx)
 	_ = metricsSrv.Shutdown(ctx)
+	grpcSrv.Stop()
 	slog.Info("analytics service stopped")
 }
 

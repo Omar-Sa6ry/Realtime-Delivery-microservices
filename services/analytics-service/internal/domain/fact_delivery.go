@@ -16,6 +16,7 @@ const (
 	DeliveryCompleted      = "delivery.completed"
 	DeliveryCancelled      = "delivery.cancelled"
 	DeliveryFailed         = "delivery.failed"
+	DeliveryDeleted        = "delivery.deleted"
 )
 
 var KnownDeliveryEventTypes = map[string]bool{
@@ -28,6 +29,7 @@ var KnownDeliveryEventTypes = map[string]bool{
 	DeliveryCompleted:      true,
 	DeliveryCancelled:      true,
 	DeliveryFailed:         true,
+	DeliveryDeleted:        true,
 }
 
 type FactDeliveryEvent struct {

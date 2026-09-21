@@ -7,7 +7,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/reconciliation"
 )
 
-
 type ReconciliationWorker struct {
 	service *reconciliation.Service
 }

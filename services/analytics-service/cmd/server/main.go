@@ -17,17 +17,37 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/reconciliation"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/config"
 	gql "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/graphql"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/workers"
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
+	logger := observability.Init()
+	_ = logger 
 
 	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
+	}
+
+	analyticsMetrics := observability.NewMetrics()
+	_ = analyticsMetrics
+	tracer, err := observability.NewTracer(observability.TracerConfig{
+		ServiceName:    "analytics-service",
+		OTLPEndpoint:   cfg.OTELEndpoint,
+		SamplingRate:   0.1,
+		EnableInsecure: true,
+	})
+	if err != nil {
+		slog.Warn("tracer init failed (non-fatal)", "error", err)
+	}
+	if tracer != nil {
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = tracer.Shutdown(ctx)
+		}()
 	}
 
 	// ClickHouse is required: facts, queries, and idempotency live there.

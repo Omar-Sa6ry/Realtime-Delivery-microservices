@@ -10,7 +10,7 @@ type contextKey string
 
 const (
 	LangKey     contextKey = "lang"
-	DefaultLang            = "en"
+	DefaultLang string     = "en"
 )
 
 var messages = map[string]map[string]string{

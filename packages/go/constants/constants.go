@@ -127,6 +127,71 @@ const (
 	PaymentMethodCash   PaymentMethod = "CASH"
 )
 
+// PaymentProvider defines payment providers for analytics and billing.
+type PaymentProvider string
+
+const (
+	PaymentProviderStripe PaymentProvider = "STRIPE"
+	PaymentProviderPaypal PaymentProvider = "PAYPAL"
+	PaymentProviderCash   PaymentProvider = "CASH"
+)
+
+// DataQualitySeverity defines the severity levels for data quality issues.
+type DataQualitySeverity string
+
+const (
+	DataQualitySeverityError   DataQualitySeverity = "ERROR"
+	DataQualitySeverityWarning DataQualitySeverity = "WARNING"
+	DataQualitySeverityInfo    DataQualitySeverity = "INFO"
+)
+
+// AnalyticsEventType defines canonical event types for analytics and audit queries.
+type AnalyticsEventType string
+
+const (
+	// Delivery domain events
+	AnalyticsEventDeliveryCreated        AnalyticsEventType = "DELIVERY_CREATED"
+	AnalyticsEventDeliveryDriverAssigned AnalyticsEventType = "DELIVERY_DRIVER_ASSIGNED"
+	AnalyticsEventDeliveryDriverAccepted AnalyticsEventType = "DELIVERY_DRIVER_ACCEPTED"
+	AnalyticsEventDeliveryPickupStarted  AnalyticsEventType = "DELIVERY_PICKUP_STARTED"
+	AnalyticsEventDeliveryPickedUp       AnalyticsEventType = "DELIVERY_PICKED_UP"
+	AnalyticsEventDeliveryInTransit      AnalyticsEventType = "DELIVERY_IN_TRANSIT"
+	AnalyticsEventDeliveryCompleted      AnalyticsEventType = "DELIVERY_COMPLETED"
+	AnalyticsEventDeliveryCancelled      AnalyticsEventType = "DELIVERY_CANCELLED"
+	AnalyticsEventDeliveryFailed         AnalyticsEventType = "DELIVERY_FAILED"
+	AnalyticsEventDeliveryDeleted        AnalyticsEventType = "DELIVERY_DELETED"
+
+	// Driver domain events
+	AnalyticsEventDriverAvailable          AnalyticsEventType = "DRIVER_AVAILABLE"
+	AnalyticsEventDriverUnavailable        AnalyticsEventType = "DRIVER_UNAVAILABLE"
+	AnalyticsEventDriverAssignmentOffered  AnalyticsEventType = "DRIVER_ASSIGNMENT_OFFERED"
+	AnalyticsEventDriverAssignmentAccepted AnalyticsEventType = "DRIVER_ASSIGNMENT_ACCEPTED"
+	AnalyticsEventDriverAssignmentRejected AnalyticsEventType = "DRIVER_ASSIGNMENT_REJECTED"
+	AnalyticsEventDriverAssignmentExpired  AnalyticsEventType = "DRIVER_ASSIGNMENT_EXPIRED"
+	AnalyticsEventDriverAssignmentReleased AnalyticsEventType = "DRIVER_ASSIGNMENT_RELEASED"
+
+	// Payment domain events
+	AnalyticsEventPaymentCreated              AnalyticsEventType = "PAYMENT_CREATED"
+	AnalyticsEventPaymentAuthorizationStarted AnalyticsEventType = "PAYMENT_AUTHORIZATION_STARTED"
+	AnalyticsEventPaymentAuthorized           AnalyticsEventType = "PAYMENT_AUTHORIZED"
+	AnalyticsEventPaymentAuthorizationFailed  AnalyticsEventType = "PAYMENT_AUTHORIZATION_FAILED"
+	AnalyticsEventPaymentCaptureStarted       AnalyticsEventType = "PAYMENT_CAPTURE_STARTED"
+	AnalyticsEventPaymentCaptured             AnalyticsEventType = "PAYMENT_CAPTURED"
+	AnalyticsEventPaymentCaptureFailed        AnalyticsEventType = "PAYMENT_CAPTURE_FAILED"
+	AnalyticsEventPaymentCancelled            AnalyticsEventType = "PAYMENT_CANCELLED"
+	AnalyticsEventPaymentRefundStarted        AnalyticsEventType = "PAYMENT_REFUND_STARTED"
+	AnalyticsEventPaymentRefunded             AnalyticsEventType = "PAYMENT_REFUNDED"
+	AnalyticsEventPaymentRefundFailed         AnalyticsEventType = "PAYMENT_REFUND_FAILED"
+	AnalyticsEventPaymentFailed               AnalyticsEventType = "PAYMENT_FAILED"
+
+	// Notification domain events
+	AnalyticsEventNotificationCreated   AnalyticsEventType = "NOTIFICATION_CREATED"
+	AnalyticsEventNotificationSent      AnalyticsEventType = "NOTIFICATION_SENT"
+	AnalyticsEventNotificationDelivered AnalyticsEventType = "NOTIFICATION_DELIVERED"
+	AnalyticsEventNotificationFailed    AnalyticsEventType = "NOTIFICATION_FAILED"
+	AnalyticsEventNotificationRetrying  AnalyticsEventType = "NOTIFICATION_RETRYING"
+)
+
 // NotificationType defines the domain event that triggered a notification.
 type NotificationType string
 

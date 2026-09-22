@@ -147,7 +147,7 @@ query GetPaymentAnalytics {
       to: "2026-09-19T23:59:59Z"
       granularity: DAY
     }
-    provider: "stripe"
+    provider: STRIPE
   }) {
     success
     statusCode
@@ -169,7 +169,7 @@ query GetPaymentAnalytics {
 
 # Raw Events (admin/debug)
 query GetRawAnalyticsEvents {
-  rawAnalyticsEvents(page: 1, limit: 20, eventType: "payment.captured") {
+  rawAnalyticsEvents(page: 1, limit: 20, eventType: PAYMENT_CAPTURED) {
     success
     statusCode
     message
@@ -198,7 +198,7 @@ query GetRawAnalyticsEvents {
 
 # Data Quality Issues
 query GetDataQualityIssues {
-  dataQualityIssues(page: 1, limit: 20, severity: "ERROR") {
+  dataQualityIssues(page: 1, limit: 20, severity: ERROR) {
     success
     statusCode
     message

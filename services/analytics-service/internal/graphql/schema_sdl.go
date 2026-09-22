@@ -18,6 +18,55 @@ enum AnalyticsGranularity {
 	MONTH
 }
 
+enum DataQualitySeverity {
+	ERROR
+	WARNING
+	INFO
+}
+
+enum PaymentProvider {
+	STRIPE
+	PAYPAL
+	CASH
+}
+
+enum AnalyticsEventType {
+	DELIVERY_CREATED
+	DELIVERY_DRIVER_ASSIGNED
+	DELIVERY_DRIVER_ACCEPTED
+	DELIVERY_PICKUP_STARTED
+	DELIVERY_PICKED_UP
+	DELIVERY_IN_TRANSIT
+	DELIVERY_COMPLETED
+	DELIVERY_CANCELLED
+	DELIVERY_FAILED
+	DELIVERY_DELETED
+	DRIVER_AVAILABLE
+	DRIVER_UNAVAILABLE
+	DRIVER_ASSIGNMENT_OFFERED
+	DRIVER_ASSIGNMENT_ACCEPTED
+	DRIVER_ASSIGNMENT_REJECTED
+	DRIVER_ASSIGNMENT_EXPIRED
+	DRIVER_ASSIGNMENT_RELEASED
+	PAYMENT_CREATED
+	PAYMENT_AUTHORIZATION_STARTED
+	PAYMENT_AUTHORIZED
+	PAYMENT_AUTHORIZATION_FAILED
+	PAYMENT_CAPTURE_STARTED
+	PAYMENT_CAPTURED
+	PAYMENT_CAPTURE_FAILED
+	PAYMENT_CANCELLED
+	PAYMENT_REFUND_STARTED
+	PAYMENT_REFUNDED
+	PAYMENT_REFUND_FAILED
+	PAYMENT_FAILED
+	NOTIFICATION_CREATED
+	NOTIFICATION_SENT
+	NOTIFICATION_DELIVERED
+	NOTIFICATION_FAILED
+	NOTIFICATION_RETRYING
+}
+
 type User @key(fields: "id") {
 	id: ID!
 }
@@ -69,7 +118,7 @@ input DriverAnalyticsFilter {
 
 input PaymentAnalyticsFilter {
 	range: AnalyticsRange!
-	provider: String
+	provider: PaymentProvider
 }
 
 type PlatformOverview {
@@ -164,7 +213,7 @@ type DataQualityIssue {
 	aggregateType: String!
 	aggregateId: String!
 	detectedAt: DateTime!
-	severity: String!
+	severity: DataQualitySeverity!
 	details: String
 }
 
@@ -237,8 +286,8 @@ type Query {
 	driverAnalytics(filter: DriverAnalyticsFilter!): DriverAnalyticsResponse!
 	topDrivers(range: AnalyticsRange!, limit: Int): DriverAnalyticsListResponse!
 	paymentAnalytics(filter: PaymentAnalyticsFilter!): PaymentAnalyticsResponse!
-	rawAnalyticsEvents(page: Int, limit: Int, eventType: String, from: DateTime, to: DateTime): RawAnalyticsEventsResponse!
-	dataQualityIssues(page: Int, limit: Int, severity: String): DataQualityIssuesResponse!
+	rawAnalyticsEvents(page: Int, limit: Int, eventType: AnalyticsEventType, from: DateTime, to: DateTime): RawAnalyticsEventsResponse!
+	dataQualityIssues(page: Int, limit: Int, severity: DataQualitySeverity): DataQualityIssuesResponse!
 }
 
 type _Service {

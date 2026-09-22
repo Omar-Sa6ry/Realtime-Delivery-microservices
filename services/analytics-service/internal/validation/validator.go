@@ -71,11 +71,11 @@ var (
 	reGranularity = regexp.MustCompile(`(?i)granularity\s*:\s*([A-Za-z0-9_]+)`)
 	reDriverID    = regexp.MustCompile(`(?i)driverId\s*:\s*(?:["']([^"']+)["']|([$A-Za-z0-9_-]+))`)
 	reCityID      = regexp.MustCompile(`(?i)cityId\s*:\s*["']([^"']+)["']`)
-	reProvider    = regexp.MustCompile(`(?i)provider\s*:\s*["']([^"']+)["']`)
+	reProvider    = regexp.MustCompile(`(?i)provider\s*:\s*["']?([A-Za-z0-9_]+)["']?`)
 	rePage        = regexp.MustCompile(`(?i)page\s*:\s*(\d+)`)
 	reLimit       = regexp.MustCompile(`(?i)limit\s*:\s*(\d+)`)
 	reSeverity    = regexp.MustCompile(`(?i)severity\s*:\s*["']?([A-Za-z0-9_]+)["']?`)
-	reEventType   = regexp.MustCompile(`(?i)eventType\s*:\s*["']([^"']+)["']`)
+	reEventType   = regexp.MustCompile(`(?i)eventType\s*:\s*["']?([A-Za-z0-9_.]+)["']?`)
 )
 
 func extractLiteral(query string, re *regexp.Regexp) string {
@@ -179,10 +179,14 @@ func ParsePaymentFilter(query string, vars map[string]any) (ports.PaymentAnalyti
 	if provider == "" {
 		provider = extractLiteral(query, reProvider)
 	}
+	normProvider, err := NormalizeProvider(provider)
+	if err != nil {
+		return ports.PaymentAnalyticsFilter{}, err
+	}
 
 	return ports.PaymentAnalyticsFilter{
 		Range:    r,
-		Provider: provider,
+		Provider: normProvider,
 	}, nil
 }
 
@@ -250,6 +254,79 @@ func ValidateSeverity(s string) (string, error) {
 		return s, nil
 	default:
 		return "", fmt.Errorf("invalid severity %q: must be ERROR, WARNING, or INFO", s)
+	}
+}
+
+// Map of GraphQL enum string to internal dot-notated topic / event_type string
+var eventTypeEnumToInternal = map[string]string{
+	"DELIVERY_CREATED":                 "delivery.created",
+	"DELIVERY_DRIVER_ASSIGNED":         "delivery.driver.assigned",
+	"DELIVERY_DRIVER_ACCEPTED":         "delivery.driver.accepted",
+	"DELIVERY_PICKUP_STARTED":          "delivery.pickup.started",
+	"DELIVERY_PICKED_UP":               "delivery.picked_up",
+	"DELIVERY_IN_TRANSIT":              "delivery.in_transit",
+	"DELIVERY_COMPLETED":               "delivery.completed",
+	"DELIVERY_CANCELLED":               "delivery.cancelled",
+	"DELIVERY_FAILED":                  "delivery.failed",
+	"DELIVERY_DELETED":                 "delivery.deleted",
+	"DRIVER_AVAILABLE":                 "driver.available",
+	"DRIVER_UNAVAILABLE":               "driver.unavailable",
+	"DRIVER_ASSIGNMENT_OFFERED":        "driver.assignment.offered",
+	"DRIVER_ASSIGNMENT_ACCEPTED":       "driver.assignment.accepted",
+	"DRIVER_ASSIGNMENT_REJECTED":       "driver.assignment.rejected",
+	"DRIVER_ASSIGNMENT_EXPIRED":        "driver.assignment.expired",
+	"DRIVER_ASSIGNMENT_RELEASED":       "driver.assignment.released",
+	"PAYMENT_CREATED":                  "payment.created",
+	"PAYMENT_AUTHORIZATION_STARTED":    "payment.authorization.started",
+	"PAYMENT_AUTHORIZED":               "payment.authorized",
+	"PAYMENT_AUTHORIZATION_FAILED":     "payment.authorization.failed",
+	"PAYMENT_CAPTURE_STARTED":          "payment.capture.started",
+	"PAYMENT_CAPTURED":                 "payment.captured",
+	"PAYMENT_CAPTURE_FAILED":           "payment.capture.failed",
+	"PAYMENT_CANCELLED":                "payment.cancelled",
+	"PAYMENT_REFUND_STARTED":           "payment.refund.started",
+	"PAYMENT_REFUNDED":                 "payment.refunded",
+	"PAYMENT_REFUND_FAILED":            "payment.refund.failed",
+	"PAYMENT_FAILED":                   "payment.failed",
+	"NOTIFICATION_CREATED":             "notification.created",
+	"NOTIFICATION_SENT":                "notification.sent",
+	"NOTIFICATION_DELIVERED":           "notification.delivered",
+	"NOTIFICATION_FAILED":              "notification.failed",
+	"NOTIFICATION_RETRYING":            "notification.retrying",
+}
+
+func NormalizeEventType(s string) (string, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", nil
+	}
+	// If passed as uppercase enum (e.g. PAYMENT_CAPTURED)
+	upper := strings.ToUpper(s)
+	if internal, ok := eventTypeEnumToInternal[upper]; ok {
+		return internal, nil
+	}
+	// If already in dot notation (e.g. payment.captured), check if reverse exists
+	lower := strings.ToLower(s)
+	for _, val := range eventTypeEnumToInternal {
+		if val == lower {
+			return val, nil
+		}
+	}
+	return "", fmt.Errorf("invalid eventType %q", s)
+}
+
+func NormalizeProvider(s string) (string, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", nil
+	}
+	upper := strings.ToUpper(s)
+	switch upper {
+	case "STRIPE", "PAYPAL", "CASH":
+		// Return lowercase or uppercase matching existing query repo expectations (lowercased in provider filter)
+		return strings.ToLower(upper), nil
+	default:
+		return "", fmt.Errorf("invalid provider %q: must be STRIPE, PAYPAL, or CASH", s)
 	}
 }
 

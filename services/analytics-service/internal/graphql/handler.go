@@ -146,6 +146,25 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 			return
 		}
 
+		role := strings.ToLower(strings.TrimSpace(r.Header.Get("x-user-role")))
+		if role == "" {
+			role = strings.ToLower(strings.TrimSpace(r.Header.Get("X-User-Role")))
+		}
+		if role != "admin" {
+			lang := i18n.FromContext(ctx)
+			writeJSON(w, http.StatusForbidden, map[string]any{
+				"errors": []map[string]any{
+					{
+						"message": i18n.T(lang, "error.unauthorized"),
+						"extensions": map[string]any{
+							"code": "FORBIDDEN",
+						},
+					},
+				},
+			})
+			return
+		}
+
 		// 5. platformOverview.
 		if strings.Contains(query, "platformOverview") {
 			tr, err := validation.ParseRange(query, vars)
@@ -226,7 +245,12 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 		// 10. rawAnalyticsEvents (admin/debug).
 		if strings.Contains(query, "rawAnalyticsEvents") {
 			page, limit := validation.ParsePage(query, vars)
-			eventType := validation.ExtractQueryField(query, "eventType", vars)
+			rawEventType := validation.ExtractQueryField(query, "eventType", vars)
+			eventType, err := validation.NormalizeEventType(rawEventType)
+			if err != nil {
+				writeDataError(w, ctx, err)
+				return
+			}
 			var from, to *time.Time
 			fromStr := validation.ExtractQueryField(query, "from", vars)
 			if fromStr != "" {

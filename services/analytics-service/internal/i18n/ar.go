@@ -24,7 +24,8 @@ var arMessages = map[string]string{
 	"error.limit.invalid":      "يجب أن يكون الحد بين 1 و 100",
 
 	// Generic errors
-	"error.internal":  "حدث خطأ داخلي في الخادم",
-	"error.not.found": "المورد المطلوب غير موجود",
+	"error.internal":     "حدث خطأ داخلي في الخادم",
+	"error.unauthorized": "غير مصرح: يتطلب صلاحيات مسؤول النظام (Admin)",
+	"error.not.found":    "المورد المطلوب غير موجود",
 }
 

@@ -25,5 +25,6 @@ var enMessages = map[string]string{
 
 	// Generic errors
 	"error.internal":               "An internal server error occurred",
+	"error.unauthorized":           "Unauthorized: admin role required",
 	"error.not.found":              "The requested resource was not found",
 }

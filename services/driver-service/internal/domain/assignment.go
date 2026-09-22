@@ -108,8 +108,8 @@ func (a *Assignment) CreateAssignment() error {
 	a.Status = AssignmentStatusOffered
 	a.AttemptNumber++
 	a.OfferedAt = time.Now()
-	// Set expiration: default 20 seconds from now (configurable)
-	a.ExpiresAt = time.Now().Add(20 * time.Second)
+	// Set expiration: default 30 seconds from now
+	a.ExpiresAt = time.Now().Add(30 * time.Second)
 	a.UpdatedAt = time.Now()
 	return nil
 }
@@ -226,9 +226,12 @@ func (a *Assignment) Duration() time.Duration {
 	case AssignmentStatusAccepted:
 		return time.Since(*a.AcceptedAt)
 	case AssignmentStatusActive:
-		return time.Since(*a.CompletedAt) // completedAt is nil for active, so this returns duration since start... let me fix
+		return time.Since(a.OfferedAt)
 	case AssignmentStatusCompleted:
-		return time.Since(*a.CompletedAt)
+		if a.CompletedAt != nil {
+			return time.Since(*a.CompletedAt)
+		}
+		return time.Since(a.UpdatedAt)
 	case AssignmentStatusRejected, AssignmentStatusExpired, AssignmentStatusCancelled:
 		return 0
 	default:

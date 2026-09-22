@@ -56,9 +56,8 @@ func (g *GeoStore) GEOSearch(ctx context.Context, longitude, latitude, radiusKm 
 	return err
 }
 
-// GEOSearchDrivers searches for drivers within a radius and returns their IDs with distances.
-func (g *GeoStore) GEOSearchDrivers(ctx context.Context, longitude, latitude, radiusKm float64) ([]redis.GeoLocation, error) {
-	return g.client.GeoSearchLocation(ctx, geoKey, &redis.GeoSearchLocationQuery{
+func (g *GeoStore) GEOSearchDrivers(ctx context.Context, longitude, latitude, radiusKm float64) ([]ports.GeoDriverResult, error) {
+	results, err := g.client.GeoSearchLocation(ctx, geoKey, &redis.GeoSearchLocationQuery{
 		GeoSearchQuery: redis.GeoSearchQuery{
 			Longitude:  longitude,
 			Latitude:   latitude,
@@ -70,6 +69,25 @@ func (g *GeoStore) GEOSearchDrivers(ctx context.Context, longitude, latitude, ra
 		WithCoord: true,
 		WithDist:  true,
 	}).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	driverResults := make([]ports.GeoDriverResult, 0, len(results))
+	for _, loc := range results {
+		driverResults = append(driverResults, ports.GeoDriverResult{
+			DriverID:       loc.Name,
+			DistanceMeters: loc.Dist * 1000.0, // redis GeoSearch with RadiusUnit "km" gives Dist in km
+			Longitude:      loc.Longitude,
+			Latitude:       loc.Latitude,
+		})
+	}
+	return driverResults, nil
+}
+
+// NearbyDriversSorted returns nearby drivers sorted by distance ascending.
+func (g *GeoStore) NearbyDriversSorted(ctx context.Context, longitude, latitude, radiusKm float64) ([]ports.GeoDriverResult, error) {
+	return g.GEOSearchDrivers(ctx, longitude, latitude, radiusKm)
 }
 
 // SetDriverLocation stores a driver's location using GEO commands.

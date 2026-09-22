@@ -88,15 +88,13 @@ func (p *DispatchPolicy) RankCandidates(candidates []Candidate) []Candidate {
 	ranked := make([]Candidate, len(candidates))
 	copy(ranked, candidates)
 
-	sort.Sort(ByRankingScore(ranked))
-
-	// Apply simple ranking: nearest compatible driver first
 	for i := range ranked {
-		// Future: add availability, vehicle compatibility, acceptance rate, etc.
 		if ranked[i].RankingScore == 0 {
 			ranked[i].RankingScore = ranked[i].DistanceMeters
 		}
 	}
+
+	sort.Sort(ByRankingScore(ranked))
 
 	return ranked[:min(p.candidateCount, len(ranked))]
 }

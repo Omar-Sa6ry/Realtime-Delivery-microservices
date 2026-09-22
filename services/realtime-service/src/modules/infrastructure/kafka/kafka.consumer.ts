@@ -13,6 +13,7 @@ import {
   DeliveryKafkaTopics,
   PaymentKafkaTopics,
   RealtimeKafkaTopics,
+  DriverEventType,
   BaseKafkaConsumer,
 } from '@delivery/common';
 import { KafkaEventHandler, REALTIME_EVENT_HANDLERS } from './handlers/base-kafka-event.handler';
@@ -28,6 +29,9 @@ const CONSUMED_TOPICS = [
   DeliveryKafkaTopics.DELIVERY_CANCELLED,
   PaymentKafkaTopics.PAYMENT_COMPLETED,
   PaymentKafkaTopics.PAYMENT_FAILED,
+  DriverEventType.AssignmentOffered,
+  DriverEventType.AssignmentRejected,
+  DriverEventType.AssignmentExpired,
 ];
 
 @Injectable()

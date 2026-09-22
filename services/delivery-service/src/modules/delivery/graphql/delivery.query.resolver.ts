@@ -109,4 +109,37 @@ export class DeliveryQueryResolver {
       },
     } as DeliveryStatusesResponse;
   }
+
+  @Auth([Permission.VIEW_DELIVERY])
+  @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 60, windowMs: 60000 })
+  @Query(() => DeliveryListResponse)
+  async openDeliveries(
+    @Args({ name: 'page', type: () => Int, nullable: true, defaultValue: 1 })
+    page: number,
+    @Args({
+      name: 'pageSize',
+      type: () => Int,
+      nullable: true,
+      defaultValue: 50,
+    })
+    pageSize: number,
+    @Context() ctx: GraphqlContext,
+  ): Promise<DeliveryListResponse> {
+    const [deliveries, total] = await this.queries.getOpenDeliveries(page, pageSize);
+    const totalPages = Math.ceil(total / pageSize);
+    const nextPage = page < totalPages ? page + 1 : null;
+    return {
+      success: true,
+      statusCode: 200,
+      message: await this.i18n.t('delivery.retrieved', { lang: ctx.language }),
+      data: {
+        items: deliveries.map(deliveryToGraphql),
+        paginationInfo: {
+          totalItems: total,
+          currentPage: page,
+          nextPage,
+        },
+      },
+    } as DeliveryListResponse;
+  }
 }

@@ -261,3 +261,37 @@ query GetDelivery {
     }
   }
 }
+
+# Browse All Open / Unassigned Deliveries (Available to Drivers)
+query GetOpenDeliveries {
+  openDeliveries(page: 1, pageSize: 20) {
+    success
+    statusCode
+    message
+    data {
+      items {
+        id
+        status
+        paymentStatus
+        amount
+        currency
+        pickupAddress {
+          city
+          countryCode
+          latitude
+          longitude
+        }
+        dropoffAddress {
+          city
+          countryCode
+        }
+        createdAt
+      }
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+    }
+  }
+}

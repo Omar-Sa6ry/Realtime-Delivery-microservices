@@ -669,3 +669,50 @@ query GetDriverReviews {
     }
   }
 }
+
+# Query Open / Unassigned Deliveries (Available for Drivers)
+query GetDriverAvailableDeliveries {
+  availableDeliveries {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      totalItems
+      items {
+        id
+        customerId
+        status
+        pickupCity
+        pickupCountry
+        dropoffCity
+        dropoffCountry
+        amount
+        currency
+        createdAt
+      }
+    }
+  }
+}
+
+# Self-Accept an Open Delivery (Driver browses and claims delivery)
+mutation SelfAcceptDelivery {
+  selfAcceptDelivery(
+    deliveryId: "354294205775876096"
+    idempotencyKey: "self-accept-354294205775876096-driver1"
+  ) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      id
+      deliveryId
+      driverId
+      status
+      offeredAt
+      acceptedAt
+      expiresAt
+    }
+  }
+}

@@ -128,3 +128,45 @@
 #     "deliveryId": "YOUR_DELIVERY_ID_HERE"
 #   }
 # }
+#
+# ------------------------------------------------------------------------------
+# 7. DRIVER ASSIGNMENT OFFER PUSH (Server -> Driver WebSocket)
+# ------------------------------------------------------------------------------
+# When a delivery is created or retried, the nearest available driver receives
+# this message directly over their open WebSocket connection (TTL = 30 seconds):
+#
+# {
+#   "type": "ASSIGNMENT_OFFERED",
+#   "data": {
+#     "assignmentId": "354294205775876096-driver-uuid",
+#     "deliveryId": "354294205775876096",
+#     "driverId": "driver-uuid",
+#     "expiresAt": "2026-09-22T11:45:00Z",
+#     "distanceMeters": 1420.5,
+#     "pickupAddress": { "city": "Cairo", "country": "EG", "location": { "lat": 30.0444, "lon": 31.2357 } },
+#     "dropoffAddress": { "city": "Giza", "country": "EG", "location": { "lat": 30.0131, "lon": 31.2089 } },
+#     "amount": "25.50",
+#     "currency": "USD"
+#   }
+# }
+#
+# The driver can accept via GraphQL mutation `acceptAssignment` or WS message `ACCEPT_ASSIGNMENT`.
+#
+# ------------------------------------------------------------------------------
+# 8. DRIVER SEARCH RETRY PUSH (Server -> Customer Delivery Subscribers)
+# ------------------------------------------------------------------------------
+# If an offered driver rejects the offer or 30 seconds pass without response:
+# Customer receives notification that the system is re-dispatching to the next driver:
+#
+# {
+#   "type": "DRIVER_SEARCH_RETRY",
+#   "data": {
+#     "deliveryId": "354294205775876096",
+#     "driverId": null,
+#     "status": "SEARCHING_RETRY",
+#     "reason": "Driver rejected assignment"
+#   }
+# }
+#
+# If no driver accepts within 10 minutes, the customer receives DELIVERY_CANCELLED
+# and payment is automatically refunded via SAGA step.

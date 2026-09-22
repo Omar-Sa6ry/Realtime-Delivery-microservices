@@ -284,6 +284,8 @@ export class DeliveryCommandService implements OnModuleInit {
       return;
     }
 
+    await this.repository.clearDriverId(id);
+
     const elapsedMs = Date.now() - new Date(delivery.createdAt).getTime();
     const tenMinutesMs = 10 * 60 * 1000;
 
@@ -293,6 +295,16 @@ export class DeliveryCommandService implements OnModuleInit {
     }
 
     this.logger.log(`Driver rejected/expired for delivery ${id} (${reason}). Re-triggering driver dispatch...`);
+
+    // Notify customer and realtime gateway that we are searching for another driver
+    this.publishNats(RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED, {
+      deliveryId: delivery.id,
+      driverId: null,
+      status: 'SEARCHING_RETRY',
+      reason,
+      timestamp: Date.now(),
+    });
+
     // Re-publish DELIVERY_CREATED event to outbox to find next available driver
     await this.outbox.save(
       this.outbox.createEvent({
@@ -312,6 +324,11 @@ export class DeliveryCommandService implements OnModuleInit {
         },
       }),
     );
+  }
+
+  async handleAssignmentRejected(id: string, driverId: string, reason: string): Promise<void> {
+    this.logger.log(`Driver ${driverId} rejected delivery ${id} (${reason}). Handling re-dispatch...`);
+    await this.handleDriverRejectedOrExpired(id, `DRIVER_REJECTED: ${reason}`);
   }
 
   async handleDriverSearchTimeout(id: string): Promise<void> {

@@ -41,6 +41,7 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
       RealtimeNatsSubjects.DELIVERY_LOCATION_UPDATED,
       RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
       RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
+      RealtimeNatsSubjects.DRIVER_ASSIGNMENT_OFFERED,
       RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED,
       'payment.status.updated',
       `${NotificationNatsSubjects.NOTIFICATION_USER}.*`,
@@ -82,7 +83,12 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    if (subject.startsWith(`${NotificationNatsSubjects.NOTIFICATION_USER}.`)) {
+    if (subject === RealtimeNatsSubjects.DRIVER_ASSIGNMENT_OFFERED) {
+      const driverId = String(message.data?.driverId || '');
+      if (driverId) {
+        await this.fanoutToDriver(driverId, message);
+      }
+    } else if (subject.startsWith(`${NotificationNatsSubjects.NOTIFICATION_USER}.`)) {
       const userId = subject.split('.').pop();
       if (userId) {
         await this.fanoutToUser(userId, message);
@@ -104,6 +110,20 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
 
   private isMediaSubject(subject: string): boolean {
     return subject.startsWith('realtime.media.');
+  }
+
+  private async fanoutToDriver(driverId: string, message: NatsFanoutMessage): Promise<void> {
+    const sockets = this.connectionService.getLocalSocketsByUser(driverId);
+    if (sockets.length === 0) return;
+
+    this.writer.sendMany(
+      sockets,
+      {
+        type: message.type || ServerMessageType.ASSIGNMENT_OFFERED,
+        data: message.data,
+      },
+      message.priority || MessagePriority.CRITICAL,
+    );
   }
 
   private async fanoutToUser(userId: string, message: NatsFanoutMessage): Promise<void> {

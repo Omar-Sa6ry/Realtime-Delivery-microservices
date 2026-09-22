@@ -39,25 +39,89 @@ func NewDispatchService(
 	}
 }
 
-// FindAvailableDrivers finds drivers available near the given coordinates.
-func (s *DispatchService) FindAvailableDrivers(ctx context.Context, lat, lng, radiusKm float64, vehicleType domain.VehicleType, deliveryID string) ([]domain.Candidate, error) {
-	drivers, err := s.driverRepo.FindAvailableByLocation(ctx, lat, lng, radiusKm, vehicleType)
+func (s *DispatchService) FindAvailableDrivers(ctx context.Context, lat, lng, radiusKm float64, vehicleType domain.VehicleType, deliveryID string, excludeDriverIDs ...string) ([]domain.Candidate, error) {
+	if radiusKm <= 0 {
+		radiusKm = 10.0
+	}
+
+	excludeMap := make(map[string]bool)
+	for _, id := range excludeDriverIDs {
+		excludeMap[id] = true
+	}
+
+	// 1. Search nearby drivers via Redis GEO (sorted ascending by distance)
+	geoResults, err := s.locationStore.NearbyDriversSorted(ctx, lng, lat, radiusKm)
 	if err != nil {
-		log.Printf("dispatch service: find available by location failed: %v", err)
-		return nil, err
+		log.Printf("dispatch service: nearby drivers geo search failed: %v", err)
 	}
 
 	var candidates []domain.Candidate
-	for _, d := range drivers {
-		candidates = append(candidates, domain.Candidate{
-			DriverID:       d.ID,
-			DistanceMeters: 0, // TODO: calculate from Redis GEOSEARCH result
-			VehicleType:    d.Vehicle.Type,
-			Status:         d.Status,
-		})
+
+	if len(geoResults) > 0 {
+		// Collect IDs to batch-fetch from MongoDB
+		var candidateIDs []string
+		distanceMap := make(map[string]float64)
+		for _, geo := range geoResults {
+			if excludeMap[geo.DriverID] {
+				continue
+			}
+			candidateIDs = append(candidateIDs, geo.DriverID)
+			distanceMap[geo.DriverID] = geo.DistanceMeters
+		}
+
+		if len(candidateIDs) > 0 {
+			drivers, err := s.driverRepo.FindByIDs(ctx, candidateIDs)
+			if err != nil {
+				log.Printf("dispatch service: FindByIDs failed: %v", err)
+				return nil, err
+			}
+
+			for _, d := range drivers {
+				if d.Status != domain.DriverStatusAvailable || d.IsBlocked || !d.IsActive {
+					continue
+				}
+				if vehicleType != "" && d.Vehicle.Type != vehicleType {
+					continue
+				}
+
+				candidates = append(candidates, domain.Candidate{
+					DriverID:       d.ID,
+					DistanceMeters: distanceMap[d.ID],
+					VehicleType:    d.Vehicle.Type,
+					Status:         d.Status,
+					RankingScore:   distanceMap[d.ID],
+				})
+			}
+		}
 	}
 
-	return domain.NewDispatchPolicy().RankCandidates(candidates), nil
+	// 2. Fallback to MongoDB if no candidates found via Redis GEO (e.g. driver has not yet updated location)
+	if len(candidates) == 0 {
+		drivers, err := s.driverRepo.FindAvailableByLocation(ctx, lat, lng, radiusKm, vehicleType)
+		if err != nil {
+			log.Printf("dispatch service: fallback find available by location failed: %v", err)
+			return nil, err
+		}
+
+		for _, d := range drivers {
+			if excludeMap[d.ID] {
+				continue
+			}
+			candidates = append(candidates, domain.Candidate{
+				DriverID:       d.ID,
+				DistanceMeters: 0,
+				VehicleType:    d.Vehicle.Type,
+				Status:         d.Status,
+				RankingScore:   999999, // Lower priority than geo-located drivers
+			})
+		}
+	}
+
+	policy := domain.NewDispatchPolicy()
+	if s.dispatchPolicy != nil {
+		policy = s.dispatchPolicy
+	}
+	return policy.RankCandidates(candidates), nil
 }
 
 // ReserveDriver reserves a driver for a delivery using distributed locking and conditional state transition.
@@ -93,7 +157,7 @@ func (s *DispatchService) ReserveDriver(ctx context.Context, driverID, deliveryI
 		return false, err
 	}
 
-	// Create assignment record as OFFERED
+	// Create assignment record as OFFERED (TTL 30 seconds)
 	now := time.Now()
 	assignment := &domain.Assignment{
 		ID:            deliveryID + "-" + driverID,
@@ -102,7 +166,7 @@ func (s *DispatchService) ReserveDriver(ctx context.Context, driverID, deliveryI
 		Status:        domain.AssignmentStatusOffered,
 		AttemptNumber: 1,
 		OfferedAt:     now,
-		ExpiresAt:     now.Add(10 * time.Minute),
+		ExpiresAt:     now.Add(30 * time.Second),
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}

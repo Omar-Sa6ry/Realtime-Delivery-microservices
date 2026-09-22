@@ -22,6 +22,11 @@ const PRIORITY_FALLBACK: Record<ServerMessageType, MessagePriority> = {
   [ServerMessageType.LOCATION_UPDATE_REJECTED]: MessagePriority.NORMAL,
   [ServerMessageType.NOTIFICATION_RECEIVED]: MessagePriority.NORMAL,
   [ServerMessageType.ERROR]: MessagePriority.CRITICAL,
+  // Assignment priorities
+  [ServerMessageType.ASSIGNMENT_OFFERED]: MessagePriority.CRITICAL,
+  [ServerMessageType.DRIVER_SEARCH_RETRY]: MessagePriority.NORMAL,
+  [ServerMessageType.ASSIGNMENT_EXPIRED]: MessagePriority.NORMAL,
+  [ServerMessageType.ASSIGNMENT_REJECTED]: MessagePriority.NORMAL,
   [ServerMessageType.MEDIA_UPLOAD_PROGRESS]: MessagePriority.HIGH_FREQUENCY_LOSSY,
   [ServerMessageType.MEDIA_PROCESSING_PROGRESS]: MessagePriority.NORMAL,
   [ServerMessageType.MEDIA_READY]: MessagePriority.CRITICAL,
@@ -35,6 +40,41 @@ export class EventMapper {
     string,
     (payload: Record<string, unknown>) => ClientEvent
   > = {
+    'driver.assignment.offered': (payload) => ({
+      type: ServerMessageType.ASSIGNMENT_OFFERED,
+      priority: MessagePriority.CRITICAL,
+      data: {
+        assignmentId: payload.assignmentId,
+        deliveryId: payload.deliveryId,
+        driverId: payload.driverId,
+        expiresAt: payload.expiresAt,
+        distanceMeters: payload.distanceMeters,
+        pickupAddress: payload.pickupAddress,
+        dropoffAddress: payload.dropoffAddress,
+        amount: payload.amount,
+        currency: payload.currency,
+      },
+    }),
+    'driver.assignment.rejected': (payload) => ({
+      type: ServerMessageType.DRIVER_SEARCH_RETRY,
+      priority: MessagePriority.NORMAL,
+      data: {
+        assignmentId: payload.assignmentId,
+        deliveryId: payload.deliveryId,
+        driverId: payload.driverId,
+        reason: payload.reason,
+      },
+    }),
+    'driver.assignment.expired': (payload) => ({
+      type: ServerMessageType.DRIVER_SEARCH_RETRY,
+      priority: MessagePriority.NORMAL,
+      data: {
+        assignmentId: payload.assignmentId,
+        deliveryId: payload.deliveryId,
+        driverId: payload.driverId,
+        reason: 'OFFER_EXPIRED',
+      },
+    }),
     'delivery.created': (payload) => ({
       type: ServerMessageType.DELIVERY_STATUS_UPDATED,
       priority: MessagePriority.NORMAL,

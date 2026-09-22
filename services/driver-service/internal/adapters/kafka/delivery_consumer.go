@@ -10,13 +10,15 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/events"
 	pkgKafka "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/kafka"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/services"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 	kafkago "github.com/segmentio/kafka-go"
 )
 
 // DeliveryCreatedConsumer listens for delivery.created events and dispatches an available driver.
 type DeliveryCreatedConsumer struct {
-	consumer    *pkgKafka.Consumer
-	dispatchSvc *services.DispatchService
+	consumer       *pkgKafka.Consumer
+	dispatchSvc    *services.DispatchService
+	assignmentRepo ports.AssignmentRepository
 }
 
 // DeliveryCreatedPayloadExtended captures the payload fields sent by delivery-service outbox.
@@ -67,7 +69,7 @@ func parseCoordinate(val interface{}, fallback float64) float64 {
 }
 
 // NewDeliveryCreatedConsumer initializes the consumer.
-func NewDeliveryCreatedConsumer(brokers []string, groupID string, dispatchSvc *services.DispatchService) *DeliveryCreatedConsumer {
+func NewDeliveryCreatedConsumer(brokers []string, groupID string, dispatchSvc *services.DispatchService, assignmentRepo ports.AssignmentRepository) *DeliveryCreatedConsumer {
 	consumer := pkgKafka.NewConsumer(pkgKafka.ConsumerConfig{
 		Brokers:    brokers,
 		Topic:      string(events.DeliveryCreated),
@@ -76,8 +78,9 @@ func NewDeliveryCreatedConsumer(brokers []string, groupID string, dispatchSvc *s
 	})
 
 	return &DeliveryCreatedConsumer{
-		consumer:    consumer,
-		dispatchSvc: dispatchSvc,
+		consumer:       consumer,
+		dispatchSvc:    dispatchSvc,
+		assignmentRepo: assignmentRepo,
 	}
 }
 
@@ -124,8 +127,17 @@ func (c *DeliveryCreatedConsumer) handleMessage(ctx context.Context, msg kafkago
 		"lon", lon,
 	)
 
-	// 1. Search for available drivers near pickup location
-	candidates, err := c.dispatchSvc.FindAvailableDrivers(ctx, lat, lon, 50.0, "", payload.DeliveryID)
+	var excludedDrivers []string
+	if c.assignmentRepo != nil {
+		var err error
+		excludedDrivers, err = c.assignmentRepo.FindRejectedDriverIDsByDelivery(ctx, payload.DeliveryID)
+		if err != nil {
+			slog.Warn("DeliveryCreatedConsumer: failed to fetch rejected drivers", "deliveryId", payload.DeliveryID, "error", err)
+		}
+	}
+
+	// 1. Search for available drivers near pickup location excluding rejected ones
+	candidates, err := c.dispatchSvc.FindAvailableDrivers(ctx, lat, lon, 50.0, "", payload.DeliveryID, excludedDrivers...)
 	if err != nil {
 		slog.Error("DeliveryCreatedConsumer: error searching for available drivers", "deliveryId", payload.DeliveryID, "error", err)
 		return err

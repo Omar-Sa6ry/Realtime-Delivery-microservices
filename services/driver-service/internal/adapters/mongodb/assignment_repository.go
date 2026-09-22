@@ -127,5 +127,31 @@ func (r *AssignmentRepository) EnsureIndexes(ctx context.Context) error {
 	return err
 }
 
+func (r *AssignmentRepository) FindRejectedDriverIDsByDelivery(ctx context.Context, deliveryID string) ([]string, error) {
+	col := r.client.Database(r.database).Collection(r.collection)
+	filter := bson.M{
+		"$or":    []bson.M{{"deliveryId": deliveryID}, {"deliveryid": deliveryID}},
+		"status": bson.M{"$in": []string{"REJECTED", "EXPIRED", "CANCELLED"}},
+	}
+	cursor, err := col.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	var assignments []*domain.Assignment
+	if err := cursor.All(ctx, &assignments); err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]bool)
+	var rejectedIDs []string
+	for _, a := range assignments {
+		if a.DriverID != "" && !seen[a.DriverID] {
+			seen[a.DriverID] = true
+			rejectedIDs = append(rejectedIDs, a.DriverID)
+		}
+	}
+	return rejectedIDs, nil
+}
+
 // Compile-time interface check
 var _ ports.AssignmentRepository = (*AssignmentRepository)(nil)

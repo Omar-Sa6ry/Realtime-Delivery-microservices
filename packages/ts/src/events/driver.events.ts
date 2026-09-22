@@ -77,8 +77,13 @@ export interface DriverAssignmentOfferedPayload {
   deliveryId: string;
   expiresAt: string; // ISO 8601
   radiusKm: number;
+  distanceMeters?: number;
   pickupLatitude?: number;
   pickupLongitude?: number;
+  pickupAddress?: any;
+  dropoffAddress?: any;
+  amount?: string;
+  currency?: string;
 }
 
 // DriverAssignmentAcceptedPayload is emitted when a driver accepts an assignment.

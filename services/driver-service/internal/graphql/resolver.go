@@ -1639,3 +1639,148 @@ func (r *RootResolver) RateDriver(ctx context.Context, args struct{ Input RateDr
 		data:       review,
 	}, nil
 }
+
+
+type OpenDeliveryItemData struct {
+	ID             string
+	CustomerID     string
+	Status         string
+	PickupCity     *string
+	PickupCountry  *string
+	DropoffCity    *string
+	DropoffCountry *string
+	Amount         *string
+	Currency       *string
+	CreatedAt      *string
+}
+
+type OpenDeliveryItemResolver struct {
+	item OpenDeliveryItemData
+}
+
+func (r *OpenDeliveryItemResolver) ID() gql.ID               { return gql.ID(r.item.ID) }
+func (r *OpenDeliveryItemResolver) CustomerId() string       { return r.item.CustomerID }
+func (r *OpenDeliveryItemResolver) Status() string           { return r.item.Status }
+func (r *OpenDeliveryItemResolver) PickupCity() *string      { return r.item.PickupCity }
+func (r *OpenDeliveryItemResolver) PickupCountry() *string   { return r.item.PickupCountry }
+func (r *OpenDeliveryItemResolver) DropoffCity() *string     { return r.item.DropoffCity }
+func (r *OpenDeliveryItemResolver) DropoffCountry() *string  { return r.item.DropoffCountry }
+func (r *OpenDeliveryItemResolver) Amount() *string          { return r.item.Amount }
+func (r *OpenDeliveryItemResolver) Currency() *string        { return r.item.Currency }
+func (r *OpenDeliveryItemResolver) CreatedAt() *string       { return r.item.CreatedAt }
+
+type OpenDeliveriesDataResolver struct {
+	items      []*OpenDeliveryItemResolver
+	totalItems int32
+}
+
+func (r *OpenDeliveriesDataResolver) Items() []*OpenDeliveryItemResolver { return r.items }
+func (r *OpenDeliveriesDataResolver) TotalItems() int32                  { return r.totalItems }
+
+type OpenDeliveriesResponseResolver struct {
+	success    bool
+	statusCode int32
+	message    string
+	timeStamp  string
+	data       *OpenDeliveriesDataResolver
+}
+
+func (r *OpenDeliveriesResponseResolver) Success() bool                      { return r.success }
+func (r *OpenDeliveriesResponseResolver) StatusCode() int32                  { return r.statusCode }
+func (r *OpenDeliveriesResponseResolver) Message() string                    { return r.message }
+func (r *OpenDeliveriesResponseResolver) TimeStamp() string                  { return r.timeStamp }
+func (r *OpenDeliveriesResponseResolver) Data() *OpenDeliveriesDataResolver { return r.data }
+
+func (r *RootResolver) AvailableDeliveries(ctx context.Context) (*OpenDeliveriesResponseResolver, error) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	driver, err := r.authorizeActiveDriver(ctx)
+	if err != nil {
+		return &OpenDeliveriesResponseResolver{
+			success:    false,
+			statusCode: 403,
+			message:    err.Error(),
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+	_ = driver
+
+	var items []*OpenDeliveryItemResolver
+
+	return &OpenDeliveriesResponseResolver{
+		success:    true,
+		statusCode: 200,
+		message:    "Open deliveries retrieved successfully",
+		timeStamp:  now,
+		data: &OpenDeliveriesDataResolver{
+			items:      items,
+			totalItems: int32(len(items)),
+		},
+	}, nil
+}
+
+func (r *RootResolver) SelfAcceptDelivery(ctx context.Context, args struct {
+	DeliveryId     gql.ID
+	IdempotencyKey string
+}) (*AssignmentResponseResolver, error) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	driver, err := r.authorizeActiveDriver(ctx)
+	if err != nil {
+		return &AssignmentResponseResolver{
+			success:    false,
+			statusCode: 403,
+			message:    err.Error(),
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
+	deliveryID := string(args.DeliveryId)
+	if deliveryID == "" {
+		return &AssignmentResponseResolver{
+			success:    false,
+			statusCode: 400,
+			message:    "deliveryId is required",
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
+	// 1. Reserve driver atomically
+	reserved, err := r.dispatchService.ReserveDriver(ctx, driver.ID, deliveryID)
+	if err != nil || !reserved {
+		msg := "Failed to reserve delivery"
+		if err != nil {
+			msg = err.Error()
+		}
+		return &AssignmentResponseResolver{
+			success:    false,
+			statusCode: 400,
+			message:    msg,
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
+	assignmentID := deliveryID + "-" + driver.ID
+
+	// 2. Accept assignment immediately
+	if err := r.dispatchService.AcceptAssignment(ctx, assignmentID, driver.ID); err != nil {
+		return &AssignmentResponseResolver{
+			success:    false,
+			statusCode: 400,
+			message:    fmt.Sprintf("Failed to accept assignment: %v", err),
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
+	updatedAssignment, _ := r.assignmentRepo.FindByID(ctx, assignmentID)
+	return &AssignmentResponseResolver{
+		success:    true,
+		statusCode: 200,
+		message:    "Delivery self-accepted successfully",
+		timeStamp:  now,
+		data:       updatedAssignment,
+	}, nil
+}

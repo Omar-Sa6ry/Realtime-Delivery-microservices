@@ -78,11 +78,16 @@ type DriverUnavailablePayload struct {
 
 // DriverAssignmentOfferedPayload is emitted when a driver is offered an assignment.
 type DriverAssignmentOfferedPayload struct {
-	AssignmentID   string  `json:"assignmentId"`
-	DriverID       string  `json:"driverId"`
-	DeliveryID     string  `json:"deliveryId"`
-	ExpiresAt      string  `json:"expiresAt"`
-	RadiusKm       float64 `json:"radiusKm"`
+	AssignmentID   string           `json:"assignmentId"`
+	DriverID       string           `json:"driverId"`
+	DeliveryID     string           `json:"deliveryId"`
+	ExpiresAt      string           `json:"expiresAt"`
+	RadiusKm       float64          `json:"radiusKm"`
+	DistanceMeters float64          `json:"distanceMeters,omitempty"`
+	PickupAddress  *DeliveryAddress `json:"pickupAddress,omitempty"`
+	DropoffAddress *DeliveryAddress `json:"dropoffAddress,omitempty"`
+	Amount         string           `json:"amount,omitempty"`
+	Currency       string           `json:"currency,omitempty"`
 }
 
 // DriverAssignmentAcceptedPayload is emitted when a driver accepts an assignment.

@@ -15,4 +15,5 @@ type AssignmentRepository interface {
 	Save(ctx context.Context, assignment *domain.Assignment) error
 	UpdateStatus(ctx context.Context, assignmentID string, status string) error
 	ExpireOffers(ctx context.Context, olderThan time.Duration) ([]string, error)
+	FindRejectedDriverIDsByDelivery(ctx context.Context, deliveryID string) ([]string, error)
 }

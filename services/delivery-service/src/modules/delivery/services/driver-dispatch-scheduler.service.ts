@@ -22,7 +22,7 @@ export class DriverDispatchSchedulerService
 
   onModuleInit(): void {
     const intervalMs = Number(
-      process.env.DRIVER_DISPATCH_RETRY_INTERVAL_MS ?? 60000,
+      process.env.DRIVER_DISPATCH_RETRY_INTERVAL_MS ?? 30000,
     );
     this.logger.log(
       `DriverDispatchSchedulerService initialized (interval: ${intervalMs}ms)`,
@@ -57,9 +57,9 @@ export class DriverDispatchSchedulerService
       );
 
       for (const delivery of pendingDeliveries) {
-        // Skip deliveries created less than 45 seconds ago so we don't duplicate the initial delivery.created dispatch
+        // Skip deliveries created less than 30 seconds ago so we don't duplicate the initial delivery.created dispatch
         const ageMs = Date.now() - new Date(delivery.createdAt).getTime();
-        if (ageMs < 45000) {
+        if (ageMs < 30000) {
           continue;
         }
 

@@ -227,6 +227,32 @@ type DriverReviewsResponse {
   data: DriverReviewsData
 }
 
+type OpenDeliveryItem {
+  id: ID!
+  customerId: String!
+  status: String!
+  pickupCity: String
+  pickupCountry: String
+  dropoffCity: String
+  dropoffCountry: String
+  amount: String
+  currency: String
+  createdAt: String
+}
+
+type OpenDeliveriesData {
+  items: [OpenDeliveryItem!]!
+  totalItems: Int!
+}
+
+type OpenDeliveriesResponse {
+  success: Boolean!
+  statusCode: Int!
+  message: String!
+  timeStamp: String!
+  data: OpenDeliveriesData
+}
+
 type Query {
   _service: _Service!
   driverServiceInfo: DriverServiceInfoResponse
@@ -238,6 +264,7 @@ type Query {
   assignment(id: ID!): AssignmentResponse
   dispatchAttempts(deliveryId: ID!): DispatchAttemptsResponse
   driverReviews(driverId: ID!, page: Int, limit: Int): DriverReviewsResponse
+  availableDeliveries: OpenDeliveriesResponse
 }
 
 type Mutation {
@@ -245,6 +272,7 @@ type Mutation {
   goOffline(idempotencyKey: String!): DriverResponse
   acceptAssignment(assignmentId: ID!, idempotencyKey: String!): AssignmentResponse
   rejectAssignment(assignmentId: ID!, reason: String, idempotencyKey: String!): AssignmentResponse
+  selfAcceptDelivery(deliveryId: ID!, idempotencyKey: String!): AssignmentResponse
   registerDriver(input: RegisterDriverInput!): DriverResponse
   updateDriverProfile(input: UpdateDriverProfileInput!): DriverResponse
   suspendDriver(driverId: ID!, reason: String!): DriverResponse

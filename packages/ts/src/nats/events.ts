@@ -24,6 +24,7 @@ export enum RealtimeNatsSubjects {
   DELIVERY_LOCATION_UPDATED = 'realtime.delivery.location.updated',
   DELIVERY_STATUS_UPDATED = 'realtime.delivery.status.updated',
   DRIVER_ASSIGNMENT_UPDATED = 'realtime.driver.assignment.updated',
+  DRIVER_ASSIGNMENT_OFFERED = 'realtime.driver.assignment.offered',
   DRIVER_PRESENCE_UPDATED = 'realtime.driver.presence.updated',
   COMMAND_DRIVER = 'realtime.command.driver',
   COMMAND_DELIVERY = 'realtime.command.delivery',

@@ -140,6 +140,49 @@ func MarshalMediaEnvelope(eventID string, eventType MediaEventType, traceID stri
 	return MarshalEnvelope(eventID, string(eventType), traceID, payload)
 }
 
+func (e *EventEnvelope) UnmarshalJSON(data []byte) error {
+	type Alias EventEnvelope
+	aux := struct {
+		RawOccurredAt  json.RawMessage `json:"occurredAt"`
+		RawTimestamp   json.RawMessage `json:"timestamp"`
+		*Alias
+	}{
+		Alias: (*Alias)(e),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	parseFlexibleTime := func(raw json.RawMessage) int64 {
+		if len(raw) == 0 {
+			return 0
+		}
+		var num int64
+		if err := json.Unmarshal(raw, &num); err == nil {
+			return num
+		}
+		var str string
+		if err := json.Unmarshal(raw, &str); err == nil {
+			if t, err := time.Parse(time.RFC3339Nano, str); err == nil {
+				return t.UnixMilli()
+			}
+			if t, err := time.Parse(time.RFC3339, str); err == nil {
+				return t.UnixMilli()
+			}
+		}
+		return 0
+	}
+
+	if len(aux.RawOccurredAt) > 0 {
+		e.OccurredAt = parseFlexibleTime(aux.RawOccurredAt)
+	}
+	if len(aux.RawTimestamp) > 0 {
+		e.Timestamp = parseFlexibleTime(aux.RawTimestamp)
+	}
+	return nil
+}
+
 // UnmarshalEnvelope parses a raw Kafka/NATS message into an EventEnvelope.
 func UnmarshalEnvelope(data []byte) (*EventEnvelope, error) {
 	var env EventEnvelope

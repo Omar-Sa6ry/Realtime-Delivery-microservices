@@ -56,6 +56,28 @@ export class DeliveryRepository {
     });
   }
   
+  async clearDriverId(id: string): Promise<void> {
+    await this.deliveries.update(id, { driverId: null as any });
+  }
+
+  async findOpenDeliveries(skip = 0, take = 50): Promise<[Delivery[], number]> {
+    return this.deliveries.findAndCount({
+      where: [
+        {
+          status: DeliveryStatus.PAYMENT_CONFIRMED,
+          driverId: IsNull(),
+        },
+        {
+          status: DeliveryStatus.DRIVER_ASSIGNED,
+          driverId: IsNull(),
+        },
+      ],
+      order: { createdAt: 'DESC' },
+      skip,
+      take,
+    });
+  }
+
   async appendHistory(
     delivery: Delivery,
     status: DeliveryStatus,

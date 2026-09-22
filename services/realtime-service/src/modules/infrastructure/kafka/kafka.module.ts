@@ -12,6 +12,9 @@ import { DeliveryCompletedHandler } from './handlers/delivery-completed.handler'
 import { DeliveryCancelledHandler } from './handlers/delivery-cancelled.handler';
 import { PaymentCompletedHandler } from './handlers/payment-completed.handler';
 import { PaymentFailedHandler } from './handlers/payment-failed.handler';
+import { DriverAssignmentOfferedHandler } from './handlers/driver-assignment-offered.handler';
+import { DriverAssignmentRejectedHandler } from './handlers/driver-assignment-rejected.handler';
+import { DriverAssignmentExpiredHandler } from './handlers/driver-assignment-expired.handler';
 
 @Module({
   imports: [
@@ -39,6 +42,9 @@ import { PaymentFailedHandler } from './handlers/payment-failed.handler';
     DeliveryCancelledHandler,
     PaymentCompletedHandler,
     PaymentFailedHandler,
+    DriverAssignmentOfferedHandler,
+    DriverAssignmentRejectedHandler,
+    DriverAssignmentExpiredHandler,
     {
       provide: REALTIME_EVENT_HANDLERS,
       useFactory: (
@@ -51,6 +57,9 @@ import { PaymentFailedHandler } from './handlers/payment-failed.handler';
         deliveryCancelled: DeliveryCancelledHandler,
         paymentCompleted: PaymentCompletedHandler,
         paymentFailed: PaymentFailedHandler,
+        driverAssignmentOffered: DriverAssignmentOfferedHandler,
+        driverAssignmentRejected: DriverAssignmentRejectedHandler,
+        driverAssignmentExpired: DriverAssignmentExpiredHandler,
       ) => [
         deliveryCreated,
         driverAssigned,
@@ -61,6 +70,9 @@ import { PaymentFailedHandler } from './handlers/payment-failed.handler';
         deliveryCancelled,
         paymentCompleted,
         paymentFailed,
+        driverAssignmentOffered,
+        driverAssignmentRejected,
+        driverAssignmentExpired,
       ],
       inject: [
         DeliveryCreatedHandler,
@@ -72,6 +84,9 @@ import { PaymentFailedHandler } from './handlers/payment-failed.handler';
         DeliveryCancelledHandler,
         PaymentCompletedHandler,
         PaymentFailedHandler,
+        DriverAssignmentOfferedHandler,
+        DriverAssignmentRejectedHandler,
+        DriverAssignmentExpiredHandler,
       ],
     },
   ],

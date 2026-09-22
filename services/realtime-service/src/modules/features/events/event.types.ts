@@ -88,6 +88,9 @@ export const eventToNatsSubject: Partial<Record<string, RealtimeNatsSubjects>> =
     'delivery.in_transit': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
     'delivery.completed': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
     'delivery.cancelled': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
+    'driver.assignment.offered': RealtimeNatsSubjects.DRIVER_ASSIGNMENT_OFFERED,
+    'driver.assignment.rejected': RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
+    'driver.assignment.expired': RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
     'payment.completed': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
     'payment.failed': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
   };

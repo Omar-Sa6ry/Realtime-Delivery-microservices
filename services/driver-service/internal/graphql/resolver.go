@@ -17,15 +17,15 @@ import (
 
 // RootResolver implements the GraphQL schema resolvers.
 type RootResolver struct {
-	driverRepo       ports.DriverRepository
-	assignmentRepo   ports.AssignmentRepository
-	dispatchService  *services.DispatchService
-	registerHandler  *commands.RegisterDriverHandler
-	blockHandler     *commands.BlockDriverHandler
-	unblockHandler   *commands.UnblockDriverHandler
+	driverRepo        ports.DriverRepository
+	assignmentRepo    ports.AssignmentRepository
+	dispatchService   *services.DispatchService
+	registerHandler   *commands.RegisterDriverHandler
+	blockHandler      *commands.BlockDriverHandler
+	unblockHandler    *commands.UnblockDriverHandler
 	rateDriverHandler *commands.RateDriverHandler
 	getReviewsHandler *queries.GetDriverReviewsHandler
-	eventPublisher   ports.EventPublisher
+	eventPublisher    ports.EventPublisher
 }
 
 // NewRootResolver constructs a new RootResolver with all application dependencies.
@@ -52,6 +52,7 @@ func NewRootResolver(
 		eventPublisher:    eventPublisher,
 	}
 }
+
 // PaginationInfoResolver
 type PaginationInfoResolver struct {
 	totalItems  int32
@@ -59,9 +60,9 @@ type PaginationInfoResolver struct {
 	nextPage    *int32
 }
 
-func (r *PaginationInfoResolver) TotalItems() int32 { return r.totalItems }
+func (r *PaginationInfoResolver) TotalItems() int32  { return r.totalItems }
 func (r *PaginationInfoResolver) CurrentPage() int32 { return r.currentPage }
-func (r *PaginationInfoResolver) NextPage() *int32  { return r.nextPage }
+func (r *PaginationInfoResolver) NextPage() *int32   { return r.nextPage }
 
 // UserResolver for Apollo Federation reference representation
 type UserResolver struct {
@@ -70,13 +71,12 @@ type UserResolver struct {
 
 func (r *UserResolver) ID() gql.ID { return gql.ID(r.id) }
 
-
 // DriverResolver
 type DriverResolver struct {
 	driver *domain.Driver
 }
 
-func (r *DriverResolver) ID() gql.ID { return gql.ID(r.driver.ID) }
+func (r *DriverResolver) ID() gql.ID     { return gql.ID(r.driver.ID) }
 func (r *DriverResolver) UserId() string { return r.driver.UserID }
 func (r *DriverResolver) User() *UserResolver {
 	if r.driver.UserID != "" {
@@ -150,10 +150,10 @@ type DriverResponseResolver struct {
 	data       *domain.Driver
 }
 
-func (r *DriverResponseResolver) Success() bool              { return r.success }
-func (r *DriverResponseResolver) StatusCode() int32          { return r.statusCode }
-func (r *DriverResponseResolver) Message() string            { return r.message }
-func (r *DriverResponseResolver) TimeStamp() string          { return r.timeStamp }
+func (r *DriverResponseResolver) Success() bool     { return r.success }
+func (r *DriverResponseResolver) StatusCode() int32 { return r.statusCode }
+func (r *DriverResponseResolver) Message() string   { return r.message }
+func (r *DriverResponseResolver) TimeStamp() string { return r.timeStamp }
 func (r *DriverResponseResolver) Data() *DriverResolver {
 	if r.data == nil {
 		return nil
@@ -166,10 +166,10 @@ type AssignmentResolver struct {
 	assignment *domain.Assignment
 }
 
-func (r *AssignmentResolver) ID() gql.ID { return gql.ID(r.assignment.ID) }
+func (r *AssignmentResolver) ID() gql.ID         { return gql.ID(r.assignment.ID) }
 func (r *AssignmentResolver) DeliveryId() string { return r.assignment.DeliveryID }
-func (r *AssignmentResolver) DriverId() string { return r.assignment.DriverID }
-func (r *AssignmentResolver) Status() string { return string(r.assignment.Status) }
+func (r *AssignmentResolver) DriverId() string   { return r.assignment.DriverID }
+func (r *AssignmentResolver) Status() string     { return string(r.assignment.Status) }
 func (r *AssignmentResolver) AttemptNumber() *int32 {
 	a := int32(r.assignment.AttemptNumber)
 	return &a
@@ -233,10 +233,10 @@ type AssignmentResponseResolver struct {
 	data       *domain.Assignment
 }
 
-func (r *AssignmentResponseResolver) Success() bool                  { return r.success }
-func (r *AssignmentResponseResolver) StatusCode() int32              { return r.statusCode }
-func (r *AssignmentResponseResolver) Message() string                { return r.message }
-func (r *AssignmentResponseResolver) TimeStamp() string              { return r.timeStamp }
+func (r *AssignmentResponseResolver) Success() bool     { return r.success }
+func (r *AssignmentResponseResolver) StatusCode() int32 { return r.statusCode }
+func (r *AssignmentResponseResolver) Message() string   { return r.message }
+func (r *AssignmentResponseResolver) TimeStamp() string { return r.timeStamp }
 func (r *AssignmentResponseResolver) Data() *AssignmentResolver {
 	if r.data == nil {
 		return nil
@@ -270,15 +270,15 @@ func (r *DriverStatusResolver) Driver() *DriverResolver {
 	}
 	return &DriverResolver{driver: r.data.Driver}
 }
-func (r *DriverStatusResolver) Status() string                 { return r.data.Status }
-func (r *DriverStatusResolver) HasActiveAssignment() bool      { return r.data.HasActiveAssignment }
+func (r *DriverStatusResolver) Status() string            { return r.data.Status }
+func (r *DriverStatusResolver) HasActiveAssignment() bool { return r.data.HasActiveAssignment }
 func (r *DriverStatusResolver) ActiveDelivery() *DeliveryResolver {
 	if r.data.ActiveDeliveryID == nil {
 		return nil
 	}
 	return &DeliveryResolver{id: *r.data.ActiveDeliveryID}
 }
-func (r *DriverStatusResolver) LastSeenAt() *string            { return r.data.LastSeenAt }
+func (r *DriverStatusResolver) LastSeenAt() *string { return r.data.LastSeenAt }
 
 // DriverStatusResponseResolver
 type DriverStatusResponseResolver struct {
@@ -289,10 +289,10 @@ type DriverStatusResponseResolver struct {
 	data       *DriverStatusData
 }
 
-func (r *DriverStatusResponseResolver) Success() bool                    { return r.success }
-func (r *DriverStatusResponseResolver) StatusCode() int32                { return r.statusCode }
-func (r *DriverStatusResponseResolver) Message() string                  { return r.message }
-func (r *DriverStatusResponseResolver) TimeStamp() string                { return r.timeStamp }
+func (r *DriverStatusResponseResolver) Success() bool     { return r.success }
+func (r *DriverStatusResponseResolver) StatusCode() int32 { return r.statusCode }
+func (r *DriverStatusResponseResolver) Message() string   { return r.message }
+func (r *DriverStatusResponseResolver) TimeStamp() string { return r.timeStamp }
 func (r *DriverStatusResponseResolver) Data() *DriverStatusResolver {
 	if r.data == nil {
 		return nil
@@ -329,12 +329,12 @@ func (r *NearbyDriverItemResolver) Driver() (*DriverResolver, error) {
 	return &DriverResolver{driver: r.item.Driver}, nil
 }
 func (r *NearbyDriverItemResolver) DistanceMeters() float64 { return r.item.DistanceMeters }
-func (r *NearbyDriverItemResolver) Status() string         { return r.item.Status }
-func (r *NearbyDriverItemResolver) VehicleType() *string   { return r.item.VehicleType }
-func (r *NearbyDriverItemResolver) Latitude() float64      { return r.item.Latitude }
-func (r *NearbyDriverItemResolver) Longitude() float64     { return r.item.Longitude }
-func (r *NearbyDriverItemResolver) Rating() float64        { return r.item.Rating }
-func (r *NearbyDriverItemResolver) IsBlocked() bool        { return r.item.IsBlocked }
+func (r *NearbyDriverItemResolver) Status() string          { return r.item.Status }
+func (r *NearbyDriverItemResolver) VehicleType() *string    { return r.item.VehicleType }
+func (r *NearbyDriverItemResolver) Latitude() float64       { return r.item.Latitude }
+func (r *NearbyDriverItemResolver) Longitude() float64      { return r.item.Longitude }
+func (r *NearbyDriverItemResolver) Rating() float64         { return r.item.Rating }
+func (r *NearbyDriverItemResolver) IsBlocked() bool         { return r.item.IsBlocked }
 
 // NearbyDriversDataResolver
 type NearbyDriversDataResolver struct {
@@ -358,10 +358,10 @@ type NearbyDriversResponseResolver struct {
 	data       *NearbyDriversDataResolver
 }
 
-func (r *NearbyDriversResponseResolver) Success() bool                        { return r.success }
-func (r *NearbyDriversResponseResolver) StatusCode() int32                    { return r.statusCode }
-func (r *NearbyDriversResponseResolver) Message() string                      { return r.message }
-func (r *NearbyDriversResponseResolver) TimeStamp() string                    { return r.timeStamp }
+func (r *NearbyDriversResponseResolver) Success() bool                    { return r.success }
+func (r *NearbyDriversResponseResolver) StatusCode() int32                { return r.statusCode }
+func (r *NearbyDriversResponseResolver) Message() string                  { return r.message }
+func (r *NearbyDriversResponseResolver) TimeStamp() string                { return r.timeStamp }
 func (r *NearbyDriversResponseResolver) Data() *NearbyDriversDataResolver { return r.data }
 
 // ReviewResolver
@@ -394,7 +394,7 @@ func (r *ReviewResolver) Delivery() *DeliveryResolver {
 	return &DeliveryResolver{id: r.review.DeliveryID}
 }
 
-func (r *ReviewResolver) Rating() float64    { return r.review.Rating }
+func (r *ReviewResolver) Rating() float64 { return r.review.Rating }
 func (r *ReviewResolver) Comment() *string {
 	if r.review.Comment != "" {
 		return &r.review.Comment
@@ -414,10 +414,10 @@ type ReviewResponseResolver struct {
 	data       *domain.Review
 }
 
-func (r *ReviewResponseResolver) Success() bool              { return r.success }
-func (r *ReviewResponseResolver) StatusCode() int32          { return r.statusCode }
-func (r *ReviewResponseResolver) Message() string            { return r.message }
-func (r *ReviewResponseResolver) TimeStamp() string          { return r.timeStamp }
+func (r *ReviewResponseResolver) Success() bool     { return r.success }
+func (r *ReviewResponseResolver) StatusCode() int32 { return r.statusCode }
+func (r *ReviewResponseResolver) Message() string   { return r.message }
+func (r *ReviewResponseResolver) TimeStamp() string { return r.timeStamp }
 func (r *ReviewResponseResolver) Data() *ReviewResolver {
 	if r.data == nil {
 		return nil
@@ -449,10 +449,10 @@ type DriverReviewsResponseResolver struct {
 	data       *DriverReviewsDataResolver
 }
 
-func (r *DriverReviewsResponseResolver) Success() bool                        { return r.success }
-func (r *DriverReviewsResponseResolver) StatusCode() int32                    { return r.statusCode }
-func (r *DriverReviewsResponseResolver) Message() string                      { return r.message }
-func (r *DriverReviewsResponseResolver) TimeStamp() string                    { return r.timeStamp }
+func (r *DriverReviewsResponseResolver) Success() bool                    { return r.success }
+func (r *DriverReviewsResponseResolver) StatusCode() int32                { return r.statusCode }
+func (r *DriverReviewsResponseResolver) Message() string                  { return r.message }
+func (r *DriverReviewsResponseResolver) TimeStamp() string                { return r.timeStamp }
 func (r *DriverReviewsResponseResolver) Data() *DriverReviewsDataResolver { return r.data }
 
 // DriverServiceInfoResolver
@@ -478,10 +478,10 @@ type DriverServiceInfoResponseResolver struct {
 	data       *DriverServiceInfoData
 }
 
-func (r *DriverServiceInfoResponseResolver) Success() bool                        { return r.success }
-func (r *DriverServiceInfoResponseResolver) StatusCode() int32                    { return r.statusCode }
-func (r *DriverServiceInfoResponseResolver) Message() string                      { return r.message }
-func (r *DriverServiceInfoResponseResolver) TimeStamp() string                    { return r.timeStamp }
+func (r *DriverServiceInfoResponseResolver) Success() bool     { return r.success }
+func (r *DriverServiceInfoResponseResolver) StatusCode() int32 { return r.statusCode }
+func (r *DriverServiceInfoResponseResolver) Message() string   { return r.message }
+func (r *DriverServiceInfoResponseResolver) TimeStamp() string { return r.timeStamp }
 func (r *DriverServiceInfoResponseResolver) Data() *DriverServiceInfoResolver {
 	if r.data == nil {
 		return nil
@@ -491,23 +491,23 @@ func (r *DriverServiceInfoResponseResolver) Data() *DriverServiceInfoResolver {
 
 // DispatchAttemptItemResolver
 type DispatchAttemptItemData struct {
-	ID            string
-	DeliveryID    string
-	DriverID      string
+	ID             string
+	DeliveryID     string
+	DriverID       string
 	DistanceMeters float64
-	AttemptNumber int32
-	Result        string
-	Reason        *string
-	CreatedAt     string
+	AttemptNumber  int32
+	Result         string
+	Reason         *string
+	CreatedAt      string
 }
 
 type DispatchAttemptItemResolver struct {
 	item DispatchAttemptItemData
 }
 
-func (r *DispatchAttemptItemResolver) ID() gql.ID               { return gql.ID(r.item.ID) }
-func (r *DispatchAttemptItemResolver) DeliveryId() string       { return r.item.DeliveryID }
-func (r *DispatchAttemptItemResolver) DriverId() string         { return r.item.DriverID }
+func (r *DispatchAttemptItemResolver) ID() gql.ID         { return gql.ID(r.item.ID) }
+func (r *DispatchAttemptItemResolver) DeliveryId() string { return r.item.DeliveryID }
+func (r *DispatchAttemptItemResolver) DriverId() string   { return r.item.DriverID }
 func (r *DispatchAttemptItemResolver) Delivery() *DeliveryResolver {
 	return &DeliveryResolver{id: r.item.DeliveryID}
 }
@@ -524,9 +524,9 @@ func (r *DispatchAttemptItemResolver) Driver(ctx context.Context) (*DriverResolv
 }
 func (r *DispatchAttemptItemResolver) DistanceMeters() float64 { return r.item.DistanceMeters }
 func (r *DispatchAttemptItemResolver) AttemptNumber() int32    { return r.item.AttemptNumber }
-func (r *DispatchAttemptItemResolver) Result() string           { return r.item.Result }
-func (r *DispatchAttemptItemResolver) Reason() *string          { return r.item.Reason }
-func (r *DispatchAttemptItemResolver) CreatedAt() string        { return r.item.CreatedAt }
+func (r *DispatchAttemptItemResolver) Result() string          { return r.item.Result }
+func (r *DispatchAttemptItemResolver) Reason() *string         { return r.item.Reason }
+func (r *DispatchAttemptItemResolver) CreatedAt() string       { return r.item.CreatedAt }
 
 // DispatchAttemptsDataResolver
 type DispatchAttemptsDataResolver struct {
@@ -550,10 +550,10 @@ type DispatchAttemptsResponseResolver struct {
 	data       *DispatchAttemptsDataResolver
 }
 
-func (r *DispatchAttemptsResponseResolver) Success() bool                            { return r.success }
-func (r *DispatchAttemptsResponseResolver) StatusCode() int32                        { return r.statusCode }
-func (r *DispatchAttemptsResponseResolver) Message() string                          { return r.message }
-func (r *DispatchAttemptsResponseResolver) TimeStamp() string                        { return r.timeStamp }
+func (r *DispatchAttemptsResponseResolver) Success() bool                       { return r.success }
+func (r *DispatchAttemptsResponseResolver) StatusCode() int32                   { return r.statusCode }
+func (r *DispatchAttemptsResponseResolver) Message() string                     { return r.message }
+func (r *DispatchAttemptsResponseResolver) TimeStamp() string                   { return r.timeStamp }
 func (r *DispatchAttemptsResponseResolver) Data() *DispatchAttemptsDataResolver { return r.data }
 
 // _Service
@@ -562,7 +562,6 @@ type ServiceResolver struct {
 }
 
 func (r *ServiceResolver) Sdl() string { return r.sdl }
-
 
 func (r *AssignmentResolver) Delivery() *DeliveryResolver {
 	return &DeliveryResolver{id: r.assignment.DeliveryID}
@@ -849,7 +848,7 @@ func (r *RootResolver) NearbyDrivers(ctx context.Context, args struct{ Input Nea
 
 	for i, c := range driverCandidates {
 		vt := string(c.VehicleType)
-		
+
 		var driver *domain.Driver
 		if i < len(loadedDrivers) && loadedDrivers[i] != nil {
 			driver = loadedDrivers[i]
@@ -857,7 +856,7 @@ func (r *RootResolver) NearbyDrivers(ctx context.Context, args struct{ Input Nea
 			// Fallback if no loader or loaded failed
 			driver, _ = r.driverRepo.FindByID(ctx, c.DriverID)
 		}
-		
+
 		rating := 0.0
 		isBlocked := false
 		if driver != nil {
@@ -943,14 +942,14 @@ func (r *RootResolver) DispatchAttempts(ctx context.Context, args struct{ Delive
 		reason := ""
 		items = append(items, &DispatchAttemptItemResolver{
 			item: DispatchAttemptItemData{
-				ID:            assignment.ID,
-				DeliveryID:    assignment.DeliveryID,
-				DriverID:      assignment.DriverID,
+				ID:             assignment.ID,
+				DeliveryID:     assignment.DeliveryID,
+				DriverID:       assignment.DriverID,
 				DistanceMeters: 0,
-				AttemptNumber: int32(assignment.AttemptNumber),
-				Result:        string(assignment.Status),
-				Reason:        &reason,
-				CreatedAt:     assignment.CreatedAt.Format(time.RFC3339),
+				AttemptNumber:  int32(assignment.AttemptNumber),
+				Result:         string(assignment.Status),
+				Reason:         &reason,
+				CreatedAt:      assignment.CreatedAt.Format(time.RFC3339),
 			},
 		})
 	}

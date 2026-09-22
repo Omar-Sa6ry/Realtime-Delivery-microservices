@@ -90,6 +90,8 @@ spec:
               value: "http://search-srv:4007/search/graphql"
             - name: DELIVERY_SERVICE_URL
               value: "http://delivery-srv:4003/delivery/graphql"
+            - name: DRIVER_SERVICE_URL
+              value: "http://driver-srv:4008/driver/graphql"
             - name: ANALYTICS_SERVICE_URL
               value: "http://analytics-srv:4009/analytics/graphql"
             

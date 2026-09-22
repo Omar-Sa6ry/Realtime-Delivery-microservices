@@ -13,7 +13,17 @@ export class HealthController {
   ) {}
 
   @Get('health')
-  async getHealth(@Res() res: Response) {
+  getHealth() {
+    return {
+      status: 'UP',
+      service: 'notification-service',
+      timestamp: new Date().toISOString(),
+      system: this.healthService.getSystemStats(),
+    };
+  }
+
+  @Get('ready')
+  async getReadiness(@Res() res: Response) {
     const dbHealth = await this.healthService.checkDatabase(this.dataSource);
     const redisHealth = await this.healthService.checkRedis(this.redisService);
     const system = this.healthService.getSystemStats();

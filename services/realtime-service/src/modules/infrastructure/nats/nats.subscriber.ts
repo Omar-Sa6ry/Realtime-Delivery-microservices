@@ -14,15 +14,6 @@ interface NatsFanoutMessage {
   data: Record<string, unknown>;
 }
 
-/**
- * NATS observer: subscribes to all realtime fan-out subjects and pushes to local sockets.
- *  realtime.delivery.location.updated   -> delivery subscribers (LOSSY, coalesced via SocketWriter)
- *  realtime.delivery.status.updated     -> delivery subscribers (NORMAL)
- *  realtime.driver.assignment.updated   -> delivery subscribers (CRITICAL)
- *  realtime.driver.presence.updated     -> admin sockets
- *  notification.user.*                  -> user sockets (NORMAL)
- *  realtime.media.*                     -> user sockets (NORMAL)
- */
 @Injectable()
 export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(NatsSubscriber.name);
@@ -40,6 +31,12 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
   }
 
   private subscribe(): void {
+    const client = this.nats.getClient();
+    if (!client) {
+      setTimeout(() => this.subscribe(), 2000);
+      return;
+    }
+
     const subjects = [
       RealtimeNatsSubjects.DELIVERY_LOCATION_UPDATED,
       RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
@@ -56,8 +53,6 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
     ];
 
     for (const subject of subjects) {
-      const client = this.nats.getClient();
-      if (!client) return;
       const sub: Subscription = client.subscribe(subject);
       this.consume(subject, sub);
     }

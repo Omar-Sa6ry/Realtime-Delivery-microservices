@@ -13,7 +13,23 @@ export class RealtimeNatsService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly config: ConfigService) {}
 
   async onModuleInit(): Promise<void> {
-    await this.connect();
+    try {
+      await this.connect();
+    } catch (err: any) {
+      this.logger.warn(`Initial NATS connection failed: ${err.message}. Reconnecting in background...`);
+      this.scheduleReconnect();
+    }
+  }
+
+  private scheduleReconnect(): void {
+    setTimeout(async () => {
+      try {
+        await this.connect();
+      } catch (err: any) {
+        this.logger.warn(`NATS reconnect attempt failed: ${err.message}`);
+        this.scheduleReconnect();
+      }
+    }, 3000);
   }
 
   private async connect(): Promise<void> {
@@ -24,7 +40,7 @@ export class RealtimeNatsService implements OnModuleInit, OnModuleDestroy {
       maxReconnectAttempts: -1,
       reconnectTimeWait: 2_000,
       timeout: 5_000,
-      waitOnFirstConnect: true,
+      waitOnFirstConnect: false,
     };
 
     this.client = await connect(options);

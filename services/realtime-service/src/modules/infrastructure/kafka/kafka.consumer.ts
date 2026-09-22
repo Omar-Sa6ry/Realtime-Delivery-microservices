@@ -52,6 +52,12 @@ export class KafkaConsumer extends BaseKafkaConsumer {
     }
   }
 
+  override async onModuleInit(): Promise<void> {
+    super.onModuleInit().catch((err) => {
+      this.logger.warn(`Kafka consumer background start error: ${err.message}`);
+    });
+  }
+
   protected async handleMessage(payload: EachMessagePayload): Promise<void> {
     try {
       const envelope = JSON.parse(payload.message.value?.toString() || '{}') as KafkaEventEnvelope;

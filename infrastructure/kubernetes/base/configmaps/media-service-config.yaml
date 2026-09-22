@@ -24,6 +24,9 @@ data:
   REDIS_DB: "0"
   REDIS_TTL: "3600"
 
+  # NATS
+  NATS_URL: "nats://nats-srv:4222"
+
   # Kafka
   KAFKA_BROKERS: "kafka-srv:9092"
   KAFKA_GROUP_ID: "media-service"

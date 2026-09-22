@@ -48,7 +48,7 @@ spec:
             timeoutSeconds: 5
           readinessProbe:
             httpGet:
-              path: /notification/health
+              path: /notification/ready
               port: 4004
             initialDelaySeconds: 10
             periodSeconds: 5

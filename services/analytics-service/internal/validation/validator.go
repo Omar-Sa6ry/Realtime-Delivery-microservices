@@ -3,6 +3,7 @@ package validation
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -64,18 +65,55 @@ func parseTime(v any) (time.Time, error) {
 	return time.Parse(time.RFC3339, s)
 }
 
-// ParseRange extracts an AnalyticsRange variable into a validated TimeRange.
-func ParseRange(vars map[string]any) (ports.TimeRange, error) {
+var (
+	reFrom        = regexp.MustCompile(`(?i)from\s*:\s*["']([^"']+)["']`)
+	reTo          = regexp.MustCompile(`(?i)to\s*:\s*["']([^"']+)["']`)
+	reGranularity = regexp.MustCompile(`(?i)granularity\s*:\s*([A-Za-z0-9_]+)`)
+	reDriverID    = regexp.MustCompile(`(?i)driverId\s*:\s*(?:["']([^"']+)["']|([$A-Za-z0-9_-]+))`)
+	reCityID      = regexp.MustCompile(`(?i)cityId\s*:\s*["']([^"']+)["']`)
+	reProvider    = regexp.MustCompile(`(?i)provider\s*:\s*["']([^"']+)["']`)
+	rePage        = regexp.MustCompile(`(?i)page\s*:\s*(\d+)`)
+	reLimit       = regexp.MustCompile(`(?i)limit\s*:\s*(\d+)`)
+	reSeverity    = regexp.MustCompile(`(?i)severity\s*:\s*["']?([A-Za-z0-9_]+)["']?`)
+	reEventType   = regexp.MustCompile(`(?i)eventType\s*:\s*["']([^"']+)["']`)
+)
+
+func extractLiteral(query string, re *regexp.Regexp) string {
+	m := re.FindStringSubmatch(query)
+	if len(m) > 1 && m[1] != "" {
+		return strings.TrimSpace(m[1])
+	}
+	if len(m) > 2 && m[2] != "" {
+		return strings.TrimSpace(m[2])
+	}
+	return ""
+}
+
+func ParseRange(query string, vars map[string]any) (ports.TimeRange, error) {
 	m := asMap(vars["range"])
-	from, err := parseTime(m["from"])
+	fromStr := asString(m["from"])
+	if fromStr == "" {
+		fromStr = extractLiteral(query, reFrom)
+	}
+	from, err := parseTime(fromStr)
 	if err != nil {
 		return ports.TimeRange{}, fmt.Errorf("range.from: %w", err)
 	}
-	to, err := parseTime(m["to"])
+
+	toStr := asString(m["to"])
+	if toStr == "" {
+		toStr = extractLiteral(query, reTo)
+	}
+	to, err := parseTime(toStr)
 	if err != nil {
 		return ports.TimeRange{}, fmt.Errorf("range.to: %w", err)
 	}
-	gran := ports.AnalyticsGranularity(strings.ToUpper(asString(m["granularity"])))
+
+	granStr := asString(m["granularity"])
+	if granStr == "" {
+		granStr = extractLiteral(query, reGranularity)
+	}
+	gran := ports.AnalyticsGranularity(strings.ToUpper(granStr))
 	r := ports.TimeRange{From: from, To: to, Granularity: gran}
 	if err := r.Validate(); err != nil {
 		return ports.TimeRange{}, err
@@ -83,56 +121,123 @@ func ParseRange(vars map[string]any) (ports.TimeRange, error) {
 	return r, nil
 }
 
-func ParseDeliveryFilter(vars map[string]any) (ports.DeliveryAnalyticsFilter, error) {
+func ParseDeliveryFilter(query string, vars map[string]any) (ports.DeliveryAnalyticsFilter, error) {
 	m := asMap(vars["filter"])
 	rm := asMap(m["range"])
-	r, err := ParseRange(map[string]any{"range": rm})
+	r, err := ParseRange(query, map[string]any{"range": rm})
 	if err != nil {
 		return ports.DeliveryAnalyticsFilter{}, err
 	}
+
+	cityID := asString(m["cityId"])
+	if cityID == "" {
+		cityID = extractLiteral(query, reCityID)
+	}
+	driverID := asString(m["driverId"])
+	if driverID == "" {
+		driverID = extractLiteral(query, reDriverID)
+	}
+
 	return ports.DeliveryAnalyticsFilter{
 		Range:    r,
-		CityID:   asString(m["cityId"]),
-		DriverID: asString(m["driverId"]),
+		CityID:   cityID,
+		DriverID: driverID,
 	}, nil
 }
 
-func ParseDriverFilter(vars map[string]any) (ports.DriverAnalyticsFilter, error) {
+func ParseDriverFilter(query string, vars map[string]any) (ports.DriverAnalyticsFilter, error) {
 	m := asMap(vars["filter"])
 	rm := asMap(m["range"])
-	r, err := ParseRange(map[string]any{"range": rm})
+	r, err := ParseRange(query, map[string]any{"range": rm})
 	if err != nil {
 		return ports.DriverAnalyticsFilter{}, err
 	}
+
+	driverID := asString(vars["driverId"])
+	if driverID == "" {
+		driverID = asString(m["driverId"])
+	}
+	if driverID == "" {
+		driverID = extractLiteral(query, reDriverID)
+	}
+
 	return ports.DriverAnalyticsFilter{
 		Range:    r,
-		DriverID: asString(m["driverId"]),
+		DriverID: driverID,
 	}, nil
 }
 
-func ParsePaymentFilter(vars map[string]any) (ports.PaymentAnalyticsFilter, error) {
+func ParsePaymentFilter(query string, vars map[string]any) (ports.PaymentAnalyticsFilter, error) {
 	m := asMap(vars["filter"])
 	rm := asMap(m["range"])
-	r, err := ParseRange(map[string]any{"range": rm})
+	r, err := ParseRange(query, map[string]any{"range": rm})
 	if err != nil {
 		return ports.PaymentAnalyticsFilter{}, err
 	}
+
+	provider := asString(m["provider"])
+	if provider == "" {
+		provider = extractLiteral(query, reProvider)
+	}
+
 	return ports.PaymentAnalyticsFilter{
 		Range:    r,
-		Provider: asString(m["provider"]),
+		Provider: provider,
 	}, nil
 }
 
-func ParsePage(vars map[string]any) (page, limit int) {
+func ParseLimit(query string, vars map[string]any, def int) int {
+	if v, ok := vars["limit"].(float64); ok {
+		return ClampTopLimit(int(v))
+	}
+	if s := extractLiteral(query, reLimit); s != "" {
+		var n int
+		if _, err := fmt.Sscanf(s, "%d", &n); err == nil {
+			return ClampTopLimit(n)
+		}
+	}
+	return def
+}
+
+func ParsePage(query string, vars map[string]any) (page, limit int) {
 	page = DefaultPage
 	limit = DefaultLimit
 	if v, ok := vars["page"].(float64); ok {
 		page = ClampPage(int(v))
+	} else if s := extractLiteral(query, rePage); s != "" {
+		var n int
+		if _, err := fmt.Sscanf(s, "%d", &n); err == nil {
+			page = ClampPage(n)
+		}
 	}
+
 	if v, ok := vars["limit"].(float64); ok {
 		limit = ClampLimit(int(v))
+	} else if s := extractLiteral(query, reLimit); s != "" {
+		var n int
+		if _, err := fmt.Sscanf(s, "%d", &n); err == nil {
+			limit = ClampLimit(n)
+		}
 	}
 	return page, limit
+}
+
+func ExtractQueryField(query, key string, vars map[string]any) string {
+	if v, ok := vars[key].(string); ok && strings.TrimSpace(v) != "" {
+		return strings.TrimSpace(v)
+	}
+	switch key {
+	case "eventType":
+		return extractLiteral(query, reEventType)
+	case "severity":
+		return extractLiteral(query, reSeverity)
+	case "from":
+		return extractLiteral(query, reFrom)
+	case "to":
+		return extractLiteral(query, reTo)
+	default:
+		return ""
+	}
 }
 
 func ValidateSeverity(s string) (string, error) {
@@ -144,13 +249,13 @@ func ValidateSeverity(s string) (string, error) {
 	case "ERROR", "WARNING", "INFO":
 		return s, nil
 	default:
-		return "", fmt.Errorf("invalid severity: %s", s)
+		return "", fmt.Errorf("invalid severity %q: must be ERROR, WARNING, or INFO", s)
 	}
 }
 
 func ScopeFromRequest(r *http.Request) string {
-	if role := strings.TrimSpace(r.Header.Get("x-user-role")); role != "" {
-		return "role=" + strings.ToUpper(role)
+	if s := r.Header.Get("X-Scope"); s != "" {
+		return s
 	}
-	return "public"
+	return "global"
 }

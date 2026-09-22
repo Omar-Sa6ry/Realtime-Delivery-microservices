@@ -13,6 +13,37 @@ spec:
       labels:
         app: realtime
     spec:
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - >-
+              until nc -z -w 3 redis-srv 6379;
+              do echo "Waiting for redis-srv:6379..."; sleep 2; done;
+              echo "Redis is reachable!"
+        - name: wait-for-nats
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - >-
+              until nc -z -w 3 nats-srv 4222;
+              do echo "Waiting for nats-srv:4222..."; sleep 2; done;
+              echo "NATS is reachable!"
+        - name: wait-for-kafka
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - >-
+              until nc -z -w 3 kafka-srv 9092;
+              do echo "Waiting for kafka-srv:9092..."; sleep 2; done;
+              echo "Kafka is reachable!"
       containers:
         - name: realtime
           image: delivery/realtime

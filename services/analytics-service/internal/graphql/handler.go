@@ -148,7 +148,7 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 
 		// 5. platformOverview.
 		if strings.Contains(query, "platformOverview") {
-			tr, err := validation.ParseRange(vars)
+			tr, err := validation.ParseRange(query, vars)
 			if err != nil {
 				writeDataError(w, ctx, err)
 				return
@@ -163,7 +163,7 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 
 		// 6. deliveryAnalytics.
 		if strings.Contains(query, "deliveryAnalytics") {
-			f, err := validation.ParseDeliveryFilter(vars)
+			f, err := validation.ParseDeliveryFilter(query, vars)
 			if err != nil {
 				writeDataError(w, ctx, err)
 				return
@@ -179,7 +179,7 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 		// 7. driverAnalytics (singular; topDrivers contains "topDrivers" too
 		// so check the plural first below via separate branch order).
 		if strings.Contains(query, "driverAnalytics") && !strings.Contains(query, "topDrivers") {
-			f, err := validation.ParseDriverFilter(vars)
+			f, err := validation.ParseDriverFilter(query, vars)
 			if err != nil {
 				writeDataError(w, ctx, err)
 				return
@@ -194,15 +194,12 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 
 		// 8. topDrivers.
 		if strings.Contains(query, "topDrivers") {
-			tr, err := validation.ParseRange(vars)
+			tr, err := validation.ParseRange(query, vars)
 			if err != nil {
 				writeDataError(w, ctx, err)
 				return
 			}
-			limit := validation.ClampTopLimit(0)
-			if v, ok := vars["limit"].(float64); ok {
-				limit = validation.ClampTopLimit(int(v))
-			}
+			limit := validation.ParseLimit(query, vars, 10)
 			writeJSON(w, http.StatusOK, map[string]any{
 				"data": map[string]any{
 					"topDrivers": resolver.TopDrivers(ctx, tr, limit, scope),
@@ -213,7 +210,7 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 
 		// 9. paymentAnalytics.
 		if strings.Contains(query, "paymentAnalytics") {
-			f, err := validation.ParsePaymentFilter(vars)
+			f, err := validation.ParsePaymentFilter(query, vars)
 			if err != nil {
 				writeDataError(w, ctx, err)
 				return
@@ -228,19 +225,18 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 
 		// 10. rawAnalyticsEvents (admin/debug).
 		if strings.Contains(query, "rawAnalyticsEvents") {
-			page, limit := validation.ParsePage(vars)
-			eventType := ""
-			if v, ok := vars["eventType"].(string); ok {
-				eventType = v
-			}
+			page, limit := validation.ParsePage(query, vars)
+			eventType := validation.ExtractQueryField(query, "eventType", vars)
 			var from, to *time.Time
-			if v, ok := vars["from"].(string); ok && v != "" {
-				if tm, err := time.Parse(time.RFC3339, v); err == nil {
+			fromStr := validation.ExtractQueryField(query, "from", vars)
+			if fromStr != "" {
+				if tm, err := time.Parse(time.RFC3339, fromStr); err == nil {
 					from = &tm
 				}
 			}
-			if v, ok := vars["to"].(string); ok && v != "" {
-				if tm, err := time.Parse(time.RFC3339, v); err == nil {
+			toStr := validation.ExtractQueryField(query, "to", vars)
+			if toStr != "" {
+				if tm, err := time.Parse(time.RFC3339, toStr); err == nil {
 					to = &tm
 				}
 			}
@@ -254,11 +250,11 @@ func GraphQLHandler(resolver *Resolver) http.HandlerFunc {
 
 		// 11. dataQualityIssues (admin/debug).
 		if strings.Contains(query, "dataQualityIssues") {
-			page, limit := validation.ParsePage(vars)
-			severity := ""
-			if v, ok := vars["severity"].(string); ok {
+			page, limit := validation.ParsePage(query, vars)
+			severity := validation.ExtractQueryField(query, "severity", vars)
+			if severity != "" {
 				var err error
-				severity, err = validation.ValidateSeverity(v)
+				severity, err = validation.ValidateSeverity(severity)
 				if err != nil {
 					writeDataError(w, ctx, err)
 					return

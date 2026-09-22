@@ -40,7 +40,7 @@ func Connect(url string) (*NatsClient, error) {
 		nats.Name("Go-Common-Client"),
 		nats.Timeout(10 * time.Second),
 		nats.ReconnectWait(2 * time.Second),
-		nats.MaxReconnects(5),
+		nats.MaxReconnects(-1),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			slog.Warn("NATS client disconnected", "error", err)
 		}),
@@ -49,12 +49,24 @@ func Connect(url string) (*NatsClient, error) {
 		}),
 	}
 
-	nc, err := nats.Connect(url, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
+	const maxAttempts = 15
+	const retryDelay = 2 * time.Second
+
+	var nc *nats.Conn
+	var lastErr error
+	for i := 1; i <= maxAttempts; i++ {
+		nc, lastErr = nats.Connect(url, opts...)
+		if lastErr == nil {
+			slog.Info("NATS client connected successfully", "url", url, "attempt", i)
+			return &NatsClient{nc: nc}, nil
+		}
+		slog.Warn("NATS client connection failed, retrying...", "url", url, "attempt", i, "maxAttempts", maxAttempts, "error", lastErr)
+		if i < maxAttempts {
+			time.Sleep(retryDelay)
+		}
 	}
 
-	return &NatsClient{nc: nc}, nil
+	return nil, fmt.Errorf("failed to connect to NATS after %d attempts: %w", maxAttempts, lastErr)
 }
 
 // Conn returns the raw NATS connection

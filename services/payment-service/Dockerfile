@@ -3,16 +3,26 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-# Copy shared packages
-COPY packages/go ./packages/go
+# Copy dependency manifests first (monorepo + local replace target) so that
+COPY packages/go/go.mod packages/go/go.sum ./packages/go/
+COPY services/payment-service/go.mod services/payment-service/go.sum ./services/payment-service/
 
-# Copy service files
-COPY services/payment-service ./services/payment-service
-
+# Resolve dependencies (module cache is persisted across builds via BuildKit)
 WORKDIR /app/services/payment-service
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
-RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /workspace/bin/payment-service ./cmd/server
+# Copy shared packages to workspace root for module replace
+WORKDIR /app
+COPY packages/go ./packages/go
+# Copy payment-service source
+WORKDIR /app/services/payment-service
+COPY services/payment-service .
+
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux \
+    go build -ldflags="-w -s" -o /workspace/bin/payment-service ./cmd/server
 
 # Runtime stage
 FROM alpine:3.20 AS runtime

@@ -3,16 +3,27 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-# Copy shared packages
+# Copy dependency manifests first (monorepo + local replace target) so that
+COPY packages/go/go.mod packages/go/go.sum ./packages/go/
+COPY services/driver-service/go.mod services/driver-service/go.sum ./services/driver-service/
+
+# Resolve dependencies (module cache is persisted across builds via BuildKit)
+WORKDIR /app/services/driver-service
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
+# Copy shared packages to workspace root for module replace
+WORKDIR /app
 COPY packages/go ./packages/go
 
-# Copy service files
-COPY services/driver-service ./services/driver-service
-
+# Copy driver-service source
 WORKDIR /app/services/driver-service
+COPY services/driver-service .
 
-RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /workspace/bin/driver-service ./cmd/server
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux \
+    go build -ldflags="-w -s" -o /workspace/bin/driver-service ./cmd/server
 
 # ─── Stage 2: Runtime ──────────────────────────────────────────────────────────
 FROM alpine:3.20 AS runtime

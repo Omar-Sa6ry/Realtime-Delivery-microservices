@@ -127,6 +127,28 @@ func (a *EventPublisherAdapter) PublishLocationUpdated(ctx context.Context, driv
 	})
 }
 
+func (a *EventPublisherAdapter) PublishNoDriverAvailable(ctx context.Context, deliveryID, customerID string, attemptNumber int, reason string) error {
+	payload := events.DriverNoDriverAvailablePayload{
+		DeliveryID:    deliveryID,
+		CustomerID:    customerID,
+		AttemptNumber: attemptNumber,
+		Reason:        reason,
+		TriedAt:       time.Now().UTC().Format(time.RFC3339),
+	}
+	return a.publish(ctx, string(events.DriverNoDriverAvailable), deliveryID, payload)
+}
+
+func (a *EventPublisherAdapter) PublishSearchRetry(ctx context.Context, deliveryID, customerID string, attemptNumber int, retryInterval int) error {
+	payload := events.DriverSearchRetryPayload{
+		DeliveryID:    deliveryID,
+		CustomerID:    customerID,
+		AttemptNumber: attemptNumber,
+		RetryInterval: retryInterval,
+		NextRetryAt:   time.Now().UTC().Add(time.Duration(retryInterval) * time.Second).Format(time.RFC3339),
+	}
+	return a.publish(ctx, string(events.DriverSearchRetry), deliveryID, payload)
+}
+
 // Compile-time interface check
 var _ ports.EventPublisher = (*EventPublisherAdapter)(nil)
 

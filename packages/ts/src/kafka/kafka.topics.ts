@@ -13,6 +13,14 @@ export enum DriverKafkaTopics {
   DRIVER_CREATED = 'driver.created',
   DRIVER_UPDATED = 'driver.updated',
   DRIVER_DELETED = 'driver.deleted',
+  DRIVER_ASSIGNMENT_OFFERED = 'driver.assignment.offered',
+  DRIVER_ASSIGNMENT_ACCEPTED = 'driver.assignment.accepted',
+  DRIVER_ASSIGNMENT_REJECTED = 'driver.assignment.rejected',
+  DRIVER_ASSIGNMENT_EXPIRED = 'driver.assignment.expired',
+  DRIVER_ASSIGNMENT_RELEASED = 'driver.assignment.released',
+  DRIVER_ASSIGNMENT_COMPLETED = 'driver.assignment.completed',
+  DRIVER_NO_DRIVER_AVAILABLE = 'driver.no_driver_available',
+  DRIVER_SEARCH_RETRY = 'driver.search.retry',
 }
 
 export enum PaymentKafkaTopics {

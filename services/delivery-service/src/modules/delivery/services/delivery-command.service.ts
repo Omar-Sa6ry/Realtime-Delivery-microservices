@@ -8,7 +8,7 @@ import { DeliveryRepository } from '../repositories/delivery.repository';
 import { DeliveryStateMachine } from './delivery.state-machine';
 import { IdempotencyService } from './idempotency.service';
 import { OutboxRepository } from '../outbox/outbox.repository';
-import { DeliveryKafkaTopics, NatsService, NotificationNatsSubjects, RealtimeNatsSubjects } from '@delivery/common';
+import { DeliveryKafkaTopics, NatsService, NotificationNatsSubjects, RealtimeNatsSubjects, ServerMessageType } from '@delivery/common';
 
 export interface CreateDeliveryInput {
   customerId: string;
@@ -258,6 +258,18 @@ export class DeliveryCommandService implements OnModuleInit {
     }
 
     this.logger.log(`Periodic retry: searching for available driver for delivery ${delivery.id}...`);
+    // Notify customer and realtime subscribers of the retry
+    this.publishNats(RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED, {
+      type: ServerMessageType.DRIVER_SEARCH_RETRY,
+      deliveryId: delivery.id,
+      customerId: delivery.customerId,
+      driverId: null,
+      status: 'SEARCHING_RETRY',
+      reason: 'RETRYING_DRIVER_SEARCH',
+      retryInterval: 30,
+      timestamp: Date.now(),
+    });
+
     await this.outbox.save(
       this.outbox.createEvent({
         eventId: randomUUID(),
@@ -298,10 +310,13 @@ export class DeliveryCommandService implements OnModuleInit {
 
     // Notify customer and realtime gateway that we are searching for another driver
     this.publishNats(RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED, {
+      type: ServerMessageType.DRIVER_SEARCH_RETRY,
       deliveryId: delivery.id,
+      customerId: delivery.customerId,
       driverId: null,
       status: 'SEARCHING_RETRY',
       reason,
+      retryInterval: 30,
       timestamp: Date.now(),
     });
 

@@ -45,6 +45,7 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
           DriverEventType.AssignmentAccepted,
           DriverEventType.AssignmentRejected,
           DriverEventType.AssignmentExpired,
+          DriverEventType.NoDriverAvailable,
         ],
         fromBeginning: false,
       });
@@ -95,6 +96,16 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
           if (deliveryId) {
             this.logger.log(`Driver assignment expired for delivery: ${deliveryId}. Retrying next available driver...`);
             await this.commands.handleDriverRejectedOrExpired(deliveryId, 'Driver assignment offer expired');
+          }
+          break;
+        }
+
+        case DriverEventType.NoDriverAvailable: {
+          const data = envelope.payload as any;
+          const deliveryId = data?.deliveryId;
+          if (deliveryId) {
+            this.logger.log(`No driver available for delivery: ${deliveryId}. Notifying customer and will retry...`);
+            await this.commands.handleDriverRejectedOrExpired(deliveryId, data?.reason || 'No drivers available nearby');
           }
           break;
         }

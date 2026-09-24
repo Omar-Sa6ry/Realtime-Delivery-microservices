@@ -12,6 +12,7 @@ type Assignment struct {
 	ID            string           `json:"id" bson:"_id"`
 	DriverID      string           `json:"driverId" bson:"driverId"`
 	DeliveryID    string           `json:"deliveryId" bson:"deliveryId"`
+	CustomerID    string           `json:"customerId,omitempty" bson:"customerId,omitempty"`
 	Status        AssignmentStatus `json:"status" bson:"status"`
 	AttemptNumber int              `json:"attemptNumber" bson:"attemptNumber"`
 	OfferedAt     time.Time        `json:"offeredAt" bson:"offeredAt"`

@@ -32,6 +32,7 @@ const CONSUMED_TOPICS = [
   DriverEventType.AssignmentOffered,
   DriverEventType.AssignmentRejected,
   DriverEventType.AssignmentExpired,
+  DriverEventType.NoDriverAvailable,
 ];
 
 @Injectable()

@@ -15,6 +15,7 @@ import { PaymentFailedHandler } from './handlers/payment-failed.handler';
 import { DriverAssignmentOfferedHandler } from './handlers/driver-assignment-offered.handler';
 import { DriverAssignmentRejectedHandler } from './handlers/driver-assignment-rejected.handler';
 import { DriverAssignmentExpiredHandler } from './handlers/driver-assignment-expired.handler';
+import { DriverNoDriverAvailableHandler } from './handlers/driver-no-driver-available.handler';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { DriverAssignmentExpiredHandler } from './handlers/driver-assignment-exp
     DriverAssignmentOfferedHandler,
     DriverAssignmentRejectedHandler,
     DriverAssignmentExpiredHandler,
+    DriverNoDriverAvailableHandler,
     {
       provide: REALTIME_EVENT_HANDLERS,
       useFactory: (
@@ -60,6 +62,7 @@ import { DriverAssignmentExpiredHandler } from './handlers/driver-assignment-exp
         driverAssignmentOffered: DriverAssignmentOfferedHandler,
         driverAssignmentRejected: DriverAssignmentRejectedHandler,
         driverAssignmentExpired: DriverAssignmentExpiredHandler,
+        driverNoDriverAvailable: DriverNoDriverAvailableHandler,
       ) => [
         deliveryCreated,
         driverAssigned,
@@ -73,6 +76,7 @@ import { DriverAssignmentExpiredHandler } from './handlers/driver-assignment-exp
         driverAssignmentOffered,
         driverAssignmentRejected,
         driverAssignmentExpired,
+        driverNoDriverAvailable,
       ],
       inject: [
         DeliveryCreatedHandler,
@@ -87,6 +91,7 @@ import { DriverAssignmentExpiredHandler } from './handlers/driver-assignment-exp
         DriverAssignmentOfferedHandler,
         DriverAssignmentRejectedHandler,
         DriverAssignmentExpiredHandler,
+        DriverNoDriverAvailableHandler,
       ],
     },
   ],

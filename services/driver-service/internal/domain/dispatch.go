@@ -18,7 +18,7 @@ func NewDispatchPolicy() *DispatchPolicy {
 	return &DispatchPolicy{
 		maxAttempts:       5,
 		searchRadiusKm:    5,
-		assignmentTimeout: 20 * time.Second,
+		assignmentTimeout: 30 * time.Second,
 		candidateCount:    10,
 	}
 }

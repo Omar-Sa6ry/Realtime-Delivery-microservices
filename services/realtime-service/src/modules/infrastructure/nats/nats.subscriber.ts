@@ -180,6 +180,17 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
       .map((id) => this.connectionService.getLocalConnection(id))
       .filter((s) => s !== undefined);
 
+    // Also include customer socket directly if customerId is in data and not already in delivery room
+    const customerId = String(message.data?.customerId || '');
+    if (customerId) {
+      const customerSockets = this.connectionService.getLocalSocketsByUser(customerId);
+      for (const cs of customerSockets) {
+        if (!sockets.includes(cs)) {
+          sockets.push(cs);
+        }
+      }
+    }
+
     const priority =
       message.priority ||
       (message.type === ServerMessageType.DELIVERY_LOCATION_UPDATED

@@ -1793,6 +1793,16 @@ func (r *RootResolver) SelfAcceptDelivery(ctx context.Context, args struct {
 		}, nil
 	}
 
+	if driver.Status != domain.DriverStatusAvailable {
+		return &AssignmentResponseResolver{
+			success:    false,
+			statusCode: 400,
+			message:    "Driver must be online and available to self-accept a delivery",
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
 	// 1. Reserve driver atomically
 	reserved, err := r.dispatchService.ReserveDriver(ctx, driver.ID, deliveryID)
 	if err != nil || !reserved {
@@ -1820,6 +1830,11 @@ func (r *RootResolver) SelfAcceptDelivery(ctx context.Context, args struct {
 			timeStamp:  now,
 			data:       nil,
 		}, nil
+	}
+
+	// 3. Ensure assignment accepted event is published for delivery-service integration
+	if r.eventPublisher != nil {
+		_ = r.eventPublisher.PublishAssignmentAccepted(ctx, assignmentID, deliveryID, driver.ID)
 	}
 
 	updatedAssignment, _ := r.assignmentRepo.FindByID(ctx, assignmentID)

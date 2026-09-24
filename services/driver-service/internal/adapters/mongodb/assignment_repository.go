@@ -153,5 +153,34 @@ func (r *AssignmentRepository) FindRejectedDriverIDsByDelivery(ctx context.Conte
 	return rejectedIDs, nil
 }
 
+func (r *AssignmentRepository) CountByDelivery(ctx context.Context, deliveryID string) (int, error) {
+	col := r.client.Database(r.database).Collection(r.collection)
+	filter := bson.M{
+		"$or": []bson.M{{"deliveryId": deliveryID}, {"deliveryid": deliveryID}},
+	}
+	count, err := col.CountDocuments(ctx, filter)
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+func (r *AssignmentRepository) FindRejectedByDelivery(ctx context.Context, deliveryID string) ([]*domain.Assignment, error) {
+	col := r.client.Database(r.database).Collection(r.collection)
+	filter := bson.M{
+		"$or":    []bson.M{{"deliveryId": deliveryID}, {"deliveryid": deliveryID}},
+		"status": bson.M{"$in": []string{"REJECTED", "EXPIRED", "CANCELLED"}},
+	}
+	cursor, err := col.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	var assignments []*domain.Assignment
+	if err := cursor.All(ctx, &assignments); err != nil {
+		return nil, err
+	}
+	return assignments, nil
+}
+
 // Compile-time interface check
 var _ ports.AssignmentRepository = (*AssignmentRepository)(nil)

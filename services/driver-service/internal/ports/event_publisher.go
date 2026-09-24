@@ -18,4 +18,6 @@ type EventPublisher interface {
 	PublishDriverAvailable(ctx context.Context, driverID string) error
 	PublishDriverUnavailable(ctx context.Context, driverID string) error
 	PublishLocationUpdated(ctx context.Context, driverID, latitude, longitude string) error
+	PublishNoDriverAvailable(ctx context.Context, deliveryID, customerID string, attemptNumber int, reason string) error
+	PublishSearchRetry(ctx context.Context, deliveryID, customerID string, attemptNumber int, retryInterval int) error
 }

@@ -43,16 +43,20 @@ query {
 # REALTIME SERVER-PUSH WEBSOCKET MESSAGES (Dispatched automatically)
 # ------------------------------------------------------------------------------
 
-# 1. ASSIGNMENT_OFFERED (Server -> Driver WebSocket)
+# ------------------------------------------------------------------------------
+# REALTIME SERVER-PUSH WEBSOCKET MESSAGES (Dispatch & Driver Flow)
+# ------------------------------------------------------------------------------
+
+# Scenario 1: ASSIGNMENT_OFFERED (Server -> Driver WebSocket)
 # Pushed to nearest online driver within pickup radius. Driver has 30s to respond.
 # {
 #   "type": "ASSIGNMENT_OFFERED",
-#   "timestamp": "2026-09-23T12:00:00Z",
+#   "timestamp": "2026-09-24T12:00:00Z",
 #   "data": {
 #     "assignmentId": "354294205775876096-driver-uuid",
 #     "deliveryId": "354294205775876096",
 #     "driverId": "driver-uuid",
-#     "expiresAt": "2026-09-23T12:00:30Z",
+#     "expiresAt": "2026-09-24T12:00:30Z",
 #     "distanceMeters": 1420.5,
 #     "pickupAddress": {
 #       "line1": "1 Main Street",
@@ -73,24 +77,44 @@ query {
 #   }
 # }
 
-# 2. DRIVER_SEARCH_RETRY (Server -> Customer WebSocket)
-# Pushed to customer when assigned driver rejects or 30s expires, informing them of next retry:
+# Scenario 2: DRIVER_SEARCH_RETRY (Server -> Customer WebSocket)
+# Pushed when no drivers are currently nearby, or when candidate rejects / offer expires (30s):
 # {
 #   "type": "DRIVER_SEARCH_RETRY",
-#   "timestamp": "2026-09-23T12:00:30Z",
+#   "timestamp": "2026-09-24T12:00:30Z",
 #   "data": {
 #     "deliveryId": "354294205775876096",
+#     "customerId": "cust-uuid",
 #     "driverId": null,
 #     "status": "SEARCHING_RETRY",
-#     "reason": "Driver rejected assignment"
+#     "reason": "NO_DRIVERS_NEARBY",
+#     "retryInterval": 30
 #   }
 # }
 
-# 3. DELIVERY_CANCELLED & REFUNDED (Server -> Customer WebSocket / Push Notification)
-# Pushed if 10 minutes pass without an available driver accepting the delivery:
+# Scenario 3: DRIVER_ASSIGNED & DRIVER_ACCEPTED (Server -> Customer WebSocket)
+# Pushed immediately when driver accepts offer via WebSocket REJECT_ASSIGNMENT/ACCEPT_ASSIGNMENT or selfAcceptDelivery GraphQL:
+# {
+#   "type": "DRIVER_ASSIGNED",
+#   "timestamp": "2026-09-24T12:01:15Z",
+#   "data": {
+#     "deliveryId": "354294205775876096",
+#     "driverId": "driver-uuid",
+#     "status": "DRIVER_ACCEPTED"
+#   }
+# }
+
+# Scenario 4: SELF-ACCEPT / OPEN DELIVERIES BROWSE (Driver GraphQL)
+# Driver browses available unassigned or rejected deliveries using availableDeliveries:
+# query { availableDeliveries { items { id status amount pickupCity dropoffCity } } }
+# And claims any with:
+# mutation { selfAcceptDelivery(deliveryId: "354294205775876096", idempotencyKey: "...") { success statusCode } }
+
+# Scenario 5: DELIVERY_CANCELLED & PAYMENT REFUNDED (Server -> Customer WS + Push Notification)
+# Pushed when 10-minute timeout is reached without driver assignment; full payment refund issued:
 # {
 #   "type": "DELIVERY_CANCELLED",
-#   "timestamp": "2026-09-23T12:10:00Z",
+#   "timestamp": "2026-09-24T12:10:00Z",
 #   "data": {
 #     "deliveryId": "354294205775876096",
 #     "status": "CANCELLED",

@@ -12,6 +12,8 @@ export enum DriverEventType {
   AssignmentExpired = 'driver.assignment.expired',
   AssignmentReleased = 'driver.assignment.released',
   AssignmentCompleted = 'driver.assignment.completed',
+  NoDriverAvailable = 'driver.no_driver_available',
+  SearchRetry = 'driver.search.retry',
 }
 
 export interface DriverGeoPoint {
@@ -125,7 +127,26 @@ export interface DriverAssignmentCompletedPayload {
   completedAt: string; // ISO 8601
 }
 
+// DriverNoDriverAvailablePayload is emitted when no driver is nearby/available.
+export interface DriverNoDriverAvailablePayload {
+  deliveryId: string;
+  customerId: string;
+  attemptNumber: number;
+  reason: string;
+  triedAt: string;
+}
+
+// DriverSearchRetryPayload is emitted when a periodic retry runs.
+export interface DriverSearchRetryPayload {
+  deliveryId: string;
+  customerId: string;
+  attemptNumber: number;
+  nextRetryAt?: string;
+  retryInterval: number;
+}
+
 // Generic Kafka event envelope for driver events.
+
 export interface DriverEventEnvelope<T = unknown> {
   eventId: string;
   eventType: DriverEventType | string;

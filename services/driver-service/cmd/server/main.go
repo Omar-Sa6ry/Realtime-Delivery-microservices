@@ -131,7 +131,7 @@ func main() {
 	expiryWorker := workers.NewAssignmentExpiryWorker(assignmentRepo, dispatchSvc)
 	reconcileWorker := workers.NewReconciliationWorker(driverRepo, assignmentRepo)
 	heartbeatWorker := workers.NewHeartbeatMonitor(driverRepo)
-	deliveryConsumer := adapterkafka.NewDeliveryCreatedConsumer(kafkaBrokers, cfg.KafkaGroupID+"-delivery-created", dispatchSvc, assignmentRepo)
+	deliveryConsumer := adapterkafka.NewDeliveryCreatedConsumer(kafkaBrokers, cfg.KafkaGroupID+"-delivery-created", dispatchSvc, assignmentRepo, eventPublisher)
 
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	defer workerCancel()

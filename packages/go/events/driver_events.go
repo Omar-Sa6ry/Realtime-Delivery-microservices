@@ -19,6 +19,8 @@ const (
 	DriverAssignmentExpired   DriverEventType = "driver.assignment.expired"
 	DriverAssignmentReleased  DriverEventType = "driver.assignment.released"
 	DriverAssignmentCompleted DriverEventType = "driver.assignment.completed"
+	DriverNoDriverAvailable   DriverEventType = "driver.no_driver_available"
+	DriverSearchRetry         DriverEventType = "driver.search.retry"
 )
 
 // DriverGeoPoint holds a geographic coordinate for a driver's location.
@@ -127,3 +129,22 @@ type DriverAssignmentCompletedPayload struct {
 	DriverID     string `json:"driverId"`
 	CompletedAt  string `json:"completedAt"`
 }
+
+// DriverNoDriverAvailablePayload is emitted when no online or nearby driver is available for a delivery.
+type DriverNoDriverAvailablePayload struct {
+	DeliveryID    string `json:"deliveryId"`
+	CustomerID    string `json:"customerId"`
+	AttemptNumber int    `json:"attemptNumber"`
+	Reason        string `json:"reason"` // "NO_DRIVERS_NEARBY" | "ALL_DRIVERS_BUSY"
+	TriedAt       string `json:"triedAt"`
+}
+
+// DriverSearchRetryPayload is emitted when a periodic retry occurs for finding a driver.
+type DriverSearchRetryPayload struct {
+	DeliveryID    string `json:"deliveryId"`
+	CustomerID    string `json:"customerId"`
+	AttemptNumber int    `json:"attemptNumber"`
+	NextRetryAt   string `json:"nextRetryAt,omitempty"`
+	RetryInterval int    `json:"retryInterval"` // in seconds (e.g. 30)
+}
+

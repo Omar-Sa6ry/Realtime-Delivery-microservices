@@ -19,6 +19,7 @@ type DeliveryCreatedConsumer struct {
 	consumer       *pkgKafka.Consumer
 	dispatchSvc    *services.DispatchService
 	assignmentRepo ports.AssignmentRepository
+	eventPublisher ports.EventPublisher
 }
 
 // DeliveryCreatedPayloadExtended captures the payload fields sent by delivery-service outbox.
@@ -69,7 +70,7 @@ func parseCoordinate(val interface{}, fallback float64) float64 {
 }
 
 // NewDeliveryCreatedConsumer initializes the consumer.
-func NewDeliveryCreatedConsumer(brokers []string, groupID string, dispatchSvc *services.DispatchService, assignmentRepo ports.AssignmentRepository) *DeliveryCreatedConsumer {
+func NewDeliveryCreatedConsumer(brokers []string, groupID string, dispatchSvc *services.DispatchService, assignmentRepo ports.AssignmentRepository, eventPublisher ports.EventPublisher) *DeliveryCreatedConsumer {
 	consumer := pkgKafka.NewConsumer(pkgKafka.ConsumerConfig{
 		Brokers:    brokers,
 		Topic:      string(events.DeliveryCreated),
@@ -81,6 +82,7 @@ func NewDeliveryCreatedConsumer(brokers []string, groupID string, dispatchSvc *s
 		consumer:       consumer,
 		dispatchSvc:    dispatchSvc,
 		assignmentRepo: assignmentRepo,
+		eventPublisher: eventPublisher,
 	}
 }
 
@@ -145,6 +147,17 @@ func (c *DeliveryCreatedConsumer) handleMessage(ctx context.Context, msg kafkago
 
 	if len(candidates) == 0 {
 		slog.Warn("DeliveryCreatedConsumer: no available drivers found for delivery", "deliveryId", payload.DeliveryID)
+		if c.eventPublisher != nil {
+			attemptNum := 1
+			if c.assignmentRepo != nil {
+				if cnt, err := c.assignmentRepo.CountByDelivery(ctx, payload.DeliveryID); err == nil && cnt > 0 {
+					attemptNum = cnt + 1
+				}
+			}
+			if pubErr := c.eventPublisher.PublishNoDriverAvailable(ctx, payload.DeliveryID, payload.CustomerID, attemptNum, "NO_DRIVERS_NEARBY"); pubErr != nil {
+				slog.Error("DeliveryCreatedConsumer: failed to publish driver.no_driver_available", "deliveryId", payload.DeliveryID, "error", pubErr)
+			}
+		}
 		return nil
 	}
 
@@ -176,6 +189,17 @@ func (c *DeliveryCreatedConsumer) handleMessage(ctx context.Context, msg kafkago
 
 	if !reserved {
 		slog.Warn("DeliveryCreatedConsumer: no candidates could be reserved at this moment for delivery", "deliveryId", payload.DeliveryID)
+		if c.eventPublisher != nil {
+			attemptNum := 1
+			if c.assignmentRepo != nil {
+				if cnt, err := c.assignmentRepo.CountByDelivery(ctx, payload.DeliveryID); err == nil && cnt > 0 {
+					attemptNum = cnt + 1
+				}
+			}
+			if pubErr := c.eventPublisher.PublishNoDriverAvailable(ctx, payload.DeliveryID, payload.CustomerID, attemptNum, "ALL_DRIVERS_BUSY"); pubErr != nil {
+				slog.Error("DeliveryCreatedConsumer: failed to publish driver.no_driver_available", "deliveryId", payload.DeliveryID, "error", pubErr)
+			}
+		}
 	}
 
 	return nil

@@ -75,6 +75,29 @@ export class EventMapper {
         reason: 'OFFER_EXPIRED',
       },
     }),
+    'driver.no_driver_available': (payload) => ({
+      type: ServerMessageType.DRIVER_SEARCH_RETRY,
+      priority: MessagePriority.NORMAL,
+      data: {
+        deliveryId: payload.deliveryId,
+        customerId: payload.customerId,
+        attemptNumber: payload.attemptNumber,
+        reason: payload.reason,
+        status: 'SEARCHING_RETRY',
+      },
+    }),
+    'driver.search.retry': (payload) => ({
+      type: ServerMessageType.DRIVER_SEARCH_RETRY,
+      priority: MessagePriority.NORMAL,
+      data: {
+        deliveryId: payload.deliveryId,
+        customerId: payload.customerId,
+        attemptNumber: payload.attemptNumber,
+        retryInterval: payload.retryInterval,
+        nextRetryAt: payload.nextRetryAt,
+        status: 'SEARCHING_RETRY',
+      },
+    }),
     'delivery.created': (payload) => ({
       type: ServerMessageType.DELIVERY_STATUS_UPDATED,
       priority: MessagePriority.NORMAL,

@@ -1,4 +1,4 @@
-# Register a new user
+# Register a new user (Public)
 mutation {
   register(
     input: {
@@ -28,14 +28,9 @@ mutation {
   }
 }
 
-# Login with email and password
+# Login with email and password (Public)
 mutation {
-  login(
-    input: {
-      email: "omarsdabry@gmail.com"
-      password: "Password123!"
-    }
-  ) {
+  login(input: { email: "omarsdabry@gmail.com", password: "Password123!" }) {
     statusCode
     message
     success
@@ -54,13 +49,10 @@ mutation {
   }
 }
 
-# Change password for the currently logged-in user (requires Bearer token)
+# Change password for the currently logged-in user (User / Driver / Admin)
 mutation {
   changePassword(
-    input: {
-      passwordOld: "ni7CV1a5+=2004"
-      passwordNew: "O12345hgtehight-"
-    }
+    input: { passwordOld: "ni7CV1a5+=2004", passwordNew: "O12345hgtehight-" }
   ) {
     statusCode
     message
@@ -68,20 +60,16 @@ mutation {
   }
 }
 
-# Request a password reset link/token
+# Request a password reset link/token (Public)
 mutation {
-  forgetPassword(
-    input: {
-      email: "omarsdabry@gmail.com"
-    }
-  ) {
+  forgetPassword(input: { email: "omarsdabry@gmail.com" }) {
     statusCode
     message
     success
   }
 }
 
-# Reset the password using the token received
+# Reset the password using the token received (Public)
 mutation {
   resetPassword(
     input: {
@@ -95,7 +83,7 @@ mutation {
   }
 }
 
-# Logout the current user
+# Logout the current user (User / Driver / Admin)
 mutation {
   logout {
     statusCode
@@ -104,13 +92,9 @@ mutation {
   }
 }
 
-# Refresh the access token
+# Refresh the access token (Public)
 mutation {
-  refreshToken(
-    input: {
-      refreshToken: "YOUR_REFRESH_TOKEN_HERE"
-    }
-  ) {
+  refreshToken(input: { refreshToken: "YOUR_REFRESH_TOKEN_HERE" }) {
     statusCode
     message
     success

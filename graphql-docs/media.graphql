@@ -1,6 +1,4 @@
-# ─── QUERIES ───────────────────────────────────────────────
-
-# Get a specific media file by ID (Single Item Envelope)
+# Get a specific media file by ID (User / Driver / Admin)
 query GetMedia {
   media(mediaId: "media-001") {
     success
@@ -31,7 +29,7 @@ query GetMedia {
   }
 }
 
-# Get paginated list of media files (Paginated Collection Envelope)
+# Get paginated list of media files for owner (User / Driver / Admin)
 query ListMedia {
   listMedia(ownerId: "user-001", limit: 10, cursor: "") {
     success
@@ -58,7 +56,7 @@ query ListMedia {
   }
 }
 
-# Get upload status (Single Item Envelope)
+# Get upload status (User / Driver / Admin)
 query GetUploadStatus {
   uploadStatus(uploadId: "upload-001") {
     success
@@ -76,9 +74,13 @@ query GetUploadStatus {
   }
 }
 
-# Get presigned download URL (Single Item Envelope)
+# Get presigned download URL (User / Driver / Admin)
 query GetDownloadUrl {
-  downloadUrl(mediaId: "media-001", versionType: "original", expirySeconds: 3600) {
+  downloadUrl(
+    mediaId: "media-001"
+    versionType: "original"
+    expirySeconds: 3600
+  ) {
     success
     statusCode
     message
@@ -91,7 +93,7 @@ query GetDownloadUrl {
   }
 }
 
-# Get user quota (Single Item Envelope)
+# Get user quota (User / Driver / Admin)
 query GetQuota {
   quota {
     success
@@ -108,12 +110,12 @@ query GetQuota {
   }
 }
 
-# Get DLQ topics
+# Get DLQ topics (Admin)
 query GetDLQTopics {
   dlqTopics
 }
 
-# Get DLQ statistics (Collection Envelope)
+# Get DLQ statistics (Admin)
 query GetDLQStats {
   dlqStats(topics: ["media-events-dlq"]) {
     success
@@ -127,9 +129,7 @@ query GetDLQStats {
   }
 }
 
-# ─── MUTATIONS ──────────────────────────────────────────────
-
-# Create upload session (Single Item Envelope)
+# Create upload session (User / Driver / Admin)
 mutation CreateUploadSession {
   createUploadSession(
     input: {
@@ -160,14 +160,12 @@ mutation CreateUploadSession {
   }
 }
 
-# Complete upload session (Single Item Envelope)
+# Complete upload session (User / Driver / Admin)
 mutation CompleteUpload {
   completeUpload(
     input: {
       uploadId: "upload-001"
-      parts: [
-        { partNumber: 1, eTag: "etag-001" }
-      ]
+      parts: [{ partNumber: 1, eTag: "etag-001" }]
       idempotencyKey: "complete-key-123"
     }
   ) {
@@ -182,7 +180,7 @@ mutation CompleteUpload {
   }
 }
 
-# Abort upload session (Base Response Envelope)
+# Abort upload session (User / Driver / Admin)
 mutation AbortUpload {
   abortUpload(uploadId: "upload-001") {
     success
@@ -193,7 +191,7 @@ mutation AbortUpload {
   }
 }
 
-# Delete media file (Base Response Envelope)
+# Delete media file (User / Driver / Admin)
 mutation DeleteMedia {
   deleteMedia(mediaId: "media-001", idempotencyKey: "del-001") {
     success
@@ -204,7 +202,7 @@ mutation DeleteMedia {
   }
 }
 
-# Replay DLQ messages (Single Item Envelope)
+# Replay DLQ messages (Admin)
 mutation ReplayDLQ {
   dlqReplay(topic: "media-events-dlq", maxMessages: 50) {
     success
@@ -219,7 +217,7 @@ mutation ReplayDLQ {
   }
 }
 
-# Renew presigned upload URLs (Single Item Envelope)
+# Renew presigned upload URLs (User / Driver / Admin)
 mutation RenewPresigned {
   renewPresigned(input: { uploadId: "upload-001", expirySeconds: 3600 }) {
     success

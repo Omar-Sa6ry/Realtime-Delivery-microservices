@@ -1,4 +1,4 @@
-# Get Analytics Service Info
+# Get Analytics Service Info (Public)
 query GetAnalyticsServiceInfo {
   analyticsServiceInfo {
     success
@@ -13,7 +13,7 @@ query GetAnalyticsServiceInfo {
   }
 }
 
-# Platform Overview (last 7 days, daily buckets)
+# Platform Overview for last 7 days in daily buckets (Admin)
 query GetPlatformOverview {
   platformOverview(range: {
     from: "2026-09-12T00:00:00Z"
@@ -39,7 +39,7 @@ query GetPlatformOverview {
   }
 }
 
-# Delivery Analytics
+# Delivery Analytics (Admin)
 query GetDeliveryAnalytics {
   deliveryAnalytics(filter: {
     range: {
@@ -76,7 +76,7 @@ query GetDeliveryAnalytics {
   }
 }
 
-# Driver Analytics (specific driver)
+# Driver Analytics for a specific driver (Driver / Admin)
 query GetDriverAnalytics($driverId: ID!) {
   driverAnalytics(filter: {
     range: {
@@ -107,7 +107,7 @@ query GetDriverAnalytics($driverId: ID!) {
   }
 }
 
-# Top Drivers by acceptance rate
+# Top Drivers ranked by acceptance rate (Admin)
 query GetTopDrivers {
   topDrivers(range: {
     from: "2026-09-12T00:00:00Z"
@@ -139,7 +139,7 @@ query GetTopDrivers {
   }
 }
 
-# Payment Analytics
+# Payment Analytics (Admin)
 query GetPaymentAnalytics {
   paymentAnalytics(filter: {
     range: {
@@ -167,7 +167,7 @@ query GetPaymentAnalytics {
   }
 }
 
-# Raw Events (admin/debug)
+# Raw Events for Admin or Debugging (Admin)
 query GetRawAnalyticsEvents {
   rawAnalyticsEvents(page: 1, limit: 20, eventType: PAYMENT_CAPTURED) {
     success
@@ -196,7 +196,7 @@ query GetRawAnalyticsEvents {
   }
 }
 
-# Data Quality Issues
+# Data Quality Issues (Admin)
 query GetDataQualityIssues {
   dataQualityIssues(page: 1, limit: 20, severity: ERROR) {
     success

@@ -1,81 +1,86 @@
-# Get Driver Service Health
+# Get Driver Service Health (Public)
 query GetDriverServiceInfo {
   driverServiceInfo {
     success
     statusCode
     message
     timeStamp
-    data { name
+    data {
+      name
       version
-      status }
+      status
+    }
   }
 }
 
-
-# Register new Driver
+# Register new Driver (User / Admin)
 mutation RegisterDriver {
-  registerDriver(input: {
-    userId: "356369776609595392",        
-    plateNumber: "ABC-123",  
-    capacityKg: 50,
-    vehicleType: MOTORCYCLE
-    capabilities: ["STANDARD"],  
-    serviceArea: "Cairo"       }) {
+  registerDriver(
+    input: {
+      userId: "356369776609595392"
+      plateNumber: "ABC-123"
+      capacityKg: 50
+      vehicleType: MOTORCYCLE
+      capabilities: ["STANDARD"]
+      serviceArea: "Cairo"
+    }
+  ) {
     success
     statusCode
     message
-    data{
-    id
-user{
-  id
+    data {
+      id
+      user {
+        id
         email
         firstName
         lastName
         role
-}
-    status
-    vehicleType
-    plateNumber
-    createdAt
+      }
+      status
+      vehicleType
+      plateNumber
+      createdAt
       capacityKg
       capabilities
       isActive
       isBlocked
       serviceArea
       updatedAt
-    }}}
-  
-  
-# Get Driver by ID - WRAPPED response
+    }
+  }
+}
+
+# Get Driver by ID (User / Driver / Admin)
 query GetDriver {
   driver(id: "3674db6d-f48f-4161-a911-0b458b39c835") {
     success
     statusCode
     message
-    data{
-    id
-user{
-  id
+    data {
+      id
+      user {
+        id
         email
         firstName
         lastName
         role
-}
-    status
-    vehicleType
-    plateNumber
+      }
+      status
+      vehicleType
+      plateNumber
       isActive
-    createdAt
+      createdAt
       capacityKg
       capabilities
       isBlocked
       serviceArea
       updatedAt
-    }}}
-  
+    }
+  }
+}
 
-  
-  # Update Driver Profile (Admin / Driver) - WRAPPED response
+# Update Driver Profile (Driver / Admin)
 mutation UpdateDriverProfile {
   updateDriverProfile(
     input: {
@@ -83,267 +88,275 @@ mutation UpdateDriverProfile {
       plateNumber: "XYZ-456"
       capacityKg: 20
       serviceArea: "Giza"
-      driverId:"c2075b3a-631c-4edf-a810-7e1eda187a92"
+      driverId: "c2075b3a-631c-4edf-a810-7e1eda187a92"
     }
   ) {
-     success
+    success
     statusCode
     message
-    data{
-    id
-user{
-  id
+    data {
+      id
+      user {
+        id
         email
         firstName
         lastName
         role
-}
-    status
-    vehicleType
-    plateNumber
-    createdAt
+      }
+      status
+      vehicleType
+      plateNumber
+      createdAt
       capacityKg
       isActive
       capabilities
       isBlocked
       serviceArea
       updatedAt
-    }}}
-  
-  
-    
-    
-  Get My Driver Profile (authenticated driver) - WRAPPED response
+    }
+  }
+}
+
+# Get My Driver Profile for Authenticated Driver (Driver)
 query GetMyDriverProfile {
   myDriverProfile {
     success
     statusCode
     message
-    data{
-    id
-user{
-  id
+    data {
+      id
+      user {
+        id
         email
         firstName
         lastName
         role
-}
-    status
-    vehicleType
-    plateNumber
-    createdAt
+      }
+      status
+      vehicleType
+      plateNumber
+      createdAt
       capacityKg
       isActive
       capabilities
       isBlocked
       serviceArea
       updatedAt
-    }}}
-  
-  
-  
-  # Activate Driver (Admin) - WRAPPED response
+    }
+  }
+}
+
+# Activate Driver (Admin)
 mutation ActivateDriver {
   activateDriver(driverId: "598a51a0-240e-4154-82c8-1b040f0c36a4") {
-          success
+    success
     statusCode
     message
-    data{
-    id
-user{
-  id
+    data {
+      id
+      user {
+        id
         email
         firstName
         lastName
         role
-}
-    status
-    vehicleType
-    plateNumber
+      }
+      status
+      vehicleType
+      plateNumber
       isActive
-    createdAt
+      createdAt
       capacityKg
       capabilities
       isBlocked
       serviceArea
       updatedAt
-    }}}
-  
-  
-  # Go Online - WRAPPED response
+    }
+  }
+}
+
+# Go Online (Driver)
 mutation GoOnline {
   goOnline(idempotencyKey: "go-onfline-dddddri-123-123d4s567d890") {
-       success
+    success
     statusCode
     message
-    data{
-    id
-user{
-  id
+    data {
+      id
+      user {
+        id
         email
         firstName
         lastName
         role
-}
-    status
-    vehicleType
-    plateNumber
-    createdAt
+      }
+      status
+      vehicleType
+      plateNumber
+      createdAt
       capacityKg
       capabilities
       isActive
       isBlocked
       serviceArea
       updatedAt
-    }}}
-  
-    # Go Offline - WRAPPED response
+    }
+  }
+}
+
+# Go Offline (Driver)
 mutation GoOffline {
   goOffline(idempotencyKey: "go-offline-driver-123-1234567890") {
-       success
+    success
     statusCode
     message
-    data{
-    id
-user{
-  id
+    data {
+      id
+      user {
+        id
         email
         firstName
         lastName
         role
-}
-    status
-    vehicleType
-    plateNumber
-    createdAt
+      }
+      status
+      vehicleType
+      plateNumber
+      createdAt
       capacityKg
       capabilities
       isBlocked
       isActive
       serviceArea
       updatedAt
-    }}}
-  
+    }
+  }
+}
 
-  # Get Driver Status - WRAPPED response
+# Get Driver Operational Status (Driver / Admin)
 query GetDriverStatus {
-  driverStatus(   driverId: "2d2c39ec-8f2c-4983-b3e3-fa6c7110cf79") {
-       success
+  driverStatus(driverId: "2d2c39ec-8f2c-4983-b3e3-fa6c7110cf79") {
+    success
     statusCode
     message
-    data{
-    status
- hasActiveAssignment
-         activeDelivery{
+    data {
+      status
+      hasActiveAssignment
+      activeDelivery {
         id
       }
       lastSeenAt
-    }}}
-  
+    }
+  }
+}
 
-# Block Driver (Admin) - WRAPPED response
+# Block Driver (Admin)
 mutation BlockDriver {
   blockDriver(
     driverId: "c2075b3a-631c-4edf-a810-7e1eda187a92"
     reason: "Suspicious activity detected"
   ) {
-       success
+    success
     statusCode
     message
-    data{
-    id
+    data {
+      id
       isActive
-user{
-  id
+      user {
+        id
         email
         firstName
         lastName
         role
-}
-    status
-    vehicleType
-    plateNumber
-    createdAt
+      }
+      status
+      vehicleType
+      plateNumber
+      createdAt
       capacityKg
       capabilities
       isBlocked
       serviceArea
       updatedAt
-    }}}
-  
+    }
+  }
+}
 
-# Unblock Driver (Admin) - WRAPPED response
+# Unblock Driver (Admin)
 mutation UnblockDriver {
   unblockDriver(
-  driverId: "c2075b3a-631c-4edf-a810-7e1eda187a92"
+    driverId: "c2075b3a-631c-4edf-a810-7e1eda187a92"
     reason: "Verification completed"
   ) {
-       success
+    success
     statusCode
     message
-    data{
-    id
+    data {
+      id
       isActive
-user{
-  id
+      user {
+        id
         email
         firstName
         lastName
         role
-}
-    status
-    vehicleType
-    plateNumber
-    createdAt
+      }
+      status
+      vehicleType
+      plateNumber
+      createdAt
       capacityKg
       capabilities
       isBlocked
       serviceArea
       updatedAt
-    }}}
- 
-  
-  
-# Suspend Driver (Admin) - WRAPPED response
+    }
+  }
+}
+
+# Suspend Driver (Admin)
 mutation SuspendDriver {
   suspendDriver(
     driverId: "a1814250-c214-4b90-a8c3-d74ddd431025"
     reason: "Policy violation"
   ) {
-       success
+    success
     statusCode
     message
-    data{
-    id
+    data {
+      id
       isActive
-user{
-  id
+      user {
+        id
         email
         firstName
         lastName
         role
-}
-    status
-    vehicleType
-    plateNumber
-    createdAt
+      }
+      status
+      vehicleType
+      plateNumber
+      createdAt
       capacityKg
       capabilities
       isBlocked
       serviceArea
       updatedAt
-    }}}
-  
-  
-  # Get Nearby Drivers - WRAPPED response
+    }
+  }
+}
+
+# Get Nearby Drivers (User / Admin)
 query GetNearbyDrivers {
-  nearbyDrivers(input: {
+  nearbyDrivers(
+    input: {
       latitude: 30.0131
       longitude: 51.2089
-    radiusKm: 50.0
-    vehicleType: MOTORCYCLE
-    limit: 10
-  }) {
+      radiusKm: 50.0
+      vehicleType: MOTORCYCLE
+      limit: 10
+    }
+  ) {
     success
     statusCode
     message
@@ -360,13 +373,13 @@ query GetNearbyDrivers {
           isActive
           rating
           isBlocked
-              status
-    vehicleType
-    plateNumber
-    createdAt
-      capacityKg
-      capabilities
-      serviceArea
+          status
+          vehicleType
+          plateNumber
+          createdAt
+          capacityKg
+          capabilities
+          serviceArea
         }
         distanceMeters
         status
@@ -380,7 +393,7 @@ query GetNearbyDrivers {
   }
 }
 
-# Get Driver Active Assignment - WRAPPED response
+# Get Driver Active Assignment (Driver / Admin)
 query GetDriverActiveAssignment {
   driverActiveAssignment(driverId: "f8e08fb8-8da1-474d-9172-474cc03f2068") {
     success
@@ -395,7 +408,7 @@ query GetDriverActiveAssignment {
       driver {
         id
       }
-      status       
+      status
       attemptNumber
       offeredAt
       isActive
@@ -408,10 +421,8 @@ query GetDriverActiveAssignment {
     }
   }
 }
- 
 
-
-# Accept Assignment - WRAPPED response
+# Accept Assignment (Driver)
 mutation AcceptAssignment {
   acceptAssignment(
     assignmentId: "356872997950197760-598a51a0-240e-4154-82c8-1b040f0c36a4"
@@ -443,7 +454,7 @@ mutation AcceptAssignment {
   }
 }
 
-# Reject Assignment - WRAPPED response
+# Reject Assignment (Driver)
 mutation RejectAssignment {
   rejectAssignment(
     assignmentId: "356841535104356352-c54b0bbf-07fb-40f6-a80c-b5510d8ccf43"
@@ -475,10 +486,8 @@ mutation RejectAssignment {
     }
   }
 }
-    
-    
-  
-# Get Dispatch Attempts for a Delivery - WRAPPED response
+
+# Get Dispatch Attempts for a Delivery (Admin)
 query GetDispatchAttempts($deliveryId: ID!) {
   dispatchAttempts(deliveryId: $deliveryId) {
     success
@@ -513,9 +522,7 @@ query GetDispatchAttempts($deliveryId: ID!) {
   "deliveryId": "356558490791055360"
 }
 
-
-
-# Get Assignment by ID - WRAPPED response
+# Get Assignment by ID (Driver / Admin)
 query GetAssignment {
   assignment(id: "356568538971901952-c4c53144-d916-4fbd-b007-c4192c8ab858") {
     success
@@ -544,66 +551,36 @@ query GetAssignment {
   }
 }
 
-
-# Get Driver Active Assignment - WRAPPED response
-query GetDriverActiveAssignment {
-  driverActiveAssignment(driverId: "c54b0bbf-07fb-40f6-a80c-b5510d8ccf43") {
+# Deactivate Driver (Admin)
+mutation DeactivateDriver {
+  deactivateDriver(driverId: "598a51a0-240e-4154-82c8-1b040f0c36a4") {
     success
     statusCode
     message
-    timeStamp
     data {
       id
-      isActive
-      delivery {
+      user {
         id
-      }
-      driver {
-        id
-      }
-      status       
-      attemptNumber
-      offeredAt
-      expiresAt
-      acceptedAt
-      rejectedAt
-      completedAt
-      createdAt
-      updatedAt
-    }
-  }
-}
-
-
-# Deactivate Driver (Admin) - WRAPPED response
-mutation DeactivateDriver {
-  deactivateDriver(driverId: "598a51a0-240e-4154-82c8-1b040f0c36a4") {
-        success
-    statusCode
-    message
-    data{
-    id
-user{
-  id
         email
         firstName
         lastName
         role
-}
-    status
-    vehicleType
-    plateNumber
-    createdAt
+      }
+      status
+      vehicleType
+      plateNumber
+      createdAt
       isActive
       capacityKg
       capabilities
       isBlocked
       serviceArea
       updatedAt
-    }}}
+    }
+  }
+}
 
-
-
+# Rate a Driver (User)
 mutation RateDriver($input: RateDriverInput!) {
   rateDriver(input: $input) {
     success
@@ -639,7 +616,7 @@ mutation RateDriver($input: RateDriverInput!) {
 
 
 
-# Get Driver Reviews (Admin) - WRAPPED response
+# Get Driver Reviews (Admin)
 query GetDriverReviews {
   driverReviews(driverId: "598a51a0-240e-4154-82c8-1b040f0c36a4", page: 1, limit: 10) {
     success
@@ -670,7 +647,7 @@ query GetDriverReviews {
   }
 }
 
-# Query Open / Unassigned Deliveries (Available for Drivers)
+# Query Open and Unassigned Deliveries Available for Drivers (Driver / Admin)
 query GetDriverAvailableDeliveries {
   availableDeliveries {
     success
@@ -695,7 +672,7 @@ query GetDriverAvailableDeliveries {
   }
 }
 
-# Self-Accept an Open Delivery (Driver browses and claims delivery)
+# Self-Accept an Open Delivery (Driver)
 mutation SelfAcceptDelivery {
   selfAcceptDelivery(
     deliveryId: "354294205775876096"

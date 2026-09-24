@@ -1,4 +1,4 @@
-# Check if realtime service is reachable (requires authentication) (user)
+# Check if realtime service is reachable (Public)
 query {
   pingForRealtime {
     statusCode
@@ -8,7 +8,7 @@ query {
   }
 }
 
-# Get connection status for a specific user (requires authentication) (user)
+# Get connection status for a specific user (User / Driver / Admin)
 query {
   getConnectionStatus(userId: "user-001") {
     statusCode
@@ -22,7 +22,7 @@ query {
   }
 }
 
-# Get active connections count by role (requires authentication) (user)
+# Get active connections count by role (Admin)
 query {
   getActiveConnections {
     statusCode
@@ -38,10 +38,6 @@ query {
     }
   }
 }
-
-# ------------------------------------------------------------------------------
-# REALTIME SERVER-PUSH WEBSOCKET MESSAGES (Dispatched automatically)
-# ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
 # REALTIME SERVER-PUSH WEBSOCKET MESSAGES (Dispatch & Driver Flow)

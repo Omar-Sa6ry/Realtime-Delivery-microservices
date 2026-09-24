@@ -1,4 +1,4 @@
-# Get Payment Service Info
+# Get Payment Service Info (Public)
 query GetPaymentServiceInfo {
   paymentServiceInfo {
     success
@@ -13,7 +13,7 @@ query GetPaymentServiceInfo {
   }
 }
 
-# Get Payment by ID (with federated User & Delivery stubs)
+# Get Payment by ID with federated User & Delivery stubs (User / Driver / Admin)
 query GetPaymentById {
   payment(id: "12345678-1234-1234-1234-123456789abc") {
     success
@@ -45,7 +45,7 @@ query GetPaymentById {
   }
 }
 
-# List Payments (Paginated with paginationInfo)
+# List Payments - Paginated with paginationInfo (Admin)
 query GetPaymentsList {
   payments(page: 1, limit: 10) {
     success

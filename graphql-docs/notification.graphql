@@ -1,4 +1,4 @@
-# Get notifications for the current user (requires Bearer token) (user)
+# Get notifications for the current user (User / Driver / Admin)
 query {
   myNotifications {
     statusCode
@@ -15,7 +15,7 @@ query {
   }
 }
 
-# Get a specific notification by ID (requires Bearer token) (user)
+# Get a specific notification by ID (User / Driver / Admin)
 query {
   notification(id: "notif-001") {
     statusCode
@@ -32,7 +32,7 @@ query {
   }
 }
 
-# Mark a notification as read (requires Bearer token) (user)
+# Mark a notification as read (User / Driver / Admin)
 mutation {
   markNotificationRead(id: "notif-001") {
     statusCode
@@ -41,7 +41,7 @@ mutation {
   }
 }
 
-# Mark all notifications as read (requires Bearer token) (user)
+# Mark all notifications as read (User / Driver / Admin)
 mutation {
   markAllNotificationsRead {
     statusCode
@@ -50,7 +50,7 @@ mutation {
   }
 }
 
-# Delete a notification (requires Bearer token) (user)
+# Delete a notification (User / Driver / Admin)
 mutation {
   deleteNotification(id: "notif-001") {
     statusCode
@@ -59,7 +59,7 @@ mutation {
   }
 }
 
-# Create a new notification (Admin only) (admin)
+# Create a new notification (Admin)
 mutation {
   createNotification(
     input: {

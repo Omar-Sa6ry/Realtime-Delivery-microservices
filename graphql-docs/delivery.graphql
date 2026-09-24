@@ -1,4 +1,4 @@
-# Get Delivery Service Health & Info
+# Get Delivery Service Health & Info (Public)
 query GetDeliveryServiceInfo {
   deliveryServiceInfo {
     success
@@ -13,7 +13,7 @@ query GetDeliveryServiceInfo {
   }
 }
 
-# Create a New Delivery (with Pickup, Dropoff & Idempotency Key)
+# Create a New Delivery with Pickup, Dropoff & Idempotency Key (User)
 mutation CreateDelivery {
   createDelivery(
     input: {
@@ -82,7 +82,7 @@ mutation CreateDelivery {
   }
 }
 
-# Get Allowed Next State Transitions for a Delivery
+# Get Allowed Next State Transitions for a Delivery (User / Driver / Admin)
 query GetDeliveryNextStatuses {
   deliveryNextStatuses(id: "354303639159836672") {
     success
@@ -95,8 +95,8 @@ query GetDeliveryNextStatuses {
   }
 }
 
-# Transition Delivery Status (State Machine Progression)
-# Possible statuses: PENDING_PAYMENT, PAYMENT_CONFIRMED, DRIVER_ASSIGNED, DRIVER_ACCEPTED, PICKED_UP, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED
+# Transition Delivery Status across State Machine (Driver / Admin)
+# Allowed statuses: PENDING_PAYMENT, PAYMENT_CONFIRMED, DRIVER_ASSIGNED, DRIVER_ACCEPTED, PICKED_UP, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED
 mutation TransitionDelivery {
   transitionDelivery(
     input: {
@@ -152,7 +152,7 @@ mutation TransitionDelivery {
   }
 }
 
-#Cancel a Delivery
+# Cancel a Delivery (User / Admin)
 mutation CancelDelivery {
   cancelDelivery(
     deliveryId: "354301801656225792"
@@ -171,7 +171,7 @@ mutation CancelDelivery {
   }
 }
 
-# Get My Deliveries (Paginated for Authenticated Customer)
+# Get My Deliveries - Paginated for Authenticated Customer (User)
 query GetMyDeliveries {
   myDeliveries(page: 1, pageSize: 20) {
     success
@@ -220,7 +220,7 @@ query GetMyDeliveries {
   }
 }
 
-# Get Delivery by ID (including Full Address, Status History & Timestamps)
+# Get Delivery by ID including Full Address, Status History & Timestamps (User / Driver / Admin)
 query GetDelivery {
   delivery(id: "354294205775876096") {
     success
@@ -262,7 +262,7 @@ query GetDelivery {
   }
 }
 
-# Browse All Open / Unassigned Deliveries (Available to Drivers)
+# Browse All Open or Unassigned Deliveries (Driver / Admin)
 query GetOpenDeliveries {
   openDeliveries(page: 1, pageSize: 20) {
     success

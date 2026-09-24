@@ -29,6 +29,20 @@ type MediaOutput struct {
 	Versions []*domain.MediaVersion
 }
 
+// GetByID retrieves a media item without ownership checks (for internal / admin use).
+func (uc *GetMediaUseCase) GetByID(ctx context.Context, mediaID string) (*domain.Media, error) {
+	return uc.mediaRepo.GetByID(ctx, mediaID)
+}
+
+// ExecuteForMedia fetches versions for an already authorized media item.
+func (uc *GetMediaUseCase) ExecuteForMedia(ctx context.Context, m *domain.Media) (*MediaOutput, error) {
+	versions, err := uc.versionRepo.ListByMedia(ctx, m.MediaID)
+	if err != nil {
+		versions = []*domain.MediaVersion{} // non-fatal — return empty versions
+	}
+	return &MediaOutput{Media: m, Versions: versions}, nil
+}
+
 // Execute fetches the media and its versions, enforcing ownership.
 func (uc *GetMediaUseCase) Execute(ctx context.Context, userID, mediaID string) (*MediaOutput, error) {
 	m, err := uc.mediaRepo.GetByID(ctx, mediaID)
@@ -39,12 +53,7 @@ func (uc *GetMediaUseCase) Execute(ctx context.Context, userID, mediaID string) 
 		return nil, domain.ErrUnauthorized
 	}
 
-	versions, err := uc.versionRepo.ListByMedia(ctx, mediaID)
-	if err != nil {
-		versions = []*domain.MediaVersion{} // non-fatal — return empty versions
-	}
-
-	return &MediaOutput{Media: m, Versions: versions}, nil
+	return uc.ExecuteForMedia(ctx, m)
 }
 
 // ListMediaInput holds parameters for listing media items.
@@ -97,9 +106,8 @@ func NewDeleteMediaUseCase(
 	}
 }
 
-// Execute marks a media item for deletion and enqueues a delete event via the outbox.
-// Actual S3 deletion is handled asynchronously by the delete worker.
-func (uc *DeleteMediaUseCase) Execute(ctx context.Context, userID, mediaID, idempotencyKey string) error {
+// ExecuteWithAdmin marks a media item for deletion, allowing admin bypass.
+func (uc *DeleteMediaUseCase) ExecuteWithAdmin(ctx context.Context, userID, mediaID, idempotencyKey string, isAdmin bool) error {
 	logger := sharedlogging.FromContext(ctx)
 
 	// 1. Fetch and authorise
@@ -107,7 +115,7 @@ func (uc *DeleteMediaUseCase) Execute(ctx context.Context, userID, mediaID, idem
 	if err != nil {
 		return err
 	}
-	if m.OwnerID != userID {
+	if !isAdmin && m.OwnerID != userID {
 		return domain.ErrUnauthorized
 	}
 
@@ -152,4 +160,9 @@ func (uc *DeleteMediaUseCase) Execute(ctx context.Context, userID, mediaID, idem
 
 	logger.Info("Media deletion accepted", "mediaId", mediaID, "userId", userID)
 	return nil
+}
+
+// Execute marks a media item for deletion and enqueues a delete event via the outbox.
+func (uc *DeleteMediaUseCase) Execute(ctx context.Context, userID, mediaID, idempotencyKey string) error {
+	return uc.ExecuteWithAdmin(ctx, userID, mediaID, idempotencyKey, false)
 }

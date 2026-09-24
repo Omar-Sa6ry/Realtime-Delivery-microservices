@@ -14,5 +14,8 @@
   "microserviceStartupError": "Microservice startup error: {message}",
   "bootstrapFailed": "Bootstrap failed; retrying in 10 seconds: {message}",
   "unauthorizedAccess": "You are not authorized to view this delivery",
-  "unauthorizedCancel": "You are not authorized to cancel this delivery"
+  "unauthorizedCancel": "You are not authorized to cancel this delivery",
+  "onlyRegularUsersCanCreate": "Only regular users can create deliveries",
+  "paymentAuthFailed": "Payment authorization failed: Insufficient funds or invalid card.",
+  "deliveryIdRequired": "deliveryId or id is required"
 }

@@ -40,7 +40,9 @@ export class DeliveryResolver {
     const userRole = ((ctx.req?.user as any)?.role ?? ctx.req?.headers?.['x-user-role'])?.toLowerCase();
 
     if (userRole === 'admin') {
-      throw new ForbiddenException('Only regular users can create deliveries');
+      throw new ForbiddenException(
+        await this.i18n.t('delivery.onlyRegularUsersCanCreate', { lang: ctx.language }),
+      );
     }
 
     const customerId = tokenUserId;
@@ -67,8 +69,9 @@ export class DeliveryResolver {
         confirmedDelivery = await this.saga.execute(created.id);
       } catch (err: any) {
         this.logger.error(`Saga failed for delivery [${created.id}]: ${err.message}`);
+        const authFailedMsg = await this.i18n.t('delivery.paymentAuthFailed', { lang: ctx.language });
         throw new BadRequestException(
-          `Payment authorization failed: Insufficient funds or invalid card. ${err.message}`,
+          `${authFailedMsg} ${err.message}`,
         );
       }
 
@@ -105,7 +108,9 @@ export class DeliveryResolver {
   ): Promise<DeliveryResponse> {
     const targetId = input.deliveryId ?? input.id;
     if (!targetId) {
-      throw new BadRequestException('deliveryId or id is required');
+      throw new BadRequestException(
+        await this.i18n.t('delivery.deliveryIdRequired', { lang: ctx.language }),
+      );
     }
     const tokenUserId = ctx.req?.user?.id ?? ctx.req?.headers?.['x-user-id'];
     const delivery = await this.commands.transition(
@@ -134,7 +139,9 @@ export class DeliveryResolver {
   ): Promise<DeliveryResponse> {
     const targetId = deliveryIdArg ?? idArg;
     if (!targetId) {
-      throw new BadRequestException('deliveryId or id is required');
+      throw new BadRequestException(
+        await this.i18n.t('delivery.deliveryIdRequired', { lang: ctx?.language }),
+      );
     }
 
     const tokenUserId = ctx?.req?.user?.id ?? ctx?.req?.headers?.['x-user-id'];

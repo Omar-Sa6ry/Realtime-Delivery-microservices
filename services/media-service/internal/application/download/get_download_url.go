@@ -12,14 +12,14 @@ import (
 
 // GetDownloadUrlInput holds parameters for the download URL generation.
 type GetDownloadUrlInput struct {
-	UserID       string
-	MediaID      string
-	VersionType  string // "original", "thumbnail", "720p", etc. — empty = original
+	UserID        string
+	IsAdmin       bool
+	MediaID       string
+	VersionType   string // "original", "thumbnail", "720p", etc. — empty = original
 	ExpirySeconds int
-	Range        string // Optional Range header (e.g., "bytes=0-1023")
+	Range         string // Optional Range header (e.g., "bytes=0-1023")
 }
 
-// GetDownloadUrlOutput holds the presigned download URL and metadata.
 // SECURITY: This URL is returned to the caller but NEVER logged.
 type GetDownloadUrlOutput struct {
 	URL         string
@@ -29,10 +29,10 @@ type GetDownloadUrlOutput struct {
 
 // GetDownloadUrlUseCase generates a presigned GET URL for authorised media access.
 type GetDownloadUrlUseCase struct {
-	mediaRepo    ports.MediaRepository
-	versionRepo  ports.VersionRepository
-	storage      ports.ObjectStorage
-	rateLimiter  *sharedratelimiter.RateLimiter
+	mediaRepo     ports.MediaRepository
+	versionRepo   ports.VersionRepository
+	storage       ports.ObjectStorage
+	rateLimiter   *sharedratelimiter.RateLimiter
 	defaultExpiry time.Duration
 }
 
@@ -45,10 +45,10 @@ func NewGetDownloadUrlUseCase(
 	defaultExpiry time.Duration,
 ) *GetDownloadUrlUseCase {
 	return &GetDownloadUrlUseCase{
-		mediaRepo:    mediaRepo,
-		versionRepo:  versionRepo,
-		storage:      storage,
-		rateLimiter:  rateLimiter,
+		mediaRepo:     mediaRepo,
+		versionRepo:   versionRepo,
+		storage:       storage,
+		rateLimiter:   rateLimiter,
 		defaultExpiry: defaultExpiry,
 	}
 }
@@ -72,7 +72,7 @@ func (uc *GetDownloadUrlUseCase) Execute(ctx context.Context, in GetDownloadUrlI
 	if err != nil {
 		return nil, err
 	}
-	if m.OwnerID != in.UserID {
+	if !in.IsAdmin && m.OwnerID != in.UserID {
 		return nil, domain.ErrUnauthorized
 	}
 	if m.Status == domain.MediaStatusQuarantined {

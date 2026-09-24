@@ -74,6 +74,14 @@ func (h *Handler) requireUser(ctx context.Context) (string, error) {
 	return userID, nil
 }
 
+func (h *Handler) isUserAdmin(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	role, _ := ctx.Value("user_role").(string)
+	return strings.EqualFold(role, "admin")
+}
+
 func (h *Handler) resolveMedia(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
 	lang := i18n.FromContext(ctx)
@@ -82,7 +90,17 @@ func (h *Handler) resolveMedia(p gql.ResolveParams) (interface{}, error) {
 		return nil, err
 	}
 
-	out, err := h.getMedia.Execute(ctx, userID, argString(p.Args, "mediaId"))
+	isAdmin := h.isUserAdmin(ctx)
+	mediaID := argString(p.Args, "mediaId")
+	m, err := h.getMedia.GetByID(ctx, mediaID)
+	if err != nil {
+		return nil, err
+	}
+	if !isAdmin && m.OwnerID != userID {
+		return nil, domain.ErrUnauthorized
+	}
+
+	out, err := h.getMedia.ExecuteForMedia(ctx, m)
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +121,15 @@ func (h *Handler) resolveListMedia(p gql.ResolveParams) (interface{}, error) {
 		return nil, err
 	}
 
+	targetOwnerID := argString(p.Args, "ownerId")
+	if targetOwnerID == "" {
+		targetOwnerID = userID
+	} else if targetOwnerID != userID && !h.isUserAdmin(ctx) {
+		return nil, errors.New(i18n.T(lang, "error.unauthorized"))
+	}
+
 	items, nextCursor, err := h.listMedia.Execute(ctx, appMedia.ListMediaInput{
-		OwnerID:      userID,
+		OwnerID:      targetOwnerID,
 		Limit:        argInt(p.Args, "limit"),
 		Cursor:       argString(p.Args, "cursor"),
 		StatusFilter: argString(p.Args, "statusFilter"),
@@ -178,6 +203,7 @@ func (h *Handler) resolveDownloadUrl(p gql.ResolveParams) (interface{}, error) {
 
 	out, err := h.getDownloadURL.Execute(ctx, download.GetDownloadUrlInput{
 		UserID:        userID,
+		IsAdmin:       h.isUserAdmin(ctx),
 		MediaID:       argString(p.Args, "mediaId"),
 		VersionType:   argString(p.Args, "versionType"),
 		ExpirySeconds: argInt(p.Args, "expirySeconds"),
@@ -338,8 +364,8 @@ func (h *Handler) resolveDeleteMedia(p gql.ResolveParams) (interface{}, error) {
 		return nil, err
 	}
 
-	if err := h.deleteMedia.Execute(
-		ctx, userID, argString(p.Args, "mediaId"), argString(p.Args, "idempotencyKey"),
+	if err := h.deleteMedia.ExecuteWithAdmin(
+		ctx, userID, argString(p.Args, "mediaId"), argString(p.Args, "idempotencyKey"), h.isUserAdmin(ctx),
 	); err != nil {
 		return nil, err
 	}

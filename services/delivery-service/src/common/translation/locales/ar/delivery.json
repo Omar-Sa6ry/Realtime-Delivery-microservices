@@ -14,5 +14,8 @@
   "microserviceStartupError": "خطأ في تشغيل خدمات النقل: {message}",
   "bootstrapFailed": "فشل تشغيل الخدمة، ستتم إعادة المحاولة خلال 10 ثوانٍ: {message}",
   "unauthorizedAccess": "غير مصرح لك بعرض هذه الشحنة",
-  "unauthorizedCancel": "غير مصرح لك بإلغاء هذه الشحنة"
+  "unauthorizedCancel": "غير مصرح لك بإلغاء هذه الشحنة",
+  "onlyRegularUsersCanCreate": "المستخدمون العاديون فقط هم من يمكنهم إنشاء طلبات التوصيل",
+  "paymentAuthFailed": "فشل تفويض الدفع: رصيد غير كافٍ أو بطاقة غير صالحة.",
+  "deliveryIdRequired": "معرف التوصيلة مطلوب"
 }

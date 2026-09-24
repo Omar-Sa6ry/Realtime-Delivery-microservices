@@ -3,7 +3,6 @@ package graphql
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	appMedia "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/application/media"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/application/upload"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/i18n"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/transport/graphql/dlq"
 	gql "github.com/graphql-go/graphql"
@@ -63,18 +63,20 @@ func NewHandler(
 }
 
 func (h *Handler) requireUser(ctx context.Context) (string, error) {
+	lang := i18n.FromContext(ctx)
 	if ctx == nil {
-		return "", errors.New("authentication required: missing x-user-id header")
+		return "", errors.New(i18n.T(lang, "error.unauthorized"))
 	}
 	userID := sharedlogging.GetUserID(ctx)
 	if userID == "" {
-		return "", errors.New("authentication required: missing x-user-id header")
+		return "", errors.New(i18n.T(lang, "error.unauthorized"))
 	}
 	return userID, nil
 }
 
 func (h *Handler) resolveMedia(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, err := h.requireUser(ctx)
 	if err != nil {
 		return nil, err
@@ -87,7 +89,7 @@ func (h *Handler) resolveMedia(p gql.ResolveParams) (interface{}, error) {
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Media fetched successfully",
+		"message":    i18n.T(lang, "media.fetched"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data":       mapMedia(out.Media, out.Versions),
 	}, nil
@@ -95,6 +97,7 @@ func (h *Handler) resolveMedia(p gql.ResolveParams) (interface{}, error) {
 
 func (h *Handler) resolveListMedia(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, err := h.requireUser(ctx)
 	if err != nil {
 		return nil, err
@@ -124,7 +127,7 @@ func (h *Handler) resolveListMedia(p gql.ResolveParams) (interface{}, error) {
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Media list fetched successfully",
+		"message":    i18n.T(lang, "media.list_fetched"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data": map[string]interface{}{
 			"paginationInfo": map[string]interface{}{
@@ -139,6 +142,7 @@ func (h *Handler) resolveListMedia(p gql.ResolveParams) (interface{}, error) {
 
 func (h *Handler) resolveUploadStatus(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, err := h.requireUser(ctx)
 	if err != nil {
 		return nil, err
@@ -151,7 +155,7 @@ func (h *Handler) resolveUploadStatus(p gql.ResolveParams) (interface{}, error) 
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Upload status fetched successfully",
+		"message":    i18n.T(lang, "media.upload_status_fetched"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data": map[string]interface{}{
 			"uploadId":       out.UploadID,
@@ -166,6 +170,7 @@ func (h *Handler) resolveUploadStatus(p gql.ResolveParams) (interface{}, error) 
 
 func (h *Handler) resolveDownloadUrl(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, err := h.requireUser(ctx)
 	if err != nil {
 		return nil, err
@@ -183,7 +188,7 @@ func (h *Handler) resolveDownloadUrl(p gql.ResolveParams) (interface{}, error) {
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Download URL generated successfully",
+		"message":    i18n.T(lang, "media.download_url_generated"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data": map[string]interface{}{
 			"url":         out.URL,
@@ -195,6 +200,7 @@ func (h *Handler) resolveDownloadUrl(p gql.ResolveParams) (interface{}, error) {
 
 func (h *Handler) resolveQuota(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, err := h.requireUser(ctx)
 	if err != nil {
 		return nil, err
@@ -207,7 +213,7 @@ func (h *Handler) resolveQuota(p gql.ResolveParams) (interface{}, error) {
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "User quota fetched successfully",
+		"message":    i18n.T(lang, "media.quota_fetched"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data": map[string]interface{}{
 			"usedBytes":            float64(usage.UsedBytes),
@@ -250,7 +256,7 @@ func (h *Handler) resolveCreateUploadSession(p gql.ResolveParams) (interface{}, 
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 201,
-		"message":    "Upload session created successfully",
+		"message":    i18n.T(i18n.FromContext(ctx), "media.upload_session_created"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data": map[string]interface{}{
 			"mediaId":        out.MediaID,
@@ -266,6 +272,7 @@ func (h *Handler) resolveCreateUploadSession(p gql.ResolveParams) (interface{}, 
 
 func (h *Handler) resolveCompleteUpload(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, err := h.requireUser(ctx)
 	if err != nil {
 		return nil, err
@@ -294,7 +301,7 @@ func (h *Handler) resolveCompleteUpload(p gql.ResolveParams) (interface{}, error
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Upload completed successfully",
+		"message":    i18n.T(lang, "media.upload_completed"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data": map[string]interface{}{
 			"mediaId": out.MediaID,
@@ -305,6 +312,7 @@ func (h *Handler) resolveCompleteUpload(p gql.ResolveParams) (interface{}, error
 
 func (h *Handler) resolveAbortUpload(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, err := h.requireUser(ctx)
 	if err != nil {
 		return nil, err
@@ -316,7 +324,7 @@ func (h *Handler) resolveAbortUpload(p gql.ResolveParams) (interface{}, error) {
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Upload aborted successfully",
+		"message":    i18n.T(lang, "media.upload_aborted"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data":       "Upload aborted",
 	}, nil
@@ -324,6 +332,7 @@ func (h *Handler) resolveAbortUpload(p gql.ResolveParams) (interface{}, error) {
 
 func (h *Handler) resolveDeleteMedia(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, err := h.requireUser(ctx)
 	if err != nil {
 		return nil, err
@@ -337,7 +346,7 @@ func (h *Handler) resolveDeleteMedia(p gql.ResolveParams) (interface{}, error) {
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Media deleted successfully",
+		"message":    i18n.T(lang, "media.deleted"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data":       "Media deleted",
 	}, nil
@@ -425,12 +434,13 @@ func intSlice(in []int) []interface{} {
 }
 
 func (h *Handler) requireAdmin(ctx context.Context) error {
+	lang := i18n.FromContext(ctx)
 	if ctx == nil {
-		return errors.New("forbidden: admin privileges required")
+		return errors.New(i18n.T(lang, "error.forbidden_admin"))
 	}
 	role, _ := ctx.Value("user_role").(string)
 	if !strings.EqualFold(role, "admin") {
-		return errors.New("forbidden: admin privileges required")
+		return errors.New(i18n.T(lang, "error.forbidden_admin"))
 	}
 	return nil
 }
@@ -476,7 +486,7 @@ func (h *Handler) resolveDLQStats(p gql.ResolveParams) (interface{}, error) {
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "DLQ stats fetched successfully",
+		"message":    i18n.T(i18n.FromContext(p.Context), "dlq.stats_fetched"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data":       result,
 	}, nil
@@ -487,9 +497,10 @@ func (h *Handler) resolveDLQReplay(p gql.ResolveParams) (interface{}, error) {
 	if err := h.requireAdmin(p.Context); err != nil {
 		return nil, err
 	}
+	lang := i18n.FromContext(p.Context)
 	topic := argString(p.Args, "topic")
 	if topic == "" {
-		return nil, fmt.Errorf("topic is required")
+		return nil, errors.New(i18n.T(lang, "error.topic_required"))
 	}
 	maxMessages := argInt(p.Args, "maxMessages")
 	if maxMessages <= 0 {
@@ -513,7 +524,7 @@ func (h *Handler) resolveDLQReplay(p gql.ResolveParams) (interface{}, error) {
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "DLQ messages replayed successfully",
+		"message":    i18n.T(lang, "dlq.replayed"),
 		"timeStamp":  now,
 		"data": map[string]interface{}{
 			"success":       true,
@@ -525,9 +536,10 @@ func (h *Handler) resolveDLQReplay(p gql.ResolveParams) (interface{}, error) {
 
 // resolveRenewPresigned renews expired multipart URLs for the authenticated owner.
 func (h *Handler) resolveRenewPresigned(p gql.ResolveParams) (interface{}, error) {
+	lang := i18n.FromContext(p.Context)
 	inputArg, ok := p.Args["input"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid input")
+		return nil, errors.New(i18n.T(lang, "error.invalid_input"))
 	}
 	userID, err := h.requireUser(p.Context)
 	if err != nil {
@@ -535,7 +547,7 @@ func (h *Handler) resolveRenewPresigned(p gql.ResolveParams) (interface{}, error
 	}
 	uploadID := argString(inputArg, "uploadId")
 	if uploadID == "" {
-		return nil, fmt.Errorf("uploadId is required")
+		return nil, errors.New(i18n.T(lang, "error.upload_id_required"))
 	}
 	result, err := h.renewPresigned.Execute(p.Context, upload.RenewPresignedInput{
 		UserID: userID, UploadID: uploadID, ExpirySeconds: argInt(inputArg, "expirySeconds"),
@@ -550,7 +562,7 @@ func (h *Handler) resolveRenewPresigned(p gql.ResolveParams) (interface{}, error
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Presigned URLs renewed successfully",
+		"message":    i18n.T(lang, "media.presigned_renewed"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data": map[string]interface{}{
 			"uploadId":       result.UploadID,

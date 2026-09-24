@@ -12,5 +12,10 @@
     "staleCommand": "This command has already been processed",
     "serviceUnavailable": "Service temporarily unavailable, please retry",
     "internalError": "Internal server error"
+  },
+  "service": {
+    "running": "Realtime service is running",
+    "statusRetrieved": "Connection status retrieved successfully",
+    "countsRetrieved": "Active connection counts retrieved successfully"
   }
 }

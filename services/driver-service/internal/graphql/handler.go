@@ -13,6 +13,12 @@ import (
 
 // ExtractLanguage determines the user language preference from Accept-Language or query parameter.
 func ExtractLanguage(r *http.Request) string {
+	if lang := r.Header.Get("x-lang"); lang != "" {
+		return i18n.NormalizeLang(lang)
+	}
+	if lang := r.Header.Get("X-Lang"); lang != "" {
+		return i18n.NormalizeLang(lang)
+	}
 	if lang := r.URL.Query().Get("lang"); lang != "" {
 		return i18n.NormalizeLang(lang)
 	}

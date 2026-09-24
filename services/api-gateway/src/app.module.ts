@@ -228,6 +228,13 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
                   context.req.headers.authorization,
                 );
               }
+              const lang =
+                context.req?.headers?.['x-lang'] ||
+                context.req?.headers?.['accept-language'];
+              if (lang) {
+                request.http.headers.set('x-lang', lang);
+                request.http.headers.set('accept-language', lang);
+              }
             },
           });
         },

@@ -26,7 +26,13 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func LanguageMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		lang := r.URL.Query().Get("lang")
+		lang := r.Header.Get("x-lang")
+		if lang == "" {
+			lang = r.Header.Get("X-Lang")
+		}
+		if lang == "" {
+			lang = r.URL.Query().Get("lang")
+		}
 		if lang == "" {
 			lang = r.Header.Get("Accept-Language")
 		}

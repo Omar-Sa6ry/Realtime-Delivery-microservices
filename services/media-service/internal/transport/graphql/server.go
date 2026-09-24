@@ -13,6 +13,7 @@ import (
 	sharedconstants "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/constants"
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	sharedmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/i18n"
 	gql "github.com/graphql-go/graphql"
 )
 
@@ -128,6 +129,18 @@ func requestContext(r *http.Request) context.Context {
 			}
 		}
 	}
+	lang := r.Header.Get("x-lang")
+	if lang == "" {
+		lang = r.Header.Get("X-Lang")
+	}
+	if lang == "" {
+		lang = r.URL.Query().Get("lang")
+	}
+	if lang == "" {
+		lang = r.Header.Get("Accept-Language")
+	}
+	ctx = i18n.WithLanguage(ctx, lang)
+
 	ctx = context.WithValue(ctx, "user_role", userRole)
 	ctx = sharedlogging.WithLogContext(ctx, sharedlogging.LogContext{
 		TraceID: r.Header.Get(sharedconstants.HeaderXCorrelationId),

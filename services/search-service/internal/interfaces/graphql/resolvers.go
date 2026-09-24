@@ -8,6 +8,7 @@ import (
 	sharedauth "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/auth"
 	sharedconstants "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/constants"
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/i18n"
 	appSearch "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/search"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/reindex"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/domain/search"
@@ -27,6 +28,7 @@ func NewResolver(searchService *appSearch.Service, reindexService *reindex.Servi
 }
 
 func (r *Resolver) getAuthContext(ctx context.Context) (userID, userRole string, err error) {
+	lang := i18n.FromContext(ctx)
 	userID = sharedlogging.GetUserID(ctx)
 	if userID == "" {
 		if authHeader := getAuthHeader(ctx); authHeader != "" {
@@ -39,7 +41,7 @@ func (r *Resolver) getAuthContext(ctx context.Context) (userID, userRole string,
 	userRole = getUserRole(ctx)
 
 	if userID == "" {
-		return "", "", errors.New("authentication required: missing x-user-id header")
+		return "", "", errors.New(i18n.T(lang, "error.unauthorized"))
 	}
 	return userID, userRole, nil
 }
@@ -64,6 +66,7 @@ func getUserRole(ctx context.Context) string {
 
 func (r *Resolver) ResolveSearchDeliveries(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, userRole, err := r.getAuthContext(ctx)
 	if err != nil {
 		return nil, err
@@ -71,7 +74,7 @@ func (r *Resolver) ResolveSearchDeliveries(p gql.ResolveParams) (interface{}, er
 
 	input, ok := p.Args["input"].(map[string]interface{})
 	if !ok {
-		return nil, errors.New("invalid input")
+		return nil, errors.New(i18n.T(lang, "error.invalid_input"))
 	}
 
 	query := buildDeliverySearchQuery(input, userID, userRole)
@@ -80,11 +83,12 @@ func (r *Resolver) ResolveSearchDeliveries(p gql.ResolveParams) (interface{}, er
 		return nil, err
 	}
 
-	return mapSearchResult(res, "Deliveries fetched successfully"), nil
+	return mapSearchResult(res, i18n.T(lang, "search.deliveries_fetched")), nil
 }
 
 func (r *Resolver) ResolveSearchDrivers(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, userRole, err := r.getAuthContext(ctx)
 	if err != nil {
 		return nil, err
@@ -92,7 +96,7 @@ func (r *Resolver) ResolveSearchDrivers(p gql.ResolveParams) (interface{}, error
 
 	input, ok := p.Args["input"].(map[string]interface{})
 	if !ok {
-		return nil, errors.New("invalid input")
+		return nil, errors.New(i18n.T(lang, "error.invalid_input"))
 	}
 
 	query := buildDriverSearchQuery(input, userID, userRole)
@@ -101,11 +105,12 @@ func (r *Resolver) ResolveSearchDrivers(p gql.ResolveParams) (interface{}, error
 		return nil, err
 	}
 
-	return mapSearchResult(res, "Drivers fetched successfully"), nil
+	return mapSearchResult(res, i18n.T(lang, "search.drivers_fetched")), nil
 }
 
 func (r *Resolver) ResolveSearchMedia(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, userRole, err := r.getAuthContext(ctx)
 	if err != nil {
 		return nil, err
@@ -113,7 +118,7 @@ func (r *Resolver) ResolveSearchMedia(p gql.ResolveParams) (interface{}, error) 
 
 	input, ok := p.Args["input"].(map[string]interface{})
 	if !ok {
-		return nil, errors.New("invalid input")
+		return nil, errors.New(i18n.T(lang, "error.invalid_input"))
 	}
 
 	query := buildMediaSearchQuery(input, userID, userRole)
@@ -122,11 +127,12 @@ func (r *Resolver) ResolveSearchMedia(p gql.ResolveParams) (interface{}, error) 
 		return nil, err
 	}
 
-	return mapSearchResult(res, "Media fetched successfully"), nil
+	return mapSearchResult(res, i18n.T(lang, "search.media_fetched")), nil
 }
 
 func (r *Resolver) ResolveSearchUsers(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	_, userRole, err := r.getAuthContext(ctx)
 	if err != nil {
 		return nil, err
@@ -134,12 +140,12 @@ func (r *Resolver) ResolveSearchUsers(p gql.ResolveParams) (interface{}, error) 
 
 	// Only admin can search users
 	if userRole != string(sharedconstants.RoleAdmin) {
-		return nil, errors.New("forbidden: admin access required")
+		return nil, errors.New(i18n.T(lang, "error.forbidden_admin"))
 	}
 
 	input, ok := p.Args["input"].(map[string]interface{})
 	if !ok {
-		return nil, errors.New("invalid input")
+		return nil, errors.New(i18n.T(lang, "error.invalid_input"))
 	}
 
 	query := buildUserSearchQuery(input)
@@ -148,11 +154,12 @@ func (r *Resolver) ResolveSearchUsers(p gql.ResolveParams) (interface{}, error) 
 		return nil, err
 	}
 
-	return mapSearchResult(res, "Users fetched successfully"), nil
+	return mapSearchResult(res, i18n.T(lang, "search.users_fetched")), nil
 }
 
 func (r *Resolver) ResolveAutocomplete(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, _, err := r.getAuthContext(ctx)
 	if err != nil {
 		return nil, err
@@ -161,7 +168,7 @@ func (r *Resolver) ResolveAutocomplete(p gql.ResolveParams) (interface{}, error)
 
 	input, ok := p.Args["input"].(map[string]interface{})
 	if !ok {
-		return nil, errors.New("invalid input")
+		return nil, errors.New(i18n.T(lang, "error.invalid_input"))
 	}
 
 	query := search.AutocompleteQuery{
@@ -178,7 +185,7 @@ func (r *Resolver) ResolveAutocomplete(p gql.ResolveParams) (interface{}, error)
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Autocomplete suggestions fetched successfully",
+		"message":    i18n.T(lang, "search.autocomplete_fetched"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data": map[string]interface{}{
 			"suggestions": res.Suggestions,
@@ -188,6 +195,7 @@ func (r *Resolver) ResolveAutocomplete(p gql.ResolveParams) (interface{}, error)
 
 func (r *Resolver) ResolveNearbyDeliveries(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, userRole, err := r.getAuthContext(ctx)
 	if err != nil {
 		return nil, err
@@ -195,7 +203,7 @@ func (r *Resolver) ResolveNearbyDeliveries(p gql.ResolveParams) (interface{}, er
 
 	input, ok := p.Args["input"].(map[string]interface{})
 	if !ok {
-		return nil, errors.New("invalid input")
+		return nil, errors.New(i18n.T(lang, "error.invalid_input"))
 	}
 
 	query := buildGeoSearchQuery(input, userID, userRole)
@@ -204,11 +212,12 @@ func (r *Resolver) ResolveNearbyDeliveries(p gql.ResolveParams) (interface{}, er
 		return nil, err
 	}
 
-	return mapSearchResult(res, "Nearby deliveries fetched successfully"), nil
+	return mapSearchResult(res, i18n.T(lang, "search.nearby_deliveries_fetched")), nil
 }
 
 func (r *Resolver) ResolveNearbyDrivers(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	userID, userRole, err := r.getAuthContext(ctx)
 	if err != nil {
 		return nil, err
@@ -216,7 +225,7 @@ func (r *Resolver) ResolveNearbyDrivers(p gql.ResolveParams) (interface{}, error
 
 	input, ok := p.Args["input"].(map[string]interface{})
 	if !ok {
-		return nil, errors.New("invalid input")
+		return nil, errors.New(i18n.T(lang, "error.invalid_input"))
 	}
 
 	query := buildGeoSearchQuery(input, userID, userRole)
@@ -225,10 +234,12 @@ func (r *Resolver) ResolveNearbyDrivers(p gql.ResolveParams) (interface{}, error
 		return nil, err
 	}
 
-	return mapSearchResult(res, "Nearby drivers fetched successfully"), nil
+	return mapSearchResult(res, i18n.T(lang, "search.nearby_drivers_fetched")), nil
 }
 
 func (r *Resolver) ResolveSearchHealth(p gql.ResolveParams) (interface{}, error) {
+	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	ts, _ := p.Context.Value("timestamp").(string)
 	if ts == "" {
 		ts = time.Now().UTC().Format(time.RFC3339)
@@ -236,7 +247,7 @@ func (r *Resolver) ResolveSearchHealth(p gql.ResolveParams) (interface{}, error)
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Search service is healthy",
+		"message":    i18n.T(lang, "server.healthy"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data": map[string]interface{}{
 			"status":    "UP",
@@ -247,6 +258,7 @@ func (r *Resolver) ResolveSearchHealth(p gql.ResolveParams) (interface{}, error)
 
 func (r *Resolver) ResolveStartReindex(p gql.ResolveParams) (interface{}, error) {
 	ctx := p.Context
+	lang := i18n.FromContext(ctx)
 	_, userRole, err := r.getAuthContext(ctx)
 	if err != nil {
 		return nil, err
@@ -254,7 +266,7 @@ func (r *Resolver) ResolveStartReindex(p gql.ResolveParams) (interface{}, error)
 
 	// Only admin can trigger reindex
 	if userRole != string(sharedconstants.RoleAdmin) {
-		return nil, errors.New("forbidden: admin access required")
+		return nil, errors.New(i18n.T(lang, "error.forbidden_admin"))
 	}
 
 	index := getString(p.Args, "index")
@@ -266,7 +278,7 @@ func (r *Resolver) ResolveStartReindex(p gql.ResolveParams) (interface{}, error)
 	return map[string]interface{}{
 		"success":    true,
 		"statusCode": 200,
-		"message":    "Reindex job started successfully",
+		"message":    i18n.T(lang, "search.reindex_started"),
 		"timeStamp":  time.Now().UTC().Format(time.RFC3339),
 		"data": map[string]interface{}{
 			"jobId":       job.JobID,

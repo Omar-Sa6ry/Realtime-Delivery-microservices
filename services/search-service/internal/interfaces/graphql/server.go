@@ -11,6 +11,7 @@ import (
 
 	sharedconstants "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/constants"
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/i18n"
 	appSearch "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/search"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/reindex"
 	gql "github.com/graphql-go/graphql"
@@ -99,6 +100,18 @@ func requestContext(r *http.Request) context.Context {
 		Method:  r.Method,
 		Path:    r.URL.Path,
 	})
+
+	lang := r.Header.Get("x-lang")
+	if lang == "" {
+		lang = r.Header.Get("X-Lang")
+	}
+	if lang == "" {
+		lang = r.URL.Query().Get("lang")
+	}
+	if lang == "" {
+		lang = r.Header.Get("Accept-Language")
+	}
+	ctx = i18n.WithLanguage(ctx, lang)
 
 	if userID != "" {
 		ctx = context.WithValue(ctx, "x-user-id", userID)

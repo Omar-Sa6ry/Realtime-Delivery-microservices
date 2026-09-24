@@ -1,17 +1,23 @@
 import { Resolver, Query, Args } from '@nestjs/graphql';
+import { I18nService, I18nContext } from 'nestjs-i18n';
 import { BooleanResponse, ConnectionStatusResponse, ConnectionsCountResponse } from './common/graphql/connection.types';
 import { ConnectionService } from './modules/gateway/connection/connection.service';
 
 @Resolver()
 export class AppResolver {
-  constructor(private readonly connectionService: ConnectionService) {}
+  constructor(
+    private readonly connectionService: ConnectionService,
+    private readonly i18n: I18nService,
+  ) {}
 
   @Query(() => BooleanResponse)
-  pingForRealtime(): BooleanResponse {
+  async pingForRealtime(): Promise<BooleanResponse> {
+    const lang = I18nContext.current()?.lang || 'en';
+    const message = await this.i18n.translate('messages.service.running', { lang });
     return {
       success: true,
       statusCode: 200,
-      message: 'Realtime service is running',
+      message,
       data: true,
     };
   }

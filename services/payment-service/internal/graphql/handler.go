@@ -16,6 +16,12 @@ import (
 )
 
 func ExtractLanguage(c *gin.Context) string {
+	if lang := c.GetHeader("x-lang"); lang != "" {
+		return i18n.NormalizeLang(lang)
+	}
+	if lang := c.GetHeader("X-Lang"); lang != "" {
+		return i18n.NormalizeLang(lang)
+	}
 	if lang := c.Query("lang"); lang != "" {
 		return i18n.NormalizeLang(lang)
 	}

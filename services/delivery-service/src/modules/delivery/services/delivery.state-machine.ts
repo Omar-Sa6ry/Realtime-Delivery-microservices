@@ -4,9 +4,8 @@ import { DeliveryStatus } from '../enums/delivery-status.enum';
 
 @Injectable()
 export class DeliveryStateMachine {
-  private readonly transitions: Record<
-    DeliveryStatus,
-    readonly DeliveryStatus[]
+  private readonly transitions: Partial<
+    Record<DeliveryStatus, readonly DeliveryStatus[]>
   > = {
     [DeliveryStatus.CREATED]: [
       DeliveryStatus.PENDING_PAYMENT,

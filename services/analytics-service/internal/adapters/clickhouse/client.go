@@ -51,9 +51,22 @@ func NewClient(cfg Config) (*Client, error) {
 }
 
 func (c *Client) Ping(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	return c.db.PingContext(ctx)
+	var lastErr error
+	for attempt := 1; attempt <= 15; attempt++ {
+		pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		err := c.db.PingContext(pingCtx)
+		cancel()
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(2 * time.Second):
+		}
+	}
+	return lastErr
 }
 
 func (c *Client) DB() *sql.DB {

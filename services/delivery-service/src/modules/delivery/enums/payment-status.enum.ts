@@ -1,8 +1,1 @@
-﻿export enum PaymentStatus {
-  PENDING = 'PENDING',
-  AUTHORIZED = 'AUTHORIZED',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
-  REFUNDED = 'REFUNDED',
-  CANCELLED = 'CANCELLED',
-}
+export { PaymentStatus } from '@delivery/common';

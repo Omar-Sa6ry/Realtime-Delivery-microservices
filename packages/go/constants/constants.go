@@ -20,14 +20,19 @@ const (
 	HeaderXUserRole      = "x-user-role"
 	HeaderXUserSession   = "x-user-session"
 	HeaderXCorrelationId = "x-correlation-id"
+	HeaderXLang          = "x-lang"
+	HeaderAcceptLanguage = "accept-language"
 )
 
 // Payment Status Constants
 const (
-	PaymentStatusPending   = "PENDING"
-	PaymentStatusCompleted = "COMPLETED"
-	PaymentStatusFailed    = "FAILED"
-	PaymentStatusRefunded  = "REFUNDED"
+	PaymentStatusPending    = "PENDING"
+	PaymentStatusAuthorized = "AUTHORIZED"
+	PaymentStatusCaptured   = "CAPTURED"
+	PaymentStatusCompleted  = "COMPLETED"
+	PaymentStatusFailed     = "FAILED"
+	PaymentStatusRefunded   = "REFUNDED"
+	PaymentStatusCancelled  = "CANCELLED"
 )
 
 // Roles

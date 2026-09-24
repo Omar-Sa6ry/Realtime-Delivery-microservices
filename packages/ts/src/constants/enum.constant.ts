@@ -1,4 +1,4 @@
-﻿import { registerEnumType } from "@nestjs/graphql";
+import { registerEnumType } from "@nestjs/graphql";
 
 export enum Role {
   ADMIN = "admin",
@@ -41,9 +41,12 @@ export enum PaymentMethod {
 
 export enum PaymentStatus {
   PENDING = "PENDING",
+  AUTHORIZED = "AUTHORIZED",
+  CAPTURED = "CAPTURED",
   COMPLETED = "COMPLETED",
   FAILED = "FAILED",
   REFUNDED = "REFUNDED",
+  CANCELLED = "CANCELLED",
 }
 
 export enum HeaderKeys {
@@ -51,6 +54,8 @@ export enum HeaderKeys {
   X_USER_ROLE = "x-user-role",
   X_USER_SESSION = "x-user-session",
   X_CORRELATION_ID = "x-correlation-id",
+  X_LANG = "x-lang",
+  ACCEPT_LANGUAGE = "accept-language",
 }
 
 export enum NotificationType {
@@ -149,6 +154,28 @@ registerEnumType(NotificationChannel, {
 registerEnumType(NotificationPriority, {
   name: "NotificationPriority",
   description: "Priority of notification delivery",
+});
+
+export enum DeliveryStatus {
+  CREATED = "CREATED",
+  PENDING = "PENDING",
+  PENDING_PAYMENT = "PENDING_PAYMENT",
+  PAYMENT_CONFIRMED = "PAYMENT_CONFIRMED",
+  SEARCHING_DRIVER = "SEARCHING_DRIVER",
+  DRIVER_ASSIGNED = "DRIVER_ASSIGNED",
+  DRIVER_ACCEPTED = "DRIVER_ACCEPTED",
+  PICKUP_STARTED = "PICKUP_STARTED",
+  PICKED_UP = "PICKED_UP",
+  IN_TRANSIT = "IN_TRANSIT",
+  DELIVERED = "DELIVERED",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
+  FAILED = "FAILED",
+}
+
+registerEnumType(DeliveryStatus, {
+  name: "DeliveryStatus",
+  description: "Status of delivery orders",
 });
 
 

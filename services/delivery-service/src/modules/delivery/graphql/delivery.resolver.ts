@@ -107,10 +107,11 @@ export class DeliveryResolver {
     if (!targetId) {
       throw new BadRequestException('deliveryId or id is required');
     }
+    const tokenUserId = ctx.req?.user?.id ?? ctx.req?.headers?.['x-user-id'];
     const delivery = await this.commands.transition(
       targetId as string,
       input.status as DeliveryStatus,
-      ctx.req?.user?.id,
+      tokenUserId,
       input.note,
     );
     return {

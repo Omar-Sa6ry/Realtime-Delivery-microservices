@@ -616,7 +616,7 @@ mutation RateDriver($input: RateDriverInput!) {
 
 
 
-# Get Driver Reviews (Admin)
+# Get Driver Reviews (Driver / Admin)
 query GetDriverReviews {
   driverReviews(driverId: "598a51a0-240e-4154-82c8-1b040f0c36a4", page: 1, limit: 10) {
     success

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	gql "github.com/graph-gophers/graphql-go"
@@ -677,6 +678,20 @@ func (r *RootResolver) DriverActiveAssignment(ctx context.Context, args struct{ 
 	var targetDriverID string
 	if args.DriverId != nil && *args.DriverId != "" {
 		targetDriverID = string(*args.DriverId)
+		role, _ := ctx.Value("role").(string)
+		userID, _ := ctx.Value("userID").(string)
+		if !strings.EqualFold(role, "admin") {
+			targetDriver, _ := r.driverRepo.FindByID(ctx, targetDriverID)
+			if targetDriver == nil || targetDriver.UserID != userID {
+				return &AssignmentResponseResolver{
+					success:    false,
+					statusCode: 403,
+					message:    "Forbidden: Only the driver or admin can view this assignment",
+					timeStamp:  now,
+					data:       nil,
+				}, nil
+			}
+		}
 	} else {
 		driver, err := r.authorizeActiveDriver(ctx)
 		if err != nil {
@@ -736,6 +751,18 @@ func (r *RootResolver) DriverStatus(ctx context.Context, args struct{ DriverId g
 			success:    false,
 			statusCode: 404,
 			message:    "Driver not found",
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
+	role, _ := ctx.Value("role").(string)
+	userID, _ := ctx.Value("userID").(string)
+	if !strings.EqualFold(role, "admin") && driver.UserID != userID {
+		return &DriverStatusResponseResolver{
+			success:    false,
+			statusCode: 403,
+			message:    "Forbidden: Only the driver or admin can view driver operational status",
 			timeStamp:  now,
 			data:       nil,
 		}, nil
@@ -917,6 +944,21 @@ func (r *RootResolver) Assignment(ctx context.Context, args struct{ Id gql.ID })
 			data:       nil,
 		}, nil
 	}
+
+	role, _ := ctx.Value("role").(string)
+	userID, _ := ctx.Value("userID").(string)
+	if !strings.EqualFold(role, "admin") {
+		driver, _ := r.driverRepo.FindByID(ctx, assignment.DriverID)
+		if driver == nil || driver.UserID != userID {
+			return &AssignmentResponseResolver{
+				success:    false,
+				statusCode: 403,
+				message:    "Forbidden: Only the assigned driver or admin can view this assignment",
+				timeStamp:  now,
+				data:       nil,
+			}, nil
+		}
+	}
 	return &AssignmentResponseResolver{
 		success:    true,
 		statusCode: 200,
@@ -928,6 +970,16 @@ func (r *RootResolver) Assignment(ctx context.Context, args struct{ Id gql.ID })
 
 func (r *RootResolver) DispatchAttempts(ctx context.Context, args struct{ DeliveryId gql.ID }) (*DispatchAttemptsResponseResolver, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
+	role, _ := ctx.Value("role").(string)
+	if !strings.EqualFold(role, "admin") {
+		return &DispatchAttemptsResponseResolver{
+			success:    false,
+			statusCode: 403,
+			message:    "Forbidden: Only admin can view dispatch attempts",
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
 	// Query assignments associated with this delivery ID
 	assignment, err := r.assignmentRepo.FindByDeliveryID(ctx, string(args.DeliveryId))
 	if err != nil {
@@ -986,6 +1038,21 @@ func (r *RootResolver) DriverReviews(ctx context.Context, args struct {
 	limit := 10
 	if args.Limit != nil && *args.Limit > 0 {
 		limit = int(*args.Limit)
+	}
+
+	role, _ := ctx.Value("role").(string)
+	userID, _ := ctx.Value("userID").(string)
+	if !strings.EqualFold(role, "admin") {
+		driver, _ := r.driverRepo.FindByID(ctx, string(args.DriverId))
+		if driver == nil || driver.UserID != userID {
+			return &DriverReviewsResponseResolver{
+				success:    false,
+				statusCode: 403,
+				message:    "Forbidden: Only the driver or admin can view these reviews",
+				timeStamp:  now,
+				data:       nil,
+			}, nil
+		}
 	}
 
 	res, err := r.getReviewsHandler.Execute(ctx, queries.GetDriverReviewsQuery{
@@ -1307,22 +1374,27 @@ type UpdateDriverProfileInput struct {
 
 func (r *RootResolver) UpdateDriverProfile(ctx context.Context, args struct{ Input UpdateDriverProfileInput }) (*DriverResponseResolver, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
-	role, _ := ctx.Value("role").(string)
-	if role != "admin" {
-		return &DriverResponseResolver{
-			success:    false,
-			statusCode: 403,
-			message:    "Forbidden: Only admin can update driver profile",
-			timeStamp:  now,
-			data:       nil,
-		}, nil
-	}
 	driver, err := r.driverRepo.FindByID(ctx, string(args.Input.DriverId))
 	if err != nil || driver == nil {
 		return &DriverResponseResolver{
 			success:    false,
 			statusCode: 404,
 			message:    "Driver profile not found",
+			timeStamp:  now,
+			data:       nil,
+		}, nil
+	}
+
+	role, _ := ctx.Value("role").(string)
+	userID, _ := ctx.Value("userID").(string)
+	isAdmin := strings.EqualFold(role, "admin")
+	isOwner := driver.UserID == userID
+
+	if !isAdmin && !isOwner {
+		return &DriverResponseResolver{
+			success:    false,
+			statusCode: 403,
+			message:    "Forbidden: Only the driver or admin can update driver profile",
 			timeStamp:  now,
 			data:       nil,
 		}, nil

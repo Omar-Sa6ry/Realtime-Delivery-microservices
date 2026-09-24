@@ -277,6 +277,27 @@ func GraphQLHandler(paymentSvc *services.PaymentService) gin.HandlerFunc {
 				return
 			}
 
+			currentUserID, _ := c.Get("userID")
+			currentUserRole, _ := c.Get("userRole")
+			roleStr, _ := currentUserRole.(string)
+			curUserStr, _ := currentUserID.(string)
+			isAdmin := strings.EqualFold(roleStr, "admin")
+
+			if !isAdmin && curUserStr != "" && payment.UserID != curUserStr {
+				c.JSON(http.StatusOK, gin.H{
+					"data": gin.H{
+						"payment": gin.H{
+							"success":    false,
+							"statusCode": 403,
+							"message":    i18n.T(lang, "error.unauthorized"),
+							"timeStamp":  now,
+							"data":       nil,
+						},
+					},
+				})
+				return
+			}
+
 			c.JSON(http.StatusOK, gin.H{
 				"data": gin.H{
 					"payment": gin.H{
@@ -295,7 +316,7 @@ func GraphQLHandler(paymentSvc *services.PaymentService) gin.HandlerFunc {
 		if strings.Contains(req.Query, "payments(") || strings.Contains(req.Query, "payments {") {
 			page := 1
 			limit := 20
-			var userID string
+			var queryUserID string
 
 			if p, ok := req.Variables["page"].(float64); ok && p > 0 {
 				page = int(p)
@@ -304,10 +325,35 @@ func GraphQLHandler(paymentSvc *services.PaymentService) gin.HandlerFunc {
 				limit = int(l)
 			}
 			if u, ok := req.Variables["userId"].(string); ok {
-				userID = u
+				queryUserID = u
 			}
 
-			payments, total, err := paymentSvc.ListPayments(ctx, page, limit, userID)
+			currentUserID, _ := c.Get("userID")
+			currentUserRole, _ := c.Get("userRole")
+			roleStr, _ := currentUserRole.(string)
+			curUserStr, _ := currentUserID.(string)
+			isAdmin := strings.EqualFold(roleStr, "admin")
+
+			// Non-admin can only query their own payments
+			if !isAdmin {
+				if curUserStr == "" {
+					c.JSON(http.StatusOK, gin.H{
+						"data": gin.H{
+							"payments": gin.H{
+								"success":    false,
+								"statusCode": 401,
+								"message":    i18n.T(lang, "error.unauthorized"),
+								"timeStamp":  now,
+								"data":       nil,
+							},
+						},
+					})
+					return
+				}
+				queryUserID = curUserStr
+			}
+
+			payments, total, err := paymentSvc.ListPayments(ctx, page, limit, queryUserID)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
 					"data": gin.H{

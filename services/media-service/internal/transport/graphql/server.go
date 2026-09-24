@@ -115,13 +115,20 @@ func (s *Server) handleGraphQL(w http.ResponseWriter, r *http.Request) {
 func requestContext(r *http.Request) context.Context {
 	ctx := r.Context()
 	userID := r.Header.Get(sharedconstants.HeaderXUserId)
-	if userID == "" {
+	userRole := r.Header.Get(sharedconstants.HeaderXUserRole)
+	if userID == "" || userRole == "" {
 		if authHeader := r.Header.Get("Authorization"); authHeader != "" {
 			if claims, err := sharedauth.Authenticate(authHeader); err == nil {
-				userID = claims.UserID()
+				if userID == "" {
+					userID = claims.UserID()
+				}
+				if userRole == "" {
+					userRole = claims.Role
+				}
 			}
 		}
 	}
+	ctx = context.WithValue(ctx, "user_role", userRole)
 	ctx = sharedlogging.WithLogContext(ctx, sharedlogging.LogContext{
 		TraceID: r.Header.Get(sharedconstants.HeaderXCorrelationId),
 		UserID:  userID,

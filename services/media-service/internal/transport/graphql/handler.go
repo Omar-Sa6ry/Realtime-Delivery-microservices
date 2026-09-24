@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
@@ -423,13 +424,30 @@ func intSlice(in []int) []interface{} {
 	return out
 }
 
+func (h *Handler) requireAdmin(ctx context.Context) error {
+	if ctx == nil {
+		return errors.New("forbidden: admin privileges required")
+	}
+	role, _ := ctx.Value("user_role").(string)
+	if !strings.EqualFold(role, "admin") {
+		return errors.New("forbidden: admin privileges required")
+	}
+	return nil
+}
+
 // resolveDLQTopics returns all DLQ topics
 func (h *Handler) resolveDLQTopics(p gql.ResolveParams) (interface{}, error) {
+	if err := h.requireAdmin(p.Context); err != nil {
+		return nil, err
+	}
 	return h.dlqManager.ListDLQTopics(), nil
 }
 
 // resolveDLQStats returns statistics for DLQ topics
 func (h *Handler) resolveDLQStats(p gql.ResolveParams) (interface{}, error) {
+	if err := h.requireAdmin(p.Context); err != nil {
+		return nil, err
+	}
 	topicsArg, ok := p.Args["topics"].([]interface{})
 	var topics []string
 	if ok {
@@ -466,6 +484,9 @@ func (h *Handler) resolveDLQStats(p gql.ResolveParams) (interface{}, error) {
 
 // resolveDLQReplay replays messages from a DLQ topic.
 func (h *Handler) resolveDLQReplay(p gql.ResolveParams) (interface{}, error) {
+	if err := h.requireAdmin(p.Context); err != nil {
+		return nil, err
+	}
 	topic := argString(p.Args, "topic")
 	if topic == "" {
 		return nil, fmt.Errorf("topic is required")

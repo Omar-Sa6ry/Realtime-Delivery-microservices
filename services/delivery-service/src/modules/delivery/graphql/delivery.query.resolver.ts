@@ -32,7 +32,10 @@ export class DeliveryQueryResolver {
     const userRole = (ctx.req?.user as any)?.role ?? ctx.req?.headers?.['x-user-role'];
     const isAdmin = userRole === 'ADMIN' || userRole === 'admin';
 
-    if (!isAdmin && delivery.customerId !== tokenUserId) {
+    const isCustomer = delivery.customerId === tokenUserId;
+    const isAssignedDriver = delivery.driverId && delivery.driverId === tokenUserId;
+
+    if (!isAdmin && !isCustomer && !isAssignedDriver) {
       throw new ForbiddenException(
         await this.i18n.t('delivery.unauthorizedAccess', { lang: ctx.language }),
       );

@@ -26,6 +26,7 @@ type RootResolver struct {
 	rateDriverHandler *commands.RateDriverHandler
 	getReviewsHandler *queries.GetDriverReviewsHandler
 	eventPublisher    ports.EventPublisher
+	deliveryClient    ports.DeliveryServiceClient
 }
 
 // NewRootResolver constructs a new RootResolver with all application dependencies.
@@ -39,6 +40,7 @@ func NewRootResolver(
 	rateDriverHandler *commands.RateDriverHandler,
 	getReviewsHandler *queries.GetDriverReviewsHandler,
 	eventPublisher ports.EventPublisher,
+	deliveryClient ports.DeliveryServiceClient,
 ) *RootResolver {
 	return &RootResolver{
 		driverRepo:        driverRepo,
@@ -50,6 +52,7 @@ func NewRootResolver(
 		rateDriverHandler: rateDriverHandler,
 		getReviewsHandler: getReviewsHandler,
 		eventPublisher:    eventPublisher,
+		deliveryClient:    deliveryClient,
 	}
 }
 
@@ -1706,6 +1709,50 @@ func (r *RootResolver) AvailableDeliveries(ctx context.Context) (*OpenDeliveries
 	_ = driver
 
 	var items []*OpenDeliveryItemResolver
+	var totalItems int32
+
+	if r.deliveryClient != nil {
+		openDeliveries, total, err := r.deliveryClient.GetOpenDeliveries(ctx, 1, 50)
+		if err == nil {
+			totalItems = total
+			for _, d := range openDeliveries {
+				item := OpenDeliveryItemData{
+					ID:         d.ID,
+					CustomerID: d.CustomerID,
+					Status:     d.Status,
+				}
+				if d.PickupCity != "" {
+					pc := d.PickupCity
+					item.PickupCity = &pc
+				}
+				if d.PickupCountry != "" {
+					pcountry := d.PickupCountry
+					item.PickupCountry = &pcountry
+				}
+				if d.DropoffCity != "" {
+					dc := d.DropoffCity
+					item.DropoffCity = &dc
+				}
+				if d.DropoffCountry != "" {
+					dcountry := d.DropoffCountry
+					item.DropoffCountry = &dcountry
+				}
+				if d.Amount != "" {
+					amt := d.Amount
+					item.Amount = &amt
+				}
+				if d.Currency != "" {
+					curr := d.Currency
+					item.Currency = &curr
+				}
+				if d.CreatedAt != "" {
+					ca := d.CreatedAt
+					item.CreatedAt = &ca
+				}
+				items = append(items, &OpenDeliveryItemResolver{item: item})
+			}
+		}
+	}
 
 	return &OpenDeliveriesResponseResolver{
 		success:    true,
@@ -1714,7 +1761,7 @@ func (r *RootResolver) AvailableDeliveries(ctx context.Context) (*OpenDeliveries
 		timeStamp:  now,
 		data: &OpenDeliveriesDataResolver{
 			items:      items,
-			totalItems: int32(len(items)),
+			totalItems: totalItems,
 		},
 	}, nil
 }

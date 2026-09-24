@@ -365,6 +365,226 @@ func (x *RefundPaymentResponse) GetRefundId() string {
 	return ""
 }
 
+type GetOpenDeliveriesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOpenDeliveriesRequest) Reset() {
+	*x = GetOpenDeliveriesRequest{}
+	mi := &file_delivery_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOpenDeliveriesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOpenDeliveriesRequest) ProtoMessage() {}
+
+func (x *GetOpenDeliveriesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_delivery_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOpenDeliveriesRequest.ProtoReflect.Descriptor instead.
+func (*GetOpenDeliveriesRequest) Descriptor() ([]byte, []int) {
+	return file_delivery_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetOpenDeliveriesRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *GetOpenDeliveriesRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type OpenDeliverySummary struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	CustomerId     string                 `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	Status         string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	PickupCity     string                 `protobuf:"bytes,4,opt,name=pickup_city,json=pickupCity,proto3" json:"pickup_city,omitempty"`
+	PickupCountry  string                 `protobuf:"bytes,5,opt,name=pickup_country,json=pickupCountry,proto3" json:"pickup_country,omitempty"`
+	DropoffCity    string                 `protobuf:"bytes,6,opt,name=dropoff_city,json=dropoffCity,proto3" json:"dropoff_city,omitempty"`
+	DropoffCountry string                 `protobuf:"bytes,7,opt,name=dropoff_country,json=dropoffCountry,proto3" json:"dropoff_country,omitempty"`
+	Amount         string                 `protobuf:"bytes,8,opt,name=amount,proto3" json:"amount,omitempty"`
+	Currency       string                 `protobuf:"bytes,9,opt,name=currency,proto3" json:"currency,omitempty"`
+	CreatedAt      string                 `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *OpenDeliverySummary) Reset() {
+	*x = OpenDeliverySummary{}
+	mi := &file_delivery_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenDeliverySummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenDeliverySummary) ProtoMessage() {}
+
+func (x *OpenDeliverySummary) ProtoReflect() protoreflect.Message {
+	mi := &file_delivery_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenDeliverySummary.ProtoReflect.Descriptor instead.
+func (*OpenDeliverySummary) Descriptor() ([]byte, []int) {
+	return file_delivery_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *OpenDeliverySummary) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *OpenDeliverySummary) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
+	}
+	return ""
+}
+
+func (x *OpenDeliverySummary) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *OpenDeliverySummary) GetPickupCity() string {
+	if x != nil {
+		return x.PickupCity
+	}
+	return ""
+}
+
+func (x *OpenDeliverySummary) GetPickupCountry() string {
+	if x != nil {
+		return x.PickupCountry
+	}
+	return ""
+}
+
+func (x *OpenDeliverySummary) GetDropoffCity() string {
+	if x != nil {
+		return x.DropoffCity
+	}
+	return ""
+}
+
+func (x *OpenDeliverySummary) GetDropoffCountry() string {
+	if x != nil {
+		return x.DropoffCountry
+	}
+	return ""
+}
+
+func (x *OpenDeliverySummary) GetAmount() string {
+	if x != nil {
+		return x.Amount
+	}
+	return ""
+}
+
+func (x *OpenDeliverySummary) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *OpenDeliverySummary) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+type GetOpenDeliveriesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*OpenDeliverySummary `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	TotalItems    int32                  `protobuf:"varint,2,opt,name=total_items,json=totalItems,proto3" json:"total_items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOpenDeliveriesResponse) Reset() {
+	*x = GetOpenDeliveriesResponse{}
+	mi := &file_delivery_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOpenDeliveriesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOpenDeliveriesResponse) ProtoMessage() {}
+
+func (x *GetOpenDeliveriesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_delivery_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOpenDeliveriesResponse.ProtoReflect.Descriptor instead.
+func (*GetOpenDeliveriesResponse) Descriptor() ([]byte, []int) {
+	return file_delivery_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetOpenDeliveriesResponse) GetItems() []*OpenDeliverySummary {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *GetOpenDeliveriesResponse) GetTotalItems() int32 {
+	if x != nil {
+		return x.TotalItems
+	}
+	return 0
+}
+
 var File_delivery_proto protoreflect.FileDescriptor
 
 const file_delivery_proto_rawDesc = "" +
@@ -403,11 +623,34 @@ const file_delivery_proto_rawDesc = "" +
 	"\n" +
 	"deliveryId\x18\x02 \x01(\tR\n" +
 	"deliveryId\x12\x1a\n" +
-	"\brefundId\x18\x03 \x01(\tR\brefundId2\xfd\x01\n" +
+	"\brefundId\x18\x03 \x01(\tR\brefundId\"D\n" +
+	"\x18GetOpenDeliveriesRequest\x12\x12\n" +
+	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\"\xc5\x02\n" +
+	"\x13OpenDeliverySummary\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vcustomer_id\x18\x02 \x01(\tR\n" +
+	"customerId\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12\x1f\n" +
+	"\vpickup_city\x18\x04 \x01(\tR\n" +
+	"pickupCity\x12%\n" +
+	"\x0epickup_country\x18\x05 \x01(\tR\rpickupCountry\x12!\n" +
+	"\fdropoff_city\x18\x06 \x01(\tR\vdropoffCity\x12'\n" +
+	"\x0fdropoff_country\x18\a \x01(\tR\x0edropoffCountry\x12\x16\n" +
+	"\x06amount\x18\b \x01(\tR\x06amount\x12\x1a\n" +
+	"\bcurrency\x18\t \x01(\tR\bcurrency\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\n" +
+	" \x01(\tR\tcreatedAt\"q\n" +
+	"\x19GetOpenDeliveriesResponse\x123\n" +
+	"\x05items\x18\x01 \x03(\v2\x1d.delivery.OpenDeliverySummaryR\x05items\x12\x1f\n" +
+	"\vtotal_items\x18\x02 \x01(\x05R\n" +
+	"totalItems2\xdb\x02\n" +
 	"\x0fDeliveryService\x12L\n" +
 	"\rIsParticipant\x12\x1c.delivery.ParticipantRequest\x1a\x1d.delivery.ParticipantResponse\x12J\n" +
 	"\vGetDelivery\x12\x1c.delivery.GetDeliveryRequest\x1a\x1d.delivery.GetDeliveryResponse\x12P\n" +
-	"\rRefundPayment\x12\x1e.delivery.RefundPaymentRequest\x1a\x1f.delivery.RefundPaymentResponseBlZjgithub.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/grpc/protob\x06proto3"
+	"\rRefundPayment\x12\x1e.delivery.RefundPaymentRequest\x1a\x1f.delivery.RefundPaymentResponse\x12\\\n" +
+	"\x11GetOpenDeliveries\x12\".delivery.GetOpenDeliveriesRequest\x1a#.delivery.GetOpenDeliveriesResponseBlZjgithub.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/grpc/protob\x06proto3"
 
 var (
 	file_delivery_proto_rawDescOnce sync.Once
@@ -421,27 +664,33 @@ func file_delivery_proto_rawDescGZIP() []byte {
 	return file_delivery_proto_rawDescData
 }
 
-var file_delivery_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_delivery_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_delivery_proto_goTypes = []any{
-	(*ParticipantRequest)(nil),    // 0: delivery.ParticipantRequest
-	(*ParticipantResponse)(nil),   // 1: delivery.ParticipantResponse
-	(*GetDeliveryRequest)(nil),    // 2: delivery.GetDeliveryRequest
-	(*GetDeliveryResponse)(nil),   // 3: delivery.GetDeliveryResponse
-	(*RefundPaymentRequest)(nil),  // 4: delivery.RefundPaymentRequest
-	(*RefundPaymentResponse)(nil), // 5: delivery.RefundPaymentResponse
+	(*ParticipantRequest)(nil),        // 0: delivery.ParticipantRequest
+	(*ParticipantResponse)(nil),       // 1: delivery.ParticipantResponse
+	(*GetDeliveryRequest)(nil),        // 2: delivery.GetDeliveryRequest
+	(*GetDeliveryResponse)(nil),       // 3: delivery.GetDeliveryResponse
+	(*RefundPaymentRequest)(nil),      // 4: delivery.RefundPaymentRequest
+	(*RefundPaymentResponse)(nil),     // 5: delivery.RefundPaymentResponse
+	(*GetOpenDeliveriesRequest)(nil),  // 6: delivery.GetOpenDeliveriesRequest
+	(*OpenDeliverySummary)(nil),       // 7: delivery.OpenDeliverySummary
+	(*GetOpenDeliveriesResponse)(nil), // 8: delivery.GetOpenDeliveriesResponse
 }
 var file_delivery_proto_depIdxs = []int32{
-	0, // 0: delivery.DeliveryService.IsParticipant:input_type -> delivery.ParticipantRequest
-	2, // 1: delivery.DeliveryService.GetDelivery:input_type -> delivery.GetDeliveryRequest
-	4, // 2: delivery.DeliveryService.RefundPayment:input_type -> delivery.RefundPaymentRequest
-	1, // 3: delivery.DeliveryService.IsParticipant:output_type -> delivery.ParticipantResponse
-	3, // 4: delivery.DeliveryService.GetDelivery:output_type -> delivery.GetDeliveryResponse
-	5, // 5: delivery.DeliveryService.RefundPayment:output_type -> delivery.RefundPaymentResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	7, // 0: delivery.GetOpenDeliveriesResponse.items:type_name -> delivery.OpenDeliverySummary
+	0, // 1: delivery.DeliveryService.IsParticipant:input_type -> delivery.ParticipantRequest
+	2, // 2: delivery.DeliveryService.GetDelivery:input_type -> delivery.GetDeliveryRequest
+	4, // 3: delivery.DeliveryService.RefundPayment:input_type -> delivery.RefundPaymentRequest
+	6, // 4: delivery.DeliveryService.GetOpenDeliveries:input_type -> delivery.GetOpenDeliveriesRequest
+	1, // 5: delivery.DeliveryService.IsParticipant:output_type -> delivery.ParticipantResponse
+	3, // 6: delivery.DeliveryService.GetDelivery:output_type -> delivery.GetDeliveryResponse
+	5, // 7: delivery.DeliveryService.RefundPayment:output_type -> delivery.RefundPaymentResponse
+	8, // 8: delivery.DeliveryService.GetOpenDeliveries:output_type -> delivery.GetOpenDeliveriesResponse
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_delivery_proto_init() }
@@ -455,7 +704,7 @@ func file_delivery_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_delivery_proto_rawDesc), len(file_delivery_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

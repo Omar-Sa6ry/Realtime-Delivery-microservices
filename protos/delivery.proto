@@ -7,6 +7,7 @@ service DeliveryService {
   rpc IsParticipant (ParticipantRequest) returns (ParticipantResponse);
   rpc GetDelivery (GetDeliveryRequest) returns (GetDeliveryResponse);
   rpc RefundPayment (RefundPaymentRequest) returns (RefundPaymentResponse);
+  rpc GetOpenDeliveries (GetOpenDeliveriesRequest) returns (GetOpenDeliveriesResponse);
 }
 
 message ParticipantRequest { 
@@ -42,3 +43,27 @@ message RefundPaymentResponse {
   string deliveryId = 2; 
   string refundId = 3; 
 }
+
+message GetOpenDeliveriesRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message OpenDeliverySummary {
+  string id = 1;
+  string customer_id = 2;
+  string status = 3;
+  string pickup_city = 4;
+  string pickup_country = 5;
+  string dropoff_city = 6;
+  string dropoff_country = 7;
+  string amount = 8;
+  string currency = 9;
+  string created_at = 10;
+}
+
+message GetOpenDeliveriesResponse {
+  repeated OpenDeliverySummary items = 1;
+  int32 total_items = 2;
+}
+

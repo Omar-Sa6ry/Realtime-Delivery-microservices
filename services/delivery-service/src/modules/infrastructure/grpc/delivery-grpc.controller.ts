@@ -80,4 +80,51 @@ export class DeliveryGrpcController {
       };
     }
   }
+
+  @GrpcMethod('DeliveryService', 'GetOpenDeliveries')
+  async getOpenDeliveries(data: { page?: number; limit?: number }): Promise<{
+    items: Array<{
+      id: string;
+      customer_id: string;
+      status: string;
+      pickup_city: string;
+      pickup_country: string;
+      dropoff_city: string;
+      dropoff_country: string;
+      amount: string;
+      currency: string;
+      created_at: string;
+    }>;
+    total_items: number;
+  }> {
+    try {
+      const page = Math.max(1, data?.page || 1);
+      const limit = Math.max(1, Math.min(100, data?.limit || 50));
+      const [deliveries, total] = await this.deliveryQueryService.getOpenDeliveries(page, limit);
+
+      const items = (deliveries || []).map((d) => ({
+        id: d.id,
+        customer_id: d.customerId || '',
+        status: d.status || '',
+        pickup_city: d.pickupAddress?.city || '',
+        pickup_country: d.pickupAddress?.countryCode || '',
+        dropoff_city: d.dropoffAddress?.city || '',
+        dropoff_country: d.dropoffAddress?.countryCode || '',
+        amount: d.amount ? String(d.amount) : '0',
+        currency: d.currency || 'USD',
+        created_at: d.createdAt ? new Date(d.createdAt).toISOString() : new Date().toISOString(),
+      }));
+
+      return {
+        items,
+        total_items: total,
+      };
+    } catch {
+      return {
+        items: [],
+        total_items: 0,
+      };
+    }
+  }
 }
+

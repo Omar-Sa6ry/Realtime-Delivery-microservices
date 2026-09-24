@@ -175,6 +175,7 @@ func main() {
 		rateDriverHandler,
 		getDriverReviewsHandler,
 		eventPublisher,
+		deliveryClient,
 	)
 	loaders := internalgql.NewLoaders(driverRepo)
 	gqlHandler := internalgql.NewHandler(rootResolver, loaders)

@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DeliveryService_IsParticipant_FullMethodName = "/delivery.DeliveryService/IsParticipant"
-	DeliveryService_GetDelivery_FullMethodName   = "/delivery.DeliveryService/GetDelivery"
-	DeliveryService_RefundPayment_FullMethodName = "/delivery.DeliveryService/RefundPayment"
+	DeliveryService_IsParticipant_FullMethodName     = "/delivery.DeliveryService/IsParticipant"
+	DeliveryService_GetDelivery_FullMethodName       = "/delivery.DeliveryService/GetDelivery"
+	DeliveryService_RefundPayment_FullMethodName     = "/delivery.DeliveryService/RefundPayment"
+	DeliveryService_GetOpenDeliveries_FullMethodName = "/delivery.DeliveryService/GetOpenDeliveries"
 )
 
 // DeliveryServiceClient is the client API for DeliveryService service.
@@ -31,6 +32,7 @@ type DeliveryServiceClient interface {
 	IsParticipant(ctx context.Context, in *ParticipantRequest, opts ...grpc.CallOption) (*ParticipantResponse, error)
 	GetDelivery(ctx context.Context, in *GetDeliveryRequest, opts ...grpc.CallOption) (*GetDeliveryResponse, error)
 	RefundPayment(ctx context.Context, in *RefundPaymentRequest, opts ...grpc.CallOption) (*RefundPaymentResponse, error)
+	GetOpenDeliveries(ctx context.Context, in *GetOpenDeliveriesRequest, opts ...grpc.CallOption) (*GetOpenDeliveriesResponse, error)
 }
 
 type deliveryServiceClient struct {
@@ -71,6 +73,16 @@ func (c *deliveryServiceClient) RefundPayment(ctx context.Context, in *RefundPay
 	return out, nil
 }
 
+func (c *deliveryServiceClient) GetOpenDeliveries(ctx context.Context, in *GetOpenDeliveriesRequest, opts ...grpc.CallOption) (*GetOpenDeliveriesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetOpenDeliveriesResponse)
+	err := c.cc.Invoke(ctx, DeliveryService_GetOpenDeliveries_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DeliveryServiceServer is the server API for DeliveryService service.
 // All implementations must embed UnimplementedDeliveryServiceServer
 // for forward compatibility.
@@ -78,6 +90,7 @@ type DeliveryServiceServer interface {
 	IsParticipant(context.Context, *ParticipantRequest) (*ParticipantResponse, error)
 	GetDelivery(context.Context, *GetDeliveryRequest) (*GetDeliveryResponse, error)
 	RefundPayment(context.Context, *RefundPaymentRequest) (*RefundPaymentResponse, error)
+	GetOpenDeliveries(context.Context, *GetOpenDeliveriesRequest) (*GetOpenDeliveriesResponse, error)
 	mustEmbedUnimplementedDeliveryServiceServer()
 }
 
@@ -96,6 +109,9 @@ func (UnimplementedDeliveryServiceServer) GetDelivery(context.Context, *GetDeliv
 }
 func (UnimplementedDeliveryServiceServer) RefundPayment(context.Context, *RefundPaymentRequest) (*RefundPaymentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RefundPayment not implemented")
+}
+func (UnimplementedDeliveryServiceServer) GetOpenDeliveries(context.Context, *GetOpenDeliveriesRequest) (*GetOpenDeliveriesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOpenDeliveries not implemented")
 }
 func (UnimplementedDeliveryServiceServer) mustEmbedUnimplementedDeliveryServiceServer() {}
 func (UnimplementedDeliveryServiceServer) testEmbeddedByValue()                         {}
@@ -172,6 +188,24 @@ func _DeliveryService_RefundPayment_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DeliveryService_GetOpenDeliveries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOpenDeliveriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DeliveryServiceServer).GetOpenDeliveries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DeliveryService_GetOpenDeliveries_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DeliveryServiceServer).GetOpenDeliveries(ctx, req.(*GetOpenDeliveriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DeliveryService_ServiceDesc is the grpc.ServiceDesc for DeliveryService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +224,10 @@ var DeliveryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RefundPayment",
 			Handler:    _DeliveryService_RefundPayment_Handler,
+		},
+		{
+			MethodName: "GetOpenDeliveries",
+			Handler:    _DeliveryService_GetOpenDeliveries_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

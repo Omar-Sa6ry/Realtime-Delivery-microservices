@@ -32,3 +32,31 @@ func (a *deliveryServiceClientAdapter) GetDelivery(ctx context.Context, delivery
 		Currency:   resp.Currency,
 	}, nil
 }
+
+func (a *deliveryServiceClientAdapter) GetOpenDeliveries(ctx context.Context, page, limit int32) ([]*ports.OpenDeliveryInfo, int32, error) {
+	resp, err := a.client.GetOpenDeliveries(ctx, &pb.GetOpenDeliveriesRequest{
+		Page:  page,
+		Limit: limit,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	result := make([]*ports.OpenDeliveryInfo, 0, len(resp.Items))
+	for _, item := range resp.Items {
+		result = append(result, &ports.OpenDeliveryInfo{
+			ID:             item.Id,
+			CustomerID:     item.CustomerId,
+			Status:         item.Status,
+			PickupCity:     item.PickupCity,
+			PickupCountry:  item.PickupCountry,
+			DropoffCity:    item.DropoffCity,
+			DropoffCountry: item.DropoffCountry,
+			Amount:         item.Amount,
+			Currency:       item.Currency,
+			CreatedAt:      item.CreatedAt,
+		})
+	}
+	return result, resp.TotalItems, nil
+}
+

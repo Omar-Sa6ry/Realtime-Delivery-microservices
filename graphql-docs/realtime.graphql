@@ -38,3 +38,63 @@ query {
     }
   }
 }
+
+# ------------------------------------------------------------------------------
+# REALTIME SERVER-PUSH WEBSOCKET MESSAGES (Dispatched automatically)
+# ------------------------------------------------------------------------------
+
+# 1. ASSIGNMENT_OFFERED (Server -> Driver WebSocket)
+# Pushed to nearest online driver within pickup radius. Driver has 30s to respond.
+# {
+#   "type": "ASSIGNMENT_OFFERED",
+#   "timestamp": "2026-09-23T12:00:00Z",
+#   "data": {
+#     "assignmentId": "354294205775876096-driver-uuid",
+#     "deliveryId": "354294205775876096",
+#     "driverId": "driver-uuid",
+#     "expiresAt": "2026-09-23T12:00:30Z",
+#     "distanceMeters": 1420.5,
+#     "pickupAddress": {
+#       "line1": "1 Main Street",
+#       "city": "Cairo",
+#       "countryCode": "EG",
+#       "latitude": 30.0444,
+#       "longitude": 31.2357
+#     },
+#     "dropoffAddress": {
+#       "line1": "2 Nile Corniche",
+#       "city": "Giza",
+#       "countryCode": "EG",
+#       "latitude": 30.0131,
+#       "longitude": 31.2089
+#     },
+#     "amount": "25.50",
+#     "currency": "USD"
+#   }
+# }
+
+# 2. DRIVER_SEARCH_RETRY (Server -> Customer WebSocket)
+# Pushed to customer when assigned driver rejects or 30s expires, informing them of next retry:
+# {
+#   "type": "DRIVER_SEARCH_RETRY",
+#   "timestamp": "2026-09-23T12:00:30Z",
+#   "data": {
+#     "deliveryId": "354294205775876096",
+#     "driverId": null,
+#     "status": "SEARCHING_RETRY",
+#     "reason": "Driver rejected assignment"
+#   }
+# }
+
+# 3. DELIVERY_CANCELLED & REFUNDED (Server -> Customer WebSocket / Push Notification)
+# Pushed if 10 minutes pass without an available driver accepting the delivery:
+# {
+#   "type": "DELIVERY_CANCELLED",
+#   "timestamp": "2026-09-23T12:10:00Z",
+#   "data": {
+#     "deliveryId": "354294205775876096",
+#     "status": "CANCELLED",
+#     "paymentStatus": "REFUNDED",
+#     "reason": "NO_DRIVER_FOUND_TIMEOUT"
+#   }
+# }

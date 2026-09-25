@@ -46,9 +46,9 @@ spec:
             - sh
             - -c
             - >-
-              until nc -z -w 3 clickhouse-srv 9000;
-              do echo "Waiting for clickhouse-srv:9000..."; sleep 2; done;
-              echo "ClickHouse is reachable!"
+              until wget -q -O - http://clickhouse-srv:8123/ping | grep -q "Ok";
+              do echo "Waiting for clickhouse-srv:8123/ping..."; sleep 2; done;
+              echo "ClickHouse is reachable and ready!"
       containers:
       - name: analytics-service
         image: delivery/analytics

@@ -7,7 +7,8 @@ manifests:
       - infrastructure/kubernetes/overlays/development
 
 deploy:
-  statusCheckDeadlineSeconds: 900
+  statusCheck: true
+  statusCheckDeadlineSeconds: 1800
   kubectl:
     hooks:
       after:

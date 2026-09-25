@@ -31,9 +31,9 @@ spec:
             - sh
             - -c
             - >-
-              until nc -z -w 3 opensearch-srv 9200;
+              until wget -q -O - http://opensearch-srv:9200 | grep -q "version";
               do echo "Waiting for opensearch-srv:9200..."; sleep 2; done;
-              echo "OpenSearch port is reachable!"
+              echo "OpenSearch is reachable and ready!"
       containers:
         - name: search
           image: delivery/search

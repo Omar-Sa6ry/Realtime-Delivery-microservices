@@ -180,7 +180,7 @@ export class DeliveryCommandService implements OnModuleInit {
       // Notify customer that delivery is completed
       this.publishNats(`${NotificationNatsSubjects.NOTIFICATION_USER}.${saved.customerId}`, {
         type: 'DELIVERY_COMPLETED',
-        title: '🎉 Order Delivered!',
+        title: 'Order Delivered!',
         body: `Your delivery #${saved.id} has been delivered successfully!`,
         data: {
           deliveryId: saved.id,

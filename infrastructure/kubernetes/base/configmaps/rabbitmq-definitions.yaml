@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-definitions
+  namespace: default
+data:
+  definitions.json: |
+    {
+      "rabbit_version": "3.13",
+      "rabbitmq_version": "3.13",
+      "product_info": "Realtime Delivery microservices — initial topology",
+      "parameters": [],
+      "global_parameters": [],
+      "policies": [
+        {
+          "vhost": "/",
+          "name": "delivery-quorum-plus-dlx",
+          "pattern": "^(orders|notifications|payments|dispatch|media|realtime|search)[\\.-]",
+          "apply-to": "queues",
+          "definition": {
+            "overflow": "reject-publish",
+            "max-length": 100000,
+            "dead-letter-exchange": "delivery.dlx.fanout"
+          },
+          "priority": 10
+        }
+      ],
+      "users": [],
+      "vhosts": [{ "name": "/" }],
+      "permissions": [],
+      "topic_permissions": [],
+      "exchanges": [
+        { "name": "delivery.orders.topic", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "arguments": {} },
+        { "name": "delivery.notifications.fanout", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "arguments": {} },
+        { "name": "delivery.payments.direct", "vhost": "/", "type": "direct", "durable": true, "auto_delete": false, "arguments": {} },
+        { "name": "delivery.dispatch.direct", "vhost": "/", "type": "direct", "durable": true, "auto_delete": false, "arguments": {} },
+        { "name": "delivery.media.topic", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "arguments": {} },
+        { "name": "delivery.realtime.fanout", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "arguments": {} },
+        { "name": "delivery.dlx.fanout", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "arguments": {} }
+      ],
+      "queues": [
+        { "name": "orders.created.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "orders.status.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "notifications.email.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "notifications.sms.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "notifications.push.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "payments.authorized.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "payments.failed.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "dispatch.requests.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "dispatch.responses.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "media.uploaded.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "media.processed.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "realtime.broadcast.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "search.index.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout" } },
+        { "name": "delivery.dlq.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } }
+      ],
+      "bindings": [
+        { "source": "delivery.orders.topic", "vhost": "/", "destination": "orders.created.queue", "destination_type": "queue", "routing_key": "order.created", "arguments": {} },
+        { "source": "delivery.orders.topic", "vhost": "/", "destination": "orders.status.queue", "destination_type": "queue", "routing_key": "order.#", "arguments": {} },
+        { "source": "delivery.orders.topic", "vhost": "/", "destination": "search.index.queue", "destination_type": "queue", "routing_key": "order.#", "arguments": {} },
+        { "source": "delivery.notifications.fanout", "vhost": "/", "destination": "notifications.email.queue", "destination_type": "queue", "routing_key": "", "arguments": {} },
+        { "source": "delivery.notifications.fanout", "vhost": "/", "destination": "notifications.sms.queue", "destination_type": "queue", "routing_key": "", "arguments": {} },
+        { "source": "delivery.notifications.fanout", "vhost": "/", "destination": "notifications.push.queue", "destination_type": "queue", "routing_key": "", "arguments": {} },
+        { "source": "delivery.payments.direct", "vhost": "/", "destination": "payments.authorized.queue", "destination_type": "queue", "routing_key": "payment.authorized", "arguments": {} },
+        { "source": "delivery.payments.direct", "vhost": "/", "destination": "payments.failed.queue", "destination_type": "queue", "routing_key": "payment.failed", "arguments": {} },
+        { "source": "delivery.dispatch.direct", "vhost": "/", "destination": "dispatch.requests.queue", "destination_type": "queue", "routing_key": "dispatch.request", "arguments": {} },
+        { "source": "delivery.dispatch.direct", "vhost": "/", "destination": "dispatch.responses.queue", "destination_type": "queue", "routing_key": "dispatch.response", "arguments": {} },
+        { "source": "delivery.media.topic", "vhost": "/", "destination": "media.uploaded.queue", "destination_type": "queue", "routing_key": "media.uploaded.#", "arguments": {} },
+        { "source": "delivery.media.topic", "vhost": "/", "destination": "media.processed.queue", "destination_type": "queue", "routing_key": "media.processed.#", "arguments": {} },
+        { "source": "delivery.media.topic", "vhost": "/", "destination": "search.index.queue", "destination_type": "queue", "routing_key": "media.#", "arguments": {} },
+        { "source": "delivery.realtime.fanout", "vhost": "/", "destination": "realtime.broadcast.queue", "destination_type": "queue", "routing_key": "", "arguments": {} },
+        { "source": "delivery.dlx.fanout", "vhost": "/", "destination": "delivery.dlq.queue", "destination_type": "queue", "routing_key": "", "arguments": {} }
+      ]
+    }

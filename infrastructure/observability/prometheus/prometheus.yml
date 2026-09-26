@@ -8,3 +8,7 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ["media-service:9090"]
+  - job_name: rabbitmq
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["rabbitmq-srv:15692"]

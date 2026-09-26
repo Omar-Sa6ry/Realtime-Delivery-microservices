@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: default
+data:
+  rabbitmq.conf: |
+    loopback_users.guest = false
+    listeners.tcp.1 = 5672
+    management.tcp.port = 15672
+    heartbeat = 30
+    channel_max = 2047
+    connection_max = 2048
+    vm_memory_high_watermark.relative = 0.6
+    disk_free_limit.absolute = 1GB
+    default_queue_type = quorum
+    quorum_cluster_size = 1
+    prometheus.tcp.port = 15692
+    load_definitions = /etc/rabbitmq/definitions.json
+    log.console = true
+    log.console.level = info
+  enabled_plugins: |
+    [rabbitmq_management, rabbitmq_prometheus, rabbitmq_shovel, rabbitmq_federation].
+  RABBITMQ_VHOST: "/"
+  RABBITMQ_URL: "amqp://delivery:delivery-dev-password@rabbitmq-srv:5672/"
+  RABBITMQ_MANAGEMENT_URL: "http://rabbitmq-srv:15672"
+  RABBITMQ_PROMETHEUS_URL: "http://rabbitmq-srv:15692/metrics"

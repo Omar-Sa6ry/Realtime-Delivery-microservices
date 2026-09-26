@@ -82,7 +82,35 @@ services:
       - DEFAULT_REGION=us-east-1
       - PERSISTENCE=0
 
+  rabbitmq-srv:
+    image: rabbitmq:3.13-management-alpine
+    pull_policy: missing
+    container_name: rabbitmq-srv
+    hostname: rabbitmq-srv
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+      - "15692:15692"
+    env_file:
+      - ../../config/env/.env.${APP_ENV:-development}
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-delivery}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-delivery-dev-password}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ../rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ../rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ../rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
 volumes:
   user_db_data:
   notification_db_data:
+  rabbitmq_data:
 

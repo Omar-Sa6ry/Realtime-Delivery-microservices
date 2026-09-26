@@ -36,3 +36,26 @@ groups:
           severity: warning
         annotations:
           summary: Kafka consumer lag is high
+  - name: rabbitmq
+    rules:
+      - alert: RabbitMQNodeDown
+        expr: up{job="rabbitmq"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: RabbitMQ node is down
+      - alert: RabbitMQUnackedGrowing
+        expr: rabbitmq_queue_messages_unacked > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: RabbitMQ unacked messages are high (consumer may be stuck)
+      - alert: RabbitMQDLQGrowing
+        expr: rabbitmq_queue_messages{queue="delivery.dlq.queue"} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Messages are accumulating in delivery.dlq.queue

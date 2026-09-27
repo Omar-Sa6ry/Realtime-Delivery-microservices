@@ -1,14 +1,13 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: rabbitmq-depl
   namespace: default
   labels:
     app: rabbitmq
 spec:
+  serviceName: rabbitmq-headless
   replicas: 1
-  strategy:
-    type: Recreate
   selector:
     matchLabels:
       app: rabbitmq
@@ -88,9 +87,15 @@ spec:
       - name: rabbitmq-definitions
         configMap:
           name: rabbitmq-definitions
-      - name: rabbitmq-data
-        persistentVolumeClaim:
-          claimName: rabbitmq-pvc
+  volumeClaimTemplates:
+  - metadata:
+      name: rabbitmq-pvc
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "standard"
+      resources:
+        requests:
+          storage: 5Gi
 ---
 apiVersion: v1
 kind: Service

@@ -54,20 +54,24 @@ spec:
         - name: rabbitmq-definitions
           mountPath: /etc/rabbitmq/definitions.json
           subPath: definitions.json
-        - name: rabbitmq-data
+        - name: rabbitmq-pvc
           mountPath: /var/lib/rabbitmq
         resources:
+          # Quorum-queue init + definitions import transiently needs > 1.5Gi;
+          # 2 OOM-kills observed at 1536Mi during boot (beam.smp).
           requests:
             cpu: "250m"
-            memory: "512Mi"
+            memory: "1Gi"
           limits:
-            cpu: "1000m"
-            memory: "1536Mi"
+            cpu: "2000m"
+            memory: "3Gi"
         startupProbe:
           exec:
             command: ["rabbitmq-diagnostics", "-q", "ping"]
           periodSeconds: 10
-          failureThreshold: 30
+          # Quorum-queue init + definitions import on slow dev disks can
+          # take > 10 minutes — don't kill a healthy-but-slow boot.
+          failureThreshold: 90
         readinessProbe:
           exec:
             command: ["rabbitmq-diagnostics", "-q", "ping"]
@@ -100,6 +104,27 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: rabbitmq-headless
+  namespace: default
+  labels:
+    app: rabbitmq
+spec:
+  clusterIP: None
+  selector:
+    app: rabbitmq
+  ports:
+  - name: amqp
+    port: 5672
+    targetPort: 5672
+    protocol: TCP
+  - name: management
+    port: 15672
+    targetPort: 15672
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: rabbitmq-srv
   namespace: default
 spec:
@@ -118,15 +143,3 @@ spec:
     port: 15692
     targetPort: 15692
     protocol: TCP
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: rabbitmq-pvc
-  namespace: default
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi

@@ -14,9 +14,9 @@ data:
     vm_memory_high_watermark.relative = 0.6
     disk_free_limit.absolute = 1GB
     default_queue_type = quorum
-    quorum_cluster_size = 1
     prometheus.tcp.port = 15692
     load_definitions = /etc/rabbitmq/definitions.json
+    consumer_timeout = 1800000
     log.console = true
     log.console.level = info
   enabled_plugins: |

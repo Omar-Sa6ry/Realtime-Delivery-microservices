@@ -52,6 +52,13 @@ export * from "./kafka/kafka.topics";
 export * from "./kafka/kafka.module";
 export * from "./kafka/kafka.service";
 
+// RabbitMQ
+export * from "./rabbitmq/rabbitmq.constants";
+export * from "./rabbitmq/rabbitmq.module";
+export * from "./rabbitmq/rabbitmq.service";
+export * from "./rabbitmq/rabbitmq.consumer";
+export * from "./rabbitmq/rabbitmq.health";
+
 // Events (Kafka / domain events)
 export * from './events/media.events';
 export * from './events/delivery.events';

@@ -20,70 +20,555 @@
     }
   ],
   "users": [],
-  "vhosts": [{ "name": "/" }],
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
   "permissions": [],
   "topic_permissions": [],
   "exchanges": [
-    { "name": "delivery.orders.topic", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "arguments": {} },
-    { "name": "delivery.notifications.fanout", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "arguments": {} },
-    { "name": "delivery.payments.direct", "vhost": "/", "type": "direct", "durable": true, "auto_delete": false, "arguments": {} },
-    { "name": "delivery.dispatch.direct", "vhost": "/", "type": "direct", "durable": true, "auto_delete": false, "arguments": {} },
-    { "name": "delivery.media.topic", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "arguments": {} },
-    { "name": "delivery.realtime.fanout", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "arguments": {} },
-    { "name": "delivery.dlx.fanout", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "arguments": {} },
-    { "name": "delivery.users.topic", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "arguments": {} },
-    { "name": "delivery.analytics.fanout", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "arguments": {} },
-    { "name": "delivery.drivers.topic", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "arguments": {} },
-    { "name": "delivery.dlx.direct", "vhost": "/", "type": "direct", "durable": true, "auto_delete": false, "arguments": {} }
+    {
+      "name": "delivery.orders.topic",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.notifications.fanout",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.payments.direct",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.dispatch.direct",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.media.topic",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.realtime.fanout",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.dlx.fanout",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.users.topic",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.analytics.fanout",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.drivers.topic",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.dlx.direct",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
   ],
   "queues": [
-    { "name": "orders.created.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "orders.dlq" } },
-    { "name": "orders.status.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "orders.dlq" } },
-    { "name": "notifications.email.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "notifications.dlq" } },
-    { "name": "notifications.sms.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "notifications.dlq" } },
-    { "name": "notifications.push.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "notifications.dlq" } },
-    { "name": "payments.authorized.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "payments.dlq" } },
-    { "name": "payments.failed.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "payments.dlq" } },
-    { "name": "dispatch.requests.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.direct", "x-dead-letter-routing-key": "drivers.dlq" } },
-    { "name": "dispatch.responses.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.direct", "x-dead-letter-routing-key": "drivers.dlq" } },
-    { "name": "media.uploaded.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "notifications.dlq" } },
-    { "name": "media.processed.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "notifications.dlq" } },
-    { "name": "realtime.broadcast.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "orders.dlq" } },
-    { "name": "search.index.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "orders.dlq" } },
-    { "name": "delivery.dlq.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } },
-    { "name": "users.created.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "notifications.dlq" } },
-    { "name": "users.updated.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "notifications.dlq" } },
-    { "name": "analytics.events.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "notifications.dlq" } },
-    { "name": "drivers.events.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "drivers.dlq" } },
-    { "name": "payments.refunded.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum", "x-dead-letter-exchange": "delivery.dlx.fanout", "x-dead-letter-routing-key": "payments.dlq" } },
-    { "name": "orders.dlq.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } },
-    { "name": "payments.dlq.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } },
-    { "name": "notifications.dlq.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } },
-    { "name": "drivers.dlq.queue", "vhost": "/", "durable": true, "auto_delete": false, "arguments": { "x-queue-type": "quorum" } }
+    {
+      "name": "orders.created.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "orders.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "orders.status.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "orders.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "notifications.email.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "notifications.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "notifications.sms.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "notifications.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "notifications.push.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "notifications.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "payments.authorized.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "payments.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "payments.failed.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "payments.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "dispatch.requests.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "drivers.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "dispatch.responses.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "drivers.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "media.uploaded.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "notifications.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "media.processed.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "notifications.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "realtime.broadcast.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "orders.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "search.index.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "orders.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "delivery.dlq.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "users.created.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "notifications.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "users.updated.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "notifications.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "analytics.events.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "notifications.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "drivers.events.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "drivers.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "payments.refunded.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout",
+        "x-dead-letter-routing-key": "payments.dlq",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "orders.dlq.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "payments.dlq.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "notifications.dlq.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "drivers.dlq.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-max-priority": 10
+      }
+    }
   ],
   "bindings": [
-    { "source": "delivery.orders.topic", "vhost": "/", "destination": "orders.created.queue", "destination_type": "queue", "routing_key": "order.created", "arguments": {} },
-    { "source": "delivery.orders.topic", "vhost": "/", "destination": "orders.status.queue", "destination_type": "queue", "routing_key": "order.#", "arguments": {} },
-    { "source": "delivery.orders.topic", "vhost": "/", "destination": "search.index.queue", "destination_type": "queue", "routing_key": "order.#", "arguments": {} },
-    { "source": "delivery.notifications.fanout", "vhost": "/", "destination": "notifications.email.queue", "destination_type": "queue", "routing_key": "", "arguments": {} },
-    { "source": "delivery.notifications.fanout", "vhost": "/", "destination": "notifications.sms.queue", "destination_type": "queue", "routing_key": "", "arguments": {} },
-    { "source": "delivery.notifications.fanout", "vhost": "/", "destination": "notifications.push.queue", "destination_type": "queue", "routing_key": "", "arguments": {} },
-    { "source": "delivery.payments.direct", "vhost": "/", "destination": "payments.authorized.queue", "destination_type": "queue", "routing_key": "payment.authorized", "arguments": {} },
-    { "source": "delivery.payments.direct", "vhost": "/", "destination": "payments.failed.queue", "destination_type": "queue", "routing_key": "payment.failed", "arguments": {} },
-    { "source": "delivery.dispatch.direct", "vhost": "/", "destination": "dispatch.requests.queue", "destination_type": "queue", "routing_key": "dispatch.request", "arguments": {} },
-    { "source": "delivery.dispatch.direct", "vhost": "/", "destination": "dispatch.responses.queue", "destination_type": "queue", "routing_key": "dispatch.response", "arguments": {} },
-    { "source": "delivery.media.topic", "vhost": "/", "destination": "media.uploaded.queue", "destination_type": "queue", "routing_key": "media.uploaded.#", "arguments": {} },
-    { "source": "delivery.media.topic", "vhost": "/", "destination": "media.processed.queue", "destination_type": "queue", "routing_key": "media.processed.#", "arguments": {} },
-    { "source": "delivery.media.topic", "vhost": "/", "destination": "search.index.queue", "destination_type": "queue", "routing_key": "media.#", "arguments": {} },
-    { "source": "delivery.realtime.fanout", "vhost": "/", "destination": "realtime.broadcast.queue", "destination_type": "queue", "routing_key": "", "arguments": {} },
-    { "source": "delivery.dlx.fanout", "vhost": "/", "destination": "delivery.dlq.queue", "destination_type": "queue", "routing_key": "", "arguments": {} },
-    { "source": "delivery.users.topic", "vhost": "/", "destination": "users.created.queue", "destination_type": "queue", "routing_key": "user.created", "arguments": {} },
-    { "source": "delivery.users.topic", "vhost": "/", "destination": "users.updated.queue", "destination_type": "queue", "routing_key": "user.updated", "arguments": {} },
-    { "source": "delivery.analytics.fanout", "vhost": "/", "destination": "analytics.events.queue", "destination_type": "queue", "routing_key": "", "arguments": {} },
-    { "source": "delivery.drivers.topic", "vhost": "/", "destination": "drivers.events.queue", "destination_type": "queue", "routing_key": "driver.*.event", "arguments": {} },
-    { "source": "delivery.dlx.direct", "vhost": "/", "destination": "orders.dlq.queue", "destination_type": "queue", "routing_key": "orders.dlq", "arguments": {} },
-    { "source": "delivery.dlx.direct", "vhost": "/", "destination": "payments.dlq.queue", "destination_type": "queue", "routing_key": "payments.dlq", "arguments": {} },
-    { "source": "delivery.dlx.direct", "vhost": "/", "destination": "notifications.dlq.queue", "destination_type": "queue", "routing_key": "notifications.dlq", "arguments": {} },
-    { "source": "delivery.dlx.direct", "vhost": "/", "destination": "drivers.dlq.queue", "destination_type": "queue", "routing_key": "drivers.dlq", "arguments": {} }
+    {
+      "source": "delivery.orders.topic",
+      "vhost": "/",
+      "destination": "orders.created.queue",
+      "destination_type": "queue",
+      "routing_key": "order.created",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.orders.topic",
+      "vhost": "/",
+      "destination": "orders.status.queue",
+      "destination_type": "queue",
+      "routing_key": "order.#",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.orders.topic",
+      "vhost": "/",
+      "destination": "search.index.queue",
+      "destination_type": "queue",
+      "routing_key": "order.#",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.notifications.fanout",
+      "vhost": "/",
+      "destination": "notifications.email.queue",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.notifications.fanout",
+      "vhost": "/",
+      "destination": "notifications.sms.queue",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.notifications.fanout",
+      "vhost": "/",
+      "destination": "notifications.push.queue",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.payments.direct",
+      "vhost": "/",
+      "destination": "payments.authorized.queue",
+      "destination_type": "queue",
+      "routing_key": "payment.authorized",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.payments.direct",
+      "vhost": "/",
+      "destination": "payments.failed.queue",
+      "destination_type": "queue",
+      "routing_key": "payment.failed",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.dispatch.direct",
+      "vhost": "/",
+      "destination": "dispatch.requests.queue",
+      "destination_type": "queue",
+      "routing_key": "dispatch.request",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.dispatch.direct",
+      "vhost": "/",
+      "destination": "dispatch.responses.queue",
+      "destination_type": "queue",
+      "routing_key": "dispatch.response",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.media.topic",
+      "vhost": "/",
+      "destination": "media.uploaded.queue",
+      "destination_type": "queue",
+      "routing_key": "media.uploaded.#",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.media.topic",
+      "vhost": "/",
+      "destination": "media.processed.queue",
+      "destination_type": "queue",
+      "routing_key": "media.processed.#",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.media.topic",
+      "vhost": "/",
+      "destination": "search.index.queue",
+      "destination_type": "queue",
+      "routing_key": "media.#",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.realtime.fanout",
+      "vhost": "/",
+      "destination": "realtime.broadcast.queue",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.dlx.fanout",
+      "vhost": "/",
+      "destination": "delivery.dlq.queue",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.users.topic",
+      "vhost": "/",
+      "destination": "users.created.queue",
+      "destination_type": "queue",
+      "routing_key": "user.created",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.users.topic",
+      "vhost": "/",
+      "destination": "users.updated.queue",
+      "destination_type": "queue",
+      "routing_key": "user.updated",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.analytics.fanout",
+      "vhost": "/",
+      "destination": "analytics.events.queue",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.drivers.topic",
+      "vhost": "/",
+      "destination": "drivers.events.queue",
+      "destination_type": "queue",
+      "routing_key": "driver.*.event",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.dlx.direct",
+      "vhost": "/",
+      "destination": "orders.dlq.queue",
+      "destination_type": "queue",
+      "routing_key": "orders.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.dlx.direct",
+      "vhost": "/",
+      "destination": "payments.dlq.queue",
+      "destination_type": "queue",
+      "routing_key": "payments.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.dlx.direct",
+      "vhost": "/",
+      "destination": "notifications.dlq.queue",
+      "destination_type": "queue",
+      "routing_key": "notifications.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.dlx.direct",
+      "vhost": "/",
+      "destination": "drivers.dlq.queue",
+      "destination_type": "queue",
+      "routing_key": "drivers.dlq",
+      "arguments": {}
+    }
   ]
 }

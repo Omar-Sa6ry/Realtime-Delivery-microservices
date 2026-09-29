@@ -20,6 +20,7 @@ import { AuthorizationModule } from './modules/gateway/authorization/authorizati
 import { EventsModule } from './modules/features/events/events.module';
 import { NatsModule } from './modules/infrastructure/nats/nats.module';
 import { KafkaConsumerModule } from './modules/infrastructure/kafka/kafka.module';
+import { RealtimeRabbitMQModule } from './modules/infrastructure/rabbitmq/rabbitmq.module';
 import { GrpcModule } from './modules/infrastructure/grpc/grpc.module';
 import { CommandModule } from './modules/features/command/command.module';
 import { AuthModule } from './modules/gateway/auth/auth.module';
@@ -79,6 +80,7 @@ import realtimeConfig from './common/config/realtime.config';
     NatsModule,
     EventsModule,
     KafkaConsumerModule,
+    RealtimeRabbitMQModule,
     GrpcModule,
     AuthModule,
 

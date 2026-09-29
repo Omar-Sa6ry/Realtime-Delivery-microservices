@@ -117,6 +117,11 @@ spec:
               
             - name: KAFKA_GROUP_ID
               value: 'notification-service'
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_URL
               
             - name: EMAIL_USER
               valueFrom:

@@ -106,6 +106,11 @@ spec:
           value: "9106"
         - name: PORT_WEBHOOK
           value: "4012"
+        - name: RABBITMQ_URL
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secret
+              key: RABBITMQ_URL
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

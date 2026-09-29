@@ -9,6 +9,7 @@ import { DeliveryStateMachine } from './delivery.state-machine';
 import { IdempotencyService } from './idempotency.service';
 import { OutboxRepository } from '../outbox/outbox.repository';
 import { DeliveryKafkaTopics, NatsService, NotificationNatsSubjects, RealtimeNatsSubjects, ServerMessageType } from '@delivery/common';
+import { DeliveryRabbitMQPublisher } from '../../infrastructure/rabbitmq/rabbitmq.publisher';
 
 export interface CreateDeliveryInput {
   customerId: string;
@@ -33,6 +34,7 @@ export class DeliveryCommandService implements OnModuleInit {
     @Inject('USER_SERVICE') private readonly userServiceClientGrpc: any,
     @Optional() @Inject('PAYMENT_SERVICE') private readonly paymentServiceClientGrpc?: any,
     @Optional() private readonly nats?: NatsService,
+    @Optional() private readonly rabbitmqPublisher?: DeliveryRabbitMQPublisher,
   ) {}
 
   onModuleInit() {
@@ -84,6 +86,10 @@ export class DeliveryCommandService implements OnModuleInit {
       status: delivery.status,
       timestamp: Date.now(),
     });
+
+    await this.publishRabbitMqBestEffort(() =>
+      this.rabbitmqPublisher?.publishOrderCreated(delivery),
+    );
 
     return delivery;
   }
@@ -143,6 +149,25 @@ export class DeliveryCommandService implements OnModuleInit {
       status: saved.status,
       timestamp: Date.now(),
     });
+
+    // Best-effort RabbitMQ publish (runs in parallel with Kafka Outbox)
+    await this.publishRabbitMqBestEffort(() =>
+      this.rabbitmqPublisher?.publishOrderStatusChanged(saved),
+    );
+    if (status === DeliveryStatus.DRIVER_ASSIGNED && saved.driverId) {
+      const assignedDriverId: string = saved.driverId;
+      await this.publishRabbitMqBestEffort(() =>
+        this.rabbitmqPublisher?.publishDriverAssigned(saved.id, assignedDriverId),
+      );
+    } else if (status === DeliveryStatus.COMPLETED || status === DeliveryStatus.DELIVERED) {
+      await this.publishRabbitMqBestEffort(() =>
+        this.rabbitmqPublisher?.publishOrderCompleted(saved),
+      );
+    } else if (status === DeliveryStatus.CANCELLED) {
+      await this.publishRabbitMqBestEffort(() =>
+        this.rabbitmqPublisher?.publishOrderCancelled(saved, note),
+      );
+    }
 
     // Handle stage-specific actions (escrow capture and user notifications)
     if (status === DeliveryStatus.PICKED_UP) {
@@ -204,6 +229,10 @@ export class DeliveryCommandService implements OnModuleInit {
     const delivery = await this.repository.findById(id);
     delivery.driverId = driverId;
     await this.repository.save(delivery);
+    // Best-effort dispatch request so driver-service can pick it up via RabbitMQ
+    await this.publishRabbitMqBestEffort(() =>
+      this.rabbitmqPublisher?.publishDispatchRequest(delivery),
+    );
     return this.transition(id, DeliveryStatus.DRIVER_ASSIGNED, driverId, `Driver ${driverId} assigned`);
   }
 
@@ -447,6 +476,19 @@ export class DeliveryCommandService implements OnModuleInit {
       } catch {
         /* NATS emission is best-effort; Kafka Outbox is source of truth */
       }
+    }
+  }
+
+  private async publishRabbitMqBestEffort(
+    publish: () => Promise<void> | undefined | null,
+  ): Promise<void> {
+    if (!this.rabbitmqPublisher) return;
+    try {
+      await publish();
+    } catch (err) {
+      this.logger.warn(
+        `RabbitMQ best-effort publish failed (flow continues): ${(err as Error)?.message}`,
+      );
     }
   }
 }

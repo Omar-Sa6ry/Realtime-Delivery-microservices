@@ -108,6 +108,11 @@ spec:
               value: "search-service"
             - name: NATS_URL
               value: "nats://nats-srv:4222"
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_URL
 
             - name: JWT_EXPIRE
               value: '36000s'

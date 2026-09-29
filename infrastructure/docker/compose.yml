@@ -144,10 +144,16 @@ services:
       REDIS_PORT: ${REDIS_PORT:-6379}
       NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
       MEDIA_SERVICE_GRPC_URL: ${MEDIA_SERVICE_GRPC_URL:-media-srv:50052}
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-delivery}:${RABBITMQ_PASSWORD:-delivery-dev-password}@rabbitmq-srv:5672/${RABBITMQ_VHOST:-/}"
     depends_on:
-      - user-db-srv
-      - redis-srv
-      - nats-srv
+      user-db-srv:
+        condition: service_started
+      redis-srv:
+        condition: service_started
+      nats-srv:
+        condition: service_started
+      rabbitmq-srv:
+        condition: service_healthy
     volumes:
       - ../../services/user-service/src:/usr/src/app/services/user-service/src
       - ../../packages/ts:/usr/src/app/packages/ts
@@ -210,10 +216,16 @@ services:
       CLAMAV_HOST: "clamav-srv"
       CLAMAV_PORT: "3310"
       FFMPEG_BINARY: "/usr/bin/ffmpeg"
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-delivery}:${RABBITMQ_PASSWORD:-delivery-dev-password}@rabbitmq-srv:5672/${RABBITMQ_VHOST:-/}"
     depends_on:
-      - redis-srv
-      - localstack-srv
-      - kafka-srv
+      redis-srv:
+        condition: service_started
+      localstack-srv:
+        condition: service_started
+      kafka-srv:
+        condition: service_started
+      rabbitmq-srv:
+        condition: service_healthy
     volumes:
       - ../../services/media-service/internal:/workspace/services/media-service/internal
       - ../../packages/go:/workspace/packages/go
@@ -294,11 +306,18 @@ services:
       FIREBASE_PROJECT_ID: ${PROJECT_ID}
       FIREBASE_CLIENT_EMAIL: ${CLIENT_EMAIL}
       FIREBASE_PRIVATE_KEY: ${PRIVATE_KEY}
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-delivery}:${RABBITMQ_PASSWORD:-delivery-dev-password}@rabbitmq-srv:5672/${RABBITMQ_VHOST:-/}"
     depends_on:
-      - notification-db-srv
-      - redis-srv
-      - nats-srv
-      - kafka-srv
+      notification-db-srv:
+        condition: service_started
+      redis-srv:
+        condition: service_started
+      nats-srv:
+        condition: service_started
+      kafka-srv:
+        condition: service_started
+      rabbitmq-srv:
+        condition: service_healthy
     volumes:
       - ../../services/notification-service/src:/usr/src/app/services/notification-service/src
       - ../../packages/ts:/usr/src/app/packages/ts
@@ -333,10 +352,16 @@ services:
       KAFKA_GROUP_ID: "realtime-service-group"
       WS_MAX_PAYLOAD: ${WS_MAX_PAYLOAD:-16384}
       WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS:-*}
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-delivery}:${RABBITMQ_PASSWORD:-delivery-dev-password}@rabbitmq-srv:5672/${RABBITMQ_VHOST:-/}"
     depends_on:
-      - redis-srv
-      - nats-srv
-      - kafka-srv
+      redis-srv:
+        condition: service_started
+      nats-srv:
+        condition: service_started
+      kafka-srv:
+        condition: service_started
+      rabbitmq-srv:
+        condition: service_healthy
     volumes:
       - ../../services/realtime-service/src:/usr/src/app/services/realtime-service/src
       - ../../packages/ts:/usr/src/app/packages/ts
@@ -378,10 +403,16 @@ services:
       REDIS_PORT: ${REDIS_PORT:-6379}
       KAFKA_BROKERS: "kafka-srv:9092"
       NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-delivery}:${RABBITMQ_PASSWORD:-delivery-dev-password}@rabbitmq-srv:5672/${RABBITMQ_VHOST:-/}"
     depends_on:
-      - redis-srv
-      - opensearch-srv
-      - kafka-srv
+      redis-srv:
+        condition: service_started
+      opensearch-srv:
+        condition: service_started
+      kafka-srv:
+        condition: service_started
+      rabbitmq-srv:
+        condition: service_healthy
     volumes:
       - ../../services/search-service:/app/services/search-service
       - ../../packages/go:/app/packages/go
@@ -478,11 +509,18 @@ services:
       KAFKA_CLIENT_ID: delivery-service
       KAFKA_GROUP_ID: delivery-service-group
       PAYMENT_SERVICE_GRPC_URL: ${PAYMENT_SERVICE_GRPC_URL:-payment-srv:50056}
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-delivery}:${RABBITMQ_PASSWORD:-delivery-dev-password}@rabbitmq-srv:5672/${RABBITMQ_VHOST:-/}"
     depends_on:
-      - delivery-db-srv
-      - redis-srv
-      - nats-srv
-      - kafka-srv
+      delivery-db-srv:
+        condition: service_started
+      redis-srv:
+        condition: service_started
+      nats-srv:
+        condition: service_started
+      kafka-srv:
+        condition: service_started
+      rabbitmq-srv:
+        condition: service_healthy
     volumes:
       - ../../services/delivery-service/src:/usr/src/app/services/delivery-service/src
       - ../../packages/ts:/usr/src/app/packages/ts
@@ -527,12 +565,20 @@ services:
       AWS_ENDPOINT: "http://localstack-srv:4566"
       AWS_ACCESS_KEY_ID: "test"
       AWS_SECRET_ACCESS_KEY: "test"
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-delivery}:${RABBITMQ_PASSWORD:-delivery-dev-password}@rabbitmq-srv:5672/${RABBITMQ_VHOST:-/}"
     depends_on:
-      - delivery-db-srv
-      - redis-srv
-      - nats-srv
-      - kafka-srv
-      - localstack-srv
+      delivery-db-srv:
+        condition: service_started
+      redis-srv:
+        condition: service_started
+      nats-srv:
+        condition: service_started
+      kafka-srv:
+        condition: service_started
+      localstack-srv:
+        condition: service_started
+      rabbitmq-srv:
+        condition: service_healthy
     volumes:
       - ../../services/driver-service:/app/services/driver-service
       - ../../packages/go:/app/packages/go
@@ -589,11 +635,18 @@ services:
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-dev-webhook-secret}
       OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
       DELIVERY_SERVICE_URL: "http://delivery-srv:4003"
+      RABBITMQ_URL: "amqp://${RABBITMQ_USER:-delivery}:${RABBITMQ_PASSWORD:-delivery-dev-password}@rabbitmq-srv:5672/${RABBITMQ_VHOST:-/}"
     depends_on:
-      - payment-db-srv
-      - redis-srv
-      - nats-srv
-      - kafka-srv
+      payment-db-srv:
+        condition: service_started
+      redis-srv:
+        condition: service_started
+      nats-srv:
+        condition: service_started
+      kafka-srv:
+        condition: service_started
+      rabbitmq-srv:
+        condition: service_healthy
     volumes:
       - ../../services/payment-service/internal:/workspace/services/payment-service/internal
       - ../../packages/go:/workspace/packages/go

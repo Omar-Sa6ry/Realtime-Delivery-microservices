@@ -14,6 +14,7 @@ import { AppResolver } from './app.resolver';
 import { CommonModule } from './common/common.module';
 import { TranslationModule } from './common/translation/translation.module';
 import { KafkaConsumerModule } from './modules/kafka/kafka.module';
+import { RabbitMQNotificationModule } from './modules/rabbitmq/rabbitmq.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { WorkersModule } from './modules/workers/workers.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
@@ -104,6 +105,7 @@ import {
     AuthModule,
     CommonModule,
     KafkaConsumerModule,
+    RabbitMQNotificationModule,
     NotificationModule,
     WorkersModule,
     OutboxModule,

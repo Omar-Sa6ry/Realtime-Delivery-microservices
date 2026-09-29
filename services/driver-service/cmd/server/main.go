@@ -18,6 +18,7 @@ import (
 	adaptergrpc "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/grpc"
 	adaptergrpcproto "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/grpc/proto"
 	adapterkafka "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/kafka"
+	rmqadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/rabbitmq"
 	adaptermongo "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/mongodb"
 	adapterredis "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/redis"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/commands"
@@ -29,6 +30,7 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/workers"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/events"
 	pkgKafka "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/kafka"
+	pkgrmq "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/rabbitmq"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -91,6 +93,25 @@ func main() {
 
 	kafkaPub := adapterkafka.NewKafkaPublisher(kafkaBrokers, "driver-events")
 
+	var rmqConn *pkgrmq.Connection
+	var rmqPublisher *rmqadapter.RabbitMQPublisher
+	if rabbitMQURL := os.Getenv("RABBITMQ_URL"); rabbitMQURL != "" {
+		if conn, rmqErr := pkgrmq.ConnectURL(rabbitMQURL, "driver-service"); rmqErr != nil {
+			log.Printf("WARNING: RabbitMQ connection failed (non-fatal — Kafka remains active): %v", rmqErr)
+		} else {
+			defer conn.Close()
+			if terr := rmqadapter.EnsureDriverTopology(conn); terr != nil {
+				log.Printf("WARNING: RabbitMQ topology ensure failed (non-fatal): %v", terr)
+			}
+			rmqConn = conn
+			rmqPublisher = rmqadapter.NewRabbitMQPublisher(conn)
+			defer rmqPublisher.Close()
+			log.Println("RabbitMQ driver adapters enabled")
+		}
+	}
+	_ = rmqConn
+	_ = rmqPublisher
+
 	// ─── Application Service ──────────────────────────────────────────────────
 	dispatchPolicy := domain.NewDispatchPolicy()
 	eventPublisher := adapterkafka.NewEventPublisherAdapter(kafkaPub)
@@ -151,6 +172,24 @@ func main() {
 			}
 		}
 	})
+	if rmqConn != nil {
+		dispatchConsumer := rmqadapter.NewDispatchConsumer(rmqConn, func(ctx context.Context, env *pkgrmq.EventEnvelope) error {
+			log.Printf("RabbitMQ dispatch.request received: type=%s id=%s", env.EventType, env.EventID)
+			return nil
+		})
+		wp.Submit(func() {
+			for {
+				if err := dispatchConsumer.Start(workerCtx); err != nil {
+					log.Printf("RabbitMQ dispatch consumer stopped: %v, retrying in 3s...", err)
+				}
+				select {
+				case <-workerCtx.Done():
+					return
+				case <-time.After(3 * time.Second):
+				}
+			}
+		})
+	}
 
 	// ─── gRPC Server ──────────────────────────────────────────────────────────
 	grpcListener, err := net.Listen("tcp", ":"+cfg.PortGRPC)

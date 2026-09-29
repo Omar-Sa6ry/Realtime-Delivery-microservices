@@ -25,12 +25,14 @@ import { DriverAssignmentStep } from './saga/steps/driver-assignment.step';
 import { RedisModule, RedisService } from '@bts-soft/core';
 import { DeliveryKafkaModule } from '../infrastructure/kafka/kafka.module';
 import { DeliveryNatsModule } from '../infrastructure/nats/nats.module';
+import { DeliveryRabbitMQModule } from '../infrastructure/rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
     RedisModule,
     forwardRef(() => DeliveryKafkaModule),
     DeliveryNatsModule,
+    DeliveryRabbitMQModule,
     TypeOrmModule.forFeature([
       Delivery,
       DeliveryStatusHistory,

@@ -23,5 +23,6 @@ import { NotificationInbox } from '../../common/database/entities/notification-i
     }),
   ],
   providers: [KafkaConsumer, EventHandlerFactory, NotificationEventHandler],
+  exports: [EventHandlerFactory],
 })
 export class KafkaConsumerModule {}

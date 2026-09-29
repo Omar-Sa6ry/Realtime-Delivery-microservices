@@ -4,7 +4,9 @@ go 1.25.0
 
 require (
 	github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go v0.0.0
+	github.com/graphql-go/graphql v0.8.1
 	github.com/opensearch-project/opensearch-go/v4 v4.3.0
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/segmentio/kafka-go v0.4.47
 )
@@ -12,7 +14,7 @@ require (
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/graphql-go/graphql v0.8.1 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect

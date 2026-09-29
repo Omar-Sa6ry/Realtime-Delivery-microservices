@@ -19,9 +19,11 @@ import (
 	pkglogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	pkgmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
 	pkgsnowflake "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/snowflake"
+	pkgrmq "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/rabbitmq"
 
 	// internal packages
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/kafka"
+	rmqadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/rabbitmq"
 	natsadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/nats"
 	pgadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/postgres"
 	stripeadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/providers/stripe"
@@ -92,6 +94,32 @@ func main() {
 	}
 	kafkaPublisher := kafka.NewEventPublisher(brokers, "payment-events")
 	defer kafkaPublisher.Close()
+
+	// RabbitMQ (Phase 4, best-effort, alongside Kafka): publisher + dispatch
+	// responses consumer start only when RABBITMQ_URL is set. Non-fatal.
+	if rabbitMQURL := os.Getenv("RABBITMQ_URL"); rabbitMQURL != "" {
+		if rmqConn, rmqErr := pkgrmq.ConnectURL(rabbitMQURL, "payment-service"); rmqErr != nil {
+			slog.Warn("RabbitMQ connection failed (non-fatal — Kafka remains active)", "error", rmqErr)
+		} else {
+			defer rmqConn.Close()
+			if terr := rmqadapter.EnsurePaymentTopology(rmqConn); terr != nil {
+				slog.Warn("RabbitMQ topology ensure failed (non-fatal)", "error", terr)
+			}
+			rmqPublisher := rmqadapter.NewRabbitMQPublisher(rmqConn)
+			defer rmqPublisher.Close()
+			_ = rmqPublisher
+			rmqConsumer := rmqadapter.NewRabbitMQConsumer(rmqConn, func(ctx context.Context, env *pkgrmq.EventEnvelope) error {
+				slog.Info("RabbitMQ dispatch.response received", "eventType", env.EventType, "eventId", env.EventID)
+				return nil
+			})
+			go func() {
+				if err := rmqConsumer.Run(context.Background()); err != nil {
+					slog.Warn("RabbitMQ dispatch consumer stopped", "error", err)
+				}
+			}()
+			slog.Info("RabbitMQ payment adapters enabled")
+		}
+	}
 
 	// NATS Realtime Publisher
 	natsPublisher, err := natsadapter.NewRealtimePublisher(cfg.NATSUrl)

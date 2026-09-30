@@ -26,9 +26,8 @@ WORKDIR /workspace/services/media-service
 # Copy media-service source
 COPY services/media-service .
 
-# CGO disabled for a fully static binary. GOARCH is left unset so the binary is
-# compiled natively for the container's platform architecture (AMD64 / ARM64).
-RUN --mount=type=cache,target=/root/.cache/go-build \
+RUN --mount=type=cache,target=/go/pkg/mod \
+   --mount=type=cache,target=/root/.cache/go-build \
    go build \
     -ldflags="-w -s -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     -o /workspace/bin/media-service \

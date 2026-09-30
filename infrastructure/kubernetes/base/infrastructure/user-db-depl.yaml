@@ -24,6 +24,12 @@ spec:
                 echo "Postgres data dir is incomplete; wiping for a fresh init";
                 find /var/lib/postgresql/data/pgdata -mindepth 1 -delete;
               fi
+              if [ -f /var/lib/postgresql/data/pgdata/pg_hba.conf ]; then
+                if ! grep -q "host all all all" /var/lib/postgresql/data/pgdata/pg_hba.conf; then
+                  echo "host all all all md5" >> /var/lib/postgresql/data/pgdata/pg_hba.conf
+                  echo "host all all all trust" >> /var/lib/postgresql/data/pgdata/pg_hba.conf
+                fi
+              fi
               exit 0
           volumeMounts:
             - name: postgres-storage

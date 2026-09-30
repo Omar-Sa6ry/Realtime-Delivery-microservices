@@ -29,6 +29,22 @@ export class HealthService {
     }
   }
 
+  async checkRabbitMQ(rabbitService: any): Promise<{ status: string; message?: string; details?: any }> {
+    try {
+      if (!rabbitService) {
+        return { status: 'UNKNOWN', message: 'RabbitMQ service not injected' };
+      }
+      const isConnected = typeof rabbitService.isConnected === 'function' ? rabbitService.isConnected() : true;
+      if (!isConnected) {
+        return { status: 'DOWN', message: 'RabbitMQ not connected' };
+      }
+      return { status: 'UP' };
+    } catch (err: any) {
+      this.logger.error('Health Check: RabbitMQ connection failed', err.stack);
+      return { status: 'DOWN', message: err.message };
+    }
+  }
+
   getSystemStats() {
     const memoryUsage = process.memoryUsage();
     return {

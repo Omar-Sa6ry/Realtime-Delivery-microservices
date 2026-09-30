@@ -6,8 +6,10 @@ import {
   RabbitMQExchanges,
   RabbitMQQueues,
   RabbitMQService,
+  RealtimeNatsSubjects,
 } from '@delivery/common';
 import { EventMapper } from '../../features/events/event.mapper';
+import { NatsPublisher } from '../nats/nats.publisher';
 
 @Injectable()
 export class RealtimeBroadcastConsumer extends BaseRabbitMQConsumer {
@@ -19,7 +21,8 @@ export class RealtimeBroadcastConsumer extends BaseRabbitMQConsumer {
 
   constructor(
     rabbitmq: RabbitMQService,
-    @Optional() private readonly eventMapper?: EventMapper,
+    @Optional() private readonly mapper?: EventMapper,
+    @Optional() private readonly natsPublisher?: NatsPublisher,
   ) {
     super(rabbitmq);
   }
@@ -28,36 +31,37 @@ export class RealtimeBroadcastConsumer extends BaseRabbitMQConsumer {
     envelope: RabbitMQEventEnvelope,
     ctx: RabbitMQConsumeContext,
   ): Promise<void> {
-    if (!this.eventMapper) {
-      this.logger.debug(
-        `No EventMapper available, logging only: ${envelope.eventType} (trace=${ctx.traceId ?? 'n/a'})`,
+    if (!this.natsPublisher || !this.mapper) {
+      this.logger.warn(
+        `NatsPublisher/EventMapper not available — cannot broadcast: ${envelope.eventType} (trace=${ctx.traceId ?? 'n/a'})`,
       );
       return;
     }
 
     try {
-      const clientEvent = this.eventMapper.toClientEvent({
+      const clientEvent = this.mapper.toClientEvent({
         eventId: envelope.eventId,
         eventType: envelope.eventType,
         traceId: ctx.traceId ?? envelope.traceId,
         timestamp: envelope.timestamp ?? Date.now(),
         payload: (envelope.payload ?? {}) as Record<string, unknown>,
       });
+
+      const subject = RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED;
+      await this.natsPublisher.publish(subject, clientEvent);
+
       this.logger.debug(
-        `Broadcast mapped: ${envelope.eventType} -> ${clientEvent.type} (event=${envelope.eventId})`,
+        `Broadcast dispatched: ${envelope.eventType} (event=${envelope.eventId}, trace=${ctx.traceId ?? 'n/a'})`,
       );
     } catch (err) {
-      // Unsupported/unknown event types are logged and acked — never rethrown,
-      // so they cannot poison the queue with infinite redeliveries.
-      this.logger.debug(
-        `Skipping unsupported realtime event ${envelope.eventType}: ${(err as Error)?.message}`,
+      this.logger.warn(
+        `Broadcast mapping or publish failed for event ${envelope.eventType}: ${(err as Error)?.message} — acking to avoid DLQ storm`,
       );
     }
   }
 
   protected override async isDuplicate(_eventId: string): Promise<boolean> {
-    // Realtime broadcast is lossy by design; upstream dedup (EventDeduplicator)
-    // applies at emit time. No inbox check here to keep broadcast low-latency.
+    // Realtime broadcast is intentionally lossy (at-most-once per connected session).
     return false;
   }
 }

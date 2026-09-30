@@ -20,7 +20,7 @@ export abstract class BaseRabbitMQConsumer implements OnModuleInit, OnModuleDest
   protected abstract readonly queue: string;
   protected abstract readonly exchange: string;
   protected abstract readonly routingKeys: string[];
-  protected abstract readonly logger: Logger;
+  protected abstract readonly logger: any;
 
   protected readonly prefetch: number = 10;
   protected readonly maxRetries = 3;
@@ -94,13 +94,13 @@ export abstract class BaseRabbitMQConsumer implements OnModuleInit, OnModuleDest
   }
 
   async onModuleDestroy(): Promise<void> {
-    this.closing = true;
-    try {
-      if (this.channel && this.consumerTag) {
+    this.closing = true
+    if (this.channel && this.consumerTag) {
+      try {
         await this.channel.cancel(this.consumerTag);
+      } catch {
+        // ignore — channel may already be gone
       }
-    } catch {
-      // ignore
     }
     try {
       await this.channel?.close();
@@ -108,6 +108,7 @@ export abstract class BaseRabbitMQConsumer implements OnModuleInit, OnModuleDest
       // ignore
     }
     this.channel = null;
+    this.consumerTag = null;
     this.connected = false;
   }
 
@@ -179,7 +180,7 @@ export abstract class BaseRabbitMQConsumer implements OnModuleInit, OnModuleDest
     let envelope: RabbitMQEventEnvelope;
     try {
       envelope = JSON.parse(msg.content.toString()) as RabbitMQEventEnvelope;
-    } catch (err) {
+    } catch {
       // Poison message — never retry, dead-letter immediately.
       this.failedCounter.inc({
         service: this.serviceName(),
@@ -217,12 +218,11 @@ export abstract class BaseRabbitMQConsumer implements OnModuleInit, OnModuleDest
 
     if (attempt < this.maxRetries) {
       this.retryCounter.inc({ service: this.serviceName(), queue: this.queue });
+      const delay = this.retryDelayMs * Math.pow(2, attempt);
       this.logger.warn(
-        `Retrying [${this.queue}] event=${envelope.eventType} attempt=${attempt + 1}/${this.maxRetries}: ${err.message}`,
+        `Retrying [${this.queue}] event=${envelope.eventType} attempt=${attempt + 1}/${this.maxRetries} delay=${delay}ms: ${err.message}`,
       );
-      await new Promise((resolve) =>
-        setTimeout(resolve, this.retryDelayMs * Math.pow(2, attempt)),
-      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
       if (this.closing || !this.channel) return;
       try {
         const headers = {

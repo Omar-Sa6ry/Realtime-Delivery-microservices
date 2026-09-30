@@ -155,6 +155,15 @@ export const RABBITMQ_QUEUE_DLQ: Record<string, { exchange: string; routingKey: 
 };
 
 export function buildQueueArguments(queue: string): Record<string, unknown> {
+  const isDlq = queue.endsWith('.dlq.queue') || queue === RabbitMQQueues.DELIVERY_DLQ;
+  if (isDlq) {
+    return {
+      'x-queue-type': 'quorum',
+      'x-max-priority': 10,
+      'x-message-ttl': 604800000, // 7 days retention for DLQ
+    };
+  }
+
   const dlq = RABBITMQ_QUEUE_DLQ[queue];
   return {
     'x-queue-type': 'quorum',

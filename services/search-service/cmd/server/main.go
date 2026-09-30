@@ -14,12 +14,14 @@ import (
 	pkgKafka "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/kafka"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
+	sharedRabbitMQ "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/rabbitmq"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/indexing"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/reindex"
 	appSearch "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/search"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/config"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/infrastructure/kafka"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/infrastructure/opensearch"
+	searchRabbitMQ "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/infrastructure/rabbitmq"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/infrastructure/redis"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/interfaces/graphql"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/interfaces/health"
@@ -100,6 +102,24 @@ func main() {
 		slog.Error("Failed to start Kafka consumers", "error", err)
 	}
 
+	// 5b. RabbitMQ Event Consumer (dual-consumption / fast events)
+	var rmqConn *sharedRabbitMQ.Connection
+	if cfg.RabbitMQURL != "" {
+		var err error
+		rmqConn, err = sharedRabbitMQ.ConnectURL(cfg.RabbitMQURL, "search-service")
+		if err != nil {
+			slog.Warn("Failed to connect to RabbitMQ (search-service will continue with Kafka only)", "error", err)
+		} else {
+			rmqConsumer := searchRabbitMQ.NewSearchRabbitMQConsumer(rmqConn, indexingService)
+			go func() {
+				if err := rmqConsumer.Start(consumerCtx); err != nil {
+					slog.Error("RabbitMQ search consumer stopped", "error", err)
+				}
+			}()
+			slog.Info("RabbitMQ search index consumer started successfully")
+		}
+	}
+
 	// 6. HTTP & GraphQL Server - Create GraphQL server first to get its handler
 	gqlServer, err := graphql.NewServer(searchService, reindexService, cfg.PortGraphQL)
 	if err != nil {
@@ -157,6 +177,9 @@ func main() {
 	slog.Info("Shutting down Search Service gracefully...")
 	consumerCancel()
 	_ = consumerManager.Close()
+	if rmqConn != nil {
+		_ = rmqConn.Close()
+	}
 
 	ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelShutdown()

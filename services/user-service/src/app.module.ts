@@ -28,6 +28,7 @@ import {
   GraphQLResponseInterceptor,
 } from '@delivery/common';
 import { BullModule } from '@nestjs/bullmq';
+import { UserRabbitMQModule } from './modules/rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
@@ -110,6 +111,7 @@ import { BullModule } from '@nestjs/bullmq';
     AuthModule,
     UserModule,
     MediaModule,
+    UserRabbitMQModule,
     LoggingModule,
     MetricsModule,
     AutomationModule,

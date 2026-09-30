@@ -142,6 +142,14 @@ var queueDLQ = map[string]struct {
 }
 
 func DefaultQueueArguments(queue string) amqp.Table {
+	if queue == QueueDeliveryDLQ || queue == QueueDLQOrders || queue == QueueDLQPayments ||
+		queue == QueueDLQNotifications || queue == QueueDLQDrivers {
+		return amqp.Table{
+			"x-queue-type":    "quorum",
+			"x-max-priority":  int32(10),
+			"x-message-ttl":   int64(604800000), // 7 days retention
+		}
+	}
 	args := amqp.Table{
 		"x-queue-type":   "quorum",
 		"x-max-priority": int32(10),

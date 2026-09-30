@@ -15,6 +15,7 @@ import { NotificationService, ChannelType } from '@bts-soft/core';
 import { Role, rolePermissionsMap, KafkaService, UserKafkaTopics } from '@delivery/common';
 import { UserFactory } from './user.factory';
 import { I18nService } from 'nestjs-i18n';
+import { UserRabbitMQPublisher } from '../rabbitmq/rabbitmq.publisher';
 import {
   RegisterInput,
   LoginInput,
@@ -38,6 +39,7 @@ export class AuthService {
     private readonly kafkaService: KafkaService,
     private readonly userFactory: UserFactory,
     private readonly i18n: I18nService,
+    private readonly rabbitmqPublisher?: UserRabbitMQPublisher,
   ) {}
 
   async register(input: RegisterInput): Promise<AuthPayloadType> {
@@ -53,7 +55,6 @@ export class AuthService {
 
     const hashedPassword = await this.passwordHasher.hash(password);
 
-    // Check if it's the first user to make them Admin
     const totalUsers = await this.userRepo.count();
     const role = totalUsers === 0 ? Role.ADMIN : Role.USER;
 
@@ -77,7 +78,6 @@ export class AuthService {
     try {
       savedUser = await queryRunner.manager.save(user);
 
-      // Create outbox record
       const outbox = new Outbox();
       outbox.id = crypto.randomUUID();
       outbox.aggregateType = 'User';
@@ -104,10 +104,8 @@ export class AuthService {
       await queryRunner.release();
     }
 
-    // Enqueue event to Redis BullMQ
     await this.outboxWorkerService.enqueueEvent(outboxId);
 
-    // Publish user.created event for search indexing and notification service.
     try {
       await this.kafkaService.emit(
         UserKafkaTopics.USER_CREATED,
@@ -122,8 +120,19 @@ export class AuthService {
         },
       );
     } catch (err) {
-      // Log but don't fail registration — search index can be rebuilt via reindex
-      console.error('Failed to publish user.created event:', err);
+      console.error('Failed to publish user.created Kafka event:', err);
+    }
+
+    if (this.rabbitmqPublisher) {
+      await this.rabbitmqPublisher.publishUserCreated({
+        id: savedUser.id,
+        email: savedUser.email,
+        firstName: savedUser.firstName,
+        lastName: savedUser.lastName,
+        role: savedUser.role,
+        isActive: savedUser.isActive,
+        createdAt: savedUser.createdAt,
+      });
     }
 
     const sessionId = crypto.randomUUID();
@@ -227,7 +236,6 @@ export class AuthService {
     const email = input.email.toLowerCase().trim();
     const user = await this.userRepo.findOne({ where: { email } });
     if (!user) {
-      // Return success silently for security (avoid user enumeration)
       return;
     }
 
@@ -244,7 +252,6 @@ export class AuthService {
       context: { name: user.firstName, token },
     }).catch(err => console.error('Failed to send reset password email:', err));
 
-    // Publish audit event (no token in payload) so notification-service keeps an in-app record
     this.kafkaService
       .emit(
         UserKafkaTopics.PASSWORD_RESET_REQUESTED,
@@ -309,7 +316,6 @@ export class AuthService {
       sessionId: payload.sessionId,
     });
 
-    // Refresh the session in Redis with same creation timestamp and updated expiry
     await this.sessionRepo.createSession(
       user.id,
       payload.sessionId,

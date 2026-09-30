@@ -1,20 +1,18 @@
 {
   "rabbit_version": "3.13",
   "rabbitmq_version": "3.13",
-  "product_info": "Realtime Delivery microservices — updated topology",
+  "product_info": "Realtime Delivery microservices — production-ready topology",
   "parameters": [],
   "global_parameters": [],
   "policies": [
     {
       "vhost": "/",
-      "name": "delivery-quorum-plus-dlx",
+      "name": "delivery-quorum-overflow",
       "pattern": "^(orders|notifications|payments|dispatch|media|realtime|search|users|analytics|drivers)[\\.-]",
       "apply-to": "queues",
       "definition": {
         "overflow": "reject-publish",
-        "max-length": 100000,
-        "dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": ""
+        "max-length": 100000
       },
       "priority": 10
     }
@@ -125,9 +123,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "orders.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "orders.dlq"
       }
     },
     {
@@ -137,9 +134,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "orders.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "orders.dlq"
       }
     },
     {
@@ -149,9 +145,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "notifications.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "notifications.dlq"
       }
     },
     {
@@ -161,9 +156,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "notifications.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "notifications.dlq"
       }
     },
     {
@@ -173,9 +167,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "notifications.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "notifications.dlq"
       }
     },
     {
@@ -185,9 +178,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "payments.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "payments.dlq"
       }
     },
     {
@@ -197,9 +189,19 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "payments.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "payments.dlq"
+      }
+    },
+    {
+      "name": "payments.refunded.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "payments.dlq"
       }
     },
     {
@@ -210,8 +212,7 @@
       "arguments": {
         "x-queue-type": "quorum",
         "x-dead-letter-exchange": "delivery.dlx.direct",
-        "x-dead-letter-routing-key": "drivers.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-routing-key": "drivers.dlq"
       }
     },
     {
@@ -222,8 +223,7 @@
       "arguments": {
         "x-queue-type": "quorum",
         "x-dead-letter-exchange": "delivery.dlx.direct",
-        "x-dead-letter-routing-key": "drivers.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-routing-key": "drivers.dlq"
       }
     },
     {
@@ -233,9 +233,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "notifications.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "notifications.dlq"
       }
     },
     {
@@ -245,9 +244,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "notifications.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "notifications.dlq"
       }
     },
     {
@@ -257,9 +255,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "orders.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "orders.dlq"
       }
     },
     {
@@ -269,19 +266,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "orders.dlq",
-        "x-max-priority": 10
-      }
-    },
-    {
-      "name": "delivery.dlq.queue",
-      "vhost": "/",
-      "durable": true,
-      "auto_delete": false,
-      "arguments": {
-        "x-queue-type": "quorum",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "orders.dlq"
       }
     },
     {
@@ -291,9 +277,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "notifications.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "notifications.dlq"
       }
     },
     {
@@ -303,9 +288,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "notifications.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "notifications.dlq"
       }
     },
     {
@@ -315,9 +299,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "notifications.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "notifications.dlq"
       }
     },
     {
@@ -327,21 +310,18 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "drivers.dlq",
-        "x-max-priority": 10
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "drivers.dlq"
       }
     },
     {
-      "name": "payments.refunded.queue",
+      "name": "delivery.dlq.queue",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout",
-        "x-dead-letter-routing-key": "payments.dlq",
-        "x-max-priority": 10
+        "x-message-ttl": 604800000
       }
     },
     {
@@ -351,7 +331,7 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-max-priority": 10
+        "x-message-ttl": 604800000
       }
     },
     {
@@ -361,7 +341,7 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-max-priority": 10
+        "x-message-ttl": 604800000
       }
     },
     {
@@ -371,7 +351,7 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-max-priority": 10
+        "x-message-ttl": 604800000
       }
     },
     {
@@ -381,7 +361,7 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-max-priority": 10
+        "x-message-ttl": 604800000
       }
     }
   ],
@@ -406,6 +386,14 @@
       "source": "delivery.orders.topic",
       "vhost": "/",
       "destination": "search.index.queue",
+      "destination_type": "queue",
+      "routing_key": "order.#",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.orders.topic",
+      "vhost": "/",
+      "destination": "realtime.broadcast.queue",
       "destination_type": "queue",
       "routing_key": "order.#",
       "arguments": {}
@@ -448,6 +436,14 @@
       "destination": "payments.failed.queue",
       "destination_type": "queue",
       "routing_key": "payment.failed",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.payments.direct",
+      "vhost": "/",
+      "destination": "payments.refunded.queue",
+      "destination_type": "queue",
+      "routing_key": "payment.refunded",
       "arguments": {}
     },
     {
@@ -523,6 +519,14 @@
       "arguments": {}
     },
     {
+      "source": "delivery.users.topic",
+      "vhost": "/",
+      "destination": "search.index.queue",
+      "destination_type": "queue",
+      "routing_key": "user.#",
+      "arguments": {}
+    },
+    {
       "source": "delivery.analytics.fanout",
       "vhost": "/",
       "destination": "analytics.events.queue",
@@ -535,7 +539,15 @@
       "vhost": "/",
       "destination": "drivers.events.queue",
       "destination_type": "queue",
-      "routing_key": "driver.*.event",
+      "routing_key": "driver.#",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.drivers.topic",
+      "vhost": "/",
+      "destination": "search.index.queue",
+      "destination_type": "queue",
+      "routing_key": "driver.#",
       "arguments": {}
     },
     {

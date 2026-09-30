@@ -17,6 +17,7 @@ import { DeliveryModule } from './modules/delivery/delivery.module';
 import { DeliveryKafkaModule } from './modules/infrastructure/kafka/kafka.module';
 import { DeliveryNatsModule } from './modules/infrastructure/nats/nats.module';
 import { DeliveryGrpcModule } from './modules/infrastructure/grpc/grpc.module';
+import { DeliveryRabbitMQModule } from './modules/infrastructure/rabbitmq/rabbitmq.module';
 
 import {
   LoggingModule,
@@ -108,6 +109,7 @@ import { HealthController } from './health.controller';
     DeliveryKafkaModule,
     DeliveryNatsModule,
     DeliveryGrpcModule,
+    DeliveryRabbitMQModule,
   ],
   controllers: [HealthController],
   providers: [

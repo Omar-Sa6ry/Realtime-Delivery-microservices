@@ -35,6 +35,9 @@ type Config struct {
 	// NATS
 	NATSUrl             string
 
+	// RabbitMQ
+	RabbitMQURL         string
+
 	// Search limits
 	MaxPageSize         int
 	MaxQueryLength      int
@@ -83,6 +86,7 @@ func Load() (*Config, error) {
 		RedisDB:             redisDB,
 		RedisTTL:            time.Duration(redisTTLSec) * time.Second,
 		NATSUrl:             getEnv("NATS_URL", "nats://nats-srv:4222"),
+		RabbitMQURL:         getEnv("RABBITMQ_URL", ""),
 		MaxPageSize:         maxPageSize,
 		MaxQueryLength:      maxQueryLength,
 	}, nil

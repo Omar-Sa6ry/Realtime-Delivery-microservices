@@ -1,7 +1,7 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { HealthIndicator, HealthIndicatorResult } from "@nestjs/terminus";
-import { RabbitMQService } from "./rabbitmq.service";
-import { CircuitBreakerState } from "./rabbitmq.service";
+import { Injectable, Logger } from '@nestjs/common';
+import { HealthIndicator, HealthIndicatorResult } from '@nestjs/terminus';
+import { RabbitMQService } from './rabbitmq.service';
+import { CircuitBreakerState } from './rabbitmq.service';
 
 @Injectable()
 export class RabbitMQHealthIndicator extends HealthIndicator {
@@ -11,27 +11,25 @@ export class RabbitMQHealthIndicator extends HealthIndicator {
     super();
   }
 
-  async isHealthy(key = "rabbitmq"): Promise<HealthIndicatorResult> {
+  async isHealthy(key = 'rabbitmq'): Promise<HealthIndicatorResult> {
     try {
       const connected = this.rabbitmq.isConnected();
       const breakerState = this.rabbitmq.getCircuitBreakerState();
-      const healthy = connected && breakerState !== CircuitBreakerState.OPEN;
+      const breakerName = CircuitBreakerState[breakerState];
 
-      if (!healthy) {
+      if (!connected || breakerState === CircuitBreakerState.OPEN) {
         return this.getStatus(key, false, {
           connected,
-          circuitBreaker: CircuitBreakerState[breakerState],
+          circuitBreaker: breakerName,
         });
       }
 
-      const channel = await this.rabbitmq.createConsumerChannel(1);
-      try {
-        await channel.close();
-      } catch {}
+      const topologyReady = this.rabbitmq.isTopologyAsserted();
 
       return this.getStatus(key, true, {
         connected,
-        circuitBreaker: CircuitBreakerState[breakerState],
+        circuitBreaker: breakerName,
+        topologyAsserted: topologyReady,
       });
     } catch (err) {
       this.logger.error(

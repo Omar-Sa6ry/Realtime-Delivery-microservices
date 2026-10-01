@@ -10,6 +10,7 @@ export enum RabbitMQExchanges {
   DRIVERS = 'delivery.drivers.topic',
   DLX = 'delivery.dlx.fanout',
   DLX_DIRECT = 'delivery.dlx.direct',
+  UNROUTABLE = 'delivery.unroutable.fanout',
 }
 
 export enum RabbitMQExchangeType {
@@ -30,6 +31,7 @@ export const RABBITMQ_EXCHANGE_TYPES: Record<RabbitMQExchanges, RabbitMQExchange
   [RabbitMQExchanges.DRIVERS]: RabbitMQExchangeType.TOPIC,
   [RabbitMQExchanges.DLX]: RabbitMQExchangeType.FANOUT,
   [RabbitMQExchanges.DLX_DIRECT]: RabbitMQExchangeType.DIRECT,
+  [RabbitMQExchanges.UNROUTABLE]: RabbitMQExchangeType.FANOUT,
 };
 
 export enum OrdersRoutingKeys {
@@ -105,6 +107,7 @@ export enum RabbitMQQueues {
   DLQ_PAYMENTS = 'payments.dlq.queue',
   DLQ_NOTIFICATIONS = 'notifications.dlq.queue',
   DLQ_DRIVERS = 'drivers.dlq.queue',
+  UNROUTABLE_MESSAGES = 'unroutable.messages.queue',
 }
 
 export const RABBITMQ_QUEUE_DLQ: Record<string, { exchange: string; routingKey: string }> = {
@@ -152,6 +155,34 @@ export const RABBITMQ_QUEUE_DLQ: Record<string, { exchange: string; routingKey: 
     exchange: RabbitMQExchanges.DLX_DIRECT,
     routingKey: DlqRoutingKeys.DRIVERS,
   },
+  [RabbitMQQueues.MEDIA_UPLOADED]: {
+    exchange: RabbitMQExchanges.DLX_DIRECT,
+    routingKey: DlqRoutingKeys.NOTIFICATIONS,
+  },
+  [RabbitMQQueues.MEDIA_PROCESSED]: {
+    exchange: RabbitMQExchanges.DLX_DIRECT,
+    routingKey: DlqRoutingKeys.NOTIFICATIONS,
+  },
+  [RabbitMQQueues.REALTIME_BROADCAST]: {
+    exchange: RabbitMQExchanges.DLX_DIRECT,
+    routingKey: DlqRoutingKeys.ORDERS,
+  },
+  [RabbitMQQueues.SEARCH_INDEX]: {
+    exchange: RabbitMQExchanges.DLX_DIRECT,
+    routingKey: DlqRoutingKeys.ORDERS,
+  },
+  [RabbitMQQueues.USERS_CREATED]: {
+    exchange: RabbitMQExchanges.DLX_DIRECT,
+    routingKey: DlqRoutingKeys.NOTIFICATIONS,
+  },
+  [RabbitMQQueues.USERS_UPDATED]: {
+    exchange: RabbitMQExchanges.DLX_DIRECT,
+    routingKey: DlqRoutingKeys.NOTIFICATIONS,
+  },
+  [RabbitMQQueues.ANALYTICS_EVENTS]: {
+    exchange: RabbitMQExchanges.DLX_DIRECT,
+    routingKey: DlqRoutingKeys.NOTIFICATIONS,
+  },
 };
 
 export function buildQueueArguments(queue: string): Record<string, unknown> {
@@ -159,8 +190,15 @@ export function buildQueueArguments(queue: string): Record<string, unknown> {
   if (isDlq) {
     return {
       'x-queue-type': 'quorum',
-      'x-max-priority': 10,
       'x-message-ttl': 604800000, // 7 days retention for DLQ
+    };
+  }
+
+  if (queue === RabbitMQQueues.ANALYTICS_EVENTS || queue === RabbitMQQueues.REALTIME_BROADCAST) {
+    return {
+      'x-queue-type': 'stream',
+      'x-max-age': '7D',
+      'x-stream-max-segment-size-bytes': 50000000,
     };
   }
 
@@ -175,7 +213,6 @@ export function buildQueueArguments(queue: string): Record<string, unknown> {
       : {
           'x-dead-letter-exchange': RabbitMQExchanges.DLX,
         }),
-    'x-max-priority': 10,
   };
 }
 

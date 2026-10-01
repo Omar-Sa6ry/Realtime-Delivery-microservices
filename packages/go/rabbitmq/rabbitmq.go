@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,6 +29,7 @@ const (
 	ExchangeDrivers       = "delivery.drivers.topic"
 	ExchangeDLX           = "delivery.dlx.fanout"
 	ExchangeDLXDirect     = "delivery.dlx.direct"
+	ExchangeUnroutable    = "delivery.unroutable.fanout"
 )
 
 var ExchangeTypes = map[string]string{
@@ -42,6 +44,7 @@ var ExchangeTypes = map[string]string{
 	ExchangeDrivers:       "topic",
 	ExchangeDLX:           "fanout",
 	ExchangeDLXDirect:     "direct",
+	ExchangeUnroutable:    "fanout",
 }
 
 const (
@@ -116,6 +119,7 @@ const (
 	QueueDLQPayments       = "payments.dlq.queue"
 	QueueDLQNotifications  = "notifications.dlq.queue"
 	QueueDLQDrivers        = "drivers.dlq.queue"
+	QueueUnroutable        = "unroutable.messages.queue"
 )
 
 const (
@@ -139,20 +143,32 @@ var queueDLQ = map[string]struct {
 	QueueDispatchRequests:  {ExchangeDLXDirect, DLQRoutingKeyDrivers},
 	QueueDispatchResponses: {ExchangeDLXDirect, DLQRoutingKeyDrivers},
 	QueueDriversEvents:     {ExchangeDLXDirect, DLQRoutingKeyDrivers},
+	QueueMediaUploaded:     {ExchangeDLXDirect, DLQRoutingKeyNotifications},
+	QueueMediaProcessed:    {ExchangeDLXDirect, DLQRoutingKeyNotifications},
+	QueueRealtimeBroadcast: {ExchangeDLXDirect, DLQRoutingKeyOrders},
+	QueueSearchIndex:       {ExchangeDLXDirect, DLQRoutingKeyOrders},
+	QueueUsersCreated:      {ExchangeDLXDirect, DLQRoutingKeyNotifications},
+	QueueUsersUpdated:      {ExchangeDLXDirect, DLQRoutingKeyNotifications},
+	QueueAnalyticsEvents:   {ExchangeDLXDirect, DLQRoutingKeyNotifications},
 }
 
 func DefaultQueueArguments(queue string) amqp.Table {
+	if queue == QueueAnalyticsEvents || queue == QueueRealtimeBroadcast {
+		return amqp.Table{
+			"x-queue-type": "stream",
+			"x-max-age": "7D",
+			"x-stream-max-segment-size-bytes": int64(50000000),
+		}
+	}
 	if queue == QueueDeliveryDLQ || queue == QueueDLQOrders || queue == QueueDLQPayments ||
 		queue == QueueDLQNotifications || queue == QueueDLQDrivers {
 		return amqp.Table{
-			"x-queue-type":    "quorum",
-			"x-max-priority":  int32(10),
-			"x-message-ttl":   int64(604800000), // 7 days retention
+			"x-queue-type":  "quorum",
+			"x-message-ttl": int64(604800000), // 7 days retention
 		}
 	}
 	args := amqp.Table{
-		"x-queue-type":   "quorum",
-		"x-max-priority": int32(10),
+		"x-queue-type": "quorum",
 	}
 	if dlq, ok := queueDLQ[queue]; ok {
 		args["x-dead-letter-exchange"] = dlq.Exchange
@@ -445,7 +461,12 @@ func (c *Connection) EnsureTopology(bindings []TopologyBinding) error {
 		}
 	}
 	for exchange, kind := range seen {
-		if err := ch.ExchangeDeclare(exchange, kind, true, false, false, false, nil); err != nil {
+		args := amqp.Table{}
+		// Do not set alternate-exchange for DLX, Unroutable, or dlq exchanges to prevent cycles
+		if exchange != ExchangeDLX && exchange != ExchangeDLXDirect && exchange != ExchangeUnroutable && !strings.Contains(exchange, "dlq") {
+			args["alternate-exchange"] = ExchangeUnroutable
+		}
+		if err := ch.ExchangeDeclare(exchange, kind, true, false, false, false, args); err != nil {
 			return fmt.Errorf("declare exchange %q: %w", exchange, err)
 		}
 	}

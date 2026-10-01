@@ -13,88 +13,80 @@ spec:
         app: api-gateway
     spec:
       containers:
-        - name: api-gateway
-          image: delivery/api-gateway
-          imagePullPolicy: IfNotPresent
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "256Mi"
-            limits:
-              cpu: "1000m"
-              memory: "1Gi"
-          ports:
-            - containerPort: 4000
-              name: http
-            - containerPort: 4099
-              name: liveness
-          startupProbe:
-            httpGet:
-              path: /
-              port: 4099
-            initialDelaySeconds: 5
-            periodSeconds: 5
-            failureThreshold: 60
-            timeoutSeconds: 5
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 4099
-            initialDelaySeconds: 5
-            periodSeconds: 5
-            failureThreshold: 120
-            timeoutSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 4099
-            initialDelaySeconds: 30
-            periodSeconds: 20
-            failureThreshold: 6
-            timeoutSeconds: 5
-          env:
-            - name: NODE_OPTIONS
-              value: "--max-old-space-size=768"
-            - name: PORT_GATEWAY
-              value: "4000"
-            - name: PORT_LIVENESS
-              value: "4099"
-            - name: NODE_ENV
-              value: "development"
-            - name: REDIS_HOST
-              value: "redis-srv"
-            - name: REDIS_PORT
-              value: "6379"
-            - name: REDIS_DB
-              value: "0"
-            - name: RATE_LIMIT_LIMIT
-              value: "100"
-            - name: RATE_LIMIT_WINDOW_MS
-              value: "60000"
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: JWT_SECRET
-            - name: PAYMENT_SUBGRAPH_URL
-              value: "http://payment-srv:4002/payment/graphql"
-            - name: MEDIA_SUBGRAPH_URL
-              value: "http://media-srv:4005/media/graphql"
-            - name: NOTIFICATION_SERVICE_URL
-              value: "http://notification-srv:4004/notification/graphql"
-            - name: USER_SERVICE_URL
-              value: "http://user-srv:4001/user/graphql"
-            - name: REALTIME_SERVICE_URL
-              value: "http://realtime-srv:4006/realtime/graphql"
-            - name: SEARCH_SERVICE_URL
-              value: "http://search-srv:4007/search/graphql"
-            - name: DELIVERY_SERVICE_URL
-              value: "http://delivery-srv:4003/delivery/graphql"
-            - name: DRIVER_SERVICE_URL
-              value: "http://driver-srv:4008/driver/graphql"
-            - name: ANALYTICS_SERVICE_URL
-              value: "http://analytics-srv:4009/analytics/graphql"
-            
+      - name: api-gateway
+        image: delivery/api-gateway
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 4000
+          name: http
+        - containerPort: 4099
+          name: liveness
+        startupProbe:
+          httpGet:
+            path: /
+            port: 4099
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 240
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 4099
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 120
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 4099
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          failureThreshold: 6
+          timeoutSeconds: 5
+        env:
+        - name: NODE_OPTIONS
+          value: --max-old-space-size=768
+        - name: PORT_GATEWAY
+          value: '4000'
+        - name: PORT_LIVENESS
+          value: '4099'
+        - name: NODE_ENV
+          value: development
+        - name: REDIS_HOST
+          value: redis-srv
+        - name: REDIS_PORT
+          value: '6379'
+        - name: REDIS_DB
+          value: '0'
+        - name: RATE_LIMIT_LIMIT
+          value: '100'
+        - name: RATE_LIMIT_WINDOW_MS
+          value: '60000'
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: secrets
+              key: JWT_SECRET
+        - name: PAYMENT_SUBGRAPH_URL
+          value: http://payment-srv:4002/payment/graphql
+        - name: MEDIA_SUBGRAPH_URL
+          value: http://media-srv:4005/media/graphql
+        - name: NOTIFICATION_SERVICE_URL
+          value: http://notification-srv:4004/notification/graphql
+        - name: USER_SERVICE_URL
+          value: http://user-srv:4001/user/graphql
+        - name: REALTIME_SERVICE_URL
+          value: http://realtime-srv:4006/realtime/graphql
+        - name: SEARCH_SERVICE_URL
+          value: http://search-srv:4007/search/graphql
+        - name: DELIVERY_SERVICE_URL
+          value: http://delivery-srv:4003/delivery/graphql
+        - name: DRIVER_SERVICE_URL
+          value: http://driver-srv:4008/driver/graphql
+        - name: ANALYTICS_SERVICE_URL
+          value: http://analytics-srv:4009/analytics/graphql
 ---
 apiVersion: v1
 kind: Service
@@ -104,9 +96,7 @@ spec:
   selector:
     app: api-gateway
   ports:
-    - name: http
-      protocol: TCP
-      port: 4000
-      targetPort: 4000
-
-
+  - name: http
+    protocol: TCP
+    port: 4000
+    targetPort: 4000

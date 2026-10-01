@@ -1,4 +1,4 @@
-﻿import * as http from 'http';
+import * as http from 'http';
 
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -123,7 +123,10 @@ async function bootstrap() {
 
 function runBootstrap() {
   bootstrap().catch((err) => {
-    console.error('Bootstrap failed, retrying in 10s...', err?.stack || err?.message || err);
+    console.error(
+      'Bootstrap failed, retrying in 10s...',
+      err?.stack || err?.message || err,
+    );
     setTimeout(() => runBootstrap(), 10000);
   });
 }

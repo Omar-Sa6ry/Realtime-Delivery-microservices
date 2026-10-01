@@ -408,7 +408,11 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       }
     }
     for (const [exchange, type] of exchanges) {
-      await channel.assertExchange(exchange, type as string, { durable: true });
+      const args: Record<string, unknown> = {};
+      if (!exchange.includes('dlx') && !exchange.includes('unroutable') && !exchange.includes('dlq')) {
+        args['alternate-exchange'] = 'delivery.unroutable.fanout';
+      }
+      await channel.assertExchange(exchange, type as string, { durable: true, arguments: args });
     }
     for (const b of bindings) {
       await channel.assertQueue(b.queue, {

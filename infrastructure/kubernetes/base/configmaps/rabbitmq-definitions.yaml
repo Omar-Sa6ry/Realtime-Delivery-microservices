@@ -39,7 +39,9 @@ data:
           "type": "topic",
           "durable": true,
           "auto_delete": false,
-          "arguments": {}
+          "arguments": {
+            "alternate-exchange": "delivery.unroutable.fanout"
+          }
         },
         {
           "name": "delivery.notifications.fanout",
@@ -47,7 +49,9 @@ data:
           "type": "fanout",
           "durable": true,
           "auto_delete": false,
-          "arguments": {}
+          "arguments": {
+            "alternate-exchange": "delivery.unroutable.fanout"
+          }
         },
         {
           "name": "delivery.payments.direct",
@@ -55,7 +59,9 @@ data:
           "type": "direct",
           "durable": true,
           "auto_delete": false,
-          "arguments": {}
+          "arguments": {
+            "alternate-exchange": "delivery.unroutable.fanout"
+          }
         },
         {
           "name": "delivery.dispatch.direct",
@@ -63,7 +69,9 @@ data:
           "type": "direct",
           "durable": true,
           "auto_delete": false,
-          "arguments": {}
+          "arguments": {
+            "alternate-exchange": "delivery.unroutable.fanout"
+          }
         },
         {
           "name": "delivery.media.topic",
@@ -71,7 +79,9 @@ data:
           "type": "topic",
           "durable": true,
           "auto_delete": false,
-          "arguments": {}
+          "arguments": {
+            "alternate-exchange": "delivery.unroutable.fanout"
+          }
         },
         {
           "name": "delivery.realtime.fanout",
@@ -79,7 +89,9 @@ data:
           "type": "fanout",
           "durable": true,
           "auto_delete": false,
-          "arguments": {}
+          "arguments": {
+            "alternate-exchange": "delivery.unroutable.fanout"
+          }
         },
         {
           "name": "delivery.dlx.fanout",
@@ -95,7 +107,9 @@ data:
           "type": "topic",
           "durable": true,
           "auto_delete": false,
-          "arguments": {}
+          "arguments": {
+            "alternate-exchange": "delivery.unroutable.fanout"
+          }
         },
         {
           "name": "delivery.analytics.fanout",
@@ -103,7 +117,9 @@ data:
           "type": "fanout",
           "durable": true,
           "auto_delete": false,
-          "arguments": {}
+          "arguments": {
+            "alternate-exchange": "delivery.unroutable.fanout"
+          }
         },
         {
           "name": "delivery.drivers.topic",
@@ -111,12 +127,22 @@ data:
           "type": "topic",
           "durable": true,
           "auto_delete": false,
-          "arguments": {}
+          "arguments": {
+            "alternate-exchange": "delivery.unroutable.fanout"
+          }
         },
         {
           "name": "delivery.dlx.direct",
           "vhost": "/",
           "type": "direct",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {}
+        },
+        {
+          "name": "delivery.unroutable.fanout",
+          "vhost": "/",
+          "type": "fanout",
           "durable": true,
           "auto_delete": false,
           "arguments": {}
@@ -261,9 +287,9 @@ data:
           "durable": true,
           "auto_delete": false,
           "arguments": {
-            "x-queue-type": "quorum",
-            "x-dead-letter-exchange": "delivery.dlx.direct",
-            "x-dead-letter-routing-key": "orders.dlq"
+            "x-queue-type": "stream",
+            "x-max-age": "7D",
+            "x-stream-max-segment-size-bytes": 50000000
           }
         },
         {
@@ -305,9 +331,9 @@ data:
           "durable": true,
           "auto_delete": false,
           "arguments": {
-            "x-queue-type": "quorum",
-            "x-dead-letter-exchange": "delivery.dlx.direct",
-            "x-dead-letter-routing-key": "notifications.dlq"
+            "x-queue-type": "stream",
+            "x-max-age": "7D",
+            "x-stream-max-segment-size-bytes": 50000000
           }
         },
         {
@@ -369,6 +395,16 @@ data:
           "arguments": {
             "x-queue-type": "quorum",
             "x-message-ttl": 604800000
+          }
+        },
+        {
+          "name": "unroutable.messages.queue",
+          "vhost": "/",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {
+            "x-queue-type": "quorum",
+            "x-dead-letter-exchange": "delivery.dlx.fanout"
           }
         }
       ],
@@ -587,6 +623,14 @@ data:
           "destination": "drivers.dlq.queue",
           "destination_type": "queue",
           "routing_key": "drivers.dlq",
+          "arguments": {}
+        },
+        {
+          "source": "delivery.unroutable.fanout",
+          "vhost": "/",
+          "destination": "unroutable.messages.queue",
+          "destination_type": "queue",
+          "routing_key": "",
           "arguments": {}
         }
       ]

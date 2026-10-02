@@ -58,24 +58,21 @@ spec:
           ports:
             - containerPort: 4006
           startupProbe:
-            httpGet:
-              path: /realtime/health
+            tcpSocket:
               port: 4006
-            initialDelaySeconds: 10
+            initialDelaySeconds: 45
             periodSeconds: 10
             failureThreshold: 60
             timeoutSeconds: 10
           readinessProbe:
-            httpGet:
-              path: /realtime/ready
+            tcpSocket:
               port: 4006
             initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 30
             timeoutSeconds: 5
           livenessProbe:
-            httpGet:
-              path: /realtime/health
+            tcpSocket:
               port: 4006
             initialDelaySeconds: 30
             periodSeconds: 20

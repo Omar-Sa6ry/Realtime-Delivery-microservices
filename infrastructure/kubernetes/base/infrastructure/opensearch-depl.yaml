@@ -6,7 +6,7 @@ spec:
   replicas: 1
   strategy:
     type: Recreate
-  progressDeadlineSeconds: 900
+  progressDeadlineSeconds: 3600
   selector:
     matchLabels:
       app: opensearch

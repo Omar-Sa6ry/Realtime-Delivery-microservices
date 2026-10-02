@@ -39,24 +39,21 @@ spec:
             - containerPort: 4004 
             - containerPort: 50053
           startupProbe:
-            httpGet:
-              path: /notification/health
+            tcpSocket:
               port: 4004
-            initialDelaySeconds: 15
+            initialDelaySeconds: 45
             periodSeconds: 5
             failureThreshold: 300
             timeoutSeconds: 5
           readinessProbe:
-            httpGet:
-              path: /notification/ready
+            tcpSocket:
               port: 4004
             initialDelaySeconds: 10
             periodSeconds: 5
             failureThreshold: 120
             timeoutSeconds: 5
           livenessProbe:
-            httpGet:
-              path: /notification/health
+            tcpSocket:
               port: 4004
             initialDelaySeconds: 5
             periodSeconds: 20

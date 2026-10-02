@@ -8,7 +8,7 @@ manifests:
 
 deploy:
   statusCheck: true
-  statusCheckDeadlineSeconds: 1800
+  statusCheckDeadlineSeconds: 3600
   kubectl:
     hooks:
       after:

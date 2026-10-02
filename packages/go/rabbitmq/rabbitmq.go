@@ -440,6 +440,17 @@ type TopologyBinding struct {
 	RoutingKey   string
 }
 
+// exchangeDeclareArgs returns the arguments every declare path must use so
+// consumer and topology declarations stay consistent with definitions.json.
+func exchangeDeclareArgs(exchange string) amqp.Table {
+	args := amqp.Table{}
+	// Do not set alternate-exchange for DLX, Unroutable, or dlq exchanges to prevent cycles
+	if exchange != ExchangeDLX && exchange != ExchangeDLXDirect && exchange != ExchangeUnroutable && !strings.Contains(exchange, "dlq") {
+		args["alternate-exchange"] = ExchangeUnroutable
+	}
+	return args
+}
+
 func (c *Connection) EnsureTopology(bindings []TopologyBinding) error {
 	ch, err := c.Channel()
 	if err != nil {
@@ -461,12 +472,7 @@ func (c *Connection) EnsureTopology(bindings []TopologyBinding) error {
 		}
 	}
 	for exchange, kind := range seen {
-		args := amqp.Table{}
-		// Do not set alternate-exchange for DLX, Unroutable, or dlq exchanges to prevent cycles
-		if exchange != ExchangeDLX && exchange != ExchangeDLXDirect && exchange != ExchangeUnroutable && !strings.Contains(exchange, "dlq") {
-			args["alternate-exchange"] = ExchangeUnroutable
-		}
-		if err := ch.ExchangeDeclare(exchange, kind, true, false, false, false, args); err != nil {
+		if err := ch.ExchangeDeclare(exchange, kind, true, false, false, false, exchangeDeclareArgs(exchange)); err != nil {
 			return fmt.Errorf("declare exchange %q: %w", exchange, err)
 		}
 	}
@@ -795,7 +801,7 @@ func (c *Consumer) consumeLoop(ctx context.Context, handler MessageHandler) erro
 	if kind == "" {
 		kind = "topic"
 	}
-	if err := ch.ExchangeDeclare(c.cfg.Exchange, kind, true, false, false, false, nil); err != nil {
+	if err := ch.ExchangeDeclare(c.cfg.Exchange, kind, true, false, false, false, exchangeDeclareArgs(c.cfg.Exchange)); err != nil {
 		return fmt.Errorf("declare exchange: %w", err)
 	}
 	if _, err := ch.QueueDeclare(c.cfg.Queue, true, false, false, false,

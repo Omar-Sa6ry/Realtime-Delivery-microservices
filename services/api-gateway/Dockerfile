@@ -33,4 +33,4 @@ COPY . .
 WORKDIR /usr/src/app/services/api-gateway
 RUN npm run build
 
-CMD ["npm", "run", "start:prod"]
+CMD ["node", "dist/main"]

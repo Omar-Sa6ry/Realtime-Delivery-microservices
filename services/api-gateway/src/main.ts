@@ -1,41 +1,37 @@
 import * as http from 'http';
-
-import { NestFactory } from '@nestjs/core';
-import { NestExpressApplication } from '@nestjs/platform-express';
-import { AppModule } from './app.module';
-import helmet from 'helmet';
-import { StructuredLogger } from '@delivery/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { waitForRedis, waitForService } from './utils/waitService.util';
 
 const LIVENESS_PORT = Number(process.env.PORT_LIVENESS ?? 4099);
-const livenessServer = http.createServer((req, res) => {
-  if (
-    req.url === '/health' ||
-    req.url === '/health/ready' ||
-    req.url === '/health/live' ||
-    req.url === '/'
-  ) {
+
+function startLivenessServer(): http.Server {
+  const server = http.createServer((req, res) => {
+    if (
+      req.url === '/health' ||
+      req.url === '/health/ready' ||
+      req.url === '/health/live' ||
+      req.url === '/'
+    ) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'alive', service: 'api-gateway' }));
+      return;
+    }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'alive', service: 'api-gateway' }));
-    return;
-  }
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ status: 'alive', service: 'api-gateway' }));
-});
+  });
 
-livenessServer.on('error', (err) =>
-  console.error(
-    '[liveness] Server error:',
-    (err as NodeJS.ErrnoException).message,
-  ),
-);
+  server.on('error', (err) => {
+    console.error('[liveness] Server error:', (err as NodeJS.ErrnoException).message);
+  });
 
-livenessServer.listen(LIVENESS_PORT, '0.0.0.0', () =>
-  console.log(`[liveness] Health server listening on port ${LIVENESS_PORT}`),
-);
+  server.listen(LIVENESS_PORT, '0.0.0.0', () => {
+    console.log(`[liveness] Health server listening on port ${LIVENESS_PORT}`);
+  });
 
-async function bootstrap() {
-  const logger = new StructuredLogger();
+  return server;
+}
+
+async function waitForDependencies(logger: any) {
   await waitForRedis();
 
   const subgraphs = [
@@ -53,44 +49,18 @@ async function bootstrap() {
   console.log('[startup] Waiting for subgraphs to be available...');
   await Promise.all(subgraphs.map((url) => waitForService(url)));
   logger.log('All subgraphs are reachable.');
+}
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger,
-  });
-
-  // Trust Proxy is crucial for Rate Limiting behind Load Balancers / Ingress
-  app.set('trust proxy', 1);
-
-  // Enable graceful shutdown hooks
-  app.enableShutdownHooks();
-
-  // Security Hardening
-  app.use(
-    helmet({
-      contentSecurityPolicy:
-        process.env.NODE_ENV === 'production' ? undefined : false,
-      crossOriginEmbedderPolicy: false,
-    }),
-  );
-
-  app.enableCors({
-    origin: '*',
-    credentials: true,
-  });
-
-  const port = process.env.PORT_GATEWAY ?? 4000;
-
-  // WebSocket Proxy for Realtime Service (handles both /ws and /realtime)
-  const { createProxyMiddleware } = require('http-proxy-middleware');
+async function setupProxies(app: NestExpressApplication) {
+  const { createProxyMiddleware } = await import('http-proxy-middleware');
+  
+  // WebSocket Proxy for Realtime Service
   const wsProxy = createProxyMiddleware({
     target: 'http://realtime-srv:4006',
     ws: true,
     changeOrigin: true,
-    pathFilter: (pathname: string) =>
-      pathname.startsWith('/realtime') || pathname.startsWith('/ws'),
-    pathRewrite: {
-      '^/realtime': '/ws',
-    },
+    pathFilter: (pathname: string) => pathname.startsWith('/realtime') || pathname.startsWith('/ws'),
+    pathRewrite: { '^/realtime': '/ws' },
   });
   app.use(wsProxy);
 
@@ -103,32 +73,57 @@ async function bootstrap() {
   });
   app.use(s3Proxy);
 
+  return { wsProxy };
+}
+
+async function bootstrap() {
+  const { StructuredLogger } = await import('@delivery/common');
+  const logger = new StructuredLogger();
+
+  await waitForDependencies(logger);
+
+  // Lazy-load AppModule and NestJS
+  const { AppModule } = require('./app.module');
+  const { NestFactory } = await import('@nestjs/core');
+  
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger });
+
+  app.set('trust proxy', 1);
+  app.enableShutdownHooks();
+
+  const helmet = (await import('helmet')).default;
+  app.use(
+    helmet({
+      contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
+
+  app.enableCors({ origin: '*', credentials: true });
+
+  const { wsProxy } = await setupProxies(app);
+
+  const port = process.env.PORT_GATEWAY ?? 4000;
   await app.listen(port, '0.0.0.0');
 
-  // Attach the proxy upgrade handler manually to the underlying HTTP server
+  // Attach proxy upgrade handler
   const httpServer = app.getHttpServer();
   httpServer.on('upgrade', (req: any, socket: any, head: any) => {
-    if (
-      req.url &&
-      (req.url.startsWith('/realtime') || req.url.startsWith('/ws'))
-    ) {
+    if (req.url && (req.url.startsWith('/realtime') || req.url.startsWith('/ws'))) {
       wsProxy.upgrade(req, socket, head);
     }
   });
 
-  logger.log(
-    `API Gateway is running on: https://delivery.test/graphql or http://localhost:${port}/graphql`,
-  );
+  console.log(`API Gateway is running on: https://delivery.test/graphql or http://localhost:${port}/graphql`);
 }
 
 function runBootstrap() {
   bootstrap().catch((err) => {
-    console.error(
-      'Bootstrap failed, retrying in 10s...',
-      err?.stack || err?.message || err,
-    );
+    console.error('Bootstrap failed, retrying in 10s...', err?.stack || err?.message || err);
     setTimeout(() => runBootstrap(), 10000);
   });
 }
 
+// Start Liveness Server, then trigger Bootstrap
+startLivenessServer();
 runBootstrap();

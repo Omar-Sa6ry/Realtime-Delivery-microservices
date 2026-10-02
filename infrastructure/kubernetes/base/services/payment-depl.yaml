@@ -78,7 +78,7 @@ spec:
           httpGet:
             path: /health/live
             port: graphql
-          initialDelaySeconds: 10
+          initialDelaySeconds: 45
           periodSeconds: 5
           failureThreshold: 120
           timeoutSeconds: 5

@@ -185,6 +185,17 @@ export const RABBITMQ_QUEUE_DLQ: Record<string, { exchange: string; routingKey: 
   },
 };
 
+export function buildExchangeArguments(exchange: string): Record<string, unknown> {
+  if (
+    exchange.includes('dlx') ||
+    exchange.includes('unroutable') ||
+    exchange.includes('dlq')
+  ) {
+    return {};
+  }
+  return { 'alternate-exchange': RabbitMQExchanges.UNROUTABLE };
+}
+
 export function buildQueueArguments(queue: string): Record<string, unknown> {
   const isDlq = queue.endsWith('.dlq.queue') || queue === RabbitMQQueues.DELIVERY_DLQ;
   if (isDlq) {

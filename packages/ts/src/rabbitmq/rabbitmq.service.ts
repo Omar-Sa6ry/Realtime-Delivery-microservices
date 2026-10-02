@@ -6,6 +6,7 @@ import {
   RABBITMQ_EXCHANGE_TYPES,
   RabbitMQExchanges,
   RabbitMQHeaders,
+  buildExchangeArguments,
   buildQueueArguments,
 } from './rabbitmq.constants';
 
@@ -408,10 +409,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       }
     }
     for (const [exchange, type] of exchanges) {
-      const args: Record<string, unknown> = {};
-      if (!exchange.includes('dlx') && !exchange.includes('unroutable') && !exchange.includes('dlq')) {
-        args['alternate-exchange'] = 'delivery.unroutable.fanout';
-      }
+      const args = buildExchangeArguments(exchange);
       await channel.assertExchange(exchange, type as string, { durable: true, arguments: args });
     }
     for (const b of bindings) {

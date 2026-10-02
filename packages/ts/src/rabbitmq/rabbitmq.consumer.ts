@@ -5,6 +5,7 @@ import {
   RABBITMQ_EXCHANGE_TYPES,
   RabbitMQExchanges,
   RabbitMQHeaders,
+  buildExchangeArguments,
   buildQueueArguments,
   resolvePrefetch,
 } from './rabbitmq.constants';
@@ -151,6 +152,7 @@ export abstract class BaseRabbitMQConsumer implements OnModuleInit, OnModuleDest
       RABBITMQ_EXCHANGE_TYPES[this.exchange as RabbitMQExchanges] ?? 'topic';
     await this.channel.assertExchange(this.exchange, exchangeType as string, {
       durable: true,
+      arguments: buildExchangeArguments(this.exchange),
     });
     await this.channel.assertQueue(this.queue, {
       durable: true,

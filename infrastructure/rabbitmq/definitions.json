@@ -292,7 +292,8 @@
       "auto_delete": false,
       "arguments": {
         "x-queue-type": "quorum",
-        "x-dead-letter-exchange": "delivery.dlx.fanout"
+        "x-dead-letter-exchange": "delivery.dlx.direct",
+        "x-dead-letter-routing-key": "orders.dlq"
       }
     },
     {
@@ -395,7 +396,8 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {
-        "x-queue-type": "quorum"
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "delivery.dlx.fanout"
       }
     }
   ],

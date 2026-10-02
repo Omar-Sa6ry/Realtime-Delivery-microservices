@@ -4,7 +4,7 @@ metadata:
   name: search-depl
 spec:
   replicas: 1
-  progressDeadlineSeconds: 900
+  progressDeadlineSeconds: 3600
   selector:
     matchLabels:
       app: search
@@ -51,24 +51,21 @@ spec:
             - containerPort: 9103
               name: metrics
           startupProbe:
-            httpGet:
-              path: /health/live
+            tcpSocket:
               port: 4007
-            initialDelaySeconds: 10
+            initialDelaySeconds: 45
             periodSeconds: 5
             failureThreshold: 120
             timeoutSeconds: 5
           readinessProbe:
-            httpGet:
-              path: /health/ready
+            tcpSocket:
               port: 4007
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 60
             timeoutSeconds: 5
           livenessProbe:
-            httpGet:
-              path: /health/live
+            tcpSocket:
               port: 4007
             initialDelaySeconds: 30
             periodSeconds: 20

@@ -91,7 +91,7 @@ spec:
           httpGet:
             path: /healthz
             port: graphql
-          initialDelaySeconds: 15
+          initialDelaySeconds: 45
           periodSeconds: 5
           failureThreshold: 180
           timeoutSeconds: 5

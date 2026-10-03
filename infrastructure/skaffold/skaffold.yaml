@@ -136,3 +136,8 @@ portForward:
     resourceName: payment-srv
     port: 4012
     localPort: 4012
+
+  - resourceType: service
+    resourceName: localstack-srv
+    port: 4566
+    localPort: 4566

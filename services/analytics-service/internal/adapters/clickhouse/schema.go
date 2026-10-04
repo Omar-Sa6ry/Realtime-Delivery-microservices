@@ -147,6 +147,19 @@ ORDER BY (channel, occurred_at, notification_id)`,
 PARTITION BY toYYYYMM(detected_at)
 ORDER BY (severity, detected_at, issue_id)`,
 	},
+	{
+		name: "analytics_processed_events",
+		sql: `CREATE TABLE IF NOT EXISTS analytics_processed_events (
+    event_id       String,
+    aggregate_type LowCardinality(String),
+    aggregate_id   String,
+    source_topic   LowCardinality(String),
+    source_offset  Int64,
+    first_seen_at  DateTime64(3, 'UTC')
+) ENGINE = MergeTree
+PARTITION BY toYYYYMM(first_seen_at)
+ORDER BY (event_id)`,
+	},
 }
 
 func Migrate(ctx context.Context, client *Client) error {

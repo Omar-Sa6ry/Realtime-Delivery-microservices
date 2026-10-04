@@ -27,6 +27,25 @@ func (s *Service) DeleteDelivery(ctx context.Context, id string) error {
 
 func (s *Service) UpsertDriver(ctx context.Context, doc search.DriverDocument) error {
 	slog.Info("Indexing driver", "id", doc.DriverID, "status", doc.Status, "version", doc.SourceVersion)
+
+	if doc.Name != "" {
+		res, err := s.repo.SearchUsers(ctx, search.UserSearchQuery{
+			Query:      doc.Name,
+			Pagination: search.PaginationInput{Limit: 5},
+		})
+		if err == nil && len(res.Items) > 0 {
+			for _, u := range res.Items {
+				if u.ID == doc.Name {
+					fullName := u.FirstName + " " + u.LastName
+					if fullName != " " {
+						doc.Name = fullName
+					}
+					break
+				}
+			}
+		}
+	}
+
 	return s.repo.UpsertDriver(ctx, doc)
 }
 

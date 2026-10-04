@@ -162,9 +162,11 @@ func (r *QueryRepository) DeliveryAnalytics(ctx context.Context, f ports.Deliver
 
 func scanDriverAnalytics(row *sql.Row, driverID string) (*ports.DriverAnalytics, error) {
 	out := &ports.DriverAnalytics{DriverID: driverID, DataAsOf: time.Now().UTC()}
-	if err := row.Scan(&out.Offers, &out.Accepted, &out.Rejected, &out.Expired, &out.AverageResponseTimeMs); err != nil {
+	var avgResp sql.NullFloat64
+	if err := row.Scan(&out.Offers, &out.Accepted, &out.Rejected, &out.Expired, &avgResp); err != nil {
 		return nil, err
 	}
+	out.AverageResponseTimeMs = avgResp.Float64
 	if out.Offers > 0 {
 		out.AcceptanceRate = float64(out.Accepted) / float64(out.Offers)
 	}
@@ -205,9 +207,11 @@ func (r *QueryRepository) TopDrivers(ctx context.Context, tr ports.TimeRange, li
 	driverIDs := make([]string, 0, limit)
 	for rows.Next() {
 		var d ports.DriverAnalytics
-		if err := rows.Scan(&d.DriverID, &d.Offers, &d.Accepted, &d.Rejected, &d.Expired, &d.AverageResponseTimeMs); err != nil {
+		var avgResp sql.NullFloat64
+		if err := rows.Scan(&d.DriverID, &d.Offers, &d.Accepted, &d.Rejected, &d.Expired, &avgResp); err != nil {
 			return nil, fmt.Errorf("scan top driver: %w", err)
 		}
+		d.AverageResponseTimeMs = avgResp.Float64
 		if d.Offers > 0 {
 			d.AcceptanceRate = float64(d.Accepted) / float64(d.Offers)
 		}

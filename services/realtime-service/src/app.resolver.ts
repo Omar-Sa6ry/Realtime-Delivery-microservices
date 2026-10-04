@@ -15,7 +15,9 @@ export class AppResolver {
   @Query(() => BooleanResponse)
   async pingForRealtime(@Context() ctx?: any): Promise<BooleanResponse> {
     const lang = ctx?.language || ctx?.req?.headers?.['x-lang'] || 'en';
-    const message = await this.i18n.translate('messages.service.running', { lang });
+    const message = await this.i18n.translate('messages.service.running', {
+      lang,
+    });
     return {
       success: true,
       statusCode: 200,
@@ -32,7 +34,9 @@ export class AppResolver {
   ): Promise<ConnectionStatusResponse> {
     const lang = ctx?.language || ctx?.req?.headers?.['x-lang'] || 'en';
     const tokenUserId = ctx?.req?.user?.id ?? ctx?.req?.headers?.['x-user-id'];
-    const userRole = (ctx?.req?.user?.role ?? ctx?.req?.headers?.['x-user-role'])?.toLowerCase();
+    const userRole = (
+      ctx?.req?.user?.role ?? ctx?.req?.headers?.['x-user-role']
+    )?.toLowerCase();
     const isAdmin = userRole === 'admin';
 
     if (!isAdmin && tokenUserId !== userId) {
@@ -42,7 +46,10 @@ export class AppResolver {
     }
 
     const status = await this.connectionService.getUserConnectionStatus(userId);
-    const message = await this.i18n.translate('messages.service.statusRetrieved', { lang });
+    const message = await this.i18n.translate(
+      'messages.service.statusRetrieved',
+      { lang },
+    );
     return {
       success: true,
       statusCode: 200,
@@ -57,9 +64,13 @@ export class AppResolver {
 
   @Auth()
   @Query(() => ConnectionsCountResponse)
-  async getActiveConnections(@Context() ctx: any): Promise<ConnectionsCountResponse> {
+  async getActiveConnections(
+    @Context() ctx: any,
+  ): Promise<ConnectionsCountResponse> {
     const lang = ctx?.language || ctx?.req?.headers?.['x-lang'] || 'en';
-    const userRole = (ctx?.req?.user?.role ?? ctx?.req?.headers?.['x-user-role'])?.toLowerCase();
+    const userRole = (
+      ctx?.req?.user?.role ?? ctx?.req?.headers?.['x-user-role']
+    )?.toLowerCase();
     const isAdmin = userRole === 'admin';
 
     if (!isAdmin) {
@@ -69,7 +80,10 @@ export class AppResolver {
     }
 
     const data = await this.connectionService.getActiveConnectionCounts();
-    const message = await this.i18n.translate('messages.service.countsRetrieved', { lang });
+    const message = await this.i18n.translate(
+      'messages.service.countsRetrieved',
+      { lang },
+    );
     return {
       success: true,
       statusCode: 200,

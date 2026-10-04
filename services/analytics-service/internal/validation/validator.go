@@ -323,8 +323,7 @@ func NormalizeProvider(s string) (string, error) {
 	upper := strings.ToUpper(s)
 	switch upper {
 	case "STRIPE", "PAYPAL", "CASH":
-		// Return lowercase or uppercase matching existing query repo expectations (lowercased in provider filter)
-		return strings.ToLower(upper), nil
+		return upper, nil
 	default:
 		return "", fmt.Errorf("invalid provider %q: must be STRIPE, PAYPAL, or CASH", s)
 	}

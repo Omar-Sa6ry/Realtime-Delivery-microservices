@@ -34,6 +34,7 @@ import {
 } from '@delivery/common';
 import { CommonModule } from './common/common.module';
 import realtimeConfig from './common/config/realtime.config';
+import { AppResolver } from './app.resolver';
 
 @Module({
   imports: [
@@ -97,6 +98,7 @@ import realtimeConfig from './common/config/realtime.config';
     CommonModule,
   ],
   providers: [
+    AppResolver,
     {
       provide: APP_FILTER,
       useClass: GraphQLExceptionFilter,

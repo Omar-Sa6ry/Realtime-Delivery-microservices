@@ -135,7 +135,7 @@ var knownEventTypes = map[string]bool{
 	"driver.assignment.expired": true, "driver.assignment.released": true,
 	"payment.created": true, "payment.authorization.started": true, "payment.authorized": true,
 	"payment.authorization.failed": true, "payment.capture.started": true, "payment.captured": true,
-	"payment.capture.failed": true, "payment.cancelled": true, "payment.refund.started": true,
+	"payment.completed": true, "payment.capture.failed": true, "payment.cancelled": true, "payment.refund.started": true,
 	"payment.refunded": true, "payment.refund.failed": true, "payment.failed": true,
 	"notification.created": true, "notification.sent": true, "notification.delivered": true,
 	"notification.failed": true, "notification.retrying": true,

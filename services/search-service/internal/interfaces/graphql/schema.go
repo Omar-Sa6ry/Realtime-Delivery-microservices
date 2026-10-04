@@ -3,6 +3,7 @@ package graphql
 import (
 	"fmt"
 
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/domain/search"
 	gql "github.com/graphql-go/graphql"
 )
 
@@ -74,8 +75,13 @@ type DeliverySearchResponse {
   data: DeliverySearchData
 }
 
+type Driver @key(fields: "id") {
+  id: ID!
+}
+
 type DriverDocument {
   driver_id: String!
+  driver: Driver
   name: String!
   status: String!
   vehicle_type: String!
@@ -342,10 +348,27 @@ var deliverySearchResponseType = gql.NewObject(gql.ObjectConfig{
 	},
 })
 
+var driverRefType = gql.NewObject(gql.ObjectConfig{
+	Name: "Driver",
+	Fields: gql.Fields{
+		"id": &gql.Field{Type: gql.NewNonNull(gql.ID)},
+	},
+})
+
 var driverDocumentType = gql.NewObject(gql.ObjectConfig{
 	Name: "DriverDocument",
 	Fields: gql.Fields{
 		"driver_id":      &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"driver": &gql.Field{
+			Type: driverRefType,
+			Resolve: func(p gql.ResolveParams) (interface{}, error) {
+				doc, ok := p.Source.(search.DriverDocument)
+				if !ok {
+					return nil, nil
+				}
+				return map[string]interface{}{"id": doc.DriverID}, nil
+			},
+		},
 		"name":           &gql.Field{Type: gql.NewNonNull(gql.String)},
 		"status":         &gql.Field{Type: gql.NewNonNull(gql.String)},
 		"vehicle_type":   &gql.Field{Type: gql.NewNonNull(gql.String)},

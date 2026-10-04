@@ -37,6 +37,7 @@ const (
 	TopicPaymentAuthorizationFailed   = "payment.authorization.failed"
 	TopicPaymentCaptureStarted        = "payment.capture.started"
 	TopicPaymentCaptured              = "payment.captured"
+	TopicPaymentCompleted             = "payment.completed"
 	TopicPaymentCaptureFailed         = "payment.capture.failed"
 	TopicPaymentCancelled             = "payment.cancelled"
 	TopicPaymentRefundStarted         = "payment.refund.started"
@@ -85,6 +86,7 @@ func AnalyticsTopics() []string {
 		TopicPaymentAuthorizationFailed,
 		TopicPaymentCaptureStarted,
 		TopicPaymentCaptured,
+		TopicPaymentCompleted,
 		TopicPaymentCaptureFailed,
 		TopicPaymentCancelled,
 		TopicPaymentRefundStarted,

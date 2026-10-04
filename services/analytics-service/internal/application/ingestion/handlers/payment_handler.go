@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/domain"
@@ -15,6 +16,7 @@ var paymentTypeMapping = map[string]domain.PaymentTransactionType{
 	"payment.authorization.failed":  domain.TransactionAuthorization,
 	"payment.capture.started":       domain.TransactionCapture,
 	"payment.captured":              domain.TransactionCapture,
+	"payment.completed":             domain.TransactionCapture,
 	"payment.capture.failed":        domain.TransactionCapture,
 	"payment.cancelled":             domain.TransactionCancel,
 	"payment.refund.started":        domain.TransactionRefund,
@@ -48,10 +50,26 @@ func (h *PaymentHandler) Handle(ctx context.Context, env *domain.EventEnvelope, 
 		PaymentID:         paymentID,
 		DeliveryID:        GetString(m, "deliveryId"),
 		UserID:            GetString(m, "userId"),
-		Provider:          GetString(m, "provider"),
+		Provider:          func() string {
+			p := GetString(m, "provider")
+			if p == "" {
+				return "STRIPE"
+			}
+			return strings.ToUpper(p)
+		}(),
 		TransactionType:   txType,
 		Status:            derivePaymentStatus(env.EventType, m),
-		Amount:            GetString(m, "amount"),
+		Amount:            func() string {
+			if a := GetString(m, "amount"); a != "" {
+				return a
+			}
+			if amStr := GetString(m, "amountMinor"); amStr != "" {
+				if amountMinor, err := strconv.ParseFloat(amStr, 64); err == nil {
+					return fmt.Sprintf("%.2f", amountMinor/100.0)
+				}
+			}
+			return "0.00"
+		}(),
 		Currency:          GetString(m, "currency"),
 		ProviderLatencyMs: GetUint64(m, "providerLatencyMs"),
 		OccurredAt:        env.OccurredAt,
@@ -82,7 +100,7 @@ func derivePaymentStatus(eventType string, m map[string]any) string {
 		return "CANCELLED"
 	case strings.HasSuffix(eventType, ".authorized"):
 		return "AUTHORIZED"
-	case strings.HasSuffix(eventType, ".captured"):
+	case strings.HasSuffix(eventType, ".captured") || strings.HasSuffix(eventType, ".completed"):
 		return "CAPTURED"
 	case strings.HasSuffix(eventType, ".refunded"):
 		return "REFUNDED"

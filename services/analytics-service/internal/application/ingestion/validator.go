@@ -160,6 +160,7 @@ var requiredPayloadFields = map[string][]string{
 	"payment.authorization.failed":  {"paymentId"},
 	"payment.capture.started":       {"paymentId"},
 	"payment.captured":              {"paymentId"},
+	"payment.completed":             {"paymentId"},
 	"payment.capture.failed":        {"paymentId"},
 	"payment.cancelled":             {"paymentId"},
 	"payment.refund.started":        {"paymentId"},

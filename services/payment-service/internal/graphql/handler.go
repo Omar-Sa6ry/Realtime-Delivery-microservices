@@ -3,6 +3,7 @@ package graphql
 import (
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -423,20 +424,18 @@ func extractIDFromQueryOrVars(query string, vars map[string]interface{}) string 
 		if id, ok := vars["id"].(string); ok && id != "" {
 			return id
 		}
+		// Apollo Gateway sometimes passes variables under different names
+		for _, v := range vars {
+			if strVal, ok := v.(string); ok && strVal != "" {
+				return strVal
+			}
+		}
 	}
 
-	idx := strings.Index(query, "id:")
-	if idx == -1 {
-		return ""
-	}
-	sub := query[idx+3:]
-	sub = strings.TrimSpace(sub)
-	if strings.HasPrefix(sub, "\"") {
-		sub = sub[1:]
-		end := strings.Index(sub, "\"")
-		if end != -1 {
-			return sub[:end]
-		}
+	re := regexp.MustCompile(`id:\s*"?([a-zA-Z0-9_-]+)"?`)
+	matches := re.FindStringSubmatch(query)
+	if len(matches) > 1 {
+		return matches[1]
 	}
 	return ""
 }

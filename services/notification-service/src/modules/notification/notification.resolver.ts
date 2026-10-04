@@ -115,7 +115,7 @@ export class NotificationResolver {
 
   @Mutation(() => BooleanResponse)
   @RedisRateLimit({ ...FIXED_WINDOW_RATE_LIMIT, limit: 50, windowMs: 60000 })
-  @Auth([Permission.DELETE_NOTIFICATION])
+  @Auth([Permission.UPDATE_NOTIFICATION])
   async deleteNotification(
     @CurrentUser() user: IUser,
     @Args('id', { type: () => ID }) id: string,

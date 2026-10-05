@@ -180,7 +180,7 @@ export class GrpcClient {
     url: string,
     protoFile: string,
   ): Promise<ServiceClient> {
-    const protoPath = join(__dirname, '../../../../../protos/', protoFile);
+    const protoPath = join(process.cwd(), '../../protos/', protoFile);
     const packageDefinition = protoLoader.loadSync(protoPath, {
       keepCase: true,
       longs: String,

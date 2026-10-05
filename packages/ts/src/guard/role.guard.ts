@@ -31,10 +31,6 @@ export class RoleGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    if (!this.userService) {
-      throw new Error('USER_SERVICE not provided in AuthCommonModule context');
-    }
-
     const ctx = GqlExecutionContext.create(context);
     const request = ctx.getContext().req;
 

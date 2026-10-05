@@ -12,7 +12,7 @@ on:
 
 jobs:
   unit-tests:
-    name: @delivery/common unit tests & coverage gate
+    name: '@delivery-micro/shard unit tests & coverage gate'
     runs-on: ubuntu-latest
     defaults:
       run:

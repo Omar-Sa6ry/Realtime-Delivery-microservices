@@ -1,6 +1,3 @@
-/**
- * User lifecycle events shared by services.
- */
 export enum UserEventType {
   Created = 'user.created',
   Updated = 'user.updated',

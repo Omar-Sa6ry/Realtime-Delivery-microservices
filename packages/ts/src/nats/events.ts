@@ -10,8 +10,6 @@ export enum UserEvents {
   CHECK_IF_INSTRUCTOR = "user.checkIfInstructor",
 }
 
-// Kafka topics now live in `../kafka/kafka.topics`.
-// Re-exported from here for backwards compatibility.
 export { DeliveryKafkaTopics, PaymentKafkaTopics } from "../kafka/kafka.topics";
 
 export enum NotificationNatsSubjects {

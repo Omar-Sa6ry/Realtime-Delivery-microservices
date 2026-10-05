@@ -21,7 +21,6 @@ export interface DriverGeoPoint {
   lon: number;
 }
 
-// Base driver payload with common fields
 export interface DriverBasePayload {
   driverId: string;
   userId?: string;
@@ -34,45 +33,35 @@ export interface DriverBasePayload {
   updatedAt: string; // ISO 8601
 }
 
-// Driver-specific payloads
 export interface DriverCreatedPayload extends DriverBasePayload {}
-
-// DriverUpdatedPayload is emitted when a driver profile is updated.
 export interface DriverUpdatedPayload extends DriverBasePayload {}
 
-// DriverDeletedPayload is emitted when a driver profile is permanently removed.
 export interface DriverDeletedPayload {
   driverId: string;
   deletedAt: string; // ISO 8601
 }
 
-// DriverActivatedPayload is emitted when a driver is activated.
 export interface DriverActivatedPayload {
   driverId: string;
 }
 
-// DriverDeactivatedPayload is emitted when a driver is deactivated.
 export interface DriverDeactivatedPayload {
   driverId: string;
 }
 
-// DriverAvailablePayload is emitted when a driver becomes available.
 export interface DriverAvailablePayload {
   driverId: string;
 }
 
-// DriverUnavailablePayload is emitted when a driver becomes unavailable.
 export interface DriverUnavailablePayload {
   driverId: string;
 }
 
-// DriverGeoPoint holds a geographic coordinate for a driver's location.
 export interface DriverGeoPoint {
   lat: number;
   lon: number;
 }
 
-// DriverAssignmentOfferedPayload is emitted when a driver is offered an assignment.
 export interface DriverAssignmentOfferedPayload {
   assignmentId: string;
   driverId: string;
@@ -88,7 +77,6 @@ export interface DriverAssignmentOfferedPayload {
   currency?: string;
 }
 
-// DriverAssignmentAcceptedPayload is emitted when a driver accepts an assignment.
 export interface DriverAssignmentAcceptedPayload {
   assignmentId: string;
   deliveryId?: string;
@@ -96,7 +84,6 @@ export interface DriverAssignmentAcceptedPayload {
   acceptedAt: string; // ISO 8601
 }
 
-// DriverAssignmentRejectedPayload is emitted when a driver rejects an assignment.
 export interface DriverAssignmentRejectedPayload {
   assignmentId: string;
   deliveryId?: string;
@@ -105,7 +92,6 @@ export interface DriverAssignmentRejectedPayload {
   rejectedAt?: string; // ISO 8601
 }
 
-// DriverAssignmentExpiredPayload is emitted when a driver assignment offer expires.
 export interface DriverAssignmentExpiredPayload {
   assignmentId: string;
   deliveryId?: string;
@@ -113,21 +99,18 @@ export interface DriverAssignmentExpiredPayload {
   expiredAt: string; // ISO 8601
 }
 
-// DriverAssignmentReleasedPayload is emitted when a driver assignment is released.
 export interface DriverAssignmentReleasedPayload {
   assignmentId: string;
   driverId: string;
   releasedAt: string; // ISO 8601
 }
 
-// DriverAssignmentCompletedPayload is emitted when a driver assignment is completed.
 export interface DriverAssignmentCompletedPayload {
   assignmentId: string;
   driverId: string;
   completedAt: string; // ISO 8601
 }
 
-// DriverNoDriverAvailablePayload is emitted when no driver is nearby/available.
 export interface DriverNoDriverAvailablePayload {
   deliveryId: string;
   customerId: string;
@@ -136,7 +119,6 @@ export interface DriverNoDriverAvailablePayload {
   triedAt: string;
 }
 
-// DriverSearchRetryPayload is emitted when a periodic retry runs.
 export interface DriverSearchRetryPayload {
   deliveryId: string;
   customerId: string;
@@ -145,7 +127,6 @@ export interface DriverSearchRetryPayload {
   retryInterval: number;
 }
 
-// Generic Kafka event envelope for driver events.
 
 export interface DriverEventEnvelope<T = unknown> {
   eventId: string;

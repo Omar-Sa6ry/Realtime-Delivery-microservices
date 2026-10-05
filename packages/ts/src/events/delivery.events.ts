@@ -53,7 +53,6 @@ export interface DeliveryDeletedPayload {
   deletedAt: string;
 }
 
-// Generic Kafka event envelope for delivery events.
 export interface DeliveryEventEnvelope<T = unknown> {
   eventId: string;
   eventType: DeliveryEventType | string;

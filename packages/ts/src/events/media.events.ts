@@ -1,8 +1,3 @@
-/**
- * Media service event types for Kafka / NATS consumers.
- * Any NestJS service that subscribes to media events should import from here.
- */
-
 export enum MediaEventType {
   UploadCreated       = 'media.upload.created',
   UploadCompleted     = 'media.upload.completed',

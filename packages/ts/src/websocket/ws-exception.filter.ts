@@ -2,11 +2,6 @@ import { ArgumentsHost, Catch, Logger } from '@nestjs/common';
 import { BaseWsExceptionFilter } from '@nestjs/websockets';
 import { ServerMessageType } from './realtime-message';
 import { WsCloseCode, WsErrorCode, WsException } from './ws-errors';
-
-/**
- * Converts WsException thrown by guards / services into the wire-protocol
- * ERROR envelope and closes the socket for terminal error codes.
- */
 @Catch(WsException)
 export class WsExceptionFilter extends BaseWsExceptionFilter {
   private readonly logger = new Logger(WsExceptionFilter.name);

@@ -2,18 +2,9 @@ import { Inject, Injectable, Optional } from "@nestjs/common";
 import { ClientMessage } from "./realtime-message";
 import { WsErrorCode, WsException } from "./ws-errors";
 
-// Token used to inject the rate limiter into the guard chain.
 export const WS_GUARD_CHAIN_RATE_LIMITER = "WS_GUARD_CHAIN_RATE_LIMITER";
+export const WS_GUARD_CHAIN_OPTIONS = "WS_GUARD_CHAIN_OPTIONS";
 
-
-// Token used to inject per-service guard options (validators + rate actions).
- export const WS_GUARD_CHAIN_OPTIONS = "WS_GUARD_CHAIN_OPTIONS";
-
-/**
- * Rate limiter contract the guard chain depends on. Implementations stay in
- * the owning service (Redis-backed store lives in this package as
- * RedisRateLimitStore / RateLimitStore).
- */
 export interface WsRateLimiter {
   check(userId: string, action: string): Promise<boolean>;
 }
@@ -25,9 +16,6 @@ export interface WsGuardChainOptions {
   rateActions?: Record<string, string>;
 }
 
-/**
- * Minimal socket surface the guard chain needs (client-side attach point).
- */
 export interface WsSocketLike {
   data?: { userId?: string };
 }
@@ -37,10 +25,6 @@ export interface WsGuardChainContext<T = unknown> {
   socket: WsSocketLike;
 }
 
-/**
- * Shared per-message guard pipeline: authenticate -> rate limit -> validate.
- * Domain-specific validators / rate actions are injected via WS_GUARD_CHAIN_OPTIONS.
- */
 @Injectable()
 export class WsGuardChain {
   constructor(

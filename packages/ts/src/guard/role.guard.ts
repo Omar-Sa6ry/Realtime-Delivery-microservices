@@ -50,10 +50,8 @@ export class RoleGuard implements CanActivate {
       throw new UnauthorizedException(await this.i18n.t('user.INVALID_TOKEN'));
     }
 
-    // Prefer JWT payload role if available to avoid unnecessary DB calls in microservices
     let userRole = payload.role as Role;
     
-    // Fallback to user service if role is missing in token
     if (!userRole && this.userService) {
       try {
         const userResponse = await this.userService.findById(userId);

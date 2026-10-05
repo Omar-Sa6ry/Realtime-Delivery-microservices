@@ -2,10 +2,6 @@ import { Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Consumer, EachMessagePayload } from 'kafkajs';
 import { KafkaService } from './kafka.service';
 
-/**
- * Base Kafka consumer class that handles automated topic creation
- * via Admin client, connection retries, and clean disconnects.
- */
 export abstract class BaseKafkaConsumer implements OnModuleInit, OnModuleDestroy {
   protected abstract readonly logger: any;
   protected abstract consumer: Consumer;

@@ -1,6 +1,3 @@
-/**
- * Search service events used for transient NATS signals and durable analytics events.
- */
 export enum SearchEventType {
   QueryStarted = 'search.query.started',
   QueryCompleted = 'search.query.completed',

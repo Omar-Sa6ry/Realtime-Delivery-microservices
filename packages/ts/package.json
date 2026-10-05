@@ -5,7 +5,11 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "npx tsc"
+    "build": "npx tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@bts-soft/cache": "^1.1.8",
@@ -26,15 +30,20 @@
     "@nestjs/graphql": "^13.0.0",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/platform-ws": "^11.0.0",
+    "@nestjs/testing": "^11.2.7",
     "@nestjs/websockets": "^11.0.0",
     "@types/express": "^5.0.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.0.0",
     "@types/ws": "^8.5.10",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "express": "^5.0.0",
     "graphql": "^16.9.0",
+    "jest": "^30.5.2",
+    "jest-mock": "^30.5.2",
     "rxjs": "^7.8.2",
+    "ts-jest": "^29.4.14",
     "typescript": "^5.7.0"
   },
   "peerDependencies": {

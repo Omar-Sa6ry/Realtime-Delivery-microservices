@@ -1,0 +1,44 @@
+name: common-unit-tests
+
+on:
+  push:
+    paths:
+      - 'packages/ts/**'
+      - '.github/workflows/common-unit-tests.yml'
+  pull_request:
+    paths:
+      - 'packages/ts/**'
+      - '.github/workflows/common-unit-tests.yml'
+
+jobs:
+  unit-tests:
+    name: @delivery/common unit tests & coverage gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/ts
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/ts/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check shared package
+        run: npx tsc --noEmit
+
+      - name: Run unit tests with coverage (fails below threshold)
+        run: npm run test:cov -- --ci --coverageReporters=text --coverageReporters=lcov
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: common-coverage-report
+          path: packages/ts/coverage
+          retention-days: 14

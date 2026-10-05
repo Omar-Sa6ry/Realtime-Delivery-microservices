@@ -5,7 +5,12 @@ const config: Config = {
   rootDir: 'src',
   testRegex: '.*\\.spec\\.ts$',
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
+    '^.+\\.(t|j)s$': [
+      'ts-jest',
+      {
+        diagnostics: false,
+      },
+    ],
   },
   collectCoverageFrom: [
     '**/*.(t|j)s',
@@ -17,9 +22,12 @@ const config: Config = {
     '!**/*.constant.ts',
     '!**/*.constants.ts',
     '!**/*.topics.ts',
+    '!**/events/envelope.ts',
   ],
   coverageDirectory: '../coverage',
+  coverageReporters: ['text', 'html', 'lcov'],
   testEnvironment: 'node',
+  workerThreads: true,
   coverageThreshold: {
     global: {
       branches: 85,

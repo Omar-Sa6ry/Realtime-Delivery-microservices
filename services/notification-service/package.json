@@ -27,7 +27,7 @@
     "@bts-soft/common": "^1.5.3",
     "@bts-soft/core": "^3.1.7",
     "@bts-soft/notifications": "^1.8.0",
-    "@delivery/common": "file:../../packages/ts",
+    "@delivery-micro/shard": "^1.0.0",
     "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.1",
     "@nestjs/apollo": "^13.4.4",
@@ -49,12 +49,12 @@
     "graphql": "16.10.0",
     "handlebars": "^4.7.9",
     "kafkajs": "^2.2.4",
+    "nats": "^2.29.3",
     "nestjs-i18n": "^10.8.5",
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.21",
-    "nats": "^2.29.3"
+    "typeorm": "^0.3.21"
   },
   "overrides": {
     "graphql": "16.10.0"

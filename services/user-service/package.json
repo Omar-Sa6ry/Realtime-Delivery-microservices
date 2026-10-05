@@ -26,7 +26,7 @@
     "@as-integrations/express5": "^1.1.2",
     "@as-integrations/fastify": "^3.1.0",
     "@bts-soft/core": "^3.1.7",
-    "@delivery/common": "file:../../packages/ts",
+    "@delivery-micro/shard": "^1.0.0",
     "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.1",
     "@nestjs/apollo": "^13.4.2",

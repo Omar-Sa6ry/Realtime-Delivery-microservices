@@ -1,11 +1,32 @@
 {
-  "name": "@delivery/common",
+  "name": "@delivery-micro/shard",
   "version": "1.0.0",
-  "description": "Shared Common Package for Realtime Delivery Microservices",
+  "description": "shared package for delivery microservices",
+  "author": "Omar Sabry",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "delivery",
+    "microservices",
+    "shared",
+    "common",
+    "kafka",
+    "grpc",
+    "nestjs",
+    "rabbitmq",
+    "prometheus",
+    "validation",
+    "ulid"
+  ],
   "scripts": {
     "build": "npx tsc",
+    "prepublishOnly": "npm run test && npm run build",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",

@@ -155,8 +155,8 @@ var queueDLQ = map[string]struct {
 func DefaultQueueArguments(queue string) amqp.Table {
 	if queue == QueueAnalyticsEvents || queue == QueueRealtimeBroadcast {
 		return amqp.Table{
-			"x-queue-type": "stream",
-			"x-max-age": "7D",
+			"x-queue-type":                    "stream",
+			"x-max-age":                       "7D",
 			"x-stream-max-segment-size-bytes": int64(50000000),
 		}
 	}
@@ -269,6 +269,50 @@ func UnmarshalEnvelope(data []byte) (*EventEnvelope, error) {
 
 // Connection — one per service, multiplexed channels
 
+// Channel is the AMQP channel surface used across this package. Declaring it
+// as an interface lets tests exercise topology/publish/consume logic without a
+// live broker.
+type Channel interface {
+	ExchangeDeclare(name, kind string, durable, autoDelete, internal, noWait bool, args amqp.Table) error
+	QueueDeclare(name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table) (amqp.Queue, error)
+	QueueBind(name, key, exchange string, noWait bool, args amqp.Table) error
+	Qos(prefetchCount, prefetchSize int, global bool) error
+	Consume(queue, consumer string, autoAck, exclusive, noLocal, noWait bool, args amqp.Table) (<-chan amqp.Delivery, error)
+	PublishWithContext(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error
+	Confirm(noWait bool) error
+	NotifyPublish(confirm chan amqp.Confirmation) chan amqp.Confirmation
+	GetNextPublishSeqNo() uint64
+	IsClosed() bool
+	Close() error
+}
+
+// brokerConn is the AMQP connection surface used by Connection.
+type brokerConn interface {
+	Channel() (Channel, error)
+	IsClosed() bool
+	Close() error
+	NotifyClose(receiver chan *amqp.Error) chan *amqp.Error
+}
+
+// realConn adapts *amqp.Connection onto brokerConn.
+type realConn struct{ c *amqp.Connection }
+
+func (r *realConn) Channel() (Channel, error) { return r.c.Channel() }
+func (r *realConn) IsClosed() bool            { return r.c.IsClosed() }
+func (r *realConn) Close() error              { return r.c.Close() }
+func (r *realConn) NotifyClose(receiver chan *amqp.Error) chan *amqp.Error {
+	return r.c.NotifyClose(receiver)
+}
+
+// dialAMQP is swappable so tests never open a real socket.
+var dialAMQP = func(url string) (brokerConn, error) {
+	conn, err := amqp.Dial(url)
+	if err != nil {
+		return nil, err
+	}
+	return &realConn{c: conn}, nil
+}
+
 type Config struct {
 	URL         string
 	ServiceName string
@@ -294,8 +338,14 @@ func (c Config) withDefaults() Config {
 type Connection struct {
 	mu     sync.Mutex
 	cfg    Config
-	conn   *amqp.Connection
+	conn   brokerConn
 	closed bool
+}
+
+// newConnection builds a Connection around an already-established broker
+// connection (used by tests and by Connect).
+func newConnection(cfg Config, conn brokerConn) *Connection {
+	return &Connection{cfg: cfg.withDefaults(), conn: conn}
 }
 
 func Connect(cfg Config) (*Connection, error) {
@@ -328,7 +378,7 @@ func (c *Connection) ensureConnLocked() error {
 	delay := c.cfg.BaseDelay
 	var lastErr error
 	for i := 1; i <= c.cfg.MaxAttempts; i++ {
-		conn, err := amqp.Dial(c.cfg.URL)
+		conn, err := dialAMQP(c.cfg.URL)
 		if err == nil {
 			c.conn = conn
 			closeErr := make(chan *amqp.Error, 1)
@@ -368,7 +418,7 @@ func (c *Connection) ensureConnLocked() error {
 		c.cfg.MaxAttempts, lastErr)
 }
 
-func (c *Connection) Channel() (*amqp.Channel, error) {
+func (c *Connection) Channel() (Channel, error) {
 	if err := c.ensureConn(); err != nil {
 		return nil, err
 	}
@@ -486,7 +536,7 @@ type Publisher struct {
 	conn     *Connection
 	service  string
 	mu       sync.Mutex
-	ch       *amqp.Channel
+	ch       Channel
 	confirms chan amqp.Confirmation
 }
 
@@ -585,11 +635,11 @@ func (p *Publisher) Publish(ctx context.Context, exchange, routingKey, eventType
 		// Reopen the channel once and retry (covers broker restarts).
 		_ = p.closeChannel()
 		if rerr := p.ensureChannel(); rerr != nil {
-			failedTotal.WithLabelValues(p.service, exchange, routingKey, "reconnect").Inc()
+			failedTotal.WithLabelValues(p.service, exchange, "reconnect").Inc()
 			return fmt.Errorf("rabbitmq publish %q rk=%q: %w", exchange, routingKey, err)
 		}
 		if rerr := p.publishOnce(ctx, exchange, routingKey, pub, confirmTimeout); rerr != nil {
-			failedTotal.WithLabelValues(p.service, exchange, routingKey, "publish_error").Inc()
+			failedTotal.WithLabelValues(p.service, exchange, "publish_error").Inc()
 			return fmt.Errorf("rabbitmq publish %q rk=%q: %w", exchange, routingKey, rerr)
 		}
 	}
@@ -655,8 +705,8 @@ func (p *Publisher) Close() error {
 	return p.closeChannel()
 }
 
-
 type MessageHandler func(ctx context.Context, env *EventEnvelope, msg amqp.Delivery) error
+
 var ErrPermanent = errors.New("permanent processing failure")
 
 type ConsumerConfig struct {
@@ -665,9 +715,9 @@ type ConsumerConfig struct {
 	Exchange    string
 	RoutingKeys []string
 	ConsumerTag string // defaults to "<service>-<queue>"
-	Prefetch int
-	MaxRetries int
-	RetryDelay time.Duration
+	Prefetch    int
+	MaxRetries  int
+	RetryDelay  time.Duration
 }
 
 type Consumer struct {
@@ -700,10 +750,14 @@ func NewConsumer(cfg ConsumerConfig) *Consumer {
 	return c
 }
 
+// consumeBackoff is the base delay before reopening a failed consume channel.
+// It is a package variable so tests can shrink it.
+var consumeBackoff = time.Second
+
 func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 	slog.Info("RabbitMQ consumer started",
 		"service", c.service, "queue", c.cfg.Queue, "exchange", c.cfg.Exchange)
-	backoff := time.Second
+	backoff := consumeBackoff
 
 	for {
 		select {
@@ -738,7 +792,7 @@ func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 			}
 			continue
 		}
-		backoff = time.Second
+		backoff = consumeBackoff
 	}
 }
 
@@ -787,7 +841,7 @@ func (c *Consumer) consumeLoop(ctx context.Context, handler MessageHandler) erro
 	}
 }
 
-func (c *Consumer) handleDelivery(ctx context.Context, ch *amqp.Channel,
+func (c *Consumer) handleDelivery(ctx context.Context, ch Channel,
 	msg amqp.Delivery, handler MessageHandler) {
 
 	env, err := UnmarshalEnvelope(msg.Body)

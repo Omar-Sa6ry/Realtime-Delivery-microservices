@@ -50,7 +50,11 @@ func CheckDatabase(ctx context.Context, db *sql.DB) HealthStatus {
 	return HealthStatus{Status: "UP"}
 }
 
-func CheckRedis(ctx context.Context, client *redis.Client) HealthStatus {
+type RedisPinger interface {
+	Ping(ctx context.Context) *redis.StatusCmd
+}
+
+func CheckRedis(ctx context.Context, client RedisPinger) HealthStatus {
 	if client == nil {
 		return HealthStatus{Status: "DOWN", Message: "Redis client not initialized"}
 	}

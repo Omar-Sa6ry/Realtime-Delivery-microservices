@@ -6,11 +6,19 @@ import (
 	"time"
 )
 
+const (
+	idSequenceBits = 12
+	idWorkerBits   = 5
+	idDatacenter   = 5
+	timestampShift = idSequenceBits + idWorkerBits + idDatacenter
+)
+
 type Snowflake struct {
 	mu        sync.Mutex
 	timestamp int64
 	workerID  int64
 	sequence  int64
+	seqBits   uint8
 }
 
 type Config struct {
@@ -41,12 +49,13 @@ func NewSnowflake(cfg Config) (*Snowflake, error) {
 		return nil, errors.New("sequence_bits must not exceed 12")
 	}
 
-	workerIDCombined := cfg.WorkerID<<cfg.SequenceBits | cfg.DatacenterID<<(cfg.SequenceBits+5)
+	workerIDCombined := cfg.WorkerID<<cfg.SequenceBits | cfg.DatacenterID<<(cfg.SequenceBits+idWorkerBits)
 
 	sf := &Snowflake{
 		timestamp: time.Now().UnixNano() / 1e6, // current timestamp in ms
 		workerID:  workerIDCombined,
 		sequence:  0,
+		seqBits:   cfg.SequenceBits,
 	}
 
 	// Initialize to current time to avoid generating IDs in the past
@@ -63,26 +72,20 @@ func (sf *Snowflake) NextID() int64 {
 	now := time.Now().UnixNano() / 1e6 // current timestamp in ms
 
 	if now == sf.timestamp {
-		// Wait for next millisecond (simple spin loop)
-		for time.Now().UnixNano()/1e6 <= now {
+		sf.sequence++
+		if sf.sequence > int64(1<<idSequenceBits-1) {
+			for time.Now().UnixNano()/1e6 <= now {
+			}
+			now = time.Now().UnixNano() / 1e6
+			sf.timestamp = now
+			sf.sequence = 0
 		}
-		now = time.Now().UnixNano() / 1e6
 	} else {
-		sf.timestamp = now
-	}
-
-	// Increment sequence
-	sf.sequence++
-
-	if sf.sequence > int64(1<<12-1) {
-		for time.Now().UnixNano()/1e6 <= now {
-		}
-		now = time.Now().UnixNano() / 1e6
 		sf.timestamp = now
 		sf.sequence = 0
 	}
 
-	id := int64((now<<22)|sf.workerID|sf.sequence) & 0x1FFFFFFFFF
+	id := int64((now << timestampShift)) | sf.workerID | sf.sequence
 
 	return id
 }
@@ -92,55 +95,40 @@ func (sf *Snowflake) ID() int64 {
 }
 
 func (sf *Snowflake) WorkerID() int64 {
-	return sf.workerID & 0x1F // 5 bits
+	return (sf.workerID >> sf.seqBits) & 0x1F // 5 bits
 }
 
 func (sf *Snowflake) Sequence() int64 {
-	return sf.sequence & 0xFFF // 12 bits
+	return sf.sequence & (int64(1)<<idSequenceBits - 1) // 12 bits
 }
 
+// Parse decomposes an ID produced by NextID.
+//
+// Layout (little-endian bit fields): sequence(12) | worker(5) | datacenter(5) |
+// timestamp(41). The sequence width is the package default of 12 bits.
 func Parse(id int64) (int64, int64, int64, int64, error) {
-	const (
-		timestampBits = 41
-		datacenterBits = 5
-		workerBits = 5
-		sequenceBits = 12
-	)
-
-	// Mask for each field
-	timestampMask := int64(1<<timestampBits - 1)
-	datacenterMask := int64(1<<datacenterBits - 1) << (timestampBits + workerBits)
-	workerMask := int64(1<<workerBits - 1) << (timestampBits)
-	sequenceMask := int64(1<<sequenceBits - 1)
-	timestamp := (id & timestampMask)
-	datacenterID := (id & datacenterMask) >> (timestampBits + workerBits)
-	workerID := (id & workerMask) >> timestampBits
-	sequence := id & sequenceMask
+	timestamp := id >> timestampShift
+	workerID := (id >> idSequenceBits) & (int64(1)<<idWorkerBits - 1)
+	datacenterID := (id >> (idSequenceBits + idWorkerBits)) & (int64(1)<<idDatacenter - 1)
+	sequence := id & (int64(1)<<idSequenceBits - 1)
 
 	return timestamp, datacenterID, workerID, sequence, nil
 }
 
+// Validate reports whether id could have been produced by NextID. The layout
+// spans the whole positive int64 range, so only non-positive values are
+// structurally impossible.
 func Validate(id int64) bool {
-	if id <= 0 {
-		return false
-	}
-	if id > 0x1FFFFFFFFF { // 41+5+5+12 = 63 bits, max positive int64
-		return false
-	}
-	return true
+	return id > 0
 }
 
 var DefaultSnowflake *Snowflake
 var defaultSnowflakeOnce sync.Once
 
 func initDefaultSnowflake() {
-	sf, err := NewSnowflake(Config{
+	sf, _ := NewSnowflake(Config{
 		WorkerID: 1,
 	})
-	if err != nil {
-		// Fallback: create with minimal config
-		sf, _ = NewSnowflake(Config{})
-	}
 	DefaultSnowflake = sf
 }
 

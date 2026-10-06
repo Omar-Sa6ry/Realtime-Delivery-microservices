@@ -22,8 +22,29 @@ func UnmarshalEnvelope(data []byte) (*EventEnvelope, error) {
 	return events.UnmarshalEnvelope(data)
 }
 
+type MessageWriter interface {
+	WriteMessages(ctx context.Context, msgs ...kafkago.Message) error
+	Close() error
+}
+
+type MessageReader interface {
+	FetchMessage(ctx context.Context) (kafkago.Message, error)
+	CommitMessages(ctx context.Context, msgs ...kafkago.Message) error
+	Config() kafkago.ReaderConfig
+	Close() error
+}
+
+type TopicConn interface {
+	CreateTopics(topics ...kafkago.TopicConfig) error
+	Close() error
+}
+
+var dialKafka = func(network, address string) (TopicConn, error) {
+	return kafkago.Dial(network, address)
+}
+
 type Producer struct {
-	writer *kafkago.Writer
+	writer MessageWriter
 }
 
 func NewProducer(brokers []string) *Producer {
@@ -76,7 +97,10 @@ func (p *Producer) Close() error {
 }
 
 func EnsureTopics(brokers []string, topics []string, numPartitions, replicationFactor int) error {
-	conn, err := kafkago.Dial("tcp", brokers[0])
+	if len(brokers) == 0 {
+		return fmt.Errorf("dial kafka for topic creation: no brokers provided")
+	}
+	conn, err := dialKafka("tcp", brokers[0])
 	if err != nil {
 		return fmt.Errorf("dial kafka for topic creation: %w", err)
 	}
@@ -115,7 +139,7 @@ type ConsumerConfig struct {
 }
 
 type Consumer struct {
-	reader      *kafkago.Reader
+	reader      MessageReader
 	maxRetries  int
 	retryDelay  time.Duration
 	dlqProducer *Producer

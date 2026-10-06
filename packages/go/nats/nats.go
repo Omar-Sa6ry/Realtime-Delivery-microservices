@@ -23,9 +23,23 @@ type NestJSResponse struct {
 	IsDisposed bool            `json:"isDisposed,omitempty"`
 }
 
-type NatsClient struct {
-	nc *nats.Conn
+type Conn interface {
+	Publish(subject string, data []byte) error
+	Request(subject string, data []byte, timeout time.Duration) (*nats.Msg, error)
+	Close()
 }
+
+type NatsClient struct {
+	nc  Conn
+	raw *nats.Conn
+}
+
+// Swappable dial/retry knobs so tests never block on a real broker.
+var (
+	natsDial         = nats.Connect
+	connectAttempts  = 15
+	connectRetryWait = 2 * time.Second
+)
 
 func Connect(url string) (*NatsClient, error) {
 	if url == "" {
@@ -45,16 +59,16 @@ func Connect(url string) (*NatsClient, error) {
 		}),
 	}
 
-	const maxAttempts = 15
-	const retryDelay = 2 * time.Second
+	maxAttempts := connectAttempts
+	retryDelay := connectRetryWait
 
 	var nc *nats.Conn
 	var lastErr error
 	for i := 1; i <= maxAttempts; i++ {
-		nc, lastErr = nats.Connect(url, opts...)
+		nc, lastErr = natsDial(url, opts...)
 		if lastErr == nil {
 			slog.Info("NATS client connected successfully", "url", url, "attempt", i)
-			return &NatsClient{nc: nc}, nil
+			return &NatsClient{nc: nc, raw: nc}, nil
 		}
 		slog.Warn("NATS client connection failed, retrying...", "url", url, "attempt", i, "maxAttempts", maxAttempts, "error", lastErr)
 		if i < maxAttempts {
@@ -65,8 +79,13 @@ func Connect(url string) (*NatsClient, error) {
 	return nil, fmt.Errorf("failed to connect to NATS after %d attempts: %w", maxAttempts, lastErr)
 }
 
+// newClient wraps an already-connected NATS surface (used by tests).
+func newClient(nc Conn) *NatsClient {
+	return &NatsClient{nc: nc}
+}
+
 func (c *NatsClient) Conn() *nats.Conn {
-	return c.nc
+	return c.raw
 }
 
 func (c *NatsClient) Close() {

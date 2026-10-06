@@ -19,8 +19,30 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type RateLimitStore interface {
+	TxPipeline() RedisPipeline
+	ZRem(ctx context.Context, key string, members ...interface{}) *redis.IntCmd
+}
+
+type RedisPipeline interface {
+	ZRemRangeByScore(ctx context.Context, key, min, max string) *redis.IntCmd
+	ZCard(ctx context.Context, key string) *redis.IntCmd
+	ZAdd(ctx context.Context, key string, members ...redis.Z) *redis.IntCmd
+	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
+	ZRangeWithScores(ctx context.Context, key string, start, stop int64) *redis.ZSliceCmd
+	Exec(ctx context.Context) ([]redis.Cmder, error)
+}
+
+type redisStore struct{ client *redis.Client }
+
+func (s redisStore) TxPipeline() RedisPipeline { return s.client.TxPipeline() }
+
+func (s redisStore) ZRem(ctx context.Context, key string, members ...interface{}) *redis.IntCmd {
+	return s.client.ZRem(ctx, key, members...)
+}
+
 type RateLimiter struct {
-	client *redis.Client
+	client RateLimitStore
 	limit  int
 	window time.Duration
 }
@@ -34,14 +56,17 @@ type Result struct {
 }
 
 func NewRateLimiter(client *redis.Client, limit int, window time.Duration) *RateLimiter {
+	return newRateLimiter(redisStore{client: client}, limit, window)
+}
+
+func newRateLimiter(store RateLimitStore, limit int, window time.Duration) *RateLimiter {
 	return &RateLimiter{
-		client: client,
+		client: store,
 		limit:  limit,
 		window: window,
 	}
 }
 
-// Limit checks if the given key has exceeded the allowed rate limit
 func (r *RateLimiter) Limit(ctx context.Context, key string) (*Result, error) {
 	now := time.Now()
 	nowMs := now.UnixNano() / int64(time.Millisecond)

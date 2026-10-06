@@ -4,10 +4,12 @@ on:
   push:
     paths:
       - 'packages/ts/**'
+      - 'packages/go/**'
       - '.github/workflows/common-unit-tests.yml'
   pull_request:
     paths:
       - 'packages/ts/**'
+      - 'packages/go/**'
       - '.github/workflows/common-unit-tests.yml'
 
 jobs:
@@ -41,4 +43,45 @@ jobs:
         with:
           name: common-coverage-report
           path: packages/ts/coverage
+          retention-days: 14
+
+  go-unit-tests:
+    name: 'packages/go unit tests & coverage gate'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/go
+    env:
+      GO_COVERAGE_THRESHOLD: '85'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/go/go.mod
+          cache-dependency-path: packages/go/go.sum
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Run unit tests with coverage (fails below threshold)
+        run: |
+          go test ./... -count=1 -timeout 180s -covermode=atomic -coverprofile=coverage.out
+          total=$(go tool cover -func=coverage.out | awk '/^total:/{gsub("%","",$NF); print $NF}')
+          echo "Total coverage: ${total}%"
+          if [ -z "$total" ]; then
+            echo "::error::Could not compute total coverage"
+            exit 1
+          fi
+          if [ "${total%.*}" -lt "$GO_COVERAGE_THRESHOLD" ]; then
+            echo "::error::Coverage ${total}% is below the ${GO_COVERAGE_THRESHOLD}% gate"
+            exit 1
+          fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverage-report
+          path: packages/go/coverage.out
           retention-days: 14

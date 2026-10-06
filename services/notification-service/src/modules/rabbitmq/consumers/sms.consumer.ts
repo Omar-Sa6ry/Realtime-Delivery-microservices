@@ -8,7 +8,7 @@ import {
   RabbitMQExchanges,
   RabbitMQQueues,
   RabbitMQService,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 import { NotificationInbox } from '../../../common/database/entities/notification-inbox.entity';
 import { EventHandlerFactory } from '../../kafka/event-handlers/event-handler.factory';
 
@@ -40,7 +40,9 @@ export class SmsRabbitMQConsumer extends BaseRabbitMQConsumer {
     if (handler) {
       await handler.handle(payload);
     } else {
-      this.logger.debug(`No handler for RabbitMQ event type: ${envelope.eventType}`);
+      this.logger.debug(
+        `No handler for RabbitMQ event type: ${envelope.eventType}`,
+      );
     }
 
     await this.inboxRepository.save(
@@ -67,6 +69,10 @@ export class SmsRabbitMQConsumer extends BaseRabbitMQConsumer {
       envelope.payload && typeof envelope.payload === 'object'
         ? (envelope.payload as Record<string, unknown>)
         : { value: envelope.payload };
-    return { ...payload, eventId: envelope.eventId, eventType: envelope.eventType };
+    return {
+      ...payload,
+      eventId: envelope.eventId,
+      eventType: envelope.eventType,
+    };
   }
 }

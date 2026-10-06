@@ -4,7 +4,11 @@ import { Repository, DataSource, IsNull } from 'typeorm';
 import { Notification } from '../../common/database/entities/notification.entity';
 import { NotificationDelivery } from '../../common/database/entities/notification-delivery.entity';
 import { NotificationDispatcherService } from './notification-dispatcher.service';
-import { NotificationType, NotificationPriority, NotificationChannel } from '@delivery/common';
+import {
+  NotificationType,
+  NotificationPriority,
+  NotificationChannel,
+} from '@delivery-micro/shard';
 import { TemplateService } from './template/template.service';
 import { PreferenceService } from './preference/preference.service';
 import { I18nService } from 'nestjs-i18n';
@@ -39,8 +43,11 @@ export class NotificationService {
     private readonly i18n: I18nService,
   ) {}
 
-  async createAndDispatch(params: CreateNotificationParams): Promise<string | null> {
-    const { userId, type, data, priority, scheduledAt, requiredChannels } = params;
+  async createAndDispatch(
+    params: CreateNotificationParams,
+  ): Promise<string | null> {
+    const { userId, type, data, priority, scheduledAt, requiredChannels } =
+      params;
 
     // 1. Resolve Preferences
     const channels =
@@ -48,13 +55,20 @@ export class NotificationService {
         ? requiredChannels
         : await this.preferenceService.getEnabledChannels(userId, type);
     if (channels.length === 0) {
-      this.logger.debug(`No channels enabled for user ${userId} for event ${type}`);
+      this.logger.debug(
+        `No channels enabled for user ${userId} for event ${type}`,
+      );
       return null;
     }
 
     // 2. Render Template (assuming English for now, can be extended)
     const locale = 'en';
-    const { title, body } = await this.templateService.render(type, channels[0], locale, data || {});
+    const { title, body } = await this.templateService.render(
+      type,
+      channels[0],
+      locale,
+      data || {},
+    );
 
     const notificationTitle = params.title || title;
     const notificationBody = params.body || body;
@@ -90,7 +104,9 @@ export class NotificationService {
       await queryRunner.manager.save(deliveries);
 
       await queryRunner.commitTransaction();
-      this.logger.debug(`Saved notification ${notification.id} for user ${userId}`);
+      this.logger.debug(
+        `Saved notification ${notification.id} for user ${userId}`,
+      );
 
       // 4. Dispatch (now or later per scheduledAt)
       const isScheduled = !!scheduledAt && scheduledAt.getTime() > Date.now();
@@ -103,14 +119,21 @@ export class NotificationService {
       return notification.id;
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      this.logger.error(`Error creating notification: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `Error creating notification: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       return null;
     } finally {
       await queryRunner.release();
     }
   }
 
-  async findAllForUser(userId: string, page: number, limit: number): Promise<PaginatedNotifications> {
+  async findAllForUser(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<PaginatedNotifications> {
     const safeLimit = Math.min(Math.max(limit, 1), 100);
     const safePage = Math.max(page, 1);
 
@@ -125,7 +148,10 @@ export class NotificationService {
     return { items, totalCount };
   }
 
-  async findByIdForUser(id: string, userId: string): Promise<Notification | null> {
+  async findByIdForUser(
+    id: string,
+    userId: string,
+  ): Promise<Notification | null> {
     return this.notificationRepository.findOne({
       where: { id, userId },
       relations: { deliveries: true },
@@ -139,7 +165,9 @@ export class NotificationService {
   }
 
   async markAsRead(id: string, userId: string): Promise<Notification> {
-    const notification = await this.notificationRepository.findOne({ where: { id, userId } });
+    const notification = await this.notificationRepository.findOne({
+      where: { id, userId },
+    });
     if (!notification) {
       throw new NotFoundException(await this.i18n.t('notification.NOT_FOUND'));
     }

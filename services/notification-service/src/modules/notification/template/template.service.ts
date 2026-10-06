@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import * as Handlebars from 'handlebars';
 import { RedisService } from '@bts-soft/cache';
 import { NotificationTemplate } from '../../../common/database/entities/notification-template.entity';
-import { NotificationType, NotificationChannel } from '@delivery/common';
+import { NotificationType, NotificationChannel } from '@delivery-micro/shard';
 
 interface CompiledTemplate {
   title: Handlebars.TemplateDelegate;
@@ -87,7 +87,12 @@ export class TemplateService implements OnModuleInit {
     this.logger.log(`Loaded ${templates.length} templates`);
   }
 
-  async render(type: NotificationType, channel: NotificationChannel, locale: string, data: Record<string, unknown>) {
+  async render(
+    type: NotificationType,
+    channel: NotificationChannel,
+    locale: string,
+    data: Record<string, unknown>,
+  ) {
     let compiled = await this.resolveTemplate(type, channel, locale);
 
     // Fallback to EN if specific locale not found
@@ -96,7 +101,9 @@ export class TemplateService implements OnModuleInit {
     }
 
     if (!compiled) {
-      this.logger.warn(`No template found for ${type}:${channel}:${locale}, falling back to default format.`);
+      this.logger.warn(
+        `No template found for ${type}:${channel}:${locale}, falling back to default format.`,
+      );
       return {
         title: `Notification: ${type}`,
         body: JSON.stringify(data),
@@ -109,7 +116,9 @@ export class TemplateService implements OnModuleInit {
         body: compiled.body(data),
       };
     } catch (error) {
-      this.logger.error(`Error rendering template ${type}:${channel}:${locale}: ${(error as Error).message}`);
+      this.logger.error(
+        `Error rendering template ${type}:${channel}:${locale}: ${(error as Error).message}`,
+      );
       return {
         title: `Notification: ${type}`,
         body: JSON.stringify(data),
@@ -155,7 +164,10 @@ export class TemplateService implements OnModuleInit {
     return this.toCompiled(cacheKey, raw);
   }
 
-  private toCompiled(cacheKey: string, raw: RawTemplate): CompiledTemplate | null {
+  private toCompiled(
+    cacheKey: string,
+    raw: RawTemplate,
+  ): CompiledTemplate | null {
     const compiled = this.compile(raw.titleTemplate, raw.bodyTemplate);
     if (compiled) {
       this.templatesCache.set(cacheKey, compiled);
@@ -163,14 +175,19 @@ export class TemplateService implements OnModuleInit {
     return compiled;
   }
 
-  private compile(titleTemplate: string, bodyTemplate: string): CompiledTemplate | null {
+  private compile(
+    titleTemplate: string,
+    bodyTemplate: string,
+  ): CompiledTemplate | null {
     try {
       return {
         title: Handlebars.compile(titleTemplate),
         body: Handlebars.compile(bodyTemplate),
       };
     } catch (error) {
-      this.logger.error(`Failed to compile template: ${(error as Error).message}`);
+      this.logger.error(
+        `Failed to compile template: ${(error as Error).message}`,
+      );
       return null;
     }
   }

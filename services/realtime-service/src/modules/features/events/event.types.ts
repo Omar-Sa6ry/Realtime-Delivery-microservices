@@ -2,8 +2,8 @@ import {
   ServerMessageType,
   MessagePriority,
   MessagePriority as Priority,
-} from '@delivery/common';
-import { RealtimeNatsSubjects } from '@delivery/common';
+} from '@delivery-micro/shard';
+import { RealtimeNatsSubjects } from '@delivery-micro/shard';
 
 export interface RealtimeEventEnvelope<T = unknown> {
   eventId: string;
@@ -89,9 +89,11 @@ export const eventToNatsSubject: Partial<Record<string, RealtimeNatsSubjects>> =
     'delivery.completed': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
     'delivery.cancelled': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
     'driver.assignment.offered': RealtimeNatsSubjects.DRIVER_ASSIGNMENT_OFFERED,
-    'driver.assignment.rejected': RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
+    'driver.assignment.rejected':
+      RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
     'driver.assignment.expired': RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
-    'driver.no_driver_available': RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
+    'driver.no_driver_available':
+      RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
     'driver.search.retry': RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED,
     'payment.completed': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,
     'payment.failed': RealtimeNatsSubjects.DELIVERY_STATUS_UPDATED,

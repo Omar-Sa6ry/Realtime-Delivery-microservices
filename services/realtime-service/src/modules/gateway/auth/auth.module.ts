@@ -1,6 +1,10 @@
 import { Global, Module } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { WsAuthGuard, WsJwtStrategy, WS_JWT_SERVICE } from '@delivery/common';
+import {
+  WsAuthGuard,
+  WsJwtStrategy,
+  WS_JWT_SERVICE,
+} from '@delivery-micro/shard';
 
 @Global()
 @Module({

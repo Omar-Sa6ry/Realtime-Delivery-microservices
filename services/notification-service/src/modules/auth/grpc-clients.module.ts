@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { join } from 'path';
-import { USER_PACKAGE_NAME } from '@delivery/common';
+import { USER_PACKAGE_NAME } from '@delivery-micro/shard';
 
 @Module({
   imports: [

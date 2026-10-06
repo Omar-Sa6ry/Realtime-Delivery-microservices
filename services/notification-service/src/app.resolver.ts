@@ -1,5 +1,5 @@
 import { Resolver, Query } from '@nestjs/graphql';
-import { BooleanResponse } from '@delivery/common';
+import { BooleanResponse } from '@delivery-micro/shard';
 
 @Resolver()
 export class AppResolver {

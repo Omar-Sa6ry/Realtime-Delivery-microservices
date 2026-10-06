@@ -1,12 +1,19 @@
-import { ObjectType, Field, ID, Int, Directive, registerEnumType } from '@nestjs/graphql';
+import {
+  ObjectType,
+  Field,
+  ID,
+  Int,
+  Directive,
+  registerEnumType,
+} from '@nestjs/graphql';
 import {
   NotificationType,
   NotificationStatus,
   NotificationPriority,
   NotificationChannel,
   DeliveryChannelStatus,
-} from '@delivery/common';
-import { GeneralResponse } from '@delivery/common';
+} from '@delivery-micro/shard';
+import { GeneralResponse } from '@delivery-micro/shard';
 
 registerEnumType(NotificationType, {
   name: 'NotificationType',
@@ -95,8 +102,12 @@ export class NotificationConnection {
 
 @Directive('@shareable')
 @ObjectType()
-export class NotificationResponse extends GeneralResponse(NotificationTypeObj) {}
+export class NotificationResponse extends GeneralResponse(
+  NotificationTypeObj,
+) {}
 
 @Directive('@shareable')
 @ObjectType()
-export class PaginatedNotificationResponse extends GeneralResponse(NotificationConnection) {}
+export class PaginatedNotificationResponse extends GeneralResponse(
+  NotificationConnection,
+) {}

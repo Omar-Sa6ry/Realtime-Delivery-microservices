@@ -3,7 +3,7 @@ import {
   RabbitMQExchanges,
   RabbitMQService,
   UsersRoutingKeys,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 
 @Injectable()
 export class UserRabbitMQPublisher {
@@ -91,7 +91,13 @@ export class UserRabbitMQPublisher {
     options?: { aggregateId?: string; aggregateType?: string },
   ): Promise<void> {
     try {
-      await this.rabbitmq.publish(exchange, routingKey, eventType, payload, options);
+      await this.rabbitmq.publish(
+        exchange,
+        routingKey,
+        eventType,
+        payload,
+        options,
+      );
     } catch (err) {
       // Best-effort: log but do not break the user mutation.
       this.logger.warn(

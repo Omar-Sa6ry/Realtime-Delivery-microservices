@@ -5,7 +5,7 @@ import {
   MessagePriority,
   WsErrorCode,
   WsException,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 
 export interface OutboundMessage<T = unknown> extends ServerMessage<T> {
   timestamp: string;

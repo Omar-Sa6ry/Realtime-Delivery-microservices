@@ -14,7 +14,7 @@ import {
   PaymentFailedPayload,
   DriverEventType,
   DriverAssignmentAcceptedPayload,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 import { DeliveryCommandService } from '../../delivery/services/delivery-command.service';
 import { PaymentStatus } from '../../delivery/enums/payment-status.enum';
 import { DeliveryStatus } from '../../delivery/enums/delivery-status.enum';
@@ -53,10 +53,14 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
         eachMessage: async (payload) => this.handleMessage(payload),
       });
       this.connected = true;
-      this.logger.log('Delivery Kafka consumer started (delivery-service-group)');
+      this.logger.log(
+        'Delivery Kafka consumer started (delivery-service-group)',
+      );
     } catch (err: any) {
       this.connected = false;
-      this.logger.error(`Delivery Kafka consumer failed to start: ${err?.message}`);
+      this.logger.error(
+        `Delivery Kafka consumer failed to start: ${err?.message}`,
+      );
     }
   }
 
@@ -72,9 +76,13 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
       switch (envelope.eventType) {
         case DriverEventType.AssignmentAccepted: {
           const data = envelope.payload as DriverAssignmentAcceptedPayload;
-          const deliveryId = data?.deliveryId || (data?.assignmentId ? data.assignmentId.split('-')[0] : undefined);
+          const deliveryId =
+            data?.deliveryId ||
+            (data?.assignmentId ? data.assignmentId.split('-')[0] : undefined);
           if (deliveryId && data?.driverId) {
-            this.logger.log(`Driver ${data.driverId} accepted assignment for delivery: ${deliveryId}`);
+            this.logger.log(
+              `Driver ${data.driverId} accepted assignment for delivery: ${deliveryId}`,
+            );
             await this.commands.acceptDriver(deliveryId, data.driverId);
           }
           break;
@@ -82,20 +90,34 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
 
         case DriverEventType.AssignmentRejected: {
           const data = envelope.payload as any;
-          const deliveryId = data?.deliveryId || (data?.assignmentId ? data.assignmentId.split('-')[0] : undefined);
+          const deliveryId =
+            data?.deliveryId ||
+            (data?.assignmentId ? data.assignmentId.split('-')[0] : undefined);
           if (deliveryId) {
-            this.logger.log(`Driver rejected assignment for delivery: ${deliveryId}. Retrying next available driver...`);
-            await this.commands.handleDriverRejectedOrExpired(deliveryId, data?.reason || 'Driver rejected assignment');
+            this.logger.log(
+              `Driver rejected assignment for delivery: ${deliveryId}. Retrying next available driver...`,
+            );
+            await this.commands.handleDriverRejectedOrExpired(
+              deliveryId,
+              data?.reason || 'Driver rejected assignment',
+            );
           }
           break;
         }
 
         case DriverEventType.AssignmentExpired: {
           const data = envelope.payload as any;
-          const deliveryId = data?.deliveryId || (data?.assignmentId ? data.assignmentId.split('-')[0] : undefined);
+          const deliveryId =
+            data?.deliveryId ||
+            (data?.assignmentId ? data.assignmentId.split('-')[0] : undefined);
           if (deliveryId) {
-            this.logger.log(`Driver assignment expired for delivery: ${deliveryId}. Retrying next available driver...`);
-            await this.commands.handleDriverRejectedOrExpired(deliveryId, 'Driver assignment offer expired');
+            this.logger.log(
+              `Driver assignment expired for delivery: ${deliveryId}. Retrying next available driver...`,
+            );
+            await this.commands.handleDriverRejectedOrExpired(
+              deliveryId,
+              'Driver assignment offer expired',
+            );
           }
           break;
         }
@@ -104,8 +126,13 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
           const data = envelope.payload as any;
           const deliveryId = data?.deliveryId;
           if (deliveryId) {
-            this.logger.log(`No driver available for delivery: ${deliveryId}. Notifying customer and will retry...`);
-            await this.commands.handleDriverRejectedOrExpired(deliveryId, data?.reason || 'No drivers available nearby');
+            this.logger.log(
+              `No driver available for delivery: ${deliveryId}. Notifying customer and will retry...`,
+            );
+            await this.commands.handleDriverRejectedOrExpired(
+              deliveryId,
+              data?.reason || 'No drivers available nearby',
+            );
           }
           break;
         }
@@ -113,7 +140,9 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
         case PaymentKafkaTopics.PAYMENT_COMPLETED: {
           const data = envelope.payload as PaymentCompletedPayload;
           if (data?.deliveryId) {
-            this.logger.log(`Payment completed for delivery: ${data.deliveryId}. Transitioning to PAYMENT_CONFIRMED...`);
+            this.logger.log(
+              `Payment completed for delivery: ${data.deliveryId}. Transitioning to PAYMENT_CONFIRMED...`,
+            );
             await this.commands.updatePaymentStatus(
               data.deliveryId,
               PaymentStatus.COMPLETED,
@@ -126,7 +155,9 @@ export class DeliveryKafkaConsumer implements OnModuleInit, OnModuleDestroy {
                 'Customer completed checkout via Stripe',
               );
             } catch (err: any) {
-              this.logger.warn(`Could not transition delivery ${data.deliveryId} to PAYMENT_CONFIRMED: ${err.message}`);
+              this.logger.warn(
+                `Could not transition delivery ${data.deliveryId} to PAYMENT_CONFIRMED: ${err.message}`,
+              );
             }
           }
           break;

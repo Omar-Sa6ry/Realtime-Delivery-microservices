@@ -156,7 +156,6 @@ services:
         condition: service_healthy
     volumes:
       - ../../services/user-service/src:/usr/src/app/services/user-service/src
-      - ../../packages/ts:/usr/src/app/packages/ts
 
   media-service:
     build:
@@ -320,7 +319,6 @@ services:
         condition: service_healthy
     volumes:
       - ../../services/notification-service/src:/usr/src/app/services/notification-service/src
-      - ../../packages/ts:/usr/src/app/packages/ts
       - ../../protos:/usr/src/app/protos
 
   realtime-service:
@@ -364,7 +362,6 @@ services:
         condition: service_healthy
     volumes:
       - ../../services/realtime-service/src:/usr/src/app/services/realtime-service/src
-      - ../../packages/ts:/usr/src/app/packages/ts
       - ../../protos:/usr/src/app/protos
 
   opensearch-srv:
@@ -456,7 +453,6 @@ services:
       - delivery-service
     volumes:
       - ../../services/api-gateway/src:/usr/src/app/services/api-gateway/src
-      - ../../packages/ts:/usr/src/app/packages/ts
 
   delivery-db-srv:
     image: postgres:15
@@ -523,7 +519,6 @@ services:
         condition: service_healthy
     volumes:
       - ../../services/delivery-service/src:/usr/src/app/services/delivery-service/src
-      - ../../packages/ts:/usr/src/app/packages/ts
       - ../../protos:/usr/src/app/protos
 
   # --- Driver Service ---

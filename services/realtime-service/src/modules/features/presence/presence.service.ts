@@ -1,8 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Role, ServerMessageType, MessagePriority } from '@delivery/common';
+import {
+  Role,
+  ServerMessageType,
+  MessagePriority,
+} from '@delivery-micro/shard';
 import { PresenceStore, PresenceState, PresenceRecord } from './presence.store';
 import { NatsPublisher } from '../../infrastructure/nats/nats.publisher';
-import { RealtimeNatsSubjects } from '@delivery/common';
+import { RealtimeNatsSubjects } from '@delivery-micro/shard';
 import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
 
 @Injectable()
@@ -42,8 +46,13 @@ export class PresenceService {
     return this.store.get(userId);
   }
 
-  private async broadcastPresence(userId: string, status: PresenceState): Promise<void> {
-    this.metrics.natsPublished.inc({ subject: RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED });
+  private async broadcastPresence(
+    userId: string,
+    status: PresenceState,
+  ): Promise<void> {
+    this.metrics.natsPublished.inc({
+      subject: RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED,
+    });
     await this.natsPublisher
       .publish(RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED, {
         driverId: userId,
@@ -51,7 +60,9 @@ export class PresenceService {
         timestamp: new Date().toISOString(),
       })
       .catch((err) =>
-        this.logger.warn(`Presence broadcast failed for ${userId}: ${err.message}`),
+        this.logger.warn(
+          `Presence broadcast failed for ${userId}: ${err.message}`,
+        ),
       );
   }
 }

@@ -5,11 +5,11 @@ import { ValidationPipe } from '@nestjs/common';
 import { I18nValidationException } from 'nestjs-i18n';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { graphqlUploadExpress } from 'graphql-upload-minimal';
-import { USER_PACKAGE_NAME, StructuredLogger } from '@delivery/common';
+import { USER_PACKAGE_NAME, StructuredLogger } from '@delivery-micro/shard';
 
 async function bootstrap() {
   const logger = new StructuredLogger();
-  const app = await NestFactory.create(AppModule, { 
+  const app = await NestFactory.create(AppModule, {
     rawBody: true,
     logger,
     abortOnError: false,
@@ -58,16 +58,21 @@ async function bootstrap() {
   console.log(`User Service is running on http://0.0.0.0:${port}`);
 
   // Start NATS + gRPC transports in the background after HTTP is live.
-  app.startAllMicroservices().catch((err: Error) =>
-    logger.error(`Microservice startup error: ${err.message}`),
-  );
+  app
+    .startAllMicroservices()
+    .catch((err: Error) =>
+      logger.error(`Microservice startup error: ${err.message}`),
+    );
 }
 
 // Keep the process alive while infrastructure (Redis, DB, NATS) is still
 // starting: library-level errors (e.g. ioredis connection) must not kill the
 // pod — the bootstrap retry loop recovers once dependencies are reachable.
 process.on('uncaughtException', (err) => {
-  console.error('[process] Uncaught exception (continuing):', err?.message ?? err);
+  console.error(
+    '[process] Uncaught exception (continuing):',
+    err?.message ?? err,
+  );
 });
 process.on('unhandledRejection', (reason) => {
   console.error('[process] Unhandled rejection (continuing):', reason);

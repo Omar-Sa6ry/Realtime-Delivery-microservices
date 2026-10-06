@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
-import { StructuredLogger } from '@delivery/common';
+import { StructuredLogger } from '@delivery-micro/shard';
 import { join } from 'path';
 import { I18nValidationException } from 'nestjs-i18n';
 
@@ -43,12 +43,17 @@ async function bootstrap() {
   const port = configService.get<string>('PORT_NOTIFICATION', '4004');
   await app.listen(port, '0.0.0.0');
 
-  logger.log(`Notification Service is running on http://localhost:${port}/notification/graphql`);
+  logger.log(
+    `Notification Service is running on http://localhost:${port}/notification/graphql`,
+  );
 
   // Start gRPC transport in the background after HTTP is live.
-  app.startAllMicroservices()
+  app
+    .startAllMicroservices()
     .then(() =>
-      logger.log(`gRPC Server is running on port ${configService.get('PORT_GRPC', '50053')}`),
+      logger.log(
+        `gRPC Server is running on port ${configService.get('PORT_GRPC', '50053')}`,
+      ),
     )
     .catch((err: Error) =>
       logger.error(`Microservice startup error: ${err.message}`),
@@ -57,7 +62,10 @@ async function bootstrap() {
 
 // Keep the process alive while infrastructure (Redis, DB, NATS, Kafka) is still starting:
 process.on('uncaughtException', (err) => {
-  console.error('[process] Uncaught exception (continuing):', err?.message ?? err);
+  console.error(
+    '[process] Uncaught exception (continuing):',
+    err?.message ?? err,
+  );
 });
 process.on('unhandledRejection', (reason) => {
   console.error('[process] Unhandled rejection (continuing):', reason);

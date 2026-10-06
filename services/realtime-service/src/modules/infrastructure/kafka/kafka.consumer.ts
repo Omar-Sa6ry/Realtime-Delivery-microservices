@@ -15,8 +15,11 @@ import {
   RealtimeKafkaTopics,
   DriverEventType,
   BaseKafkaConsumer,
-} from '@delivery/common';
-import { KafkaEventHandler, REALTIME_EVENT_HANDLERS } from './handlers/base-kafka-event.handler';
+} from '@delivery-micro/shard';
+import {
+  KafkaEventHandler,
+  REALTIME_EVENT_HANDLERS,
+} from './handlers/base-kafka-event.handler';
 import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
 
 const CONSUMED_TOPICS = [
@@ -65,15 +68,21 @@ export class KafkaConsumer extends BaseKafkaConsumer {
 
   protected async handleMessage(payload: EachMessagePayload): Promise<void> {
     try {
-      const envelope = JSON.parse(payload.message.value?.toString() || '{}') as KafkaEventEnvelope;
+      const envelope = JSON.parse(
+        payload.message.value?.toString() || '{}',
+      ) as KafkaEventEnvelope;
       if (!envelope?.eventId || !envelope?.eventType) {
-        this.logger.warn('Dropping malformed Kafka message (missing envelope fields)');
+        this.logger.warn(
+          'Dropping malformed Kafka message (missing envelope fields)',
+        );
         return;
       }
 
       const handler = this.registry.get(envelope.eventType);
       if (!handler) {
-        this.logger.debug(`No handler registered for event type ${envelope.eventType}`);
+        this.logger.debug(
+          `No handler registered for event type ${envelope.eventType}`,
+        );
         return;
       }
 
@@ -86,7 +95,10 @@ export class KafkaConsumer extends BaseKafkaConsumer {
     }
   }
 
-  private async routeToDlq(payload: EachMessagePayload, reason: Error): Promise<void> {
+  private async routeToDlq(
+    payload: EachMessagePayload,
+    reason: Error,
+  ): Promise<void> {
     const dlqTopic = payload.topic.startsWith('payment')
       ? RealtimeKafkaTopics.DLQ_PAYMENT
       : RealtimeKafkaTopics.DLQ_DELIVERY;

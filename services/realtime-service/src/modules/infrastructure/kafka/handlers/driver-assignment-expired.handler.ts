@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RealtimeNatsSubjects, DriverEventType } from '@delivery/common';
+import { RealtimeNatsSubjects, DriverEventType } from '@delivery-micro/shard';
 import { BaseKafkaEventHandler } from './base-kafka-event.handler';
 import { EventDeduplicator } from '../../../features/events/event-deduplicator';
 import { EventMapper } from '../../../features/events/event.mapper';

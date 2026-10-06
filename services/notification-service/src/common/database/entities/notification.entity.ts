@@ -7,7 +7,11 @@ import {
   OneToMany,
   Index,
 } from 'typeorm';
-import { NotificationType, NotificationStatus, NotificationPriority } from '@delivery/common';
+import {
+  NotificationType,
+  NotificationStatus,
+  NotificationPriority,
+} from '@delivery-micro/shard';
 import { IdGenerator } from '@bts-soft/common';
 import { NotificationDelivery } from './notification-delivery.entity';
 

@@ -8,7 +8,10 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { NotificationChannel, DeliveryChannelStatus } from '@delivery/common';
+import {
+  NotificationChannel,
+  DeliveryChannelStatus,
+} from '@delivery-micro/shard';
 import { IdGenerator } from '@bts-soft/common';
 import { Notification } from './notification.entity';
 
@@ -21,7 +24,9 @@ export class NotificationDelivery {
   @Index()
   notificationId: string;
 
-  @ManyToOne(() => Notification, (notification) => notification.deliveries, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Notification, (notification) => notification.deliveries, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'notificationId' })
   notification: Notification;
 

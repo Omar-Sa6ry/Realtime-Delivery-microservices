@@ -6,7 +6,7 @@ import {
   toContext,
   ConnectionContext,
 } from './connection.types';
-import { IJwtPayload } from '@delivery/common';
+import { IJwtPayload } from '@delivery-micro/shard';
 
 @Injectable()
 export class ConnectionRegistry {

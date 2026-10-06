@@ -1,7 +1,17 @@
-import { BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
-import { Args, Context, Mutation, Resolver, ResolveReference } from '@nestjs/graphql';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
+import {
+  Args,
+  Context,
+  Mutation,
+  Resolver,
+  ResolveReference,
+} from '@nestjs/graphql';
 import { I18nService } from 'nestjs-i18n';
-import { Auth, Permission } from '@delivery/common';
+import { Auth, Permission } from '@delivery-micro/shard';
 import { DeliveryCommandService } from '../services/delivery-command.service';
 import { DeliveryQueryService } from '../services/delivery-query.service';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
@@ -26,7 +36,10 @@ export class DeliveryResolver {
   ) {}
 
   @ResolveReference()
-  async resolveReference(reference: { __typename: string; id: string }): Promise<DeliveryType> {
+  async resolveReference(reference: {
+    __typename: string;
+    id: string;
+  }): Promise<DeliveryType> {
     return deliveryToGraphql(await this.queries.getById(reference.id));
   }
 
@@ -37,11 +50,15 @@ export class DeliveryResolver {
     @Context() ctx: GraphqlContext,
   ): Promise<DeliveryResponse> {
     const tokenUserId = ctx.req?.user?.id ?? ctx.req?.headers?.['x-user-id'];
-    const userRole = ((ctx.req?.user as any)?.role ?? ctx.req?.headers?.['x-user-role'])?.toLowerCase();
+    const userRole = (
+      (ctx.req?.user as any)?.role ?? ctx.req?.headers?.['x-user-role']
+    )?.toLowerCase();
 
     if (userRole === 'admin') {
       throw new ForbiddenException(
-        await this.i18n.t('delivery.onlyRegularUsersCanCreate', { lang: ctx.language }),
+        await this.i18n.t('delivery.onlyRegularUsersCanCreate', {
+          lang: ctx.language,
+        }),
       );
     }
 
@@ -68,22 +85,29 @@ export class DeliveryResolver {
       try {
         confirmedDelivery = await this.saga.execute(created.id);
       } catch (err: any) {
-        this.logger.error(`Saga failed for delivery [${created.id}]: ${err.message}`);
-        const authFailedMsg = await this.i18n.t('delivery.paymentAuthFailed', { lang: ctx.language });
-        throw new BadRequestException(
-          `${authFailedMsg} ${err.message}`,
+        this.logger.error(
+          `Saga failed for delivery [${created.id}]: ${err.message}`,
         );
+        const authFailedMsg = await this.i18n.t('delivery.paymentAuthFailed', {
+          lang: ctx.language,
+        });
+        throw new BadRequestException(`${authFailedMsg} ${err.message}`);
       }
 
       // Schedule 10-minute timeout check for driver acceptance (only if not waiting for customer payment)
       if (confirmedDelivery.status !== DeliveryStatus.PENDING_PAYMENT) {
-        setTimeout(() => {
-          this.commands.handleDriverSearchTimeout(confirmedDelivery.id).catch((err: Error) => {
-            this.logger.error(
-              `Driver search timeout check failed for delivery [${confirmedDelivery.id}]: ${err.message}`,
-            );
-          });
-        }, 10 * 60 * 1000);
+        setTimeout(
+          () => {
+            this.commands
+              .handleDriverSearchTimeout(confirmedDelivery.id)
+              .catch((err: Error) => {
+                this.logger.error(
+                  `Driver search timeout check failed for delivery [${confirmedDelivery.id}]: ${err.message}`,
+                );
+              });
+          },
+          10 * 60 * 1000,
+        );
       }
 
       return {
@@ -95,7 +119,10 @@ export class DeliveryResolver {
     };
 
     if (input.idempotencyKey) {
-      return this.commands.executeWithIdempotency(input.idempotencyKey, operation);
+      return this.commands.executeWithIdempotency(
+        input.idempotencyKey,
+        operation,
+      );
     }
     return operation();
   }
@@ -109,7 +136,9 @@ export class DeliveryResolver {
     const targetId = input.deliveryId ?? input.id;
     if (!targetId) {
       throw new BadRequestException(
-        await this.i18n.t('delivery.deliveryIdRequired', { lang: ctx.language }),
+        await this.i18n.t('delivery.deliveryIdRequired', {
+          lang: ctx.language,
+        }),
       );
     }
     const tokenUserId = ctx.req?.user?.id ?? ctx.req?.headers?.['x-user-id'];
@@ -132,30 +161,41 @@ export class DeliveryResolver {
   @Auth([Permission.CANCEL_DELIVERY])
   @Mutation(() => DeliveryResponse)
   async cancelDelivery(
-    @Args({ name: 'deliveryId', type: () => String, nullable: true }) deliveryIdArg?: string,
+    @Args({ name: 'deliveryId', type: () => String, nullable: true })
+    deliveryIdArg?: string,
     @Args({ name: 'id', type: () => String, nullable: true }) idArg?: string,
-    @Args({ name: 'reason', type: () => String, nullable: true }) reason?: string,
+    @Args({ name: 'reason', type: () => String, nullable: true })
+    reason?: string,
     @Context() ctx?: GraphqlContext,
   ): Promise<DeliveryResponse> {
     const targetId = deliveryIdArg ?? idArg;
     if (!targetId) {
       throw new BadRequestException(
-        await this.i18n.t('delivery.deliveryIdRequired', { lang: ctx?.language }),
+        await this.i18n.t('delivery.deliveryIdRequired', {
+          lang: ctx?.language,
+        }),
       );
     }
 
     const tokenUserId = ctx?.req?.user?.id ?? ctx?.req?.headers?.['x-user-id'];
-    const userRole = (ctx?.req?.user as any)?.role ?? ctx?.req?.headers?.['x-user-role'];
+    const userRole =
+      (ctx?.req?.user as any)?.role ?? ctx?.req?.headers?.['x-user-role'];
     const isAdmin = userRole === 'ADMIN' || userRole === 'admin';
 
     const existing = await this.queries.getById(targetId as string);
     if (!isAdmin && existing.customerId !== tokenUserId) {
       throw new ForbiddenException(
-        await this.i18n.t('delivery.unauthorizedCancel', { lang: ctx?.language }),
+        await this.i18n.t('delivery.unauthorizedCancel', {
+          lang: ctx?.language,
+        }),
       );
     }
 
-    const delivery = await this.commands.cancel(targetId as string, tokenUserId, reason);
+    const delivery = await this.commands.cancel(
+      targetId as string,
+      tokenUserId,
+      reason,
+    );
     return {
       success: true,
       statusCode: 200,

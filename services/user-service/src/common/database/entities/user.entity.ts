@@ -7,7 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Address } from './address.entity';
-import { Role } from '@delivery/common';
+import { Role } from '@delivery-micro/shard';
 
 @Entity('users')
 export class User {

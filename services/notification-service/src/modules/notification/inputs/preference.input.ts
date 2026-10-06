@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { NotificationType, NotificationChannel } from '@delivery/common';
+import { NotificationType, NotificationChannel } from '@delivery-micro/shard';
 
 @InputType()
 export class ChannelPreferenceInput {

@@ -31,7 +31,7 @@ import {
   MetricsInterceptor,
   GraphQLExceptionFilter,
   GraphQLResponseInterceptor,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 import { CommonModule } from './common/common.module';
 import realtimeConfig from './common/config/realtime.config';
 import { AppResolver } from './app.resolver';
@@ -42,7 +42,8 @@ import { AppResolver } from './app.resolver';
       isGlobal: true,
       load: [realtimeConfig],
       envFilePath: [
-        '../../config/env/.env.' + (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
+        '../../config/env/.env.' +
+          (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
       ],
     }),
 
@@ -53,7 +54,9 @@ import { AppResolver } from './app.resolver';
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET') || 'default_secret',
-        signOptions: { expiresIn: config.get<string>('JWT_EXPIRE', '36000s') as StringValue },
+        signOptions: {
+          expiresIn: config.get<string>('JWT_EXPIRE', '36000s') as StringValue,
+        },
       }),
       inject: [ConfigService],
     }),

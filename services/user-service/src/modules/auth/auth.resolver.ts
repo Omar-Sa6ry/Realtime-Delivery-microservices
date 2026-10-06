@@ -1,18 +1,22 @@
 import { Resolver, Mutation, Args, Context } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
-import { 
-  AuthPayloadType, 
+import {
+  AuthPayloadType,
   AuthResponse,
-  RegisterInput, 
-  LoginInput, 
-  ForgetPasswordInput, 
+  RegisterInput,
+  LoginInput,
+  ForgetPasswordInput,
   ResetPasswordInput,
-  RefreshTokenInput
+  RefreshTokenInput,
 } from './dto/auth.types';
-import { BooleanResponse } from '@delivery/common';
+import { BooleanResponse } from '@delivery-micro/shard';
 import { AuthService } from './auth.service';
-import { RoleGuard, RedisRateLimit, RateLimiterAlgorithm } from '@delivery/common';
+import {
+  RoleGuard,
+  RedisRateLimit,
+  RateLimiterAlgorithm,
+} from '@delivery-micro/shard';
 
 @Resolver()
 export class AuthResolver {
@@ -59,7 +63,9 @@ export class AuthResolver {
     limit: 3,
     windowMs: 60000,
   })
-  async forgetPassword(@Args('input') input: ForgetPasswordInput): Promise<BooleanResponse> {
+  async forgetPassword(
+    @Args('input') input: ForgetPasswordInput,
+  ): Promise<BooleanResponse> {
     await this.authService.forgetPassword(input);
     return {
       success: true,
@@ -75,7 +81,9 @@ export class AuthResolver {
     limit: 3,
     windowMs: 60000,
   })
-  async resetPassword(@Args('input') input: ResetPasswordInput): Promise<BooleanResponse> {
+  async resetPassword(
+    @Args('input') input: ResetPasswordInput,
+  ): Promise<BooleanResponse> {
     await this.authService.resetPassword(input);
     return {
       success: true,
@@ -89,7 +97,8 @@ export class AuthResolver {
   @UseGuards(RoleGuard)
   async logout(@Context() ctx: any): Promise<BooleanResponse> {
     const userId = ctx.req.user?.id || ctx.req.headers['x-user-id'];
-    const sessionId = ctx.req.user?.sessionId || ctx.req.headers['x-session-id'];
+    const sessionId =
+      ctx.req.user?.sessionId || ctx.req.headers['x-session-id'];
     await this.authService.logout(userId, sessionId);
     return {
       success: true,
@@ -100,7 +109,9 @@ export class AuthResolver {
   }
 
   @Mutation(() => AuthResponse)
-  async refreshToken(@Args('input') input: RefreshTokenInput): Promise<AuthResponse> {
+  async refreshToken(
+    @Args('input') input: RefreshTokenInput,
+  ): Promise<AuthResponse> {
     const data = await this.authService.refreshToken(input);
     return {
       success: true,
@@ -110,4 +121,3 @@ export class AuthResolver {
     } as AuthResponse;
   }
 }
-

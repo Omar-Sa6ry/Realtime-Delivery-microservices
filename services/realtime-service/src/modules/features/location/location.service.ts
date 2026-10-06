@@ -1,8 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { I18nService, I18nContext } from 'nestjs-i18n';
 import { RedisService } from '@bts-soft/cache';
-import { Role, RealtimeNatsSubjects, ServerMessageType } from '@delivery/common';
-import { WsErrorCode, WsException } from '@delivery/common';
+import {
+  Role,
+  RealtimeNatsSubjects,
+  ServerMessageType,
+} from '@delivery-micro/shard';
+import { WsErrorCode, WsException } from '@delivery-micro/shard';
 import { redisKeys, TTL } from '../../../common/common-types/constants';
 import { LocationValidator } from './location.validator';
 import { LocationThrottler } from './location.throttler';
@@ -12,7 +16,7 @@ import { NatsPublisher } from '../../infrastructure/nats/nats.publisher';
 import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
 import { AuthenticatedSocket } from '../../gateway/connection/connection.types';
 import { SocketWriter } from '../../gateway/connection/socket-writer.service';
-import { MessagePriority } from '@delivery/common';
+import { MessagePriority } from '@delivery-micro/shard';
 
 @Injectable()
 export class LocationService {
@@ -50,7 +54,11 @@ export class LocationService {
 
     // 2. Authorize (driver only + assigned to this delivery)
     if (socket.data.userRole !== Role.DRIVER) {
-      throw new WsException(WsErrorCode.FORBIDDEN, this.t('ws.unauthorized'), false);
+      throw new WsException(
+        WsErrorCode.FORBIDDEN,
+        this.t('ws.unauthorized'),
+        false,
+      );
     }
     const authorized = await this.authorization.canSendLocationUpdate(
       socket.data.userId,
@@ -58,7 +66,11 @@ export class LocationService {
     );
     if (!authorized) {
       this.metrics.locationUpdates.inc({ result: 'rejected_unauthorized' });
-      throw new WsException(WsErrorCode.FORBIDDEN, this.t('ws.notAssignedDriver'), false);
+      throw new WsException(
+        WsErrorCode.FORBIDDEN,
+        this.t('ws.notAssignedDriver'),
+        false,
+      );
     }
 
     // 3. Throttle (token bucket)
@@ -90,7 +102,9 @@ export class LocationService {
         result.lat!,
         driverId,
       )
-      .catch((err) => this.logger.warn(`Failed to update geo index: ${err.message}`));
+      .catch((err) =>
+        this.logger.warn(`Failed to update geo index: ${err.message}`),
+      );
 
     await this.redis
       .set(
@@ -106,19 +120,24 @@ export class LocationService {
         },
         TTL.DRIVER_LOCATION,
       )
-      .catch((err) => this.logger.warn(`Failed to store driver location: ${err.message}`));
+      .catch((err) =>
+        this.logger.warn(`Failed to store driver location: ${err.message}`),
+      );
 
     // 5. Fan-out via NATS (all nodes, filtered to delivery subscribers)
-    await this.natsPublisher.publish(RealtimeNatsSubjects.DELIVERY_LOCATION_UPDATED, {
-      deliveryId: result.deliveryId,
-      driverId: socket.data.userId,
-      lat: result.lat,
-      lng: result.lng,
-      accuracy: result.accuracy,
-      speed: result.speed,
-      heading: result.heading,
-      timestamp: new Date(result.timestamp!).toISOString(),
-    });
+    await this.natsPublisher.publish(
+      RealtimeNatsSubjects.DELIVERY_LOCATION_UPDATED,
+      {
+        deliveryId: result.deliveryId,
+        driverId: socket.data.userId,
+        lat: result.lat,
+        lng: result.lng,
+        accuracy: result.accuracy,
+        speed: result.speed,
+        heading: result.heading,
+        timestamp: new Date(result.timestamp!).toISOString(),
+      },
+    );
 
     this.metrics.locationUpdates.inc({ result: 'accepted' });
   }

@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { RedisModule, RedisService } from '@bts-soft/cache';
-import { HealthService, MetricsModule } from '@delivery/common';
+import { HealthService, MetricsModule } from '@delivery-micro/shard';
 import { TranslationModule } from './translation/translation.module';
 import { HealthController } from './health.controller';
 import { RealtimeMetricsService } from './metrics/realtime-metrics.service';

@@ -20,7 +20,7 @@ import {
   MetricsModule,
   AutomationModule,
   MetricsInterceptor,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 import depthLimit from 'graphql-depth-limit';
 import {
   CorrelationIdMiddleware,

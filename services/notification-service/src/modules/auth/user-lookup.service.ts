@@ -1,16 +1,21 @@
-import { Inject, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import type { ClientGrpc } from '@nestjs/microservices';
 import {
   USER_SERVICE_NAME,
   GetUserResponse,
   Role,
   IUser,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 
 interface UserGrpcClient {
   getUser(request: { id: string }): Promise<Partial<GetUserResponse>>;
 }
-
 
 @Injectable()
 export class UserLookupService implements OnModuleInit {
@@ -22,7 +27,8 @@ export class UserLookupService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    this.userGrpcClient = this.grpcClient.getService<UserGrpcClient>(USER_SERVICE_NAME);
+    this.userGrpcClient =
+      this.grpcClient.getService<UserGrpcClient>(USER_SERVICE_NAME);
   }
 
   async findById(id: string): Promise<IUser> {

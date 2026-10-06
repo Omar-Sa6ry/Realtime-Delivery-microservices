@@ -6,7 +6,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, LessThan } from 'typeorm';
 import { Notification } from '../../common/database/entities/notification.entity';
 import { NotificationDelivery } from '../../common/database/entities/notification-delivery.entity';
-import { NotificationStatus, DeliveryChannelStatus } from '@delivery/common';
+import {
+  NotificationStatus,
+  DeliveryChannelStatus,
+} from '@delivery-micro/shard';
 import { NotificationDispatcherService } from '../notification/notification-dispatcher.service';
 import { DeliveryStateService } from './delivery-state.service';
 

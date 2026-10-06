@@ -13,7 +13,7 @@ import {
   UserKafkaTopics,
   KafkaService,
   BaseKafkaConsumer,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 
 @Injectable()
 export class KafkaConsumer extends BaseKafkaConsumer {
@@ -39,7 +39,11 @@ export class KafkaConsumer extends BaseKafkaConsumer {
     );
   }
 
-  protected async handleMessage({ topic, partition, message }: EachMessagePayload): Promise<void> {
+  protected async handleMessage({
+    topic,
+    partition,
+    message,
+  }: EachMessagePayload): Promise<void> {
     try {
       if (!message.value) return;
 
@@ -70,15 +74,19 @@ export class KafkaConsumer extends BaseKafkaConsumer {
       }
 
       // Save to Inbox
-      await this.inboxRepository.save(this.inboxRepository.create({
-        eventId,
-        eventType,
-        consumer: 'notification-service',
-        processedAt: new Date(),
-      }));
-      
+      await this.inboxRepository.save(
+        this.inboxRepository.create({
+          eventId,
+          eventType,
+          consumer: 'notification-service',
+          processedAt: new Date(),
+        }),
+      );
     } catch (error) {
-      this.logger.error(`Error processing message from topic ${topic}: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `Error processing message from topic ${topic}: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
     }
   }
 }

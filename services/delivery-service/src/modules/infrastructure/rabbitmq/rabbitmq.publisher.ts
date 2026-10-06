@@ -4,7 +4,7 @@ import {
   OrdersRoutingKeys,
   RabbitMQExchanges,
   RabbitMQService,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 
 @Injectable()
 export class DeliveryRabbitMQPublisher {

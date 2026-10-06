@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { I18nService, I18nContext } from 'nestjs-i18n';
-import { WsErrorCode, WsException } from '@delivery/common';
+import { WsErrorCode, WsException } from '@delivery-micro/shard';
 import { SubscriptionStore } from './subscription.store';
 import { RealtimeAuthorizationService } from '../../gateway/authorization/realtime-authorization.service';
-import { IJwtPayload, Role } from '@delivery/common';
+import { IJwtPayload, Role } from '@delivery-micro/shard';
 
 @Injectable()
 export class SubscriptionService {

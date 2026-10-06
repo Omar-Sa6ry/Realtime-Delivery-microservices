@@ -1,16 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ServerMessageType, RealtimeNatsSubjects, MessagePriority } from '@delivery/common';
+import {
+  ServerMessageType,
+  RealtimeNatsSubjects,
+  MessagePriority,
+} from '@delivery-micro/shard';
 import { IdempotencyStore } from '../events/idempotency.store';
 import { RealtimeAuthorizationService } from '../../gateway/authorization/realtime-authorization.service';
 import { NatsPublisher } from '../../infrastructure/nats/nats.publisher';
-import { WsErrorCode, WsException } from '@delivery/common';
-import { IJwtPayload, Role } from '@delivery/common';
+import { WsErrorCode, WsException } from '@delivery-micro/shard';
+import { IJwtPayload, Role } from '@delivery-micro/shard';
 import { AssignmentCommandPayload } from '../../../common/common-types/ws-message.types';
 import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
 
 const ID_RE = /^[0-9a-zA-Z_-]{8,64}$/;
 
-export type CommandKind = 'ACCEPT_ASSIGNMENT' | 'REJECT_ASSIGNMENT' | 'COMPLETE_DELIVERY';
+export type CommandKind =
+  'ACCEPT_ASSIGNMENT' | 'REJECT_ASSIGNMENT' | 'COMPLETE_DELIVERY';
 
 /**
  * Command pattern: each WebSocket command is mapped to a NATS command subject
@@ -41,23 +46,41 @@ export class CommandService {
   ): Promise<{ accepted: boolean; duplicate?: boolean; rejected?: boolean }> {
     // 1. Validate shape
     if (!payload?.deliveryId || !ID_RE.test(payload.deliveryId)) {
-      throw new WsException(WsErrorCode.INVALID_DELIVERY_ID, 'Invalid deliveryId', false);
+      throw new WsException(
+        WsErrorCode.INVALID_DELIVERY_ID,
+        'Invalid deliveryId',
+        false,
+      );
     }
     if (typeof payload.commandId !== 'string' || payload.commandId.length < 8) {
-      throw new WsException(WsErrorCode.INVALID_MESSAGE, 'Missing or invalid commandId', false);
+      throw new WsException(
+        WsErrorCode.INVALID_MESSAGE,
+        'Missing or invalid commandId',
+        false,
+      );
     }
 
     // 2. Idempotency (SET NX) — duplicate commands are acknowledged, not re-forwarded
     const claim = await this.idempotency.claim(payload.commandId);
     if (claim === 'duplicate') {
-      this.logger.debug(`Duplicate command ignored (commandId=${payload.commandId})`);
+      this.logger.debug(
+        `Duplicate command ignored (commandId=${payload.commandId})`,
+      );
       return { accepted: false, duplicate: true };
     }
 
     // 3. Authorization (driver-only commands)
-    const authorized = await this.authorization.canSendCommand(user, kind, payload.deliveryId);
+    const authorized = await this.authorization.canSendCommand(
+      user,
+      kind,
+      payload.deliveryId,
+    );
     if (!authorized) {
-      throw new WsException(WsErrorCode.FORBIDDEN, 'Not the assigned driver', false);
+      throw new WsException(
+        WsErrorCode.FORBIDDEN,
+        'Not the assigned driver',
+        false,
+      );
     }
 
     // 4. Forward to the domain service via NATS

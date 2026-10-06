@@ -1,4 +1,4 @@
-import * as http from 'http';
+﻿import * as http from 'http';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { waitForRedis, waitForService } from './utils/waitService.util';
 
@@ -21,7 +21,10 @@ function startLivenessServer(): http.Server {
   });
 
   server.on('error', (err) => {
-    console.error('[liveness] Server error:', (err as NodeJS.ErrnoException).message);
+    console.error(
+      '[liveness] Server error:',
+      (err as NodeJS.ErrnoException).message,
+    );
   });
 
   server.listen(LIVENESS_PORT, '0.0.0.0', () => {
@@ -53,13 +56,14 @@ async function waitForDependencies(logger: any) {
 
 async function setupProxies(app: NestExpressApplication) {
   const { createProxyMiddleware } = await import('http-proxy-middleware');
-  
+
   // WebSocket Proxy for Realtime Service
   const wsProxy = createProxyMiddleware({
     target: 'http://realtime-srv:4006',
     ws: true,
     changeOrigin: true,
-    pathFilter: (pathname: string) => pathname.startsWith('/realtime') || pathname.startsWith('/ws'),
+    pathFilter: (pathname: string) =>
+      pathname.startsWith('/realtime') || pathname.startsWith('/ws'),
     pathRewrite: { '^/realtime': '/ws' },
   });
   app.use(wsProxy);
@@ -77,7 +81,7 @@ async function setupProxies(app: NestExpressApplication) {
 }
 
 async function bootstrap() {
-  const { StructuredLogger } = await import('@delivery/common');
+  const { StructuredLogger } = await import('@delivery-micro/shard');
   const logger = new StructuredLogger();
 
   await waitForDependencies(logger);
@@ -85,8 +89,10 @@ async function bootstrap() {
   // Lazy-load AppModule and NestJS
   const { AppModule } = require('./app.module');
   const { NestFactory } = await import('@nestjs/core');
-  
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger });
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger,
+  });
 
   app.set('trust proxy', 1);
   app.enableShutdownHooks();
@@ -94,7 +100,8 @@ async function bootstrap() {
   const helmet = (await import('helmet')).default;
   app.use(
     helmet({
-      contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+      contentSecurityPolicy:
+        process.env.NODE_ENV === 'production' ? undefined : false,
       crossOriginEmbedderPolicy: false,
     }),
   );
@@ -109,17 +116,25 @@ async function bootstrap() {
   // Attach proxy upgrade handler
   const httpServer = app.getHttpServer();
   httpServer.on('upgrade', (req: any, socket: any, head: any) => {
-    if (req.url && (req.url.startsWith('/realtime') || req.url.startsWith('/ws'))) {
+    if (
+      req.url &&
+      (req.url.startsWith('/realtime') || req.url.startsWith('/ws'))
+    ) {
       wsProxy.upgrade(req, socket, head);
     }
   });
 
-  console.log(`API Gateway is running on: https://delivery.test/graphql or http://localhost:${port}/graphql`);
+  console.log(
+    `API Gateway is running on: https://delivery.test/graphql or http://localhost:${port}/graphql`,
+  );
 }
 
 function runBootstrap() {
   bootstrap().catch((err) => {
-    console.error('Bootstrap failed, retrying in 10s...', err?.stack || err?.message || err);
+    console.error(
+      'Bootstrap failed, retrying in 10s...',
+      err?.stack || err?.message || err,
+    );
     setTimeout(() => runBootstrap(), 10000);
   });
 }

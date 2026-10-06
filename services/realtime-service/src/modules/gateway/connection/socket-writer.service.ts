@@ -1,5 +1,9 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { MessagePriority, ServerMessageType, ServerMessage } from '@delivery/common';
+import {
+  MessagePriority,
+  ServerMessageType,
+  ServerMessage,
+} from '@delivery-micro/shard';
 import { WebSocket } from 'ws';
 import { TIMINGS } from '../../../common/common-types/constants';
 import { SocketData } from './connection.types';
@@ -45,7 +49,10 @@ export class SocketWriter implements OnModuleDestroy {
 
     if (socket.bufferedAmount > TIMINGS.MAX_BACKLOG * 1024) {
       this.metrics.backpressureSaturated.inc();
-      this.metrics.messagesDropped.inc({ type: message.type, reason: 'slow_consumer' });
+      this.metrics.messagesDropped.inc({
+        type: message.type,
+        reason: 'slow_consumer',
+      });
       this.logger.warn(
         `Slow consumer detected (socket=${socket.data.socketId}, buffered=${socket.bufferedAmount}); terminating`,
       );
@@ -65,9 +72,13 @@ export class SocketWriter implements OnModuleDestroy {
     for (const socket of sockets) this.send(socket, message, priority);
   }
 
-  private queueLossy(socket: WebSocket & { data: SocketData }, message: ServerMessage): void {
+  private queueLossy(
+    socket: WebSocket & { data: SocketData },
+    message: ServerMessage,
+  ): void {
     const socketId = socket.data.socketId;
-    if (!this.pendingLossy.has(socketId)) this.pendingLossy.set(socketId, new Map());
+    if (!this.pendingLossy.has(socketId))
+      this.pendingLossy.set(socketId, new Map());
     const queue = this.pendingLossy.get(socketId)!;
     const key = this.lossyKey(message);
     queue.set(key, JSON.stringify(message));
@@ -113,8 +124,13 @@ export class SocketWriter implements OnModuleDestroy {
     try {
       socket.send(JSON.stringify(message));
     } catch (err) {
-      this.metrics.messagesDropped.inc({ type: message.type, reason: 'send_error' });
-      this.logger.warn(`Send failed for socket ${socket.data.socketId}: ${err.message}`);
+      this.metrics.messagesDropped.inc({
+        type: message.type,
+        reason: 'send_error',
+      });
+      this.logger.warn(
+        `Send failed for socket ${socket.data.socketId}: ${err.message}`,
+      );
     }
   }
 }

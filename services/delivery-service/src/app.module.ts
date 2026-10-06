@@ -26,7 +26,7 @@ import {
   MetricsInterceptor,
   GraphQLExceptionFilter,
   GraphQLResponseInterceptor,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 import { BullModule } from '@nestjs/bullmq';
 import { HealthController } from './health.controller';
 
@@ -36,7 +36,8 @@ import { HealthController } from './health.controller';
       isGlobal: true,
       load: [deliveryConfig],
       envFilePath: [
-        '../../config/env/.env.' + (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
+        '../../config/env/.env.' +
+          (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
       ],
     }),
 
@@ -48,7 +49,8 @@ import { HealthController } from './health.controller';
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET') || 'default_secret',
         signOptions: {
-          expiresIn: (config.get<string>('JWT_EXPIRE', '36000s') || '36000s') as any,
+          expiresIn: (config.get<string>('JWT_EXPIRE', '36000s') ||
+            '36000s') as any,
         },
       }),
       inject: [ConfigService],

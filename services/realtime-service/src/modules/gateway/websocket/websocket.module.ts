@@ -3,7 +3,7 @@ import {
   WsGuardChain,
   WS_GUARD_CHAIN_OPTIONS,
   WS_GUARD_CHAIN_RATE_LIMITER,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 import { RealtimeGateway } from './websocket.gateway';
 import { RATE_ACTIONS, VALIDATION } from './websocket.types';
 import { WebsocketRateLimiterService } from './websocket-rate-limiter.service';

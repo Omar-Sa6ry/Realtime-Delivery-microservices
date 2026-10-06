@@ -2,7 +2,7 @@ import { Controller } from '@nestjs/common';
 import { GrpcMethod, RpcException } from '@nestjs/microservices';
 import { UserService } from './user.service';
 import { JwtTokenProvider } from '../../common/security/jwt-token.provider';
-import { USER_SERVICE_NAME } from '@delivery/common';
+import { USER_SERVICE_NAME } from '@delivery-micro/shard';
 import type {
   GetUserRequest,
   GetUserResponse,
@@ -12,7 +12,7 @@ import type {
   GetUserPermissionsResponse,
   UpdateUserRoleRequest,
   UpdateUserRoleResponse,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 
 @Controller()
 export class UserGrpcController {
@@ -41,7 +41,9 @@ export class UserGrpcController {
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'ValidateToken')
-  async validateToken(data: ValidateTokenRequest): Promise<ValidateTokenResponse> {
+  async validateToken(
+    data: ValidateTokenRequest,
+  ): Promise<ValidateTokenResponse> {
     const payload = await this.tokenProvider.verifyAccessToken(data.token);
     if (!payload) {
       return { valid: false, user_id: '', role: '' };
@@ -54,7 +56,9 @@ export class UserGrpcController {
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'GetUserPermissions')
-  async getUserPermissions(data: GetUserPermissionsRequest): Promise<GetUserPermissionsResponse> {
+  async getUserPermissions(
+    data: GetUserPermissionsRequest,
+  ): Promise<GetUserPermissionsResponse> {
     try {
       await this.userService.findById(data.user_id);
       return { permissions: [] };
@@ -64,7 +68,9 @@ export class UserGrpcController {
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'UpdateUserRole')
-  async updateUserRole(data: UpdateUserRoleRequest): Promise<UpdateUserRoleResponse> {
+  async updateUserRole(
+    data: UpdateUserRoleRequest,
+  ): Promise<UpdateUserRoleResponse> {
     console.log('[gRPC] UpdateUserRole received data:', JSON.stringify(data));
     try {
       await this.userService.updateUserRole(data.user_id, data.role);
@@ -82,4 +88,3 @@ export class UserGrpcController {
     }
   }
 }
-

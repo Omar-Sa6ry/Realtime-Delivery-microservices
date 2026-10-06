@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { ServerMessageType, MessagePriority } from '@delivery/common';
+import { ServerMessageType, MessagePriority } from '@delivery-micro/shard';
 import { ConnectionRegistry } from '../connection/connection.registry';
 import { ConnectionService } from '../connection/connection.service';
 import { ConnectionStateStore } from '../connection/connection-state.store';

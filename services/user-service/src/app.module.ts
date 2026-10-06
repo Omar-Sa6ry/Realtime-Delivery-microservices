@@ -26,7 +26,7 @@ import {
   MetricsInterceptor,
   GraphQLExceptionFilter,
   GraphQLResponseInterceptor,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 import { BullModule } from '@nestjs/bullmq';
 import { UserRabbitMQModule } from './modules/rabbitmq/rabbitmq.module';
 
@@ -37,7 +37,8 @@ import { UserRabbitMQModule } from './modules/rabbitmq/rabbitmq.module';
       envFilePath: [
         join(
           process.cwd(),
-          '../../config/env/.env.' + (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
+          '../../config/env/.env.' +
+            (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
         ),
       ],
     }),

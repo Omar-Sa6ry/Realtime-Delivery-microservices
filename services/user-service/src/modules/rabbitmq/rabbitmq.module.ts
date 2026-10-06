@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { RabbitMQModule } from '@delivery/common';
+import { RabbitMQModule } from '@delivery-micro/shard';
 import { UserRabbitMQPublisher } from './rabbitmq.publisher';
 
 @Global()

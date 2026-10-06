@@ -1,5 +1,5 @@
 import { Controller, Get, Res } from '@nestjs/common';
-import { MetricsService } from '@delivery/common';
+import { MetricsService } from '@delivery-micro/shard';
 
 @Controller('metrics')
 export class MetricsController {

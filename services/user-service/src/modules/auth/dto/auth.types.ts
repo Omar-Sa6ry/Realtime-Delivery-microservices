@@ -7,7 +7,7 @@ import {
   TextField,
 } from '@bts-soft/core';
 import { IsOptional, IsString } from 'class-validator';
-import { GeneralResponse } from '@delivery/common';
+import { GeneralResponse } from '@delivery-micro/shard';
 
 import { UserType } from '../../user/dto/user.types';
 
@@ -80,4 +80,3 @@ export class RefreshTokenInput {
   @TextField('refreshToken', 10, 1000, false, true, false)
   refreshToken: string;
 }
-

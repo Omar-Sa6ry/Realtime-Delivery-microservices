@@ -1,8 +1,12 @@
 import { Resolver, Query, Args, Context } from '@nestjs/graphql';
 import { I18nService } from 'nestjs-i18n';
 import { ForbiddenException } from '@nestjs/common';
-import { Auth } from '@delivery/common';
-import { BooleanResponse, ConnectionStatusResponse, ConnectionsCountResponse } from './common/graphql/connection.types';
+import { Auth } from '@delivery-micro/shard';
+import {
+  BooleanResponse,
+  ConnectionStatusResponse,
+  ConnectionsCountResponse,
+} from './common/graphql/connection.types';
 import { ConnectionService } from './modules/gateway/connection/connection.service';
 
 @Resolver()

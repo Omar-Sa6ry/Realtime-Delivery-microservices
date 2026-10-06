@@ -1,1 +1,1 @@
-export { DeliveryStatus } from '@delivery/common';
+export { DeliveryStatus } from '@delivery-micro/shard';

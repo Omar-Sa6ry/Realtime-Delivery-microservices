@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { KafkaModule } from '@delivery/common';
+import { KafkaModule } from '@delivery-micro/shard';
 import { UserService } from './user.service';
 import { DbUserService } from './db-user.service';
 import { UserResolver } from './user.resolver';
@@ -16,14 +16,16 @@ import { HealthController } from './health.controller';
       useFactory: (config: ConfigService) => ({
         clientId: 'user-service',
         brokers: (config.get<string>('KAFKA_BROKERS', 'kafka-srv:9092') || '')
-          .split(',').map(b => b.trim()).filter(Boolean),
+          .split(',')
+          .map((b) => b.trim())
+          .filter(Boolean),
       }),
     }),
   ],
   controllers: [UserGrpcController, MetricsController, HealthController],
   providers: [
-    DbUserService, 
-    UserService, 
+    DbUserService,
+    UserService,
     UserResolver,
     {
       provide: 'USER_SERVICE',
@@ -41,7 +43,7 @@ import { HealthController } from './health.controller';
         };
       },
       inject: [UserService],
-    }
+    },
   ],
   exports: [UserService, 'USER_SERVICE'],
 })

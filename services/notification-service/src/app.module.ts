@@ -4,7 +4,10 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
 import { GraphQLModule } from '@nestjs/graphql';
-import { ApolloFederationDriver, ApolloFederationDriverConfig } from '@nestjs/apollo';
+import {
+  ApolloFederationDriver,
+  ApolloFederationDriverConfig,
+} from '@nestjs/apollo';
 import { JwtModule } from '@nestjs/jwt';
 import { RedisModule } from '@bts-soft/cache';
 import { StringValue } from 'ms';
@@ -27,14 +30,15 @@ import {
   MetricsInterceptor,
   GraphQLExceptionFilter,
   GraphQLResponseInterceptor,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
-        '../../config/env/.env.' + (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
+        '../../config/env/.env.' +
+          (process.env.APP_ENV || process.env.NODE_ENV || 'development'),
       ],
     }),
 
@@ -47,7 +51,9 @@ import {
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET') || 'default_secret',
-        signOptions: { expiresIn: config.get<string>('JWT_EXPIRE', '1d') as StringValue },
+        signOptions: {
+          expiresIn: config.get<string>('JWT_EXPIRE', '1d') as StringValue,
+        },
       }),
       inject: [ConfigService],
     }),

@@ -4,7 +4,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { I18nService, I18nValidationException } from 'nestjs-i18n';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
-import { StructuredLogger } from '@delivery/common';
+import { StructuredLogger } from '@delivery-micro/shard';
 
 async function bootstrap() {
   const logger = new StructuredLogger();
@@ -76,7 +76,10 @@ async function bootstrap() {
 // Keep the process alive while infrastructure (Redis, DB, NATS) is still starting:
 // library-level errors (e.g. ioredis connection) must not kill the pod — the bootstrap retry loop recovers once dependencies are reachable.
 process.on('uncaughtException', (err) => {
-  console.error('[process] Uncaught exception (continuing):', err?.message ?? err);
+  console.error(
+    '[process] Uncaught exception (continuing):',
+    err?.message ?? err,
+  );
 });
 process.on('unhandledRejection', (reason) => {
   console.error('[process] Unhandled rejection (continuing):', reason);

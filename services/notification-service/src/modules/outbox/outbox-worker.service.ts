@@ -1,10 +1,22 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { NotificationOutbox, OutboxStatus } from '../../common/database/entities/notification-outbox.entity';
-import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import {
+  NotificationOutbox,
+  OutboxStatus,
+} from '../../common/database/entities/notification-outbox.entity';
+import {
+  ClientProxy,
+  ClientProxyFactory,
+  Transport,
+} from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
-import { NotificationNatsSubjects } from '@delivery/common';
+import { NotificationNatsSubjects } from '@delivery-micro/shard';
 
 @Injectable()
 export class OutboxWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -20,7 +32,9 @@ export class OutboxWorkerService implements OnModuleInit, OnModuleDestroy {
     this.natsClient = ClientProxyFactory.create({
       transport: Transport.NATS,
       options: {
-        servers: [this.configService.get<string>('NATS_URL', 'nats://nats-srv:4222')],
+        servers: [
+          this.configService.get<string>('NATS_URL', 'nats://nats-srv:4222'),
+        ],
         queue: 'notification-service',
       },
     });
@@ -51,14 +65,16 @@ export class OutboxWorkerService implements OnModuleInit, OnModuleDestroy {
         try {
           const payload = record.payload;
           const subject = `${NotificationNatsSubjects.NOTIFICATION_USER}.${payload.userId}`;
-          
+
           this.natsClient.emit(subject, payload);
 
           record.status = OutboxStatus.PUBLISHED;
           record.publishedAt = new Date();
           await this.outboxRepository.save(record);
         } catch (error) {
-          this.logger.error(`Failed to publish outbox record ${record.id}: ${error.message}`);
+          this.logger.error(
+            `Failed to publish outbox record ${record.id}: ${error.message}`,
+          );
           record.attemptCount += 1;
           if (record.attemptCount > 5) {
             record.status = OutboxStatus.FAILED;
@@ -67,7 +83,10 @@ export class OutboxWorkerService implements OnModuleInit, OnModuleDestroy {
         }
       }
     } catch (error) {
-      this.logger.error(`Error processing outbox: ${error.message}`, error.stack);
+      this.logger.error(
+        `Error processing outbox: ${error.message}`,
+        error.stack,
+      );
     }
   }
 }

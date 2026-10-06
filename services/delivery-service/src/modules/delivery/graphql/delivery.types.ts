@@ -1,7 +1,14 @@
-import { Field, ObjectType, Directive, ID, Int, registerEnumType } from '@nestjs/graphql';
+import {
+  Field,
+  ObjectType,
+  Directive,
+  ID,
+  Int,
+  registerEnumType,
+} from '@nestjs/graphql';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
 import { PaymentStatus } from '../enums/payment-status.enum';
-import { GeneralResponse } from '@delivery/common';
+import { GeneralResponse } from '@delivery-micro/shard';
 
 registerEnumType(DeliveryStatus, {
   name: 'DeliveryStatus',
@@ -146,7 +153,9 @@ export class PaginatedDeliveries {
 
 @Directive('@shareable')
 @ObjectType()
-export class DeliveryListResponse extends GeneralResponse(PaginatedDeliveries) {}
+export class DeliveryListResponse extends GeneralResponse(
+  PaginatedDeliveries,
+) {}
 
 @Directive('@shareable')
 @ObjectType()
@@ -157,7 +166,9 @@ export class DeliveryStatusesData {
 
 @Directive('@shareable')
 @ObjectType()
-export class DeliveryStatusesResponse extends GeneralResponse(DeliveryStatusesData) {}
+export class DeliveryStatusesResponse extends GeneralResponse(
+  DeliveryStatusesData,
+) {}
 
 @Directive('@shareable')
 @ObjectType()
@@ -174,7 +185,6 @@ export class DeliveryServiceInfo {
 
 @Directive('@shareable')
 @ObjectType()
-export class DeliveryServiceInfoResponse extends GeneralResponse(DeliveryServiceInfo) {}
-
-
-
+export class DeliveryServiceInfoResponse extends GeneralResponse(
+  DeliveryServiceInfo,
+) {}

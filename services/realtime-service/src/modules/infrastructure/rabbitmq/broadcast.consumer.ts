@@ -7,7 +7,7 @@ import {
   RabbitMQQueues,
   RabbitMQService,
   RealtimeNatsSubjects,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 import { EventMapper } from '../../features/events/event.mapper';
 import { NatsPublisher } from '../nats/nats.publisher';
 

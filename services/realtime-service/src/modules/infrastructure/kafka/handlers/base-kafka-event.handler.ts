@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { KafkaEventEnvelope } from '@delivery/common';
-import { RealtimeNatsSubjects } from '@delivery/common';
+import { KafkaEventEnvelope } from '@delivery-micro/shard';
+import { RealtimeNatsSubjects } from '@delivery-micro/shard';
 import { EventDeduplicator } from '../../../features/events/event-deduplicator';
 import { EventMapper } from '../../../features/events/event.mapper';
 import { NatsPublisher } from '../../nats/nats.publisher';
@@ -51,7 +51,10 @@ export abstract class BaseKafkaEventHandler<T> implements KafkaEventHandler {
     }
 
     const clientEvent = this.mapper.toClientEvent(envelope);
-    const published = await this.natsPublisher.publish(this.natsSubject, clientEvent);
+    const published = await this.natsPublisher.publish(
+      this.natsSubject,
+      clientEvent,
+    );
     if (!published) {
       this.logger.warn(`Fan-out publish failed for ${this.eventType}`);
     }

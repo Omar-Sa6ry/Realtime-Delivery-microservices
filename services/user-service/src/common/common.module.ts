@@ -11,7 +11,7 @@ import { BcryptPasswordHasher } from './security/bcrypt-password.hasher';
 import { JwtTokenProvider } from './security/jwt-token.provider';
 import { OutboxWorkerService } from './messaging/outbox-worker.service';
 import { OutboxProcessor } from './messaging/outbox.queue';
-import { GraphQLResponseInterceptor } from '@delivery/common';
+import { GraphQLResponseInterceptor } from '@delivery-micro/shard';
 
 @Global()
 @Module({

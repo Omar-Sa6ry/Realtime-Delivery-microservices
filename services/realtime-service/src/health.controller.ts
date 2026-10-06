@@ -1,6 +1,6 @@
 import { Controller, Get, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { HealthService } from '@delivery/common';
+import { HealthService } from '@delivery-micro/shard';
 import { RedisService } from '@bts-soft/cache';
 
 @Controller('realtime')

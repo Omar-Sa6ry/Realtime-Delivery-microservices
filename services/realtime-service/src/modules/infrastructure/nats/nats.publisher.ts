@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RealtimeNatsSubjects, RealtimeMessage } from '@delivery/common';
+import { RealtimeNatsSubjects, RealtimeMessage } from '@delivery-micro/shard';
 import { RealtimeNatsService } from './nats.service';
 import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
 
@@ -22,7 +22,9 @@ export class NatsPublisher {
       return false;
     }
     try {
-      this.nats.getClient()!.publish(subject, this.nats.getCodec().encode(data));
+      this.nats
+        .getClient()!
+        .publish(subject, this.nats.getCodec().encode(data));
       this.metrics.natsPublished.inc({ subject });
       return true;
     } catch (err) {

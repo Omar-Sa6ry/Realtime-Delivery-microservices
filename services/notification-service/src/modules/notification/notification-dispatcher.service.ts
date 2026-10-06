@@ -5,8 +5,14 @@ import { Queue } from 'bullmq';
 import { Repository } from 'typeorm';
 import { NotificationDelivery } from '../../common/database/entities/notification-delivery.entity';
 import { Notification } from '../../common/database/entities/notification.entity';
-import { NotificationOutbox, OutboxStatus } from '../../common/database/entities/notification-outbox.entity';
-import { NotificationChannel, NotificationPriority } from '@delivery/common';
+import {
+  NotificationOutbox,
+  OutboxStatus,
+} from '../../common/database/entities/notification-outbox.entity';
+import {
+  NotificationChannel,
+  NotificationPriority,
+} from '@delivery-micro/shard';
 
 @Injectable()
 export class NotificationDispatcherService {
@@ -23,7 +29,10 @@ export class NotificationDispatcherService {
     private outboxRepository: Repository<NotificationOutbox>,
   ) {}
 
-  async dispatch(notification: Notification, deliveries: NotificationDelivery[]) {
+  async dispatch(
+    notification: Notification,
+    deliveries: NotificationDelivery[],
+  ) {
     for (const delivery of deliveries) {
       const jobData = {
         notificationId: notification.id,
@@ -50,9 +59,14 @@ export class NotificationDispatcherService {
             await this.realtimeQueue.add('send', jobData, { jobId });
             break;
         }
-        this.logger.debug(`Dispatched ${delivery.channel} job for notification ${notification.id}`);
+        this.logger.debug(
+          `Dispatched ${delivery.channel} job for notification ${notification.id}`,
+        );
       } catch (error) {
-        this.logger.error(`Failed to dispatch ${delivery.channel} for notification ${notification.id}: ${error.message}`, error.stack);
+        this.logger.error(
+          `Failed to dispatch ${delivery.channel} for notification ${notification.id}: ${error.message}`,
+          error.stack,
+        );
       }
     }
 
@@ -69,9 +83,14 @@ export class NotificationDispatcherService {
         { notificationId: notification.id },
         { delay, jobId: `scheduled-${notification.id}` },
       );
-      this.logger.debug(`Scheduled notification ${notification.id} for ${scheduledAt.toISOString()}`);
+      this.logger.debug(
+        `Scheduled notification ${notification.id} for ${scheduledAt.toISOString()}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to schedule notification ${notification.id}: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to schedule notification ${notification.id}: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -101,16 +120,24 @@ export class NotificationDispatcherService {
           await this.realtimeQueue.add('send', jobData, { jobId });
           break;
       }
-      this.logger.debug(`Requeued ${delivery.channel} delivery ${delivery.id} for retry`);
+      this.logger.debug(
+        `Requeued ${delivery.channel} delivery ${delivery.id} for retry`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to requeue delivery ${delivery.id}: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to requeue delivery ${delivery.id}: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
   private async createRealtimeOutbox(notification: Notification) {
     try {
       const existing = await this.outboxRepository.findOne({
-        where: { eventType: 'NOTIFICATION_CREATED', aggregateId: notification.id },
+        where: {
+          eventType: 'NOTIFICATION_CREATED',
+          aggregateId: notification.id,
+        },
       });
       if (existing) return;
 
@@ -129,7 +156,10 @@ export class NotificationDispatcherService {
       });
       await this.outboxRepository.save(outbox);
     } catch (error) {
-      this.logger.error(`Failed to create realtime outbox for notification ${notification.id}: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to create realtime outbox for notification ${notification.id}: ${error.message}`,
+        error.stack,
+      );
     }
   }
 }

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { IJwtPayload, Role } from '@delivery/common';
+import { IJwtPayload, Role } from '@delivery-micro/shard';
 import { WebSocket } from 'ws';
 import { ConnectionContext, SocketData } from './connection.types';
 import { ConnectionRegistry } from './connection.registry';

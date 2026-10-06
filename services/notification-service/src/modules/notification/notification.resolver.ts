@@ -6,9 +6,9 @@ import {
   RateLimiterAlgorithm,
   CurrentUser,
   Permission,
-} from '@delivery/common';
-import type { IUser } from '@delivery/common';
-import { NotificationType } from '@delivery/common';
+} from '@delivery-micro/shard';
+import type { IUser } from '@delivery-micro/shard';
+import { NotificationType } from '@delivery-micro/shard';
 import { NotificationService } from './notification.service';
 import { PreferenceService } from './preference/preference.service';
 import {
@@ -20,9 +20,11 @@ import {
 import { NotificationPreferenceResponse } from './dtos/preference.dto';
 import { NotificationPreferenceInput } from './inputs/preference.input';
 import { NotificationPreference } from '../../common/database/entities/notification-preference.entity';
-import { IntResponse, BooleanResponse } from '@delivery/common';
+import { IntResponse, BooleanResponse } from '@delivery-micro/shard';
 
-const FIXED_WINDOW_RATE_LIMIT = { algorithm: RateLimiterAlgorithm.FIXED_WINDOW_COUNTER };
+const FIXED_WINDOW_RATE_LIMIT = {
+  algorithm: RateLimiterAlgorithm.FIXED_WINDOW_COUNTER,
+};
 
 @Resolver(() => NotificationTypeObj)
 export class NotificationResolver {
@@ -37,10 +39,16 @@ export class NotificationResolver {
   @Auth([Permission.READ_NOTIFICATION])
   async myNotifications(
     @CurrentUser() user: IUser,
-    @Args('page', { type: () => Int, nullable: true, defaultValue: 1 }) page: number,
-    @Args('limit', { type: () => Int, nullable: true, defaultValue: 20 }) limit: number,
+    @Args('page', { type: () => Int, nullable: true, defaultValue: 1 })
+    page: number,
+    @Args('limit', { type: () => Int, nullable: true, defaultValue: 20 })
+    limit: number,
   ): Promise<PaginatedNotificationResponse> {
-    const result = await this.notificationService.findAllForUser(user.id, page, limit);
+    const result = await this.notificationService.findAllForUser(
+      user.id,
+      page,
+      limit,
+    );
 
     const notificationConnection: NotificationConnection = {
       items: result.items as NotificationTypeObj[],
@@ -62,7 +70,10 @@ export class NotificationResolver {
     @CurrentUser() user: IUser,
     @Args('id', { type: () => ID }) id: string,
   ): Promise<NotificationResponse> {
-    const notification = await this.notificationService.findByIdForUser(id, user.id);
+    const notification = await this.notificationService.findByIdForUser(
+      id,
+      user.id,
+    );
     return {
       success: true,
       statusCode: 200,
@@ -74,7 +85,9 @@ export class NotificationResolver {
   @Query(() => IntResponse)
   @RedisRateLimit({ ...FIXED_WINDOW_RATE_LIMIT, limit: 100, windowMs: 60000 })
   @Auth([Permission.READ_NOTIFICATION])
-  async unreadNotificationCount(@CurrentUser() user: IUser): Promise<IntResponse> {
+  async unreadNotificationCount(
+    @CurrentUser() user: IUser,
+  ): Promise<IntResponse> {
     const count = await this.notificationService.unreadCountForUser(user.id);
     return {
       success: true,
@@ -103,7 +116,9 @@ export class NotificationResolver {
   @Mutation(() => BooleanResponse)
   @RedisRateLimit({ ...FIXED_WINDOW_RATE_LIMIT, limit: 60, windowMs: 60000 })
   @Auth([Permission.UPDATE_NOTIFICATION])
-  async markAllNotificationsAsRead(@CurrentUser() user: IUser): Promise<BooleanResponse> {
+  async markAllNotificationsAsRead(
+    @CurrentUser() user: IUser,
+  ): Promise<BooleanResponse> {
     await this.notificationService.markAllAsRead(user.id);
     return {
       success: true,
@@ -136,7 +151,10 @@ export class NotificationResolver {
     @CurrentUser() user: IUser,
     @Args('type', { type: () => String, nullable: true }) type?: string,
   ): Promise<NotificationPreferenceResponse> {
-    const items = await this.preferenceService.findForUser(user.id, type as NotificationType);
+    const items = await this.preferenceService.findForUser(
+      user.id,
+      type as NotificationType,
+    );
     return {
       success: true,
       statusCode: 200,
@@ -150,11 +168,16 @@ export class NotificationResolver {
   @Auth([Permission.UPDATE_NOTIFICATION])
   async updateNotificationPreferences(
     @CurrentUser() user: IUser,
-    @Args('preferences', { type: () => [NotificationPreferenceInput] }) preferences: NotificationPreferenceInput[],
+    @Args('preferences', { type: () => [NotificationPreferenceInput] })
+    preferences: NotificationPreferenceInput[],
   ): Promise<NotificationPreferenceResponse> {
     const saved: NotificationPreference[] = [];
     for (const preference of preferences) {
-      const rows = await this.preferenceService.upsertPreferences(user.id, preference.type, preference.channels);
+      const rows = await this.preferenceService.upsertPreferences(
+        user.id,
+        preference.type,
+        preference.channels,
+      );
       saved.push(...rows);
     }
     return {
@@ -165,4 +188,3 @@ export class NotificationResolver {
     } as NotificationPreferenceResponse;
   }
 }
-

@@ -7,7 +7,7 @@ import {
   Index,
   Unique,
 } from 'typeorm';
-import { NotificationType, NotificationChannel } from '@delivery/common';
+import { NotificationType, NotificationChannel } from '@delivery-micro/shard';
 import { IdGenerator } from '@bts-soft/common';
 
 @Entity('notification_preferences')

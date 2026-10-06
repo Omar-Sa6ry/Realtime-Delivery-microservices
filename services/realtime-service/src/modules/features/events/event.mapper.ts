@@ -3,11 +3,12 @@ import {
   ClientMessageType,
   ServerMessageType,
   MessagePriority,
-} from '@delivery/common';
+} from '@delivery-micro/shard';
 import { RealtimeEventEnvelope, ClientEvent } from './event.types';
 
 const PRIORITY_FALLBACK: Record<ServerMessageType, MessagePriority> = {
-  [ServerMessageType.DELIVERY_LOCATION_UPDATED]: MessagePriority.HIGH_FREQUENCY_LOSSY,
+  [ServerMessageType.DELIVERY_LOCATION_UPDATED]:
+    MessagePriority.HIGH_FREQUENCY_LOSSY,
   [ServerMessageType.DELIVERY_STATUS_UPDATED]: MessagePriority.NORMAL,
   [ServerMessageType.DRIVER_ASSIGNED]: MessagePriority.CRITICAL,
   [ServerMessageType.DELIVERY_COMPLETED]: MessagePriority.CRITICAL,
@@ -27,7 +28,8 @@ const PRIORITY_FALLBACK: Record<ServerMessageType, MessagePriority> = {
   [ServerMessageType.DRIVER_SEARCH_RETRY]: MessagePriority.NORMAL,
   [ServerMessageType.ASSIGNMENT_EXPIRED]: MessagePriority.NORMAL,
   [ServerMessageType.ASSIGNMENT_REJECTED]: MessagePriority.NORMAL,
-  [ServerMessageType.MEDIA_UPLOAD_PROGRESS]: MessagePriority.HIGH_FREQUENCY_LOSSY,
+  [ServerMessageType.MEDIA_UPLOAD_PROGRESS]:
+    MessagePriority.HIGH_FREQUENCY_LOSSY,
   [ServerMessageType.MEDIA_PROCESSING_PROGRESS]: MessagePriority.NORMAL,
   [ServerMessageType.MEDIA_READY]: MessagePriority.CRITICAL,
   [ServerMessageType.MEDIA_DELETED]: MessagePriority.CRITICAL,

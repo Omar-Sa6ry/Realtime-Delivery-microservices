@@ -1,4 +1,11 @@
-import { BadRequestException, Inject, Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { lastValueFrom } from 'rxjs';
 import { Delivery } from '../entities/delivery.entity';
@@ -8,7 +15,13 @@ import { DeliveryRepository } from '../repositories/delivery.repository';
 import { DeliveryStateMachine } from './delivery.state-machine';
 import { IdempotencyService } from './idempotency.service';
 import { OutboxRepository } from '../outbox/outbox.repository';
-import { DeliveryKafkaTopics, NatsService, NotificationNatsSubjects, RealtimeNatsSubjects, ServerMessageType } from '@delivery/common';
+import {
+  DeliveryKafkaTopics,
+  NatsService,
+  NotificationNatsSubjects,
+  RealtimeNatsSubjects,
+  ServerMessageType,
+} from '@delivery-micro/shard';
 import { DeliveryRabbitMQPublisher } from '../../infrastructure/rabbitmq/rabbitmq.publisher';
 
 export interface CreateDeliveryInput {
@@ -32,18 +45,24 @@ export class DeliveryCommandService implements OnModuleInit {
     private readonly idempotency: IdempotencyService,
     private readonly outbox: OutboxRepository,
     @Inject('USER_SERVICE') private readonly userServiceClientGrpc: any,
-    @Optional() @Inject('PAYMENT_SERVICE') private readonly paymentServiceClientGrpc?: any,
+    @Optional()
+    @Inject('PAYMENT_SERVICE')
+    private readonly paymentServiceClientGrpc?: any,
     @Optional() private readonly nats?: NatsService,
     @Optional() private readonly rabbitmqPublisher?: DeliveryRabbitMQPublisher,
   ) {}
 
   onModuleInit() {
-    this.userServiceClient = this.userServiceClientGrpc.getService('UserService');
+    this.userServiceClient =
+      this.userServiceClientGrpc.getService('UserService');
     if (this.paymentServiceClientGrpc) {
       try {
-        this.paymentServiceClient = this.paymentServiceClientGrpc.getService('PaymentService');
+        this.paymentServiceClient =
+          this.paymentServiceClientGrpc.getService('PaymentService');
       } catch (err: any) {
-        this.logger.warn(`Could not bind PaymentService gRPC in DeliveryCommandService: ${err.message}`);
+        this.logger.warn(
+          `Could not bind PaymentService gRPC in DeliveryCommandService: ${err.message}`,
+        );
       }
     }
   }
@@ -52,18 +71,26 @@ export class DeliveryCommandService implements OnModuleInit {
     // Validate customer existence via gRPC
     if (this.userServiceClient) {
       try {
-        const user = await lastValueFrom(this.userServiceClient.GetUser({ id: input.customerId }));
+        const user = await lastValueFrom(
+          this.userServiceClient.GetUser({ id: input.customerId }),
+        );
         if (!user || !(user as any).id) {
-          throw new BadRequestException(`Customer with ID ${input.customerId} does not exist`);
+          throw new BadRequestException(
+            `Customer with ID ${input.customerId} does not exist`,
+          );
         }
       } catch (err: any) {
         if (err instanceof BadRequestException) {
           throw err;
         }
         if (err?.code === 5 || err?.details?.includes('not found')) {
-          throw new BadRequestException(`Customer with ID ${input.customerId} does not exist`);
+          throw new BadRequestException(
+            `Customer with ID ${input.customerId} does not exist`,
+          );
         }
-        this.logger.error(`Failed to validate customer via gRPC: ${err.message}`);
+        this.logger.error(
+          `Failed to validate customer via gRPC: ${err.message}`,
+        );
         throw new BadRequestException('Could not validate customer ID');
       }
     }
@@ -94,7 +121,10 @@ export class DeliveryCommandService implements OnModuleInit {
     return delivery;
   }
 
-  async executeWithIdempotency<T>(key: string, operation: () => Promise<T>): Promise<T> {
+  async executeWithIdempotency<T>(
+    key: string,
+    operation: () => Promise<T>,
+  ): Promise<T> {
     return this.idempotency.execute(key, operation);
   }
 
@@ -135,7 +165,8 @@ export class DeliveryCommandService implements OnModuleInit {
             dropoff: saved.dropoffAddress,
             changedBy: changedBy ?? null,
             note: note ?? null,
-            updatedAt: saved.updatedAt?.toISOString() ?? new Date().toISOString(),
+            updatedAt:
+              saved.updatedAt?.toISOString() ?? new Date().toISOString(),
           },
         }),
       );
@@ -157,9 +188,15 @@ export class DeliveryCommandService implements OnModuleInit {
     if (status === DeliveryStatus.DRIVER_ASSIGNED && saved.driverId) {
       const assignedDriverId: string = saved.driverId;
       await this.publishRabbitMqBestEffort(() =>
-        this.rabbitmqPublisher?.publishDriverAssigned(saved.id, assignedDriverId),
+        this.rabbitmqPublisher?.publishDriverAssigned(
+          saved.id,
+          assignedDriverId,
+        ),
       );
-    } else if (status === DeliveryStatus.COMPLETED || status === DeliveryStatus.DELIVERED) {
+    } else if (
+      status === DeliveryStatus.COMPLETED ||
+      status === DeliveryStatus.DELIVERED
+    ) {
       await this.publishRabbitMqBestEffort(() =>
         this.rabbitmqPublisher?.publishOrderCompleted(saved),
       );
@@ -171,21 +208,29 @@ export class DeliveryCommandService implements OnModuleInit {
 
     // Handle stage-specific actions (escrow capture and user notifications)
     if (status === DeliveryStatus.PICKED_UP) {
-      this.publishNats(`${NotificationNatsSubjects.NOTIFICATION_USER}.${saved.customerId}`, {
-        type: 'ORDER_PICKED_UP',
-        title: 'Order Picked Up',
-        body: `Your delivery #${saved.id} has been picked up by the driver and is on the way!`,
-        data: {
-          deliveryId: saved.id,
-          driverId: saved.driverId,
-          status: saved.status,
+      this.publishNats(
+        `${NotificationNatsSubjects.NOTIFICATION_USER}.${saved.customerId}`,
+        {
+          type: 'ORDER_PICKED_UP',
+          title: 'Order Picked Up',
+          body: `Your delivery #${saved.id} has been picked up by the driver and is on the way!`,
+          data: {
+            deliveryId: saved.id,
+            driverId: saved.driverId,
+            status: saved.status,
+          },
         },
-      });
-    } else if (status === DeliveryStatus.COMPLETED || status === DeliveryStatus.DELIVERED) {
+      );
+    } else if (
+      status === DeliveryStatus.COMPLETED ||
+      status === DeliveryStatus.DELIVERED
+    ) {
       // SAGA Step 3: Capture escrow funds on completion
       if (this.paymentServiceClient && saved.amount) {
         const amountMinor = Math.round(parseFloat(saved.amount) * 100);
-        this.logger.log(`[SAGA Step 3: Capture] Capturing escrow payment on delivery completion #${saved.id} (${amountMinor} minor units)`);
+        this.logger.log(
+          `[SAGA Step 3: Capture] Capturing escrow payment on delivery completion #${saved.id} (${amountMinor} minor units)`,
+        );
         lastValueFrom(
           this.paymentServiceClient.CapturePayment({
             delivery_id: saved.id,
@@ -194,32 +239,42 @@ export class DeliveryCommandService implements OnModuleInit {
           }),
         )
           .then(async () => {
-            this.logger.log(`[SAGA Step 3] Payment captured for completed delivery ${saved.id}`);
+            this.logger.log(
+              `[SAGA Step 3] Payment captured for completed delivery ${saved.id}`,
+            );
             await this.updatePaymentStatus(saved.id, PaymentStatus.COMPLETED);
           })
           .catch((err: any) => {
-            this.logger.error(`[SAGA Step 3] Payment capture failed on completion for delivery ${saved.id}: ${err.message}`);
+            this.logger.error(
+              `[SAGA Step 3] Payment capture failed on completion for delivery ${saved.id}: ${err.message}`,
+            );
           });
       }
 
       // Notify customer that delivery is completed
-      this.publishNats(`${NotificationNatsSubjects.NOTIFICATION_USER}.${saved.customerId}`, {
-        type: 'DELIVERY_COMPLETED',
-        title: 'Order Delivered!',
-        body: `Your delivery #${saved.id} has been delivered successfully!`,
-        data: {
-          deliveryId: saved.id,
-          driverId: saved.driverId,
-          status: saved.status,
-          completedAt: saved.completedAt,
+      this.publishNats(
+        `${NotificationNatsSubjects.NOTIFICATION_USER}.${saved.customerId}`,
+        {
+          type: 'DELIVERY_COMPLETED',
+          title: 'Order Delivered!',
+          body: `Your delivery #${saved.id} has been delivered successfully!`,
+          data: {
+            deliveryId: saved.id,
+            driverId: saved.driverId,
+            status: saved.status,
+            completedAt: saved.completedAt,
+          },
         },
-      });
+      );
     }
 
     return saved;
   }
 
-  async updatePaymentStatus(id: string, paymentStatus: PaymentStatus): Promise<Delivery> {
+  async updatePaymentStatus(
+    id: string,
+    paymentStatus: PaymentStatus,
+  ): Promise<Delivery> {
     const delivery = await this.repository.findById(id);
     delivery.paymentStatus = paymentStatus;
     return this.repository.save(delivery);
@@ -233,7 +288,12 @@ export class DeliveryCommandService implements OnModuleInit {
     await this.publishRabbitMqBestEffort(() =>
       this.rabbitmqPublisher?.publishDispatchRequest(delivery),
     );
-    return this.transition(id, DeliveryStatus.DRIVER_ASSIGNED, driverId, `Driver ${driverId} assigned`);
+    return this.transition(
+      id,
+      DeliveryStatus.DRIVER_ASSIGNED,
+      driverId,
+      `Driver ${driverId} assigned`,
+    );
   }
 
   async acceptDriver(id: string, driverId: string): Promise<Delivery> {
@@ -242,25 +302,41 @@ export class DeliveryCommandService implements OnModuleInit {
       delivery.driverId = driverId;
       await this.repository.save(delivery);
     }
-    if (delivery.status === DeliveryStatus.PAYMENT_CONFIRMED || delivery.status === DeliveryStatus.CREATED) {
-      await this.transition(id, DeliveryStatus.DRIVER_ASSIGNED, driverId, `Driver ${driverId} assigned`);
+    if (
+      delivery.status === DeliveryStatus.PAYMENT_CONFIRMED ||
+      delivery.status === DeliveryStatus.CREATED
+    ) {
+      await this.transition(
+        id,
+        DeliveryStatus.DRIVER_ASSIGNED,
+        driverId,
+        `Driver ${driverId} assigned`,
+      );
     }
-    const updated = await this.transition(id, DeliveryStatus.DRIVER_ACCEPTED, driverId, `Driver ${driverId} accepted`);
+    const updated = await this.transition(
+      id,
+      DeliveryStatus.DRIVER_ACCEPTED,
+      driverId,
+      `Driver ${driverId} accepted`,
+    );
 
     // SAGA: Funds remain safely AUTHORIZED in escrow until delivery completion.
     // Driver assignment is confirmed.
 
     // Notify customer via NATS notification channel
-    this.publishNats(`${NotificationNatsSubjects.NOTIFICATION_USER}.${updated.customerId}`, {
-      type: 'DRIVER_ACCEPTED',
-      title: 'Driver Found!',
-      body: `A driver has accepted your delivery request #${updated.id}.`,
-      data: {
-        deliveryId: updated.id,
-        driverId,
-        status: updated.status,
+    this.publishNats(
+      `${NotificationNatsSubjects.NOTIFICATION_USER}.${updated.customerId}`,
+      {
+        type: 'DRIVER_ACCEPTED',
+        title: 'Driver Found!',
+        body: `A driver has accepted your delivery request #${updated.id}.`,
+        data: {
+          deliveryId: updated.id,
+          driverId,
+          status: updated.status,
+        },
       },
-    });
+    );
 
     // Notify customer via Realtime driver assignment channel
     this.publishNats(RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED, {
@@ -274,7 +350,11 @@ export class DeliveryCommandService implements OnModuleInit {
   }
 
   async retryDriverDispatch(delivery: Delivery): Promise<void> {
-    if (!delivery || delivery.status !== DeliveryStatus.PAYMENT_CONFIRMED || delivery.driverId) {
+    if (
+      !delivery ||
+      delivery.status !== DeliveryStatus.PAYMENT_CONFIRMED ||
+      delivery.driverId
+    ) {
       return;
     }
 
@@ -286,7 +366,9 @@ export class DeliveryCommandService implements OnModuleInit {
       return;
     }
 
-    this.logger.log(`Periodic retry: searching for available driver for delivery ${delivery.id}...`);
+    this.logger.log(
+      `Periodic retry: searching for available driver for delivery ${delivery.id}...`,
+    );
     // Notify customer and realtime subscribers of the retry
     this.publishNats(RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED, {
       type: ServerMessageType.DRIVER_SEARCH_RETRY,
@@ -313,15 +395,25 @@ export class DeliveryCommandService implements OnModuleInit {
           currency: delivery.currency,
           pickup: delivery.pickupAddress,
           dropoff: delivery.dropoffAddress,
-          createdAt: delivery.createdAt?.toISOString() ?? new Date().toISOString(),
+          createdAt:
+            delivery.createdAt?.toISOString() ?? new Date().toISOString(),
         },
       }),
     );
   }
 
-  async handleDriverRejectedOrExpired(id: string, reason: string): Promise<void> {
+  async handleDriverRejectedOrExpired(
+    id: string,
+    reason: string,
+  ): Promise<void> {
     const delivery = await this.repository.findById(id);
-    if (!delivery || delivery.status === DeliveryStatus.DRIVER_ACCEPTED || delivery.status === DeliveryStatus.CANCELLED || delivery.status === DeliveryStatus.FAILED || delivery.status === DeliveryStatus.COMPLETED) {
+    if (
+      !delivery ||
+      delivery.status === DeliveryStatus.DRIVER_ACCEPTED ||
+      delivery.status === DeliveryStatus.CANCELLED ||
+      delivery.status === DeliveryStatus.FAILED ||
+      delivery.status === DeliveryStatus.COMPLETED
+    ) {
       return;
     }
 
@@ -335,7 +427,9 @@ export class DeliveryCommandService implements OnModuleInit {
       return;
     }
 
-    this.logger.log(`Driver rejected/expired for delivery ${id} (${reason}). Re-triggering driver dispatch...`);
+    this.logger.log(
+      `Driver rejected/expired for delivery ${id} (${reason}). Re-triggering driver dispatch...`,
+    );
 
     // Notify customer and realtime gateway that we are searching for another driver
     this.publishNats(RealtimeNatsSubjects.DRIVER_ASSIGNMENT_UPDATED, {
@@ -364,47 +458,74 @@ export class DeliveryCommandService implements OnModuleInit {
           currency: delivery.currency,
           pickup: delivery.pickupAddress,
           dropoff: delivery.dropoffAddress,
-          createdAt: delivery.createdAt?.toISOString() ?? new Date().toISOString(),
+          createdAt:
+            delivery.createdAt?.toISOString() ?? new Date().toISOString(),
         },
       }),
     );
   }
 
-  async handleAssignmentRejected(id: string, driverId: string, reason: string): Promise<void> {
-    this.logger.log(`Driver ${driverId} rejected delivery ${id} (${reason}). Handling re-dispatch...`);
+  async handleAssignmentRejected(
+    id: string,
+    driverId: string,
+    reason: string,
+  ): Promise<void> {
+    this.logger.log(
+      `Driver ${driverId} rejected delivery ${id} (${reason}). Handling re-dispatch...`,
+    );
     await this.handleDriverRejectedOrExpired(id, `DRIVER_REJECTED: ${reason}`);
   }
 
   async handleDriverSearchTimeout(id: string): Promise<void> {
     const delivery = await this.repository.findById(id);
-    if (!delivery || delivery.status === DeliveryStatus.DRIVER_ACCEPTED || delivery.status === DeliveryStatus.CANCELLED || delivery.status === DeliveryStatus.FAILED || delivery.status === DeliveryStatus.COMPLETED) {
+    if (
+      !delivery ||
+      delivery.status === DeliveryStatus.DRIVER_ACCEPTED ||
+      delivery.status === DeliveryStatus.CANCELLED ||
+      delivery.status === DeliveryStatus.FAILED ||
+      delivery.status === DeliveryStatus.COMPLETED
+    ) {
       return;
     }
 
-
-    this.logger.warn(`No driver found within 10 minutes for delivery ${id}. Cancelling and notifying customer...`);
-    const cancelled = await this.cancel(id, 'system', 'No driver found within 10 minutes');
+    this.logger.warn(
+      `No driver found within 10 minutes for delivery ${id}. Cancelling and notifying customer...`,
+    );
+    const cancelled = await this.cancel(
+      id,
+      'system',
+      'No driver found within 10 minutes',
+    );
 
     // Notify customer
-    this.publishNats(`${NotificationNatsSubjects.NOTIFICATION_USER}.${cancelled.customerId}`, {
-      type: 'DELIVERY_CANCELLED',
-      title: 'No Driver Found',
-      body: `We were unable to find an available driver for your delivery request #${cancelled.id} within 10 minutes. The request has been cancelled.`,
-      data: {
-        deliveryId: cancelled.id,
-        status: cancelled.status,
-        reason: 'NO_DRIVER_FOUND_TIMEOUT',
+    this.publishNats(
+      `${NotificationNatsSubjects.NOTIFICATION_USER}.${cancelled.customerId}`,
+      {
+        type: 'DELIVERY_CANCELLED',
+        title: 'No Driver Found',
+        body: `We were unable to find an available driver for your delivery request #${cancelled.id} within 10 minutes. The request has been cancelled.`,
+        data: {
+          deliveryId: cancelled.id,
+          status: cancelled.status,
+          reason: 'NO_DRIVER_FOUND_TIMEOUT',
+        },
       },
-    });
+    );
   }
 
-  async cancel(id: string, changedBy?: string, note?: string): Promise<Delivery> {
+  async cancel(
+    id: string,
+    changedBy?: string,
+    note?: string,
+  ): Promise<Delivery> {
     const delivery = await this.repository.findById(id);
 
     // If payment was authorized or held, cancel authorization via gRPC
     if (this.paymentServiceClient && delivery) {
       if (delivery.paymentStatus === PaymentStatus.AUTHORIZED) {
-        this.logger.log(`[SAGA Compensation] Cancelling authorization for delivery ${id}`);
+        this.logger.log(
+          `[SAGA Compensation] Cancelling authorization for delivery ${id}`,
+        );
         lastValueFrom(
           this.paymentServiceClient.CancelAuthorization({
             delivery_id: id,
@@ -415,12 +536,18 @@ export class DeliveryCommandService implements OnModuleInit {
             await this.updatePaymentStatus(id, PaymentStatus.CANCELLED);
           })
           .catch((err: any) => {
-            this.logger.warn(`Failed to cancel payment authorization: ${err.message}`);
+            this.logger.warn(
+              `Failed to cancel payment authorization: ${err.message}`,
+            );
           });
       } else if (delivery.paymentStatus === PaymentStatus.COMPLETED) {
         // If payment was already captured, issue a refund
-        this.logger.log(`[SAGA Compensation] Refunding captured payment for delivery ${id}`);
-        const amountMinor = Math.round(parseFloat(delivery.amount || '0') * 100);
+        this.logger.log(
+          `[SAGA Compensation] Refunding captured payment for delivery ${id}`,
+        );
+        const amountMinor = Math.round(
+          parseFloat(delivery.amount || '0') * 100,
+        );
         lastValueFrom(
           this.paymentServiceClient.CreateRefund({
             delivery_id: id,

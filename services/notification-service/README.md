@@ -37,21 +37,21 @@ The service deliberately does **not** own user data. Authentication/authorizatio
 
 ## Tech stack
 
-| Concern            | Technology                                              |
-| ------------------ | ------------------------------------------------------- |
-| Framework          | NestJS 11                                               |
-| GraphQL (public)   | Apollo Federation driver (subgraph at `/notification/graphql`) |
-| Database           | PostgreSQL + TypeORM (`synchronize` for dev)            |
-| Queues             | BullMQ (`notification-email | sms | push | inapp | realtime`) |
-| Cache / Redis      | `@bts-soft/cache` (`RedisService`)                      |
-| Notifications      | `@bts-soft/notifications` (`NotificationService.send()`) |
-| Event streaming    | Kafka (consumers) via `kafkajs`                         |
-| Realtime bus       | NATS (outbox → `NotificationNatsSubjects.NOTIFICATION_USER.<userId>`) |
-| RPC                | gRPC (inbound `SendNotification`, outbound user lookup) |
-| Shared platform    | `@delivery/common` (`file:../../packages/ts`)           |
-| Auth               | JWT (`RoleGuard`, `Auth(...)`)                          |
-| i18n               | `nestjs-i18n` (locales `en`, `ar`)                      |
-| Observability      | `LoggingModule`, `MetricsModule`, `AutomationModule`    |
+| Concern          | Technology                                                            |
+| ---------------- | --------------------------------------------------------------------- |
+| Framework        | NestJS 11                                                             |
+| GraphQL (public) | Apollo Federation driver (subgraph at `/notification/graphql`)        |
+| Database         | PostgreSQL + TypeORM (`synchronize` for dev)                          |
+| Queues           | BullMQ (`notification-email                                           | sms | push | inapp | realtime`) |
+| Cache / Redis    | `@bts-soft/cache` (`RedisService`)                                    |
+| Notifications    | `@bts-soft/notifications` (`NotificationService.send()`)              |
+| Event streaming  | Kafka (consumers) via `kafkajs`                                       |
+| Realtime bus     | NATS (outbox → `NotificationNatsSubjects.NOTIFICATION_USER.<userId>`) |
+| RPC              | gRPC (inbound `SendNotification`, outbound user lookup)               |
+| Shared platform  | `@delivery-micro/shard` (NPM package)                                 |
+| Auth             | JWT (`RoleGuard`, `Auth(...)`)                                        |
+| i18n             | `nestjs-i18n` (locales `en`, `ar`)                                    |
+| Observability    | `LoggingModule`, `MetricsModule`, `AutomationModule`                  |
 
 ---
 
@@ -137,14 +137,14 @@ src/
 
 The notification domain is split into six cohesive tables on purpose:
 
-| Entity                  | Table                    | Purpose |
-| ----------------------- | ------------------------ | ------- |
-| `Notification`          | `notifications`          | The **aggregate**: one logical notification for one user (type, title, body, priority, status, read state). |
-| `NotificationDelivery`  | `notification_delivery`  | One row per **channel targeted** for a notification (EMAIL, SMS, ...). Tracks per-channel status, attempts, `sentAt`/`deliveredAt`. Enables retrying only the failed channel instead of re-sending everything. |
-| `NotificationTemplate`  | `notification_templates` | Versioned **Handlebars templates** keyed by `type + channel + locale`. Keeps copy out of code; supports i18n (en/ar) and fast in-memory + Redis caching. |
-| `NotificationPreference`| `notification_preferences`| Per-user opt-in/opt-out per `(userId, type, channel)`. `PreferenceService.getEnabledChannels()` uses this to decide which channels are allowed; if none exist, sane defaults (IN_APP + PUSH) are used. |
-| `NotificationOutbox`    | `notification_outbox`    | **Transactional outbox** for realtime fan-out via NATS (see above). |
-| `NotificationInbox`     | `notification_inbox`     | **Idempotency inbox** for Kafka at-least-once consumption. |
+| Entity                   | Table                      | Purpose                                                                                                                                                                                                        |
+| ------------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Notification`           | `notifications`            | The **aggregate**: one logical notification for one user (type, title, body, priority, status, read state).                                                                                                    |
+| `NotificationDelivery`   | `notification_delivery`    | One row per **channel targeted** for a notification (EMAIL, SMS, ...). Tracks per-channel status, attempts, `sentAt`/`deliveredAt`. Enables retrying only the failed channel instead of re-sending everything. |
+| `NotificationTemplate`   | `notification_templates`   | Versioned **Handlebars templates** keyed by `type + channel + locale`. Keeps copy out of code; supports i18n (en/ar) and fast in-memory + Redis caching.                                                       |
+| `NotificationPreference` | `notification_preferences` | Per-user opt-in/opt-out per `(userId, type, channel)`. `PreferenceService.getEnabledChannels()` uses this to decide which channels are allowed; if none exist, sane defaults (IN_APP + PUSH) are used.         |
+| `NotificationOutbox`     | `notification_outbox`      | **Transactional outbox** for realtime fan-out via NATS (see above).                                                                                                                                            |
+| `NotificationInbox`      | `notification_inbox`       | **Idempotency inbox** for Kafka at-least-once consumption.                                                                                                                                                     |
 
 This separation keeps the aggregate clean, allows per-channel retries, isolates templating, and gives reliable, exactly-once-shipped event handling.
 
@@ -161,7 +161,7 @@ The root module wires the platform infrastructure exactly like the User Service:
 - `RedisModule`, BullMQ `forRootAsync`, BTS `NotificationModule`.
 - `JwtModule.registerAsync({ global: true })` — consumes `JWT_SECRET` / `JWT_EXPIRE`.
 - `GraphQLModule.forRoot<ApolloFederationDriverConfig>` — federated subgraph at `/notification/graphql`.
-- `LoggingModule`, `MetricsModule`, `AutomationModule` from `@delivery/common`.
+- `LoggingModule`, `MetricsModule`, `AutomationModule` from `@delivery-micro/shard`.
 - `AuthModule`, `CommonModule`, `KafkaModule`, `NotificationModule`, `WorkersModule`, `OutboxModule`, `GrpcModule`.
 - Global `APP_FILTER` = `HttpExceptionFilter` (`@bts-soft/core`).
 - Global `APP_INTERCEPTOR`s = `GraphqlResponseInterceptor` (uniform responses) + `MetricsInterceptor`.
@@ -239,15 +239,15 @@ The realtime worker simply marks its delivery sent — the actual push to the cl
 
 All queries/mutations require a `Bearer` JWT and are permission/rate limited:
 
-| Operation | Type | Permissions | Rate limit (per minute) |
-| --------- | ---- | ----------- | ----------------------- |
-| `myNotifications(page, limit)` | Query | `READ_NOTIFICATION` | 100 |
-| `notification(id)` | Query | `READ_NOTIFICATION` | 100 |
-| `unreadNotificationCount` | Query | `READ_NOTIFICATION` | 100 |
-| `markNotificationAsRead(id)` | Mutation | `UPDATE_NOTIFICATION` | 60 |
-| `markAllNotificationsAsRead` | Mutation | `UPDATE_NOTIFICATION` | 60 |
-| `deleteNotification(id)` | Mutation | `DELETE_NOTIFICATION` | 50 |
-| `ping` | Query | (public) | – |
+| Operation                      | Type     | Permissions           | Rate limit (per minute) |
+| ------------------------------ | -------- | --------------------- | ----------------------- |
+| `myNotifications(page, limit)` | Query    | `READ_NOTIFICATION`   | 100                     |
+| `notification(id)`             | Query    | `READ_NOTIFICATION`   | 100                     |
+| `unreadNotificationCount`      | Query    | `READ_NOTIFICATION`   | 100                     |
+| `markNotificationAsRead(id)`   | Mutation | `UPDATE_NOTIFICATION` | 60                      |
+| `markAllNotificationsAsRead`   | Mutation | `UPDATE_NOTIFICATION` | 60                      |
+| `deleteNotification(id)`       | Mutation | `DELETE_NOTIFICATION` | 50                      |
+| `ping`                         | Query    | (public)              | –                       |
 
 Permissions map to roles via `rolePermissionsMap` in `packages/ts` (`USER` and `DRIVER` have `READ_NOTIFICATION`/`UPDATE_NOTIFICATION`; `DELETE_NOTIFICATION` is admin-only).
 
@@ -262,7 +262,7 @@ Every resolver returns a `GeneralResponse<T>` / `BooleanResponse` / `IntResponse
   "success": true,
   "statusCode": 200,
   "message": "Notifications retrieved successfully",
-  "data": { }
+  "data": {}
 }
 ```
 
@@ -275,20 +275,20 @@ Every resolver returns a `GeneralResponse<T>` / `BooleanResponse` / `IntResponse
 
 From the repository-root `.env` (`envFilePath: ../../.env`):
 
-| Variable              | Default               | Used for                       |
-| --------------------- | --------------------- | ------------------------------ |
-| `POSTGRES_PASSWORD`   | (required from env)   | Postgres password (`DB_USERNAME`, `DB_NAME`, `DB_HOST`, `DB_PORT` also supported) |
-| `REDIS_HOST`          | `localhost`           | Redis + BullMQ + rate limit    |
-| `REDIS_PORT`          | `6379`                | Redis                          |
-| `REDIS_DB`            | `0`                   | Redis                          |
-| `KAFKA_BROKERS`       | `kafka-srv:9092`      | Kafka consumer                 |
-| `KAFKA_GROUP_ID`      | `notification-service`| Kafka consumer group           |
-| `NATS_URL`            | `nats://nats-srv:4222`| Realtime outbox publisher      |
-| `USER_GRPC_URL`       | `user-srv:50051`      | gRPC user lookup               |
-| `JWT_SECRET`          | `default_secret`      | JWT verification (RoleGuard reads `process.env.JWT_SECRET`) |
-| `JWT_EXPIRE`          | `1d`                  | JWT token expiry               |
-| `PORT_NOTIFICATION`   | `4004`                | HTTP/GraphQL port              |
-| `PORT_GRPC`           | `50053`               | gRPC server port               |
+| Variable            | Default                | Used for                                                                          |
+| ------------------- | ---------------------- | --------------------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD` | (required from env)    | Postgres password (`DB_USERNAME`, `DB_NAME`, `DB_HOST`, `DB_PORT` also supported) |
+| `REDIS_HOST`        | `localhost`            | Redis + BullMQ + rate limit                                                       |
+| `REDIS_PORT`        | `6379`                 | Redis                                                                             |
+| `REDIS_DB`          | `0`                    | Redis                                                                             |
+| `KAFKA_BROKERS`     | `kafka-srv:9092`       | Kafka consumer                                                                    |
+| `KAFKA_GROUP_ID`    | `notification-service` | Kafka consumer group                                                              |
+| `NATS_URL`          | `nats://nats-srv:4222` | Realtime outbox publisher                                                         |
+| `USER_GRPC_URL`     | `user-srv:50051`       | gRPC user lookup                                                                  |
+| `JWT_SECRET`        | `default_secret`       | JWT verification (RoleGuard reads `process.env.JWT_SECRET`)                       |
+| `JWT_EXPIRE`        | `1d`                   | JWT token expiry                                                                  |
+| `PORT_NOTIFICATION` | `4004`                 | HTTP/GraphQL port                                                                 |
+| `PORT_GRPC`         | `50053`                | gRPC server port                                                                  |
 
 ---
 

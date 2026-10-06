@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { User } from '../../common/database/entities/user.entity';
-import { Role } from '@delivery/common';
+import { Role } from '@delivery-micro/shard';
 import { IdGenerator } from '@bts-soft/core';
 
 @Injectable()

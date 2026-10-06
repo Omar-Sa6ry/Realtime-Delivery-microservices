@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RabbitMQEventEnvelope } from '@delivery/common';
+import { RabbitMQEventEnvelope } from '@delivery-micro/shard';
 
 export interface RabbitMQNotificationView {
   type: string;

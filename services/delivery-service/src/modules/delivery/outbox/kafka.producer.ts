@@ -1,5 +1,5 @@
 ﻿import { Injectable } from '@nestjs/common';
-import { KafkaService } from '@delivery/common';
+import { KafkaService } from '@delivery-micro/shard';
 import { Outbox } from '../entities/outbox.entity';
 
 @Injectable()

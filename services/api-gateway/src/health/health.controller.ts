@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { HealthService } from '@delivery/common';
+import { HealthService } from '@delivery-micro/shard';
 
 @Controller('health')
 export class HealthController {

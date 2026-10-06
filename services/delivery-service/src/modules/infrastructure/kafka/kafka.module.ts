@@ -1,6 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { KafkaModule } from '@delivery/common';
+import { KafkaModule } from '@delivery-micro/shard';
 import { DeliveryKafkaConsumer } from './kafka.consumer';
 import { DeliveryModule } from '../../delivery/delivery.module';
 

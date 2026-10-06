@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { RabbitMQModule } from '@delivery/common';
+import { RabbitMQModule } from '@delivery-micro/shard';
 import { NotificationInbox } from '../../common/database/entities/notification-inbox.entity';
 import { KafkaConsumerModule } from '../kafka/kafka.module';
 import { EmailRabbitMQConsumer } from './consumers/email.consumer';

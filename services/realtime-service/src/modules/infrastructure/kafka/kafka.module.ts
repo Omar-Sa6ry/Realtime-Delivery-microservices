@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { KafkaModule } from '@delivery/common';
+import { KafkaModule } from '@delivery-micro/shard';
 import { KafkaConsumer } from './kafka.consumer';
 import { REALTIME_EVENT_HANDLERS } from './handlers/base-kafka-event.handler';
 import { DeliveryCreatedHandler } from './handlers/delivery-created.handler';

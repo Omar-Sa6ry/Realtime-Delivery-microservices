@@ -12,7 +12,12 @@ import { JwtTokenProvider } from '../../common/security/jwt-token.provider';
 import { RedisSessionRepository } from '../../common/database/repositories/redis-session.repository';
 import { OutboxWorkerService } from '../../common/messaging/outbox-worker.service';
 import { NotificationService, ChannelType } from '@bts-soft/core';
-import { Role, rolePermissionsMap, KafkaService, UserKafkaTopics } from '@delivery/common';
+import {
+  Role,
+  rolePermissionsMap,
+  KafkaService,
+  UserKafkaTopics,
+} from '@delivery-micro/shard';
 import { UserFactory } from './user.factory';
 import { I18nService } from 'nestjs-i18n';
 import { UserRabbitMQPublisher } from '../rabbitmq/rabbitmq.publisher';
@@ -47,11 +52,15 @@ export class AuthService {
     const { password, firstName, lastName, phoneNumber, imageUrl } = input;
 
     const [existingPhone, existingEmail] = await Promise.all([
-      phoneNumber ? this.userRepo.findOne({ where: { phoneNumber } }) : Promise.resolve(null),
+      phoneNumber
+        ? this.userRepo.findOne({ where: { phoneNumber } })
+        : Promise.resolve(null),
       this.userRepo.findOne({ where: { email } }),
     ]);
-    if (existingEmail) throw new BadRequestException(this.i18n.t('user.EMAIL_EXISTED'));
-    if (existingPhone) throw new BadRequestException(this.i18n.t('user.PHONE_EXISTED'));
+    if (existingEmail)
+      throw new BadRequestException(this.i18n.t('user.EMAIL_EXISTED'));
+    if (existingPhone)
+      throw new BadRequestException(this.i18n.t('user.PHONE_EXISTED'));
 
     const hashedPassword = await this.passwordHasher.hash(password);
 
@@ -245,12 +254,16 @@ export class AuthService {
 
     await this.userRepo.save(user);
 
-    this.notificationService.send(ChannelType.EMAIL, {
-      recipientId: user.email,
-      subject: 'Password Reset Code',
-      body: 'Hi {{name}}, your password reset code is {{token}}.',
-      context: { name: user.firstName, token },
-    }).catch(err => console.error('Failed to send reset password email:', err));
+    this.notificationService
+      .send(ChannelType.EMAIL, {
+        recipientId: user.email,
+        subject: 'Password Reset Code',
+        body: 'Hi {{name}}, your password reset code is {{token}}.',
+        context: { name: user.firstName, token },
+      })
+      .catch((err) =>
+        console.error('Failed to send reset password email:', err),
+      );
 
     this.kafkaService
       .emit(
@@ -262,11 +275,15 @@ export class AuthService {
           firstName: user.firstName,
         },
       )
-      .catch(err => console.error('Failed to publish password_reset event:', err));
+      .catch((err) =>
+        console.error('Failed to publish password_reset event:', err),
+      );
   }
 
   async resetPassword(input: ResetPasswordInput): Promise<void> {
-    const user = await this.userRepo.findOne({ where: { resetToken: input.token } });
+    const user = await this.userRepo.findOne({
+      where: { resetToken: input.token },
+    });
     if (
       !user ||
       !user.resetTokenExpiry ||
@@ -288,7 +305,9 @@ export class AuthService {
   }
 
   async refreshToken(input: RefreshTokenInput): Promise<AuthPayloadType> {
-    const payload = await this.tokenProvider.verifyRefreshToken(input.refreshToken);
+    const payload = await this.tokenProvider.verifyRefreshToken(
+      input.refreshToken,
+    );
     if (!payload || !payload.sessionId) {
       throw new UnauthorizedException(this.i18n.t('user.INVALID_TOKEN'));
     }

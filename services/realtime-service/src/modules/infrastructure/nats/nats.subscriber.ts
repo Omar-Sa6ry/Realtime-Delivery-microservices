@@ -1,11 +1,21 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { RealtimeNatsSubjects, ServerMessageType, MessagePriority, NotificationNatsSubjects } from '@delivery/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import {
+  RealtimeNatsSubjects,
+  ServerMessageType,
+  MessagePriority,
+  NotificationNatsSubjects,
+} from '@delivery-micro/shard';
 import { Subscription } from 'nats';
 import { SubscriptionStore } from '../../features/subscription/subscription.store';
 import { ConnectionService } from '../../gateway/connection/connection.service';
 import { SocketWriter } from '../../gateway/connection/socket-writer.service';
 import { RealtimeNatsService } from './nats.service';
-import { Role } from '@delivery/common';
+import { Role } from '@delivery-micro/shard';
 import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
 
 interface NatsFanoutMessage {
@@ -70,11 +80,16 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
         }
       }
     } catch (err) {
-      this.logger.error(`NATS subscription ${subject} terminated: ${err.message}`);
+      this.logger.error(
+        `NATS subscription ${subject} terminated: ${err.message}`,
+      );
     }
   }
 
-  private async handleMessage(subject: string, data: Uint8Array): Promise<void> {
+  private async handleMessage(
+    subject: string,
+    data: Uint8Array,
+  ): Promise<void> {
     let message: NatsFanoutMessage;
     try {
       message = this.nats.getCodec().decode(data) as NatsFanoutMessage;
@@ -88,7 +103,9 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
       if (driverId) {
         await this.fanoutToDriver(driverId, message);
       }
-    } else if (subject.startsWith(`${NotificationNatsSubjects.NOTIFICATION_USER}.`)) {
+    } else if (
+      subject.startsWith(`${NotificationNatsSubjects.NOTIFICATION_USER}.`)
+    ) {
       const userId = subject.split('.').pop();
       if (userId) {
         await this.fanoutToUser(userId, message);
@@ -112,7 +129,10 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
     return subject.startsWith('realtime.media.');
   }
 
-  private async fanoutToDriver(driverId: string, message: NatsFanoutMessage): Promise<void> {
+  private async fanoutToDriver(
+    driverId: string,
+    message: NatsFanoutMessage,
+  ): Promise<void> {
     const sockets = this.connectionService.getLocalSocketsByUser(driverId);
     if (sockets.length === 0) return;
 
@@ -126,7 +146,10 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  private async fanoutToUser(userId: string, message: NatsFanoutMessage): Promise<void> {
+  private async fanoutToUser(
+    userId: string,
+    message: NatsFanoutMessage,
+  ): Promise<void> {
     const sockets = this.connectionService.getLocalSocketsByUser(userId);
     if (sockets.length === 0) return;
 
@@ -140,7 +163,10 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  private async fanoutPaymentStatusToUser(userId: string, data: Record<string, unknown>): Promise<void> {
+  private async fanoutPaymentStatusToUser(
+    userId: string,
+    data: Record<string, unknown>,
+  ): Promise<void> {
     const sockets = this.connectionService.getLocalSocketsByUser(userId);
     if (sockets.length === 0) return;
 
@@ -171,11 +197,14 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  private async fanoutToDeliverySubscribers(message: NatsFanoutMessage): Promise<void> {
+  private async fanoutToDeliverySubscribers(
+    message: NatsFanoutMessage,
+  ): Promise<void> {
     const deliveryId = String(message.data?.deliveryId || '');
     if (!deliveryId) return;
 
-    const socketIds = await this.subscriptionStore.getDeliverySubscribers(deliveryId);
+    const socketIds =
+      await this.subscriptionStore.getDeliverySubscribers(deliveryId);
     const sockets = socketIds
       .map((id) => this.connectionService.getLocalConnection(id))
       .filter((s) => s !== undefined);
@@ -183,7 +212,8 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
     // Also include customer socket directly if customerId is in data and not already in delivery room
     const customerId = String(message.data?.customerId || '');
     if (customerId) {
-      const customerSockets = this.connectionService.getLocalSocketsByUser(customerId);
+      const customerSockets =
+        this.connectionService.getLocalSocketsByUser(customerId);
       for (const cs of customerSockets) {
         if (!sockets.includes(cs)) {
           sockets.push(cs);

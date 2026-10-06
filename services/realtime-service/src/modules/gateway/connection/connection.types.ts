@@ -1,5 +1,5 @@
 import { WebSocket } from 'ws';
-import { IJwtPayload, Role } from '@delivery/common';
+import { IJwtPayload, Role } from '@delivery-micro/shard';
 
 export interface SocketData {
   socketId: string;
@@ -42,9 +42,7 @@ export const toContext = (
   lastHeartbeatAt: Date.now(),
 });
 
-export const toSocketData = (
-  ctx: ConnectionContext,
-): SocketData => ({
+export const toSocketData = (ctx: ConnectionContext): SocketData => ({
   socketId: ctx.socketId,
   nodeId: ctx.nodeId,
   userId: ctx.userId,

@@ -1,12 +1,22 @@
-import { Injectable, BadRequestException, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import {
+  Repository,
+  DataSource,
+  MoreThanOrEqual,
+  LessThanOrEqual,
+} from 'typeorm';
 import { User } from '../../common/database/entities/user.entity';
 import { Address } from '../../common/database/entities/address.entity';
 import { Outbox } from '../../common/database/entities/outbox.entity';
 import { BcryptPasswordHasher } from '../../common/security/bcrypt-password.hasher';
 import { OutboxWorkerService } from '../../common/messaging/outbox-worker.service';
-import { Role, KafkaService, UserKafkaTopics } from '@delivery/common';
+import { Role, KafkaService, UserKafkaTopics } from '@delivery-micro/shard';
 import { IdGenerator } from '@bts-soft/core';
 import { I18nService } from 'nestjs-i18n';
 import { UpdateProfileInput, ChangePasswordInput } from './dto/user.types';
@@ -32,7 +42,9 @@ export class DbUserService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.userRepo.findOne({ where: { email: email.toLowerCase().trim() } });
+    return this.userRepo.findOne({
+      where: { email: email.toLowerCase().trim() },
+    });
   }
 
   async updateProfile(
@@ -58,9 +70,12 @@ export class DbUserService {
         });
         user.imageUrl = resolved.url;
       } catch (err) {
-        console.error('Failed to resolve avatar media URL, retrying once after delay:', err);
+        console.error(
+          'Failed to resolve avatar media URL, retrying once after delay:',
+          err,
+        );
         // Retry after a short delay in case of race condition with media status transition
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         try {
           const resolved = await this.mediaGrpcService.resolveMediaUrl({
             mediaId: avatarMediaId,
@@ -70,7 +85,10 @@ export class DbUserService {
           });
           user.imageUrl = resolved.url;
         } catch (retryErr) {
-          console.error('Retry also failed for avatar URL resolution:', retryErr);
+          console.error(
+            'Retry also failed for avatar URL resolution:',
+            retryErr,
+          );
           // Store the mediaId so we can resolve later
           user.imageUrl = undefined;
         }
@@ -145,13 +163,19 @@ export class DbUserService {
     return savedUser;
   }
 
-  async changePassword(userId: string, input: ChangePasswordInput): Promise<User> {
+  async changePassword(
+    userId: string,
+    input: ChangePasswordInput,
+  ): Promise<User> {
     const user = await this.findById(userId);
     if (!user) {
       throw new BadRequestException(this.i18n.t('user.NOT_FOUND'));
     }
 
-    const isValid = await this.passwordHasher.compare(input.passwordOld, user.passwordHash);
+    const isValid = await this.passwordHasher.compare(
+      input.passwordOld,
+      user.passwordHash,
+    );
     if (!isValid) {
       throw new UnauthorizedException(this.i18n.t('user.INVALID_PASSWORD'));
     }
@@ -179,12 +203,13 @@ export class DbUserService {
     }
 
     const normalizedRole = role.toLowerCase() as Role;
-    user.role = Object.values(Role).includes(normalizedRole) ? normalizedRole : (role as any);
+    user.role = Object.values(Role).includes(normalizedRole)
+      ? normalizedRole
+      : (role as any);
     const saved = await this.userRepo.save(user);
     await this.emitUserUpdated(saved);
     return saved;
   }
-
 
   async toggleUserActive(id: string, isActive: boolean): Promise<User> {
     const user = await this.findById(id);
@@ -244,7 +269,7 @@ export class DbUserService {
     if (address.isDefault) {
       // Set all other user addresses to isDefault = false
       if (user.addresses && user.addresses.length > 0) {
-        user.addresses.forEach(addr => {
+        user.addresses.forEach((addr) => {
           addr.isDefault = false;
         });
         await this.addressRepo.save(user.addresses);
@@ -260,7 +285,7 @@ export class DbUserService {
       throw new NotFoundException(this.i18n.t('user.NOT_FOUND'));
     }
 
-    const hasAddress = user.addresses?.some(a => a.id === addressId);
+    const hasAddress = user.addresses?.some((a) => a.id === addressId);
     if (!hasAddress) {
       throw new BadRequestException(this.i18n.t('user.ADDRESS_NOT_FOUND'));
     }
@@ -274,21 +299,27 @@ export class DbUserService {
       throw new NotFoundException(this.i18n.t('user.NOT_FOUND'));
     }
 
-    const hasAddress = user.addresses?.some(a => a.id === addressId);
+    const hasAddress = user.addresses?.some((a) => a.id === addressId);
     if (!hasAddress) {
       throw new BadRequestException(this.i18n.t('user.ADDRESS_NOT_FOUND'));
     }
 
     if (user.addresses) {
-      user.addresses.forEach(addr => {
+      user.addresses.forEach((addr) => {
         addr.isDefault = addr.id === addressId;
       });
       await this.addressRepo.save(user.addresses);
     }
   }
 
-  async countUsersThisMonthAndLastMonth(): Promise<{ totalUsers: number; usersThisMonth: number; percentageIncrease: number }> {
-    const totalUsers = await this.userRepo.count({ where: { role: Role.USER } });
+  async countUsersThisMonthAndLastMonth(): Promise<{
+    totalUsers: number;
+    usersThisMonth: number;
+    percentageIncrease: number;
+  }> {
+    const totalUsers = await this.userRepo.count({
+      where: { role: Role.USER },
+    });
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -301,12 +332,17 @@ export class DbUserService {
     const usersLastMonth = await this.userRepo.count({
       where: {
         role: Role.USER,
-        createdAt: MoreThanOrEqual(startOfLastMonth) && LessThanOrEqual(endOfLastMonth),
+        createdAt:
+          MoreThanOrEqual(startOfLastMonth) && LessThanOrEqual(endOfLastMonth),
       },
     });
 
     const percentageIncrease = usersLastMonth
-      ? Number((((usersThisMonth - usersLastMonth) / usersLastMonth) * 100).toFixed(2))
+      ? Number(
+          (((usersThisMonth - usersLastMonth) / usersLastMonth) * 100).toFixed(
+            2,
+          ),
+        )
       : 100;
 
     return { totalUsers, usersThisMonth, percentageIncrease };

@@ -1,6 +1,6 @@
 import { Controller, Get, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { HealthService, MetricsService } from '@delivery/common';
+import { HealthService, MetricsService } from '@delivery-micro/shard';
 import { RedisService } from '@bts-soft/cache';
 import { RealtimeNatsService } from '../modules/infrastructure/nats/nats.service';
 import { KafkaConsumer } from '../modules/infrastructure/kafka/kafka.consumer';
@@ -27,9 +27,11 @@ export class HealthController {
     const system = this.healthService.getSystemStats();
     const connections = this.connectionService.getLocalSocketCount();
 
-    const criticalUp = redisHealth.status === 'UP' && natsHealth.status === 'UP';
+    const criticalUp =
+      redisHealth.status === 'UP' && natsHealth.status === 'UP';
     const kafkaUp = kafkaHealth.status === 'UP';
-    const status = criticalUp && kafkaUp ? 'UP' : criticalUp ? 'DEGRADED' : 'DOWN';
+    const status =
+      criticalUp && kafkaUp ? 'UP' : criticalUp ? 'DEGRADED' : 'DOWN';
 
     res.status(200).json({
       status,

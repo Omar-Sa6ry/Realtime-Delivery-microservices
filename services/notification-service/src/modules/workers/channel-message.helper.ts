@@ -3,9 +3,12 @@ import {
   NotificationPriority as BtsNotificationPriority,
 } from '@bts-soft/notifications';
 import { Notification } from '../../common/database/entities/notification.entity';
-import { NotificationPriority } from '@delivery/common';
+import { NotificationPriority } from '@delivery-micro/shard';
 
-const NOTIFICATION_PRIORITY_MAP: Record<NotificationPriority, BtsNotificationPriority> = {
+const NOTIFICATION_PRIORITY_MAP: Record<
+  NotificationPriority,
+  BtsNotificationPriority
+> = {
   [NotificationPriority.LOW]: BtsNotificationPriority.LOW,
   [NotificationPriority.NORMAL]: BtsNotificationPriority.NORMAL,
   [NotificationPriority.HIGH]: BtsNotificationPriority.HIGH,
@@ -22,7 +25,8 @@ export function buildChannelMessage(
     title: notification.title,
     subject: notification.title,
     priority:
-      NOTIFICATION_PRIORITY_MAP[notification.priority] ?? BtsNotificationPriority.NORMAL,
+      NOTIFICATION_PRIORITY_MAP[notification.priority] ??
+      BtsNotificationPriority.NORMAL,
     idempotencyKey,
     context: notification.data ?? undefined,
   };

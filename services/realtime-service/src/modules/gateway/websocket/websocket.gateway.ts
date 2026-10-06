@@ -8,15 +8,15 @@ import {
   WebSocketGateway,
 } from '@nestjs/websockets';
 import type { IncomingMessage } from 'http';
-import { ClientMessageType, ServerMessageType } from '@delivery/common';
-import type { ClientMessage, IJwtPayload } from '@delivery/common';
-import { WsAuthGuard } from '@delivery/common';
+import { ClientMessageType, ServerMessageType } from '@delivery-micro/shard';
+import type { ClientMessage, IJwtPayload } from '@delivery-micro/shard';
+import { WsAuthGuard } from '@delivery-micro/shard';
 import { ConnectionService } from '../connection/connection.service';
 import { SubscriptionService } from '../../features/subscription/subscription.service';
 import { HeartbeatService } from '../heartbeat/heartbeat.service';
 import { LocationService } from '../../features/location/location.service';
 import { CommandService } from '../../features/command/command.service';
-import { WsGuardChain } from '@delivery/common';
+import { WsGuardChain } from '@delivery-micro/shard';
 import type { AuthenticatedSocket } from '../connection/connection.types';
 import { ConfigService } from '@nestjs/config';
 import type {
@@ -25,7 +25,7 @@ import type {
   LocationUpdatePayload,
 } from '../../../common/common-types/ws-message.types';
 import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
-import { WsExceptionFilter } from '@delivery/common';
+import { WsExceptionFilter } from '@delivery-micro/shard';
 
 @WebSocketGateway({
   path: '/ws',
@@ -62,9 +62,7 @@ export class RealtimeGateway
     request: IncomingMessage,
   ): Promise<void> {
     if (!this.isOriginAllowed(request)) {
-      this.logger.warn(
-        `WebSocket origin rejected: ${request.headers.origin}`,
-      );
+      this.logger.warn(`WebSocket origin rejected: ${request.headers.origin}`);
       client.close(4403, 'FORBIDDEN');
       return;
     }
@@ -190,7 +188,11 @@ export class RealtimeGateway
       type: ClientMessageType.LOCATION_UPDATE,
     });
     await this.guardChain.run({ message: message!, socket: client });
-    await this.locationService.handle(client, message!.data!, message?.requestId);
+    await this.locationService.handle(
+      client,
+      message!.data!,
+      message?.requestId,
+    );
     return undefined;
   }
 
@@ -285,7 +287,8 @@ export class RealtimeGateway
     const origin = request.headers.origin;
     if (!origin) return true; // non-browser clients send no Origin header
     return this.allowedOrigins.some(
-      (o) => origin === o || origin.endsWith(`://${o}`) || origin.endsWith(`.${o}`),
+      (o) =>
+        origin === o || origin.endsWith(`://${o}`) || origin.endsWith(`.${o}`),
     );
   }
 }

@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { RoleGuard } from '@delivery/common';
+import { RoleGuard } from '@delivery-micro/shard';
 import { JwtModule } from '@nestjs/jwt';
 import { RedisModule } from '@bts-soft/cache';
 import { GrpcClientsModule } from './grpc-clients.module';

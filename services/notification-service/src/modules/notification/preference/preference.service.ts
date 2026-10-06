@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotificationPreference } from '../../../common/database/entities/notification-preference.entity';
-import { NotificationType, NotificationChannel } from '@delivery/common';
+import { NotificationType, NotificationChannel } from '@delivery-micro/shard';
 
 @Injectable()
 export class PreferenceService {
@@ -13,12 +13,18 @@ export class PreferenceService {
     private preferenceRepository: Repository<NotificationPreference>,
   ) {}
 
-  async getEnabledChannels(userId: string, type: NotificationType): Promise<NotificationChannel[]> {
+  async getEnabledChannels(
+    userId: string,
+    type: NotificationType,
+  ): Promise<NotificationChannel[]> {
     const preferences = await this.preferenceRepository.find({
       where: { userId, type },
     });
 
-    const defaultChannels = [NotificationChannel.IN_APP, NotificationChannel.PUSH];
+    const defaultChannels = [
+      NotificationChannel.IN_APP,
+      NotificationChannel.PUSH,
+    ];
 
     if (preferences.length === 0) {
       // Return defaults if no preferences are explicitly set
@@ -59,7 +65,10 @@ export class PreferenceService {
     return results;
   }
 
-  async findForUser(userId: string, type?: NotificationType): Promise<NotificationPreference[]> {
+  async findForUser(
+    userId: string,
+    type?: NotificationType,
+  ): Promise<NotificationPreference[]> {
     return this.preferenceRepository.find({
       where: type ? { userId, type } : { userId },
       order: { type: 'ASC', channel: 'ASC' },

@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { NotificationService } from '../notification/notification.service';
-import { NotificationPriority, NotificationType } from '@delivery/common';
+import { NotificationPriority, NotificationType } from '@delivery-micro/shard';
 
 export interface SendNotificationRequest {
   userId: string;

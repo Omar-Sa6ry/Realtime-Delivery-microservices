@@ -2,9 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { StructuredLogger } from '@delivery/common';
+import { StructuredLogger } from '@delivery-micro/shard';
 import { I18nValidationException } from 'nestjs-i18n';
-import { RealtimeWsAdapter } from '@delivery/common';
+import { RealtimeWsAdapter } from '@delivery-micro/shard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -29,7 +29,9 @@ async function bootstrap() {
 
   const maxPayload =
     Number(configService.get<string>('WS_MAX_PAYLOAD', '16384')) || 16384;
-  app.useWebSocketAdapter(new RealtimeWsAdapter(app.getHttpServer(), { maxPayload }));
+  app.useWebSocketAdapter(
+    new RealtimeWsAdapter(app.getHttpServer(), { maxPayload }),
+  );
 
   const port = configService.get<string>('PORT_REALTIME') || '4006';
 
@@ -50,7 +52,10 @@ async function bootstrap() {
 }
 
 process.on('uncaughtException', (err) => {
-  console.error('[process] Uncaught exception (continuing):', err?.message ?? err);
+  console.error(
+    '[process] Uncaught exception (continuing):',
+    err?.message ?? err,
+  );
 });
 process.on('unhandledRejection', (reason) => {
   console.error('[process] Unhandled rejection (continuing):', reason);

@@ -1,4 +1,4 @@
-import { WS_DEFAULTS } from '@delivery/common';
+import { WS_DEFAULTS } from '@delivery-micro/shard';
 
 export const redisKeys = {
   connection: (socketId: string) => `ws:connection:${socketId}`,
@@ -54,7 +54,7 @@ export const RATE_LIMITS = {
 
 // ===== Server -> client default priority for each server message =====
 
-import { MessagePriority, ServerMessageType } from '@delivery/common';
+import { MessagePriority, ServerMessageType } from '@delivery-micro/shard';
 
 export const SERVER_MESSAGE_PRIORITY: Partial<
   Record<ServerMessageType, MessagePriority>

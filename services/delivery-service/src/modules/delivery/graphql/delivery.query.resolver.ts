@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Args, Context, Int, Query, Resolver } from '@nestjs/graphql';
 import { I18nService } from 'nestjs-i18n';
-import { Auth, Permission } from '@delivery/common';
+import { Auth, Permission } from '@delivery-micro/shard';
 import { RateLimit, RateLimiterAlgorithm } from '@bts-soft/validation';
 import { DeliveryQueryService } from '../services/delivery-query.service';
 import {
@@ -21,7 +21,11 @@ export class DeliveryQueryResolver {
   ) {}
 
   @Auth([Permission.VIEW_DELIVERY])
-  @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 60, windowMs: 60000 })
+  @RateLimit({
+    algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER,
+    limit: 60,
+    windowMs: 60000,
+  })
   @Query(() => DeliveryResponse)
   async delivery(
     @Args('id') id: string,
@@ -29,15 +33,19 @@ export class DeliveryQueryResolver {
   ): Promise<DeliveryResponse> {
     const delivery = await this.queries.getById(id);
     const tokenUserId = ctx.req?.user?.id ?? ctx.req?.headers?.['x-user-id'];
-    const userRole = (ctx.req?.user as any)?.role ?? ctx.req?.headers?.['x-user-role'];
+    const userRole =
+      (ctx.req?.user as any)?.role ?? ctx.req?.headers?.['x-user-role'];
     const isAdmin = userRole === 'ADMIN' || userRole === 'admin';
 
     const isCustomer = delivery.customerId === tokenUserId;
-    const isAssignedDriver = delivery.driverId && delivery.driverId === tokenUserId;
+    const isAssignedDriver =
+      delivery.driverId && delivery.driverId === tokenUserId;
 
     if (!isAdmin && !isCustomer && !isAssignedDriver) {
       throw new ForbiddenException(
-        await this.i18n.t('delivery.unauthorizedAccess', { lang: ctx.language }),
+        await this.i18n.t('delivery.unauthorizedAccess', {
+          lang: ctx.language,
+        }),
       );
     }
 
@@ -50,7 +58,11 @@ export class DeliveryQueryResolver {
   }
 
   @Auth([Permission.VIEW_DELIVERY])
-  @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 60, windowMs: 60000 })
+  @RateLimit({
+    algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER,
+    limit: 60,
+    windowMs: 60000,
+  })
   @Query(() => DeliveryListResponse)
   async myDeliveries(
     @Args({ name: 'page', type: () => Int, nullable: true, defaultValue: 1 })
@@ -94,7 +106,11 @@ export class DeliveryQueryResolver {
   }
 
   @Auth([Permission.VIEW_DELIVERY])
-  @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 120, windowMs: 60000 })
+  @RateLimit({
+    algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER,
+    limit: 120,
+    windowMs: 60000,
+  })
   @Query(() => DeliveryStatusesResponse)
   async deliveryNextStatuses(
     @Args('id') id: string,
@@ -114,7 +130,11 @@ export class DeliveryQueryResolver {
   }
 
   @Auth([Permission.VIEW_DELIVERY])
-  @RateLimit({ algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER, limit: 60, windowMs: 60000 })
+  @RateLimit({
+    algorithm: RateLimiterAlgorithm.SLIDING_WINDOW_COUNTER,
+    limit: 60,
+    windowMs: 60000,
+  })
   @Query(() => DeliveryListResponse)
   async openDeliveries(
     @Args({ name: 'page', type: () => Int, nullable: true, defaultValue: 1 })
@@ -128,7 +148,10 @@ export class DeliveryQueryResolver {
     pageSize: number,
     @Context() ctx: GraphqlContext,
   ): Promise<DeliveryListResponse> {
-    const [deliveries, total] = await this.queries.getOpenDeliveries(page, pageSize);
+    const [deliveries, total] = await this.queries.getOpenDeliveries(
+      page,
+      pageSize,
+    );
     const totalPages = Math.ceil(total / pageSize);
     const nextPage = page < totalPages ? page + 1 : null;
     return {

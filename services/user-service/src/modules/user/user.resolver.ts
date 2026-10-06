@@ -1,4 +1,11 @@
-import { Resolver, Query, Mutation, Args, Context, ResolveReference } from '@nestjs/graphql';
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Args,
+  Context,
+  ResolveReference,
+} from '@nestjs/graphql';
 import {
   UserType,
   UserResponse,
@@ -8,9 +15,9 @@ import {
   AddressResponse,
   AddressListResponse,
 } from './dto/user.types';
-import { BooleanResponse } from '@delivery/common';
+import { BooleanResponse } from '@delivery-micro/shard';
 import { UserService } from './user.service';
-import { Auth, Permission } from '@delivery/common';
+import { Auth, Permission } from '@delivery-micro/shard';
 import { I18nService } from 'nestjs-i18n';
 
 @Resolver(() => UserType)
@@ -21,8 +28,13 @@ export class UserResolver {
   ) {}
 
   @ResolveReference()
-  async resolveReference(reference: { __typename: string; id: string }): Promise<UserType> {
-    return (await this.userService.findById(reference.id)) as unknown as UserType;
+  async resolveReference(reference: {
+    __typename: string;
+    id: string;
+  }): Promise<UserType> {
+    return (await this.userService.findById(
+      reference.id,
+    )) as unknown as UserType;
   }
 
   @Query(() => UserResponse)
@@ -185,4 +197,3 @@ export class UserResolver {
     } as BooleanResponse;
   }
 }
-

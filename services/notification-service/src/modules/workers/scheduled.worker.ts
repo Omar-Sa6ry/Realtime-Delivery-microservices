@@ -5,7 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Notification } from '../../common/database/entities/notification.entity';
 import { NotificationDelivery } from '../../common/database/entities/notification-delivery.entity';
-import { DeliveryChannelStatus } from '@delivery/common';
+import { DeliveryChannelStatus } from '@delivery-micro/shard';
 import { NotificationDispatcherService } from '../notification/notification-dispatcher.service';
 
 @Processor('notification-scheduled')
@@ -26,7 +26,9 @@ export class ScheduledWorker extends WorkerHost {
   async process(job: Job<{ notificationId: string }>) {
     const { notificationId } = job.data;
 
-    const notification = await this.notificationRepository.findOne({ where: { id: notificationId } });
+    const notification = await this.notificationRepository.findOne({
+      where: { id: notificationId },
+    });
     if (!notification) return;
 
     const deliveries = await this.deliveryRepository.find({

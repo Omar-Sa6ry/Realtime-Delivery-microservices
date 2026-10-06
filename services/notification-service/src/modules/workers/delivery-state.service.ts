@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '../../common/database/entities/notification.entity';
 import { NotificationDelivery } from '../../common/database/entities/notification-delivery.entity';
-import { NotificationStatus, DeliveryChannelStatus } from '@delivery/common';
+import {
+  NotificationStatus,
+  DeliveryChannelStatus,
+} from '@delivery-micro/shard';
 
 @Injectable()
 export class DeliveryStateService {
@@ -36,7 +39,11 @@ export class DeliveryStateService {
     await this.transitionNotification(notification, NotificationStatus.SENT);
   }
 
-  async fail(delivery: NotificationDelivery, notification: Notification | null, error: Error) {
+  async fail(
+    delivery: NotificationDelivery,
+    notification: Notification | null,
+    error: Error,
+  ) {
     delivery.status = DeliveryChannelStatus.FAILED;
     delivery.lastError = error.message;
     delivery.failedAt = new Date();
@@ -66,7 +73,10 @@ export class DeliveryStateService {
     this.logger.debug(`Expired notification ${notification.id}`);
   }
 
-  private async transitionNotification(notification: Notification | null, terminalStatus: NotificationStatus) {
+  private async transitionNotification(
+    notification: Notification | null,
+    terminalStatus: NotificationStatus,
+  ) {
     if (!notification || notification.id === undefined) return;
     if (
       notification.status === NotificationStatus.SENT ||
@@ -99,8 +109,12 @@ export class DeliveryStateService {
       return;
     }
 
-    const hasFailed = deliveries.some((d) => d.status === DeliveryChannelStatus.FAILED);
-    notification.status = hasFailed ? NotificationStatus.FAILED : terminalStatus;
+    const hasFailed = deliveries.some(
+      (d) => d.status === DeliveryChannelStatus.FAILED,
+    );
+    notification.status = hasFailed
+      ? NotificationStatus.FAILED
+      : terminalStatus;
     await this.notificationRepository.save(notification);
   }
 }

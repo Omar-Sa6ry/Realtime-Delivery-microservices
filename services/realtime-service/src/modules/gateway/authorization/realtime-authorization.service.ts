@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { IJwtPayload, Role } from '@delivery/common';
-import { WsErrorCode, WsException } from '@delivery/common';
+import { IJwtPayload, Role } from '@delivery-micro/shard';
+import { WsErrorCode, WsException } from '@delivery-micro/shard';
 import { DeliveryPolicy } from './policies/delivery.policy';
 import { DriverPolicy } from './policies/driver.policy';
 

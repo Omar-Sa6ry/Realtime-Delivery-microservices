@@ -2,7 +2,6 @@ package events
 
 import "time"
 
-// DriverEventType is the canonical event type for driver domain Kafka messages.
 type DriverEventType string
 
 const (
@@ -23,13 +22,11 @@ const (
 	DriverSearchRetry         DriverEventType = "driver.search.retry"
 )
 
-// DriverGeoPoint holds a geographic coordinate for a driver's location.
 type DriverGeoPoint struct {
 	Lat float64 `json:"lat"`
 	Lon float64 `json:"lon"`
 }
 
-// DriverCreatedPayload is emitted when a driver profile is first created.
 type DriverCreatedPayload struct {
 	DriverID      string         `json:"driverId"`
 	Name          string         `json:"name"`
@@ -52,33 +49,27 @@ type DriverUpdatedPayload struct {
 	SourceVersion int64          `json:"sourceVersion"`
 }
 
-// DriverDeletedPayload is emitted when a driver profile is permanently removed.
 type DriverDeletedPayload struct {
 	DriverID  string    `json:"driverId"`
 	DeletedAt time.Time `json:"deletedAt"`
 }
 
-// DriverActivatedPayload is emitted when a driver is activated.
 type DriverActivatedPayload struct {
 	DriverID string `json:"driverId"`
 }
 
-// DriverDeactivatedPayload is emitted when a driver is deactivated.
 type DriverDeactivatedPayload struct {
 	DriverID string `json:"driverId"`
 }
 
-// DriverAvailablePayload is emitted when a driver becomes available.
 type DriverAvailablePayload struct {
 	DriverID string `json:"driverId"`
 }
 
-// DriverUnavailablePayload is emitted when a driver becomes unavailable.
 type DriverUnavailablePayload struct {
 	DriverID string `json:"driverId"`
 }
 
-// DriverAssignmentOfferedPayload is emitted when a driver is offered an assignment.
 type DriverAssignmentOfferedPayload struct {
 	AssignmentID   string           `json:"assignmentId"`
 	DriverID       string           `json:"driverId"`
@@ -92,7 +83,6 @@ type DriverAssignmentOfferedPayload struct {
 	Currency       string           `json:"currency,omitempty"`
 }
 
-// DriverAssignmentAcceptedPayload is emitted when a driver accepts an assignment.
 type DriverAssignmentAcceptedPayload struct {
 	AssignmentID string `json:"assignmentId"`
 	DeliveryID   string `json:"deliveryId,omitempty"`
@@ -100,7 +90,6 @@ type DriverAssignmentAcceptedPayload struct {
 	AcceptedAt   string `json:"acceptedAt"`
 }
 
-// DriverAssignmentRejectedPayload is emitted when a driver rejects an assignment.
 type DriverAssignmentRejectedPayload struct {
 	AssignmentID string `json:"assignmentId"`
 	DeliveryID   string `json:"deliveryId,omitempty"`
@@ -108,7 +97,6 @@ type DriverAssignmentRejectedPayload struct {
 	Reason       string `json:"reason"`
 }
 
-// DriverAssignmentExpiredPayload is emitted when a driver assignment offer expires.
 type DriverAssignmentExpiredPayload struct {
 	AssignmentID string `json:"assignmentId"`
 	DeliveryID   string `json:"deliveryId,omitempty"`
@@ -116,21 +104,18 @@ type DriverAssignmentExpiredPayload struct {
 	ExpiredAt    string `json:"expiredAt"`
 }
 
-// DriverAssignmentReleasedPayload is emitted when a driver assignment is released.
 type DriverAssignmentReleasedPayload struct {
 	AssignmentID string `json:"assignmentId"`
 	DriverID     string `json:"driverId"`
 	ReleasedAt   string `json:"releasedAt"`
 }
 
-// DriverAssignmentCompletedPayload is emitted when a driver assignment is completed.
 type DriverAssignmentCompletedPayload struct {
 	AssignmentID string `json:"assignmentId"`
 	DriverID     string `json:"driverId"`
 	CompletedAt  string `json:"completedAt"`
 }
 
-// DriverNoDriverAvailablePayload is emitted when no online or nearby driver is available for a delivery.
 type DriverNoDriverAvailablePayload struct {
 	DeliveryID    string `json:"deliveryId"`
 	CustomerID    string `json:"customerId"`
@@ -139,7 +124,6 @@ type DriverNoDriverAvailablePayload struct {
 	TriedAt       string `json:"triedAt"`
 }
 
-// DriverSearchRetryPayload is emitted when a periodic retry occurs for finding a driver.
 type DriverSearchRetryPayload struct {
 	DeliveryID    string `json:"deliveryId"`
 	CustomerID    string `json:"customerId"`

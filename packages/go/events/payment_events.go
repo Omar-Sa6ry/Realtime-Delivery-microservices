@@ -2,7 +2,6 @@ package events
 
 import "time"
 
-// PaymentEventType is the canonical event type for payment domain Kafka messages.
 type PaymentEventType string
 
 const (
@@ -21,7 +20,6 @@ const (
 	PaymentFailed                 PaymentEventType = "payment.failed"
 )
 
-// PaymentCreatedPayload is emitted when a new payment is created.
 type PaymentCreatedPayload struct {
 	PaymentID      string    `json:"paymentId"`
 	DeliveryID     string    `json:"deliveryId"`
@@ -34,7 +32,6 @@ type PaymentCreatedPayload struct {
 	CreatedAt      time.Time `json:"createdAt"`
 }
 
-// PaymentAuthorizationStartedPayload is emitted when payment authorization starts.
 type PaymentAuthorizationStartedPayload struct {
 	PaymentID      string    `json:"paymentId"`
 	DeliveryID     string    `json:"deliveryId"`
@@ -46,7 +43,6 @@ type PaymentAuthorizationStartedPayload struct {
 	StartedAt      time.Time `json:"startedAt"`
 }
 
-// PaymentAuthorizedPayload is emitted when payment authorization succeeds.
 type PaymentAuthorizedPayload struct {
 	PaymentID             string    `json:"paymentId"`
 	DeliveryID            string    `json:"deliveryId"`
@@ -60,7 +56,6 @@ type PaymentAuthorizedPayload struct {
 	AuthorizedAt          time.Time `json:"authorizedAt"`
 }
 
-// PaymentAuthorizationFailedPayload is emitted when payment authorization fails.
 type PaymentAuthorizationFailedPayload struct {
 	PaymentID      string    `json:"paymentId"`
 	DeliveryID     string    `json:"deliveryId"`
@@ -75,7 +70,6 @@ type PaymentAuthorizationFailedPayload struct {
 	FailedAt       time.Time `json:"failedAt"`
 }
 
-// PaymentCaptureStartedPayload is emitted when payment capture starts.
 type PaymentCaptureStartedPayload struct {
 	PaymentID      string    `json:"paymentId"`
 	DeliveryID     string    `json:"deliveryId"`
@@ -87,7 +81,6 @@ type PaymentCaptureStartedPayload struct {
 	StartedAt      time.Time `json:"startedAt"`
 }
 
-// PaymentCapturedPayload is emitted when payment capture succeeds.
 type PaymentCapturedPayload struct {
 	PaymentID             string    `json:"paymentId"`
 	DeliveryID            string    `json:"deliveryId"`
@@ -101,7 +94,6 @@ type PaymentCapturedPayload struct {
 	CapturedAt            time.Time `json:"capturedAt"`
 }
 
-// PaymentCaptureFailedPayload is emitted when payment capture fails.
 type PaymentCaptureFailedPayload struct {
 	PaymentID      string    `json:"paymentId"`
 	DeliveryID     string    `json:"deliveryId"`
@@ -116,7 +108,6 @@ type PaymentCaptureFailedPayload struct {
 	FailedAt       time.Time `json:"failedAt"`
 }
 
-// PaymentCancelledPayload is emitted when a payment authorization is cancelled.
 type PaymentCancelledPayload struct {
 	PaymentID      string    `json:"paymentId"`
 	DeliveryID     string    `json:"deliveryId"`
@@ -128,7 +119,6 @@ type PaymentCancelledPayload struct {
 	CancelledAt    time.Time `json:"cancelledAt"`
 }
 
-// PaymentRefundStartedPayload is emitted when a refund starts.
 type PaymentRefundStartedPayload struct {
 	PaymentID      string    `json:"paymentId"`
 	DeliveryID     string    `json:"deliveryId"`
@@ -141,7 +131,6 @@ type PaymentRefundStartedPayload struct {
 	StartedAt      time.Time `json:"startedAt"`
 }
 
-// PaymentRefundedPayload is emitted when a refund succeeds.
 type PaymentRefundedPayload struct {
 	PaymentID            string    `json:"paymentId"`
 	DeliveryID           string    `json:"deliveryId"`
@@ -155,7 +144,6 @@ type PaymentRefundedPayload struct {
 	RefundedAt           time.Time `json:"refundedAt"`
 }
 
-// PaymentRefundFailedPayload is emitted when a refund fails.
 type PaymentRefundFailedPayload struct {
 	PaymentID      string    `json:"paymentId"`
 	DeliveryID     string    `json:"deliveryId"`
@@ -170,7 +158,6 @@ type PaymentRefundFailedPayload struct {
 	FailedAt       time.Time `json:"failedAt"`
 }
 
-// PaymentFailedPayload is emitted when a payment fails permanently.
 type PaymentFailedPayload struct {
 	PaymentID      string    `json:"paymentId"`
 	DeliveryID     string    `json:"deliveryId"`
@@ -185,12 +172,10 @@ type PaymentFailedPayload struct {
 	FailedAt       time.Time `json:"failedAt"`
 }
 
-// NewPaymentEventEnvelope creates a new EventEnvelope for payment events.
 func NewPaymentEventEnvelope(eventID string, eventType PaymentEventType, traceID string, payload interface{}) (*EventEnvelope, error) {
 	return NewEventEnvelope(eventID, string(eventType), traceID, payload)
 }
 
-// MarshalPaymentEnvelope marshals a payment event into an EventEnvelope.
 func MarshalPaymentEnvelope(eventID string, eventType PaymentEventType, traceID string, payload interface{}) ([]byte, error) {
 	return MarshalEnvelope(eventID, string(eventType), traceID, payload)
 }

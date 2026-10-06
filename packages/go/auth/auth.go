@@ -17,7 +17,6 @@ const (
 	PermissionViewUser = "view_user"
 )
 
-// Claims is the subset of the shared JWT contract required by search-service.
 type Claims struct {
 	Subject   string `json:"sub"`
 	ID        string `json:"id"`
@@ -32,7 +31,6 @@ func (c Claims) UserID() string {
 	return c.ID
 }
 
-// Authenticate verifies a bearer JWT using the same JWT_SECRET used by the Nest services.
 func Authenticate(header string) (Claims, error) {
 	parts := strings.Fields(header)
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
@@ -84,7 +82,6 @@ func RequirePermission(header, permission string) (Claims, error) {
 	return claims, nil
 }
 
-// Keep this map aligned with packages/ts/src/constants/rolePermissionsMap.constant.ts.
 func HasPermission(role, permission string) bool {
 	return strings.EqualFold(role, RoleAdmin) &&
 		strings.EqualFold(permission, PermissionViewUser)

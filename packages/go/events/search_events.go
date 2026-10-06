@@ -2,7 +2,6 @@ package events
 
 import "time"
 
-// Used for NATS transient signals and optional analytics Kafka events.
 type SearchEventType string
 
 const (
@@ -16,8 +15,6 @@ const (
 	SearchReindexFailed    SearchEventType = "search.reindex.failed"
 )
 
-// SearchQueryStartedPayload carries metadata when a search query begins.
-// Published to NATS for low-latency observability signals.
 type SearchQueryStartedPayload struct {
 	QueryHash string    `json:"queryHash"` // SHA256 of canonical query
 	Index     string    `json:"index"`     // deliveries | drivers | media
@@ -26,8 +23,6 @@ type SearchQueryStartedPayload struct {
 	StartedAt time.Time `json:"startedAt"`
 }
 
-// SearchQueryCompletedPayload carries metrics after a search query completes.
-// Published to NATS for real-time observability; also sent to Kafka for Analytics.
 type SearchQueryCompletedPayload struct {
 	QueryHash    string        `json:"queryHash"`
 	Index        string        `json:"index"`
@@ -40,7 +35,6 @@ type SearchQueryCompletedPayload struct {
 	CompletedAt  time.Time     `json:"completedAt"`
 }
 
-// SearchReindexStartedPayload is published when a reindex job begins.
 type SearchReindexStartedPayload struct {
 	JobID     string    `json:"jobId"`
 	Index     string    `json:"index"`
@@ -48,7 +42,6 @@ type SearchReindexStartedPayload struct {
 	TriggeredBy string  `json:"triggeredBy"` // admin | scheduled | reconciliation
 }
 
-// SearchReindexCompletedPayload is published when a reindex job finishes.
 type SearchReindexCompletedPayload struct {
 	JobID          string        `json:"jobId"`
 	Index          string        `json:"index"`
@@ -58,7 +51,6 @@ type SearchReindexCompletedPayload struct {
 	CompletedAt    time.Time     `json:"completedAt"`
 }
 
-// SearchReindexFailedPayload is published when a reindex job fails.
 type SearchReindexFailedPayload struct {
 	JobID     string    `json:"jobId"`
 	Index     string    `json:"index"`

@@ -9,17 +9,14 @@ import (
 	"time"
 )
 
-// ContextHandler wraps another slog.Handler to inject trace, user, method, and path from context.Context
 type ContextHandler struct {
 	slog.Handler
 }
 
-// NewContextHandler creates a ContextHandler wrapping the target handler
 func NewContextHandler(target slog.Handler) *ContextHandler {
 	return &ContextHandler{Handler: target}
 }
 
-// Handle extracts metadata from context and appends it to slog attributes before logging
 func (h *ContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	if ctx == nil {
 		return h.Handler.Handle(ctx, r)
@@ -41,12 +38,10 @@ func (h *ContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
-// DevHandler formats logs for human readability with colorized levels in local development
 type DevHandler struct {
 	w io.Writer
 }
 
-// NewDevHandler creates a new human-friendly development log handler
 func NewDevHandler(w io.Writer) *DevHandler {
 	if w == nil {
 		w = os.Stdout
@@ -137,7 +132,6 @@ func (h *DevHandler) WithGroup(name string) slog.Handler {
 	return h
 }
 
-// InitLogger initializes the global structured logger based on target environment (Production JSON vs Dev Console)
 func InitLogger() *slog.Logger {
 	env := os.Getenv("APP_ENV")
 	if env == "" {

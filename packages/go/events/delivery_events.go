@@ -2,7 +2,6 @@ package events
 
 import "time"
 
-// DeliveryEventType is the canonical event type for delivery domain Kafka messages.
 type DeliveryEventType string
 
 const (
@@ -16,20 +15,17 @@ const (
 	DeliveryDeleted        DeliveryEventType = "delivery.deleted"
 )
 
-// DeliveryLocation holds a geographic coordinate pair.
 type DeliveryLocation struct {
 	Lat float64 `json:"lat"`
 	Lon float64 `json:"lon"`
 }
 
-// DeliveryAddress is the pickup or dropoff address on a delivery.
 type DeliveryAddress struct {
 	City     string           `json:"city"`
 	Country  string           `json:"country"`
 	Location DeliveryLocation `json:"location"`
 }
 
-// DeliveryCreatedPayload is emitted when a new delivery is created.
 type DeliveryCreatedPayload struct {
 	DeliveryID      string          `json:"deliveryId"`
 	CustomerID      string          `json:"customerId"`
@@ -42,7 +38,6 @@ type DeliveryCreatedPayload struct {
 	SourceVersion   int64           `json:"sourceVersion"`
 }
 
-// Search Service uses this to upsert the search document.
 type DeliveryUpdatedPayload struct {
 	DeliveryID    string    `json:"deliveryId"`
 	CustomerID    string    `json:"customerId"`
@@ -52,7 +47,6 @@ type DeliveryUpdatedPayload struct {
 	SourceVersion int64     `json:"sourceVersion"`
 }
 
-// DeliveryDriverAssignedPayload is emitted when a driver is assigned to a delivery.
 type DeliveryDriverAssignedPayload struct {
 	DeliveryID    string    `json:"deliveryId"`
 	DriverID      string    `json:"driverId"`
@@ -60,7 +54,6 @@ type DeliveryDriverAssignedPayload struct {
 	SourceVersion int64     `json:"sourceVersion"`
 }
 
-// DeliveryDeletedPayload is emitted when a delivery is permanently deleted.
 type DeliveryDeletedPayload struct {
 	DeliveryID string    `json:"deliveryId"`
 	DeletedAt  time.Time `json:"deletedAt"`

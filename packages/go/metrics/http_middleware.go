@@ -20,7 +20,6 @@ func (w *responseWriterWrapper) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-// HTTPMetricsMiddleware wraps an HTTP handler to capture request counts, durations, and status codes for Prometheus
 func HTTPMetricsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Do not track metrics scraping endpoint

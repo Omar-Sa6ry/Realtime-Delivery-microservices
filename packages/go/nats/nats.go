@@ -10,14 +10,12 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-// NestJSRequest represents the JSON packet NestJS expects in NATS transport
 type NestJSRequest struct {
 	Pattern string      `json:"pattern"`
 	Data    interface{} `json:"data"`
 	ID      string      `json:"id"`
 }
 
-// NestJSResponse represents the JSON packet NestJS responds with
 type NestJSResponse struct {
 	Response   json.RawMessage `json:"response,omitempty"`
 	Error      interface{}     `json:"err,omitempty"`
@@ -25,12 +23,10 @@ type NestJSResponse struct {
 	IsDisposed bool            `json:"isDisposed,omitempty"`
 }
 
-// NatsClient wraps the standard NATS connection and adds helper utilities
 type NatsClient struct {
 	nc *nats.Conn
 }
 
-// Connect establishes a new connection to NATS server(s)
 func Connect(url string) (*NatsClient, error) {
 	if url == "" {
 		url = nats.DefaultURL
@@ -69,19 +65,16 @@ func Connect(url string) (*NatsClient, error) {
 	return nil, fmt.Errorf("failed to connect to NATS after %d attempts: %w", maxAttempts, lastErr)
 }
 
-// Conn returns the raw NATS connection
 func (c *NatsClient) Conn() *nats.Conn {
 	return c.nc
 }
 
-// Close gracefully closes the NATS connection
 func (c *NatsClient) Close() {
 	if c.nc != nil {
 		c.nc.Close()
 	}
 }
 
-// Publish publishes a standard raw JSON payload to a NATS subject (Pub/Sub)
 func (c *NatsClient) Publish(subject string, data interface{}) error {
 	bytes, err := json.Marshal(data)
 	if err != nil {
@@ -98,7 +91,6 @@ func (c *NatsClient) Publish(subject string, data interface{}) error {
 	return nil
 }
 
-// Request performs a raw JSON Request-Response RPC over NATS
 func (c *NatsClient) Request(subject string, data interface{}, timeout time.Duration) ([]byte, error) {
 	bytes, err := json.Marshal(data)
 	if err != nil {
@@ -114,7 +106,6 @@ func (c *NatsClient) Request(subject string, data interface{}, timeout time.Dura
 	return msg.Data, nil
 }
 
-// PublishNestJS publishes a payload using the NestJS envelope format (compatible with NestJS event subscribers)
 func (c *NatsClient) PublishNestJS(pattern string, data interface{}) error {
 	envelope := NestJSRequest{
 		Pattern: pattern,
@@ -137,7 +128,6 @@ func (c *NatsClient) PublishNestJS(pattern string, data interface{}) error {
 	return nil
 }
 
-// RequestNestJS performs a Request-Response RPC wrapped in the NestJS envelope format (compatible with NestJS @MessagePattern handlers)
 func (c *NatsClient) RequestNestJS(pattern string, data interface{}, timeout time.Duration) (json.RawMessage, error) {
 	envelope := NestJSRequest{
 		Pattern: pattern,

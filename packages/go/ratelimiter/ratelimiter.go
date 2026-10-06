@@ -19,14 +19,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// RateLimiter implements a Redis sliding window rate limiter
 type RateLimiter struct {
 	client *redis.Client
 	limit  int
 	window time.Duration
 }
 
-// Result holds the details of a rate-limit check
 type Result struct {
 	Allowed           bool
 	Limit             int
@@ -35,7 +33,6 @@ type Result struct {
 	RetryAfterSeconds int64
 }
 
-// NewRateLimiter creates a new RateLimiter instance
 func NewRateLimiter(client *redis.Client, limit int, window time.Duration) *RateLimiter {
 	return &RateLimiter{
 		client: client,
@@ -73,7 +70,6 @@ func (r *RateLimiter) Limit(ctx context.Context, key string) (*Result, error) {
 	if count >= r.limit {
 		allowed = false
 		remaining = 0
-		// Remove the newly added member to prevent artificial inflation
 		r.client.ZRem(ctx, redisKey, member)
 	}
 
@@ -102,7 +98,6 @@ func (r *RateLimiter) Limit(ctx context.Context, key string) (*Result, error) {
 	}, nil
 }
 
-// UnaryServerInterceptor returns a gRPC unary interceptor that applies rate limiting
 func (r *RateLimiter) UnaryServerInterceptor(keyExtractor func(context.Context) string) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -122,7 +117,6 @@ func (r *RateLimiter) UnaryServerInterceptor(keyExtractor func(context.Context) 
 			return nil, status.Errorf(codes.Internal, "rate limiter check error: %v", err)
 		}
 
-		// Inject rate limiting headers into outbound metadata if headers context is available
 		header := metadata.Pairs(
 			"X-RateLimit-Limit", strconv.Itoa(res.Limit),
 			"X-RateLimit-Remaining", strconv.Itoa(res.Remaining),
@@ -139,7 +133,6 @@ func (r *RateLimiter) UnaryServerInterceptor(keyExtractor func(context.Context) 
 	}
 }
 
-// HTTPMiddleware returns an HTTP middleware that applies rate limiting
 func (r *RateLimiter) HTTPMiddleware(keyExtractor func(*http.Request) string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -171,7 +164,6 @@ func (r *RateLimiter) HTTPMiddleware(keyExtractor func(*http.Request) string) fu
 	}
 }
 
-// Helper to extract default key from gRPC context (User ID or Remote IP)
 func extractDefaultGRPCKey(ctx context.Context) string {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
@@ -196,7 +188,6 @@ func extractDefaultGRPCKey(ctx context.Context) string {
 	return "ip:unknown"
 }
 
-// Helper to extract default key from HTTP request (User ID or Remote IP)
 func extractDefaultHTTPKey(r *http.Request) string {
 	if userID := r.Header.Get("x-user-id"); userID != "" {
 		return fmt.Sprintf("user:%s", userID)

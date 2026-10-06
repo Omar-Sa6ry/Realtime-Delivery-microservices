@@ -17,13 +17,11 @@ func init() {
 	startTime = time.Now()
 }
 
-// HealthStatus represents the return status of health checks
 type HealthStatus struct {
 	Status  string `json:"status"`
 	Message string `json:"message,omitempty"`
 }
 
-// SystemStats holds standard Go system resource statistics
 type SystemStats struct {
 	Uptime       float64     `json:"uptime"`
 	NumCPU       int         `json:"numCpu"`
@@ -31,7 +29,6 @@ type SystemStats struct {
 	Memory       MemoryStats `json:"memory"`
 }
 
-// MemoryStats holds details about Go runtime memory allocation in MB
 type MemoryStats struct {
 	HeapAllocMB  uint64 `json:"heapAllocMB"`
 	TotalAllocMB uint64 `json:"totalAllocMB"`
@@ -39,7 +36,6 @@ type MemoryStats struct {
 	NumGC        uint32 `json:"numGC"`
 }
 
-// CheckDatabase checks database connectivity by pinging the *sql.DB connection
 func CheckDatabase(ctx context.Context, db *sql.DB) HealthStatus {
 	if db == nil {
 		return HealthStatus{Status: "DOWN", Message: "Database driver not initialized"}
@@ -54,7 +50,6 @@ func CheckDatabase(ctx context.Context, db *sql.DB) HealthStatus {
 	return HealthStatus{Status: "UP"}
 }
 
-// CheckRedis checks redis connectivity by pinging the *redis.Client connection
 func CheckRedis(ctx context.Context, client *redis.Client) HealthStatus {
 	if client == nil {
 		return HealthStatus{Status: "DOWN", Message: "Redis client not initialized"}
@@ -69,7 +64,6 @@ func CheckRedis(ctx context.Context, client *redis.Client) HealthStatus {
 	return HealthStatus{Status: "UP"}
 }
 
-// GetSystemStats returns standard Go system resource metrics
 func GetSystemStats() SystemStats {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
@@ -87,7 +81,6 @@ func GetSystemStats() SystemStats {
 	}
 }
 
-// FormatStatsString returns system stats formatted as a log string
 func FormatStatsString(stats SystemStats) string {
 	return fmt.Sprintf("Uptime: %.2fs, CPUs: %d, Goroutines: %d, Memory: [HeapAlloc: %dMB, TotalAlloc: %dMB, Sys: %dMB, GCs: %d]",
 		stats.Uptime,

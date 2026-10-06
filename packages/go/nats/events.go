@@ -1,6 +1,5 @@
 package nats
 
-// User NATS events subjects matching the TypeScript definitions
 const (
 	UserEventGetByID           = "user.get.by.id"
 	UserEventGetByEmail        = "user.get.by.email"
@@ -13,7 +12,6 @@ const (
 	UserEventCheckIfInstructor = "user.checkIfInstructor"
 )
 
-// DeliveryKafkaTopics defines the Kafka topics emitted by the delivery domain.
 const (
 	DeliveryTopicCreated        = "delivery.created"
 	DeliveryTopicDriverAssigned = "delivery.driver.assigned"

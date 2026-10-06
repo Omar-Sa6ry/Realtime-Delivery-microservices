@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-// MediaEventType is the canonical event type identifier for Kafka messages.
 type MediaEventType string
 
 const (
@@ -25,7 +24,6 @@ const (
 	MediaDeleteFailed        MediaEventType = "media.delete.failed"
 )
 
-// MediaUploadCreatedPayload is emitted when a new upload session is created.
 type MediaUploadCreatedPayload struct {
 	MediaID     string `json:"mediaId"`
 	UserID      string `json:"userId"`
@@ -37,7 +35,6 @@ type MediaUploadCreatedPayload struct {
 	UploadID    string `json:"uploadId"`
 }
 
-// MediaUploadCompletedPayload is emitted when a multipart upload is finalised.
 type MediaUploadCompletedPayload struct {
 	MediaID     string `json:"mediaId"`
 	UserID      string `json:"userId"`
@@ -48,7 +45,6 @@ type MediaUploadCompletedPayload struct {
 	MediaType   string `json:"mediaType"`
 }
 
-// MediaReadyPayload is emitted when all processing is complete and the media is available.
 type MediaReadyPayload struct {
 	MediaID     string             `json:"mediaId"`
 	UserID      string             `json:"userId"`
@@ -59,7 +55,6 @@ type MediaReadyPayload struct {
 	Versions    []MediaVersionInfo `json:"versions"`
 }
 
-// MediaVersionInfo describes one processed rendition.
 type MediaVersionInfo struct {
 	VersionType string `json:"versionType"`
 	ObjectKey   string `json:"objectKey"`
@@ -70,14 +65,12 @@ type MediaVersionInfo struct {
 	DurationMS  int64  `json:"durationMs,omitempty"`
 }
 
-// MediaDeletedPayload is emitted when a media item is fully deleted from S3.
 type MediaDeletedPayload struct {
 	MediaID string    `json:"mediaId"`
 	UserID  string    `json:"userId"`
 	At      time.Time `json:"at"`
 }
 
-// MediaScanCompletedPayload is emitted after antivirus scanning.
 type MediaScanCompletedPayload struct {
 	MediaID  string `json:"mediaId"`
 	UserID   string `json:"userId"`
@@ -86,7 +79,6 @@ type MediaScanCompletedPayload struct {
 }
 
 // EventEnvelope is the canonical Kafka/NATS event envelope.
-// All durable events should preserve correlation and causation information.
 type EventEnvelope struct {
 	EventID       string          `json:"eventId"`
 	EventType     string          `json:"eventType"`      // e.g. "payment.authorized", "media.ready"
@@ -102,7 +94,6 @@ type EventEnvelope struct {
 	Payload       json.RawMessage `json:"payload"`
 }
 
-// NewEventEnvelope creates a new EventEnvelope.
 func NewEventEnvelope(eventID string, eventType string, traceID string, payload interface{}) (*EventEnvelope, error) {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -121,12 +112,10 @@ func NewEventEnvelope(eventID string, eventType string, traceID string, payload 
 	}, nil
 }
 
-// NewMediaEventEnvelope is a backward-compatible wrapper for media events.
 func NewMediaEventEnvelope(eventID string, eventType MediaEventType, traceID string, payload interface{}) (*EventEnvelope, error) {
 	return NewEventEnvelope(eventID, string(eventType), traceID, payload)
 }
 
-// Accepts any string event type for cross-domain use.
 func MarshalEnvelope(eventID string, eventType string, traceID string, payload interface{}) ([]byte, error) {
 	env, err := NewEventEnvelope(eventID, eventType, traceID, payload)
 	if err != nil {
@@ -135,7 +124,6 @@ func MarshalEnvelope(eventID string, eventType string, traceID string, payload i
 	return json.Marshal(env)
 }
 
-// MarshalMediaEnvelope is a backward-compatible wrapper for media events.
 func MarshalMediaEnvelope(eventID string, eventType MediaEventType, traceID string, payload interface{}) ([]byte, error) {
 	return MarshalEnvelope(eventID, string(eventType), traceID, payload)
 }
@@ -183,7 +171,6 @@ func (e *EventEnvelope) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// UnmarshalEnvelope parses a raw Kafka/NATS message into an EventEnvelope.
 func UnmarshalEnvelope(data []byte) (*EventEnvelope, error) {
 	var env EventEnvelope
 	if err := json.Unmarshal(data, &env); err != nil {

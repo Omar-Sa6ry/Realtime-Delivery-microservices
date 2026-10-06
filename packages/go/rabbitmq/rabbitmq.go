@@ -192,9 +192,7 @@ func PrefetchFor(queue string) int {
 	return 10
 }
 
-// ---------------------------------------------------------------------------
 // Metrics
-// ---------------------------------------------------------------------------
 
 var (
 	publishedTotal  *prometheus.CounterVec
@@ -257,27 +255,20 @@ func registerMetrics() {
 	})
 }
 
-// ---------------------------------------------------------------------------
 // Envelope helpers (same contract as the events package / TS envelope)
-// ---------------------------------------------------------------------------
 
 type EventEnvelope = events.EventEnvelope
 
-// MarshalEnvelope wraps payload in the standard EventEnvelope.
 func MarshalEnvelope(eventID, eventType, traceID string, payload interface{}) ([]byte, error) {
 	return events.MarshalEnvelope(eventID, eventType, traceID, payload)
 }
 
-// UnmarshalEnvelope parses a raw AMQP body into an EventEnvelope.
 func UnmarshalEnvelope(data []byte) (*EventEnvelope, error) {
 	return events.UnmarshalEnvelope(data)
 }
 
-// ---------------------------------------------------------------------------
 // Connection — one per service, multiplexed channels
-// ---------------------------------------------------------------------------
 
-// Config holds parameters for connecting to RabbitMQ.
 type Config struct {
 	URL         string
 	ServiceName string
@@ -300,7 +291,6 @@ func (c Config) withDefaults() Config {
 	return c
 }
 
-// Connection wraps a single AMQP connection with lazy auto-reconnect.
 type Connection struct {
 	mu     sync.Mutex
 	cfg    Config
@@ -308,7 +298,6 @@ type Connection struct {
 	closed bool
 }
 
-// Connect dials RabbitMQ with exponential-backoff retries.
 func Connect(cfg Config) (*Connection, error) {
 	cfg = cfg.withDefaults()
 	registerMetrics()
@@ -319,7 +308,6 @@ func Connect(cfg Config) (*Connection, error) {
 	return c, nil
 }
 
-// ConnectURL is a convenience wrapper for Connect with just a URL.
 func ConnectURL(url, serviceName string) (*Connection, error) {
 	return Connect(Config{URL: url, ServiceName: serviceName})
 }
@@ -380,8 +368,6 @@ func (c *Connection) ensureConnLocked() error {
 		c.cfg.MaxAttempts, lastErr)
 }
 
-// Channel opens a new channel on the shared connection, reconnecting first
-// when the connection is down.
 func (c *Connection) Channel() (*amqp.Channel, error) {
 	if err := c.ensureConn(); err != nil {
 		return nil, err
@@ -411,17 +397,14 @@ func (c *Connection) Channel() (*amqp.Channel, error) {
 	return ch, nil
 }
 
-// IsConnected reports whether the underlying connection is usable.
 func (c *Connection) IsConnected() bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.conn != nil && !c.conn.IsClosed() && !c.closed
 }
 
-// ServiceName returns the logical service name used in metric labels.
 func (c *Connection) ServiceName() string { return c.cfg.ServiceName }
 
-// Close shuts down the connection permanently.
 func (c *Connection) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -432,7 +415,6 @@ func (c *Connection) Close() error {
 	return nil
 }
 
-// TopologyBinding describes one exchange → queue binding to assert.
 type TopologyBinding struct {
 	Exchange     string
 	ExchangeType string // defaults from ExchangeTypes, falls back to "topic"
@@ -440,11 +422,8 @@ type TopologyBinding struct {
 	RoutingKey   string
 }
 
-// exchangeDeclareArgs returns the arguments every declare path must use so
-// consumer and topology declarations stay consistent with definitions.json.
 func exchangeDeclareArgs(exchange string) amqp.Table {
 	args := amqp.Table{}
-	// Do not set alternate-exchange for DLX, Unroutable, or dlq exchanges to prevent cycles
 	if exchange != ExchangeDLX && exchange != ExchangeDLXDirect && exchange != ExchangeUnroutable && !strings.Contains(exchange, "dlq") {
 		args["alternate-exchange"] = ExchangeUnroutable
 	}
@@ -488,13 +467,9 @@ func (c *Connection) EnsureTopology(bindings []TopologyBinding) error {
 	return nil
 }
 
-// ---------------------------------------------------------------------------
 // Publisher — confirms + reconnect + metrics
-// ---------------------------------------------------------------------------
 
-// PublishOptions customises a single publish.
 type PublishOptions struct {
-	// Transient disables persistence (default false → persistent delivery).
 	Transient     bool
 	Priority      uint8
 	TraceID       string
@@ -507,7 +482,6 @@ type PublishOptions struct {
 	ConfirmTimout time.Duration // default 5s
 }
 
-// Publisher publishes events with publisher confirms over one channel.
 type Publisher struct {
 	conn     *Connection
 	service  string
@@ -516,7 +490,6 @@ type Publisher struct {
 	confirms chan amqp.Confirmation
 }
 
-// NewPublisher creates a publisher bound to the shared connection.
 func NewPublisher(conn *Connection) *Publisher {
 	registerMetrics()
 	return &Publisher{conn: conn, service: conn.ServiceName()}
@@ -539,9 +512,6 @@ func (p *Publisher) ensureChannel() error {
 	return nil
 }
 
-// Publish wraps payload in the standard envelope and publishes it with
-// confirms. On channel-level failures it reopens the channel and retries
-// once before returning an error (Outbox workers should retry with backoff).
 func (p *Publisher) Publish(ctx context.Context, exchange, routingKey, eventType string,
 	payload interface{}, opts *PublishOptions) error {
 	if opts == nil {
@@ -656,7 +626,6 @@ func (p *Publisher) publishOnce(ctx context.Context, exchange, routingKey string
 	}
 }
 
-// bothIDs extracts eventId from an envelope body (fallback trace id).
 func bothIDs(body []byte) string {
 	var env struct {
 		EventID string `json:"eventId"`
@@ -680,40 +649,27 @@ func (p *Publisher) closeChannel() error {
 	return nil
 }
 
-// Close closes the publisher channel (not the shared connection).
 func (p *Publisher) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.closeChannel()
 }
 
-// ---------------------------------------------------------------------------
-// Consumer — manual ack + prefetch + retry + DLQ + tracing
-// ---------------------------------------------------------------------------
 
-// MessageHandler processes one event envelope.
-// Return ErrPermanent to dead-letter immediately without retries.
 type MessageHandler func(ctx context.Context, env *EventEnvelope, msg amqp.Delivery) error
-
-// ErrPermanent wraps a processing error to signal it must NOT be retried.
 var ErrPermanent = errors.New("permanent processing failure")
 
-// ConsumerConfig holds parameters for creating a Consumer.
 type ConsumerConfig struct {
 	Conn        *Connection
 	Queue       string
 	Exchange    string
 	RoutingKeys []string
 	ConsumerTag string // defaults to "<service>-<queue>"
-	// Prefetch caps unacked messages (0 = PrefetchFor(queue)).
 	Prefetch int
-	// MaxRetries for transient failures before dead-letter (0 = 3).
 	MaxRetries int
-	// RetryDelay base delay between retries (0 = 2s, exponential).
 	RetryDelay time.Duration
 }
 
-// Consumer consumes one queue with at-least-once semantics.
 type Consumer struct {
 	cfg        ConsumerConfig
 	service    string
@@ -721,7 +677,6 @@ type Consumer struct {
 	retryDelay time.Duration
 }
 
-// NewConsumer creates a consumer bound to a single queue.
 func NewConsumer(cfg ConsumerConfig) *Consumer {
 	registerMetrics()
 	if cfg.Prefetch <= 0 {
@@ -745,9 +700,6 @@ func NewConsumer(cfg ConsumerConfig) *Consumer {
 	return c
 }
 
-// Run consumes until ctx is cancelled. Transient errors retry with
-// exponential backoff; exhausted retries and permanent errors are
-// nacked (→ per-domain DLQ via delivery.dlx.direct).
 func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 	slog.Info("RabbitMQ consumer started",
 		"service", c.service, "queue", c.cfg.Queue, "exchange", c.cfg.Exchange)
@@ -840,7 +792,6 @@ func (c *Consumer) handleDelivery(ctx context.Context, ch *amqp.Channel,
 
 	env, err := UnmarshalEnvelope(msg.Body)
 	if err != nil {
-		// Poison message — never retry, dead-letter immediately.
 		failedTotal.WithLabelValues(c.service, c.cfg.Queue, "invalid_json").Inc()
 		slog.Error("RabbitMQ poison message, dead-lettering",
 			"service", c.service, "queue", c.cfg.Queue, "error", err)
@@ -881,8 +832,6 @@ func (c *Consumer) handleDelivery(ctx context.Context, ch *amqp.Channel,
 				return
 			case <-time.After(delay):
 			}
-			// Republish with incremented retry count, ack the original to
-			// preserve quorum-queue ordering semantics.
 			headers := amqp.Table{}
 			for k, v := range msg.Headers {
 				headers[k] = v

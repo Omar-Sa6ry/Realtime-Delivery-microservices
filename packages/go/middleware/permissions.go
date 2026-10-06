@@ -9,9 +9,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// RequirePermissionInterceptor verifies the authenticated user has at least one of the required
-// permissions (derived from their role via constants.RolePermissionsMap). Mirrors the
-// NestJS RoleGuard permission validation.
 func RequirePermissionInterceptor(required ...constants.Permission) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,

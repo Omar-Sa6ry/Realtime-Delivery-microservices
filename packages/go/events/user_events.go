@@ -2,7 +2,6 @@ package events
 
 import "time"
 
-// UserEventType represents user lifecycle events
 type UserEventType string
 
 const (
@@ -11,7 +10,6 @@ const (
 	UserDeleted UserEventType = "user.deleted"
 )
 
-// UserCreatedPayload is emitted when a new user registers
 type UserCreatedPayload struct {
 	UserID    string    `json:"userId"`
 	Email     string    `json:"email"`
@@ -21,7 +19,6 @@ type UserCreatedPayload struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-// UserUpdatedPayload is emitted when a user profile is updated
 type UserUpdatedPayload struct {
 	UserID    string     `json:"userId"`
 	Email     string     `json:"email"`
@@ -34,7 +31,6 @@ type UserUpdatedPayload struct {
 	AvatarID  *string    `json:"avatarMediaId,omitempty"`
 }
 
-// UserDeletedPayload is emitted when a user is deleted
 type UserDeletedPayload struct {
 	UserID    string    `json:"userId"`
 	DeletedAt time.Time `json:"deletedAt"`

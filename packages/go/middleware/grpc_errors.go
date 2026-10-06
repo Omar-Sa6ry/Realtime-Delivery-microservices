@@ -2,8 +2,6 @@ package middleware
 
 import "google.golang.org/grpc/codes"
 
-// HTTPStatusToGRPC maps an HTTP status code to the equivalent gRPC status code.
-// Mirrors the NestJS GrpcExceptionFilter mapping in the TypeScript common package.
 func HTTPStatusToGRPC(statusCode int) codes.Code {
 	switch statusCode {
 	case 400:

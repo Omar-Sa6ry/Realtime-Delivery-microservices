@@ -10,15 +10,9 @@ import (
 )
 
 var (
-	// RequestCounter measures the total requests processed
 	RequestCounter *prometheus.CounterVec
-
-	// RequestDuration measures request processing duration in seconds
 	RequestDuration *prometheus.HistogramVec
-
-	// ErrorCounter measures total application errors
 	ErrorCounter *prometheus.CounterVec
-
 	registerOnce sync.Once
 )
 
@@ -26,7 +20,6 @@ func init() {
 	RegisterMetrics()
 }
 
-// RegisterMetrics registers application Prometheus metrics with the default registry
 func RegisterMetrics() {
 	registerOnce.Do(func() {
 		RequestCounter = prometheus.NewCounterVec(
@@ -60,12 +53,10 @@ func RegisterMetrics() {
 	})
 }
 
-// HTTPHandler returns the default prometheus metrics HTTP handler
 func HTTPHandler() http.Handler {
 	return promhttp.Handler()
 }
 
-// StartMetricsServer starts a standalone HTTP server to expose Prometheus metrics
 func StartMetricsServer(port string) error {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", HTTPHandler())

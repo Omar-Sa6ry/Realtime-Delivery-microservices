@@ -1,6 +1,5 @@
 package events
 
-// AnalyticsEventType is the canonical event type for analytics domain Kafka messages.
 type AnalyticsEventType string
 
 const (
@@ -11,10 +10,8 @@ const (
 	AnalyticsDlq            AnalyticsEventType = "analytics.dlq"
 )
 
-// AnalyticsEventEnvelope is the standard envelope for analytics events.
 type AnalyticsEventEnvelope = EventEnvelope
 
-// AnalyticsDLQPayload represents a event that failed processing and was sent to the DLQ.
 type AnalyticsDLQPayload struct {
 	EventID      string    `json:"eventId"`
 	EventType    string    `json:"eventType"`
@@ -26,7 +23,6 @@ type AnalyticsDLQPayload struct {
 	CorrelationID string   `json:"correlationId,omitempty"`
 }
 
-// NotificationEventType is the canonical event type for notification domain Kafka messages.
 type NotificationEventType string
 
 const (
@@ -37,7 +33,6 @@ const (
 	NotificationRetrying NotificationEventType = "notification.retrying"
 )
 
-// NotificationPayload is the standard payload for notification events.
 type NotificationPayload struct {
 	NotificationID string    `json:"notificationId"`
 	RecipientType  string    `json:"recipientType"` // email, push, sms, in_app
@@ -49,5 +44,4 @@ type NotificationPayload struct {
 	DeliveredAt    string    `json:"deliveredAt,omitempty"`
 }
 
-// NotificationEventEnvelope is the envelope for notification events.
 type NotificationEventEnvelope = EventEnvelope

@@ -10,13 +10,11 @@ import (
 	"time"
 )
 
-// WebhookPayload represents the standard webhook message format for Discord/Slack
 type WebhookPayload struct {
 	Username string `json:"username"`
 	Content  string `json:"content"`
 }
 
-// TriggerAlert sends an automated alert message to Discord/Slack webhook configured in ALERT_WEBHOOK_URL
 func TriggerAlert(title, message, severity string) (bool, error) {
 	if severity == "" {
 		severity = "WARNING"

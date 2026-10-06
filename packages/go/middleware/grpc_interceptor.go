@@ -18,7 +18,6 @@ const (
 	CorrelationIDKey contextKey = constants.HeaderXCorrelationId
 )
 
-// UnaryServerMetadataInterceptor extracts headers from incoming gRPC metadata and populates context.Context
 func UnaryServerMetadataInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -42,7 +41,6 @@ func UnaryServerMetadataInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
-// AuthInterceptor ensures that x-user-id is present in the context, returning Unauthenticated if missing.
 func AuthInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -58,7 +56,6 @@ func AuthInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
-// RequireRoleInterceptor verifies that the authenticated user's role matches one of the allowed roles.
 func RequireRoleInterceptor(allowedRoles ...string) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -81,7 +78,6 @@ func RequireRoleInterceptor(allowedRoles ...string) grpc.UnaryServerInterceptor 
 	}
 }
 
-// GetUserID retrieves the authenticated userId from gRPC context
 func GetUserID(ctx context.Context) string {
 	if val, ok := ctx.Value(UserIDKey).(string); ok {
 		return val
@@ -89,7 +85,6 @@ func GetUserID(ctx context.Context) string {
 	return ""
 }
 
-// GetUserRole retrieves the authenticated user's role from gRPC context
 func GetUserRole(ctx context.Context) string {
 	if val, ok := ctx.Value(UserRoleKey).(string); ok {
 		return val
@@ -97,7 +92,6 @@ func GetUserRole(ctx context.Context) string {
 	return ""
 }
 
-// GetCorrelationID retrieves the correlationId from gRPC context
 func GetCorrelationID(ctx context.Context) string {
 	if val, ok := ctx.Value(CorrelationIDKey).(string); ok {
 		return val

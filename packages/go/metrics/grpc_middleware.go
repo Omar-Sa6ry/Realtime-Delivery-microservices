@@ -8,7 +8,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// UnaryServerMetricsInterceptor captures and logs prometheus metrics for unary gRPC requests
 func UnaryServerMetricsInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -41,7 +40,6 @@ func UnaryServerMetricsInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
-// StreamServerMetricsInterceptor captures and logs prometheus metrics for stream gRPC requests
 func StreamServerMetricsInterceptor() grpc.StreamServerInterceptor {
 	return func(
 		srv interface{},

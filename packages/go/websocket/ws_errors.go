@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-// WsErrorCode is the canonical error code sent to clients —
-// matches the TypeScript WsErrorCode enum.
 type WsErrorCode string
 
 const (
@@ -22,8 +20,6 @@ const (
 	WsErrorInternal           WsErrorCode = "INTERNAL_ERROR"
 )
 
-// WsErrorPayload is the error envelope sent over the wire —
-// matches the TypeScript WsErrorPayload interface.
 type WsErrorPayload struct {
 	Code      WsErrorCode `json:"code"`
 	Message   string      `json:"message"`
@@ -31,15 +27,12 @@ type WsErrorPayload struct {
 	RequestID string      `json:"requestId,omitempty"`
 }
 
-// WsException is a WebSocket protocol error —
-// matches the TypeScript WsException class.
 type WsException struct {
 	Code      WsErrorCode
 	Message   string
 	Retryable bool
 }
 
-// NewWsException creates a WsException, defaulting the message to the code.
 func NewWsException(code WsErrorCode, message string, retryable bool) *WsException {
 	if message == "" {
 		message = string(code)
@@ -52,8 +45,6 @@ func (e *WsException) Error() string {
 	return e.Message
 }
 
-// Payload converts the exception into the wire error envelope —
-// matches the TS WsException.toPayload().
 func (e *WsException) Payload(requestID string) WsErrorPayload {
 	return WsErrorPayload{
 		Code:      e.Code,

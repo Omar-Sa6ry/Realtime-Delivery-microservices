@@ -13,7 +13,6 @@ const (
 	PathKey    logContextKey = "path"
 )
 
-// LogContext holds logging context fields
 type LogContext struct {
 	TraceID string
 	UserID  string
@@ -21,7 +20,6 @@ type LogContext struct {
 	Path    string
 }
 
-// WithLogContext returns a new context with the provided LogContext fields populated
 func WithLogContext(ctx context.Context, fields LogContext) context.Context {
 	if fields.TraceID != "" {
 		ctx = context.WithValue(ctx, TraceIDKey, fields.TraceID)
@@ -38,29 +36,24 @@ func WithLogContext(ctx context.Context, fields LogContext) context.Context {
 	return ctx
 }
 
-// WithTraceID returns a new context with the trace ID populated
 func WithTraceID(ctx context.Context, traceID string) context.Context {
 	return context.WithValue(ctx, TraceIDKey, traceID)
 }
 
-// WithUserID returns a new context with the user ID populated
 func WithUserID(ctx context.Context, userID string) context.Context {
 	return context.WithValue(ctx, UserIDKey, userID)
 }
 
-// GetTraceID retrieves the trace ID from the context
 func GetTraceID(ctx context.Context) string {
 	if val, ok := ctx.Value(TraceIDKey).(string); ok {
 		return val
 	}
-	// Fallback to check other potential keys (e.g. from grpc interceptors)
 	if val, ok := ctx.Value("x-correlation-id").(string); ok {
 		return val
 	}
 	return ""
 }
 
-// GetUserID retrieves the user ID from the context
 func GetUserID(ctx context.Context) string {
 	if val, ok := ctx.Value(UserIDKey).(string); ok {
 		return val
@@ -71,7 +64,6 @@ func GetUserID(ctx context.Context) string {
 	return ""
 }
 
-// GetMethod retrieves the method from the context
 func GetMethod(ctx context.Context) string {
 	if val, ok := ctx.Value(MethodKey).(string); ok {
 		return val
@@ -79,7 +71,6 @@ func GetMethod(ctx context.Context) string {
 	return ""
 }
 
-// GetPath retrieves the path from the context
 func GetPath(ctx context.Context) string {
 	if val, ok := ctx.Value(PathKey).(string); ok {
 		return val

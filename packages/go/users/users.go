@@ -2,7 +2,6 @@ package users
 
 import "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/constants"
 
-// gRPC service identifiers for the user service — match the TypeScript grpc-user.interface
 const (
 	PackageName   = "user"
 	ServiceName   = "UserService"
@@ -10,7 +9,6 @@ const (
 	JwtPayloadKey = "jwt-payload"
 )
 
-// User is the core user model shared across services — matches the TypeScript UserDto / IUser.
 type User struct {
 	ID          string `json:"id"`
 	Email       string `json:"email"`
@@ -24,14 +22,12 @@ type User struct {
 	UpdatedAt   int64  `json:"updatedAt"`
 }
 
-// AuthenticatedUser is the identity attached to a request context — matches TypeScript AuthenticatedUser.
 type AuthenticatedUser struct {
 	UserID    string `json:"userId"`
 	Role      string `json:"role"`
 	SessionID string `json:"sessionId,omitempty"`
 }
 
-// JwtPayload mirrors the fields carried inside the access token — matches TypeScript IJwtPayload.
 type JwtPayload struct {
 	UserID    string `json:"userId,omitempty"`
 	Sub       string `json:"sub,omitempty"`
@@ -43,7 +39,6 @@ type JwtPayload struct {
 	Exp       int64  `json:"exp,omitempty"`
 }
 
-// UserID returns the effective user identifier regardless of which field carried it.
 func (p JwtPayload) UserIDOrEmpty() string {
 	if p.UserID != "" {
 		return p.UserID
@@ -54,13 +49,11 @@ func (p JwtPayload) UserIDOrEmpty() string {
 	return p.ID
 }
 
-// PaginationInput mirrors the TypeScript PaginationInput DTO.
 type PaginationInput struct {
 	Page  int `json:"page"`
 	Limit int `json:"limit"`
 }
 
-// NewPaginationInput builds a PaginationInput applying the shared defaults when values are invalid.
 func NewPaginationInput(page, limit int) PaginationInput {
 	if page < 1 {
 		page = constants.DefaultPage
@@ -71,12 +64,9 @@ func NewPaginationInput(page, limit int) PaginationInput {
 	return PaginationInput{Page: page, Limit: limit}
 }
 
-// Offset returns the SQL offset for the current page.
 func (p PaginationInput) Offset() int {
 	return (p.Page - 1) * p.Limit
 }
-
-// gRPC request/response DTOs — match the TypeScript grpc-user.interface and protos/user.proto.
 
 type GetUserRequest struct {
 	ID string `json:"id"`

@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-// Snowflake represents a Twitter Snowflake ID generator.
 type Snowflake struct {
 	mu        sync.Mutex
 	timestamp int64
@@ -14,7 +13,6 @@ type Snowflake struct {
 	sequence  int64
 }
 
-// Config holds the configuration for the Snowflake ID generator.
 type Config struct {
 	WorkerID      int64 // 0-31
 	DatacenterID  int64 // 0-31 (optional, can be combined with WorkerID)
@@ -22,7 +20,6 @@ type Config struct {
 	SequenceBits  uint8 // Number of bits for sequence (default: 12)
 }
 
-// DefaultConfig returns a default configuration.
 func DefaultConfig() Config {
 	return Config{
 		Epoch:        1288834974657, // Twitter epoch in milliseconds
@@ -65,8 +62,6 @@ func (sf *Snowflake) NextID() int64 {
 
 	now := time.Now().UnixNano() / 1e6 // current timestamp in ms
 
-	// If we're generating IDs too fast (same millisecond),
-	// wait until the next millisecond
 	if now == sf.timestamp {
 		// Wait for next millisecond (simple spin loop)
 		for time.Now().UnixNano()/1e6 <= now {
@@ -79,7 +74,6 @@ func (sf *Snowflake) NextID() int64 {
 	// Increment sequence
 	sf.sequence++
 
-	// If sequence overflows for this millisecond, wait for next millisecond
 	if sf.sequence > int64(1<<12-1) {
 		for time.Now().UnixNano()/1e6 <= now {
 		}
@@ -93,17 +87,14 @@ func (sf *Snowflake) NextID() int64 {
 	return id
 }
 
-// ID returns the generated ID as int64.
 func (sf *Snowflake) ID() int64 {
 	return sf.NextID()
 }
 
-// WorkerID returns the worker ID embedded in the Snowflake.
 func (sf *Snowflake) WorkerID() int64 {
 	return sf.workerID & 0x1F // 5 bits
 }
 
-// Sequence returns the sequence number embedded in the Snowflake.
 func (sf *Snowflake) Sequence() int64 {
 	return sf.sequence & 0xFFF // 12 bits
 }
@@ -121,23 +112,14 @@ func Parse(id int64) (int64, int64, int64, int64, error) {
 	datacenterMask := int64(1<<datacenterBits - 1) << (timestampBits + workerBits)
 	workerMask := int64(1<<workerBits - 1) << (timestampBits)
 	sequenceMask := int64(1<<sequenceBits - 1)
-
-	// Extract timestamp (remove epoch)
 	timestamp := (id & timestampMask)
-
-	// Extract datacenter ID
 	datacenterID := (id & datacenterMask) >> (timestampBits + workerBits)
-
-	// Extract worker ID
 	workerID := (id & workerMask) >> timestampBits
-
-	// Extract sequence
 	sequence := id & sequenceMask
 
 	return timestamp, datacenterID, workerID, sequence, nil
 }
 
-// Validate checks if the given ID looks like a valid Snowflake ID.
 func Validate(id int64) bool {
 	if id <= 0 {
 		return false
@@ -148,8 +130,6 @@ func Validate(id int64) bool {
 	return true
 }
 
-// DefaultSnowflake is a pre-configured Snowflake using worker ID 1.
-// This is useful for quick startup without configuration.
 var DefaultSnowflake *Snowflake
 var defaultSnowflakeOnce sync.Once
 
@@ -164,7 +144,6 @@ func initDefaultSnowflake() {
 	DefaultSnowflake = sf
 }
 
-// Generate generates a new Snowflake ID using the default generator.
 func Generate() int64 {
 	defaultSnowflakeOnce.Do(initDefaultSnowflake)
 	return DefaultSnowflake.ID()

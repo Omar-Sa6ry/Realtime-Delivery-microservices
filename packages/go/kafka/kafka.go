@@ -18,17 +18,14 @@ func MarshalEnvelope(eventID, eventType, traceID string, payload interface{}) ([
 	return events.MarshalEnvelope(eventID, eventType, traceID, payload)
 }
 
-// UnmarshalEnvelope parses a raw Kafka message into an EventEnvelope.
 func UnmarshalEnvelope(data []byte) (*EventEnvelope, error) {
 	return events.UnmarshalEnvelope(data)
 }
 
-// Producer wraps a kafka-go Writer with structured event publishing.
 type Producer struct {
 	writer *kafkago.Writer
 }
 
-// NewProducer creates a new Kafka producer connected to the given brokers.
 func NewProducer(brokers []string) *Producer {
 	writer := &kafkago.Writer{
 		Addr:         kafkago.TCP(brokers...),
@@ -66,7 +63,6 @@ func (p *Producer) Publish(ctx context.Context, topic, key string, payload []byt
 	return nil
 }
 
-// PublishEnvelope wraps the payload in the standard EventEnvelope and publishes it.
 func (p *Producer) PublishEnvelope(ctx context.Context, topic, key, eventType, traceID string, payload interface{}) error {
 	data, err := MarshalEnvelope("", eventType, traceID, payload)
 	if err != nil {
@@ -75,12 +71,10 @@ func (p *Producer) PublishEnvelope(ctx context.Context, topic, key, eventType, t
 	return p.Publish(ctx, topic, key, data, traceID)
 }
 
-// Close flushes pending messages and closes the underlying writer.
 func (p *Producer) Close() error {
 	return p.writer.Close()
 }
 
-// EnsureTopics creates the given topics in Kafka if they don't already exist.
 func EnsureTopics(brokers []string, topics []string, numPartitions, replicationFactor int) error {
 	conn, err := kafkago.Dial("tcp", brokers[0])
 	if err != nil {
@@ -108,14 +102,10 @@ func EnsureTopics(brokers []string, topics []string, numPartitions, replicationF
 	return nil
 }
 
-// MessageHandler is the signature for processing a single Kafka message.
-// Return ErrPermanent to send the message to the DLQ without retrying.
 type MessageHandler func(ctx context.Context, msg kafkago.Message) error
 
-// ErrPermanent wraps an error to signal that it should NOT be retried and must go to the DLQ.
 var ErrPermanent = errors.New("permanent processing failure")
 
-// ConsumerConfig holds parameters for creating a Consumer.
 type ConsumerConfig struct {
 	Brokers    []string
 	Topic      string
@@ -131,7 +121,6 @@ type Consumer struct {
 	dlqProducer *Producer
 }
 
-// NewConsumer creates a Kafka consumer bound to a single topic and consumer group.
 func NewConsumer(cfg ConsumerConfig) *Consumer {
 	reader := kafkago.NewReader(kafkago.ReaderConfig{
 		Brokers:        cfg.Brokers,
@@ -172,9 +161,6 @@ func NewConsumer(cfg ConsumerConfig) *Consumer {
 	}
 }
 
-// Run starts consuming messages, invoking handler for each message. (at-least-once).
-// Transient errors retry with exponential backoff; exhausted retries and
-// permanent errors are routed to the DLQ. Run blocks until ctx is cancelled.
 func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 	slog.Info("Kafka consumer started", "topic", c.reader.Config().Topic, "group", c.reader.Config().GroupID)
 	for {
@@ -242,7 +228,6 @@ func (c *Consumer) processWithRetry(ctx context.Context, msg kafkago.Message, ha
 	return fmt.Errorf("exhausted %d retries: %w", c.maxRetries, lastErr)
 }
 
-// routeToDLQ sends a failed message to the topic + ".dlq".
 func (c *Consumer) routeToDLQ(ctx context.Context, msg kafkago.Message, reason error) {
 	topic := c.reader.Config().Topic
 	slog.Error("Routing Kafka message to DLQ",
@@ -267,7 +252,6 @@ func (c *Consumer) routeToDLQ(ctx context.Context, msg kafkago.Message, reason e
 	}
 }
 
-// Close gracefully shuts down the consumer.
 func (c *Consumer) Close() error {
 	return c.reader.Close()
 }

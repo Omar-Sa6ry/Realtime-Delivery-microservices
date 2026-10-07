@@ -48,7 +48,7 @@ spec:
               port: 9200
             initialDelaySeconds: 30
             periodSeconds: 10
-            failureThreshold: 120
+            failureThreshold: 240
           readinessProbe:
             tcpSocket:
               port: 9200

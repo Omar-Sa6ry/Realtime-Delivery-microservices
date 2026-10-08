@@ -11,7 +11,7 @@ import {
   RateLimiterAlgorithm,
   RedisStore,
 } from '@bts-soft/validation';
-import { AppResolver } from './app.resolver';
+import { AppController } from './app.controller';
 import { JwtAuthGuard } from './common/guards/auth.guard';
 import { HealthController } from './health/health.controller';
 import { MetricsController } from './health/metrics.controller';
@@ -244,10 +244,8 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
     MetricsModule,
     AutomationModule,
   ],
-  controllers: [HealthController, MetricsController],
+  controllers: [HealthController, MetricsController, AppController],
   providers: [
-    AppResolver,
-
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

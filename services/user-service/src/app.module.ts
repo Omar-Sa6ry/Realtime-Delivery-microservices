@@ -29,6 +29,7 @@ import {
 } from '@delivery-micro/shard';
 import { BullModule } from '@nestjs/bullmq';
 import { UserRabbitMQModule } from './modules/rabbitmq/rabbitmq.module';
+import { AppResolver } from './app.resolver';
 
 @Module({
   imports: [
@@ -118,6 +119,7 @@ import { UserRabbitMQModule } from './modules/rabbitmq/rabbitmq.module';
     AutomationModule,
   ],
   providers: [
+    AppResolver,
     {
       provide: APP_FILTER,
       useClass: GraphQLExceptionFilter,

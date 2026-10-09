@@ -2,8 +2,11 @@ package middleware
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/constants"
+	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -18,6 +21,14 @@ const (
 	CorrelationIDKey contextKey = constants.HeaderXCorrelationId
 )
 
+func newRequestID() string {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return "unknown"
+	}
+	return hex.EncodeToString(buf)
+}
+
 func UnaryServerMetadataInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -25,18 +36,36 @@ func UnaryServerMetadataInterceptor() grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
+		var (
+			userID        string
+			correlationID string
+		)
 		md, ok := metadata.FromIncomingContext(ctx)
 		if ok {
 			if vals := md.Get(constants.HeaderXUserId); len(vals) > 0 {
+				userID = vals[0]
 				ctx = context.WithValue(ctx, UserIDKey, vals[0])
 			}
 			if vals := md.Get(constants.HeaderXUserRole); len(vals) > 0 {
 				ctx = context.WithValue(ctx, UserRoleKey, vals[0])
 			}
 			if vals := md.Get(constants.HeaderXCorrelationId); len(vals) > 0 {
+				correlationID = vals[0]
 				ctx = context.WithValue(ctx, CorrelationIDKey, vals[0])
 			}
 		}
+
+		traceID := correlationID
+		if traceID == "" {
+			traceID = newRequestID()
+		}
+		ctx = sharedlogging.WithLogContext(ctx, sharedlogging.LogContext{
+			TraceID: traceID,
+			UserID:  userID,
+			Method:  info.FullMethod,
+			Path:    info.FullMethod,
+		})
+
 		return handler(ctx, req)
 	}
 }

@@ -7,6 +7,7 @@ describe('StructuredLogger', () => {
   let errorSpy: jest.SpyInstance;
   let warnSpy: jest.SpyInstance;
   const originalEnv = process.env.NODE_ENV;
+  const originalLevel = process.env.LOG_LEVEL;
 
   beforeEach(() => {
     logger = new StructuredLogger();
@@ -22,6 +23,11 @@ describe('StructuredLogger', () => {
       delete process.env.NODE_ENV;
     } else {
       process.env.NODE_ENV = originalEnv;
+    }
+    if (originalLevel === undefined) {
+      delete process.env.LOG_LEVEL;
+    } else {
+      process.env.LOG_LEVEL = originalLevel;
     }
   });
 
@@ -71,6 +77,30 @@ describe('StructuredLogger', () => {
     expect(logSpy.mock.calls[0][0]).toContain('\x1b[35m[DEBUG]');
     expect(logSpy.mock.calls[1][0]).toContain('\x1b[0m[VERBOSE]');
     expect(logSpy.mock.calls[2][0]).toContain('\x1b[0m[INFO]');
+  });
+
+  it('suppresses records below LOG_LEVEL', () => {
+    process.env.LOG_LEVEL = 'warn';
+
+    logger.debug('chatter');
+    logger.log('started');
+    logger.warn('degraded');
+    logger.error('broken');
+
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('defaults to info level in production when LOG_LEVEL is unset', () => {
+    delete process.env.LOG_LEVEL;
+    process.env.NODE_ENV = 'production';
+
+    logger.debug('chatter');
+    logger.log('started');
+
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(logSpy.mock.calls[0][0]).toContain('"level":"INFO"');
   });
 
   it('writes the stack trace separately when not in production', () => {

@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -50,11 +51,7 @@ func NewDevHandler(w io.Writer) *DevHandler {
 }
 
 func (h *DevHandler) Enabled(_ context.Context, level slog.Level) bool {
-	logLevel := os.Getenv("LOG_LEVEL")
-	if logLevel == "debug" || logLevel == "DEBUG" {
-		return true
-	}
-	return level >= slog.LevelInfo
+	return level >= ParseLevel(os.Getenv("LOG_LEVEL"))
 }
 
 func (h *DevHandler) Handle(ctx context.Context, r slog.Record) error {
@@ -141,7 +138,7 @@ func InitLogger() *slog.Logger {
 	var baseHandler slog.Handler
 	if env == "production" {
 		baseHandler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelInfo,
+			Level: ParseLevel(os.Getenv("LOG_LEVEL")),
 		})
 	} else {
 		baseHandler = NewDevHandler(os.Stdout)
@@ -150,4 +147,19 @@ func InitLogger() *slog.Logger {
 	logger := slog.New(NewContextHandler(baseHandler))
 	slog.SetDefault(logger)
 	return logger
+}
+
+func ParseLevel(value string) slog.Level {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error", "err":
+		return slog.LevelError
+	case "info", "":
+		return slog.LevelInfo
+	default:
+		return slog.LevelInfo
+	}
 }

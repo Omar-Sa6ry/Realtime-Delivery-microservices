@@ -16,64 +16,100 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTriggerAlertWithoutWebhookURL(t *testing.T) {
-	t.Setenv("ALERT_WEBHOOK_URL", "")
+func TestTriggerAlertWithoutAlertmanagerURL(t *testing.T) {
+	t.Setenv("ALERTMANAGER_URL", "")
 
-	ok, err := TriggerAlert("Disk full", "90% used", "CRITICAL")
+	ok, err := TriggerAlert("media-service", "Disk full", "90% used", "CRITICAL")
 
 	assert.False(t, ok)
 	require.Error(t, err)
-	assert.Equal(t, "ALERT_WEBHOOK_URL is not set", err.Error())
+	assert.Equal(t, "ALERTMANAGER_URL is not set", err.Error())
 }
 
 func TestTriggerAlertDeliversPayload(t *testing.T) {
 	type captured struct {
-		username string
-		content  string
-		ct       string
+		path    string
+		ct      string
+		payload []AlertmanagerAlert
 	}
 	got := make(chan captured, 1)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		var payload WebhookPayload
+		var payload []AlertmanagerAlert
 		require.NoError(t, json.Unmarshal(body, &payload))
-		got <- captured{username: payload.Username, content: payload.Content, ct: r.Header.Get("Content-Type")}
+		got <- captured{path: r.URL.Path, ct: r.Header.Get("Content-Type"), payload: payload}
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
 
-	t.Setenv("ALERT_WEBHOOK_URL", srv.URL)
+	t.Setenv("ALERTMANAGER_URL", srv.URL+"/")
 
-	ok, err := TriggerAlert("CPU spike", "usage 99%", "")
+	ok, err := TriggerAlert("analytics-service", "CPU spike", "usage 99%", "")
 	require.NoError(t, err)
 	assert.True(t, ok)
 
 	c := <-got
-	assert.Equal(t, "System Alert Bot", c.username)
+	assert.Equal(t, "/api/v2/alerts", c.path)
 	assert.Equal(t, "application/json", c.ct)
-	assert.Contains(t, c.content, "[WARNING] CPU spike")
-	assert.Contains(t, c.content, "usage 99%")
-	assert.Contains(t, c.content, "Timestamp:")
+	require.Len(t, c.payload, 1)
+
+	labels := c.payload[0].Labels
+	assert.Equal(t, "ApplicationAlert", labels["alertname"])
+	assert.Equal(t, "analytics-service", labels["service"])
+	assert.Equal(t, "warning", labels["severity"])
+	assert.Equal(t, "CPU spike", labels["title"])
+	assert.Equal(t, "CPU spike", c.payload[0].Annotations["summary"])
+	assert.Equal(t, "usage 99%", c.payload[0].Annotations["description"])
+	assert.NotEmpty(t, c.payload[0].StartsAt)
 }
 
-func TestTriggerAlertPreservesSeverity(t *testing.T) {
-	var content string
+func TestTriggerAlertDefaultsServiceLabel(t *testing.T) {
+	var payload []AlertmanagerAlert
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		var payload WebhookPayload
 		require.NoError(t, json.Unmarshal(body, &payload))
-		content = payload.Content
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
 
-	t.Setenv("ALERT_WEBHOOK_URL", srv.URL)
+	t.Setenv("ALERTMANAGER_URL", srv.URL)
 
-	ok, err := TriggerAlert("title", "message", "ERROR")
+	ok, err := TriggerAlert("", "no service given", "m", "WARNING")
 	require.NoError(t, err)
 	assert.True(t, ok)
-	assert.Contains(t, content, "[ERROR] title")
+	assert.Equal(t, "application", payload[0].Labels["service"])
+}
+
+func TestTriggerAlertMapsSeverityAndService(t *testing.T) {
+	var payload []AlertmanagerAlert
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		require.NoError(t, json.Unmarshal(body, &payload))
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	t.Setenv("ALERTMANAGER_URL", srv.URL)
+
+	for _, tc := range []struct {
+		in       string
+		expected string
+	}{
+		{"CRITICAL", "critical"},
+		{"ERROR", "critical"},
+		{"WARNING", "warning"},
+		{"WARN", "warning"},
+		{"INFO", "info"},
+		{"", "warning"},
+		{"something-else", "warning"},
+	} {
+		ok, err := TriggerAlert("payment-service", "title-"+tc.in, "message", tc.in)
+		require.NoError(t, err)
+		assert.True(t, ok)
+		assert.Equal(t, tc.expected, payload[0].Labels["severity"])
+		assert.Equal(t, "payment-service", payload[0].Labels["service"])
+	}
 }
 
 func TestTriggerAlertRejectsNon2xxResponse(t *testing.T) {
@@ -82,34 +118,34 @@ func TestTriggerAlertRejectsNon2xxResponse(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	t.Setenv("ALERT_WEBHOOK_URL", srv.URL)
+	t.Setenv("ALERTMANAGER_URL", srv.URL)
 
-	ok, err := TriggerAlert("t", "m", "WARNING")
+	ok, err := TriggerAlert("driver-service", "t", "m", "WARNING")
 	assert.False(t, ok)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "webhook responded with status: 502")
+	assert.Contains(t, err.Error(), "alertmanager responded with status: 502")
 }
 
-func TestTriggerAlertUnreachableWebhook(t *testing.T) {
+func TestTriggerAlertUnreachableAlertmanager(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	addr := listener.Addr().String()
 	require.NoError(t, listener.Close())
 
-	t.Setenv("ALERT_WEBHOOK_URL", "http://"+addr)
+	t.Setenv("ALERTMANAGER_URL", "http://"+addr)
 
-	ok, err := TriggerAlert("t", "m", "WARNING")
+	ok, err := TriggerAlert("search-service", "t", "m", "WARNING")
 	assert.False(t, ok)
 	require.Error(t, err)
 }
 
-func TestTriggerAlertInvalidWebhookURL(t *testing.T) {
-	t.Setenv("ALERT_WEBHOOK_URL", "http://%zz")
+func TestTriggerAlertInvalidAlertmanagerURL(t *testing.T) {
+	t.Setenv("ALERTMANAGER_URL", "http://%zz")
 
-	ok, err := TriggerAlert("t", "m", "WARNING")
+	ok, err := TriggerAlert("media-service", "t", "m", "WARNING")
 	assert.False(t, ok)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to create webhook HTTP request")
+	assert.Contains(t, err.Error(), "failed to create alert HTTP request")
 }
 
 // --- database health ---

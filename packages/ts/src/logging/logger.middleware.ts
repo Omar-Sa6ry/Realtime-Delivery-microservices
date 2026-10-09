@@ -5,9 +5,13 @@ import { LoggerContext } from './logger.context';
 @Injectable()
 export class LoggerMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
-    const traceId = (req.headers['x-trace-id'] || req.headers['x-request-id'] || crypto.randomUUID()) as string;
+    const traceId = (req.headers['x-correlation-id'] ||
+      req.headers['x-trace-id'] ||
+      req.headers['x-request-id'] ||
+      crypto.randomUUID()) as string;
     const userId = req.headers['x-user-id'] as string;
-    
+
+    res.setHeader('x-correlation-id', traceId);
     res.setHeader('x-trace-id', traceId);
 
     const contextStore = {

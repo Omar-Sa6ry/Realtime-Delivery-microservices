@@ -1,6 +1,6 @@
 {
   "name": "@delivery-micro/shard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "shared package for delivery microservices",
   "author": "Omar Sabry",
   "main": "dist/index.js",

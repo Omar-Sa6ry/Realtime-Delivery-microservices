@@ -56,6 +56,26 @@ describe('LoggerMiddleware', () => {
     });
   });
 
+  it('prefers the platform x-correlation-id header', () => {
+    const req = buildRequest({
+      headers: {
+        'x-correlation-id': 'corr-1',
+        'x-trace-id': 'trace-legacy',
+        'x-request-id': 'req-legacy',
+      },
+    });
+    const res = buildResponse();
+    let traceId: string | undefined;
+
+    middleware.use(req, res, () => {
+      traceId = LoggerContext.getTraceId();
+    });
+
+    expect(traceId).toBe('corr-1');
+    expect(res.setHeader).toHaveBeenCalledWith('x-correlation-id', 'corr-1');
+    expect(res.setHeader).toHaveBeenCalledWith('x-trace-id', 'corr-1');
+  });
+
   it('falls back to the x-request-id header', () => {
     const req = buildRequest({ headers: { 'x-request-id': 'req-123' } });
     const res = buildResponse();

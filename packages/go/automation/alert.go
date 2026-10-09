@@ -7,63 +7,92 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
-type WebhookPayload struct {
-	Username string `json:"username"`
-	Content  string `json:"content"`
+type AlertmanagerAlert struct {
+	Labels      map[string]string `json:"labels"`
+	Annotations map[string]string `json:"annotations"`
+	StartsAt    string            `json:"startsAt"`
 }
 
-func TriggerAlert(title, message, severity string) (bool, error) {
-	if severity == "" {
-		severity = "WARNING"
+const (
+	alertRequestTimeout = 5 * time.Second
+	defaultAlertService = "application"
+)
+
+func normalizeSeverity(severity string) string {
+	switch strings.ToUpper(strings.TrimSpace(severity)) {
+	case "CRITICAL", "ERROR", "FATAL", "EMERG", "ALERT":
+		return "critical"
+	case "INFO", "DEBUG", "NOTICE":
+		return "info"
+	case "WARNING", "WARN", "":
+		return "warning"
+	default:
+		return "warning"
+	}
+}
+
+func TriggerAlert(service, title, message, severity string) (bool, error) {
+	if service == "" {
+		service = defaultAlertService
 	}
 
-	webhookURL := os.Getenv("ALERT_WEBHOOK_URL")
-	if webhookURL == "" {
-		slog.Warn("Alert triggered but no ALERT_WEBHOOK_URL is configured",
+	alertmanagerURL := strings.TrimRight(os.Getenv("ALERTMANAGER_URL"), "/")
+	if alertmanagerURL == "" {
+		slog.Warn("Alert triggered but no ALERTMANAGER_URL is configured",
 			"severity", severity,
 			"title", title,
 			"message", message,
 		)
-		return false, fmt.Errorf("ALERT_WEBHOOK_URL is not set")
+		return false, fmt.Errorf("ALERTMANAGER_URL is not set")
 	}
 
-	timestamp := time.Now().UTC().Format(time.RFC3339)
-	content := fmt.Sprintf("**[%s] %s**\n%s\nTimestamp: %s", severity, title, message, timestamp)
-
-	payload := WebhookPayload{
-		Username: "System Alert Bot",
-		Content:  content,
+	payload := []AlertmanagerAlert{
+		{
+			Labels: map[string]string{
+				"alertname": "ApplicationAlert",
+				"severity":  normalizeSeverity(severity),
+				"source":    "application",
+				"service":   service,
+				"title":     title,
+			},
+			Annotations: map[string]string{
+				"summary":     title,
+				"description": message,
+			},
+			StartsAt: time.Now().UTC().Format(time.RFC3339),
+		},
 	}
 
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return false, fmt.Errorf("failed to marshal alert webhook payload: %w", err)
+		return false, fmt.Errorf("failed to marshal alert payload: %w", err)
 	}
 
 	client := &http.Client{
-		Timeout: 5 * time.Second,
+		Timeout: alertRequestTimeout,
 	}
 
-	req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(payloadBytes))
+	req, err := http.NewRequest(http.MethodPost, alertmanagerURL+"/api/v2/alerts", bytes.NewBuffer(payloadBytes))
 	if err != nil {
-		return false, fmt.Errorf("failed to create webhook HTTP request: %w", err)
+		return false, fmt.Errorf("failed to create alert HTTP request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		slog.Error("Failed to dispatch automated webhook alert", "title", title, "error", err)
+		slog.Error("Failed to dispatch automated alert", "title", title, "error", err)
 		return false, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return false, fmt.Errorf("webhook responded with status: %d", resp.StatusCode)
+		return false, fmt.Errorf("alertmanager responded with status: %d", resp.StatusCode)
 	}
 
-	slog.Info("Alert notification dispatched successfully", "title", title)
+	slog.Info("Alert dispatched to Alertmanager", "title", title, "service", service)
 	return true, nil
 }

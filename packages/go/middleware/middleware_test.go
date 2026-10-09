@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/constants"
+	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -109,6 +110,45 @@ func TestUnaryServerMetadataInterceptorWithoutMetadata(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.True(t, called)
+}
+
+func TestUnaryServerMetadataInterceptorSeedsLoggingContext(t *testing.T) {
+	interceptor := UnaryServerMetadataInterceptor()
+
+	var gotTraceID, gotUserID, gotMethod string
+	_, err := interceptor(
+		metadataContext(t, metadata.Pairs(
+			constants.HeaderXCorrelationId, "corr-9",
+			constants.HeaderXUserId, "u-9",
+		)),
+		struct{}{},
+		&grpc.UnaryServerInfo{FullMethod: "/driver.DriverService/ReserveDriver"},
+		func(ctx context.Context, req interface{}) (interface{}, error) {
+			gotTraceID = sharedlogging.GetTraceID(ctx)
+			gotUserID = sharedlogging.GetUserID(ctx)
+			gotMethod = sharedlogging.GetMethod(ctx)
+			return "ok", nil
+		})
+
+	require.NoError(t, err)
+	assert.Equal(t, "corr-9", gotTraceID)
+	assert.Equal(t, "u-9", gotUserID)
+	assert.Equal(t, "/driver.DriverService/ReserveDriver", gotMethod)
+}
+
+func TestUnaryServerMetadataInterceptorGeneratesTraceID(t *testing.T) {
+	interceptor := UnaryServerMetadataInterceptor()
+
+	var gotTraceID string
+	_, err := interceptor(metadataContext(t, metadata.MD{}), struct{}{},
+		&grpc.UnaryServerInfo{FullMethod: "/svc/Method"},
+		func(ctx context.Context, req interface{}) (interface{}, error) {
+			gotTraceID = sharedlogging.GetTraceID(ctx)
+			return "ok", nil
+		})
+
+	require.NoError(t, err)
+	assert.Len(t, gotTraceID, 32)
 }
 
 func TestAuthInterceptor(t *testing.T) {

@@ -27,7 +27,7 @@
     "@bts-soft/common": "^1.5.3",
     "@bts-soft/core": "^3.1.7",
     "@bts-soft/notifications": "^1.8.0",
-    "@delivery-micro/shard": "^1.0.0",
+    "@delivery-micro/shard": "^1.0.1",
     "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.1",
     "@nestjs/apollo": "^13.4.4",

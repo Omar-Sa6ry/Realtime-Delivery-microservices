@@ -3,6 +3,27 @@ import { LoggerContext } from "./logger.context";
 
 @Injectable()
 export class StructuredLogger implements LoggerService {
+  private isEnabled(level: "DEBUG" | "VERBOSE" | "INFO" | "WARN" | "ERROR") {
+    const ranks: Record<string, number> = {
+      debug: 0,
+      verbose: 0,
+      info: 1,
+      warn: 2,
+      warning: 2,
+      error: 3,
+    };
+    const configured = (
+      process.env.LOG_LEVEL ||
+      (process.env.NODE_ENV === "production" ? "info" : "debug")
+    )
+      .toLowerCase()
+      .trim();
+    const minRank = ranks[configured] ?? ranks.info;
+    const rank =
+      level === "INFO" ? ranks.info : ranks[level.toLowerCase()] ?? ranks.info;
+    return rank >= minRank;
+  }
+
   private formatMessage(level: string, message: any, context?: string) {
     const store = LoggerContext.getStore() || {};
     const logObj = {
@@ -33,10 +54,12 @@ export class StructuredLogger implements LoggerService {
   }
 
   log(message: any, context?: string) {
+    if (!this.isEnabled("INFO")) return;
     console.log(this.formatMessage("INFO", message, context));
   }
 
   error(message: any, trace?: string, context?: string) {
+    if (!this.isEnabled("ERROR")) return;
     console.error(this.formatMessage("ERROR", message, context || trace));
     if (trace && process.env.NODE_ENV !== "production") {
       console.error(trace);
@@ -44,14 +67,17 @@ export class StructuredLogger implements LoggerService {
   }
 
   warn(message: any, context?: string) {
+    if (!this.isEnabled("WARN")) return;
     console.warn(this.formatMessage("WARN", message, context));
   }
 
   debug(message: any, context?: string) {
+    if (!this.isEnabled("DEBUG")) return;
     console.log(this.formatMessage("DEBUG", message, context));
   }
 
   verbose(message: any, context?: string) {
+    if (!this.isEnabled("VERBOSE")) return;
     console.log(this.formatMessage("VERBOSE", message, context));
   }
 }

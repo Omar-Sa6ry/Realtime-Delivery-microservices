@@ -53,7 +53,6 @@ async function bootstrap() {
 
     const port = Number(process.env.PORT_DELIVERY ?? 4003);
     process.env.PORT_DELIVERY_GRPC ??= '50054';
-    process.env.PORT_METRICS ??= '9104';
 
     await app.listen(port, '0.0.0.0');
     const i18n = app.get(I18nService);

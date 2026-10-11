@@ -2,6 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RedisModule, RedisService } from '@bts-soft/cache';
 import { HealthController } from './health.controller';
+import { MetricsController } from './metrics.controller';
 import { Notification } from './database/entities/notification.entity';
 import { NotificationDelivery } from './database/entities/notification-delivery.entity';
 import { NotificationPreference } from './database/entities/notification-preference.entity';
@@ -11,7 +12,7 @@ import { NotificationOutbox } from './database/entities/notification-outbox.enti
 
 @Global()
 @Module({
-  controllers: [HealthController],
+  controllers: [HealthController, MetricsController],
   imports: [
     RedisModule,
     TypeOrmModule.forFeature([

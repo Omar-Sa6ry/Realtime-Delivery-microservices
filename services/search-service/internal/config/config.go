@@ -14,6 +14,10 @@ type Config struct {
 	PortGraphQL         string
 	PortMetrics         string
 	LogLevel            string
+
+	// Tracing (OTLP -> otel-collector -> Tempo). Empty endpoint disables tracing.
+	OTELEndpoint     string
+	OTELSamplingRate float64
 	
 	// OpenSearch
 	OpenSearchAddresses []string
@@ -68,12 +72,22 @@ func Load() (*Config, error) {
 		maxQueryLength = 500
 	}
 
+	samplingRate, err := strconv.ParseFloat(getEnv("OTEL_SAMPLING_RATE", "1.0"), 64)
+	if err != nil || samplingRate < 0 {
+		samplingRate = 1.0
+	}
+	if samplingRate > 1 {
+		samplingRate = 1
+	}
+
 	return &Config{
 		AppEnv:              appEnv,
 		NodeEnv:             appEnv,
 		PortGraphQL:         portGraphQL,
 		PortMetrics:         portMetrics,
 		LogLevel:            getEnv("LOG_LEVEL", "info"),
+		OTELEndpoint:        getEnv("OTEL_ENDPOINT", ""),
+		OTELSamplingRate:    samplingRate,
 		OpenSearchAddresses: addresses,
 		OpenSearchUsername:  getEnv("OPENSEARCH_USERNAME", "admin"),
 		OpenSearchPassword:  getEnv("OPENSEARCH_PASSWORD", "admin"),

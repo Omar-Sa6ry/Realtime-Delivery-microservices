@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { AlertService } from '@delivery-micro/shard';
 import { Delivery } from '../entities/delivery.entity';
 import { DeliveryRepository } from '../repositories/delivery.repository';
 import { DeliverySagaContext, DeliverySagaStep } from './saga-step';
@@ -14,6 +15,7 @@ export class DeliverySagaOrchestrator {
     private readonly repository: DeliveryRepository,
     paymentStep: PaymentConfirmationStep,
     driverStep: DriverAssignmentStep,
+    private readonly alerts: AlertService,
   ) {
     this.steps = [paymentStep, driverStep];
   }
@@ -47,6 +49,11 @@ export class DeliverySagaOrchestrator {
       this.logger.error(
         `Saga failed at step for delivery ${deliveryId}: ${error.message}. Initiating compensations...`,
       );
+      void this.alerts.triggerAlert(
+        'Delivery saga failed',
+        `Delivery ${deliveryId} failed: ${error.message}. Compensations initiated.`,
+        'CRITICAL',
+      );
       for (const step of completed.reverse()) {
         try {
           this.logger.warn(`Compensating Saga step: ${step.name}`);
@@ -54,6 +61,11 @@ export class DeliverySagaOrchestrator {
         } catch (compErr: any) {
           this.logger.error(
             `Compensation failed for step ${step.name}: ${compErr.message}`,
+          );
+          void this.alerts.triggerAlert(
+            'Saga compensation failed',
+            `Delivery ${deliveryId} step ${step.name} could not be compensated: ${compErr.message}`,
+            'CRITICAL',
           );
         }
       }

@@ -23,6 +23,7 @@ type Config struct {
 	MaxDispatchAttempts  string
 	UserServiceURL       string
 	DeliveryServiceURL   string
+	OTELEndpoint         string
 }
 
 func Load() *Config {
@@ -45,6 +46,7 @@ func Load() *Config {
 		MaxDispatchAttempts:  getEnv("MAX_DISPATCH_ATTEMPTS", "5"),
 		UserServiceURL:       getEnv("USER_SERVICE_URL", "user-srv:50051"),
 		DeliveryServiceURL:   getEnv("DELIVERY_SERVICE_URL", "delivery-srv:50054"),
+		OTELEndpoint:         getEnv("OTEL_ENDPOINT", ""),
 	}
 }
 

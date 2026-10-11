@@ -1,8 +1,11 @@
 ﻿import * as http from 'http';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { StructuredLogger } from '@delivery-micro/shard';
 import { waitForRedis, waitForService } from './utils/waitService.util';
 
 const LIVENESS_PORT = Number(process.env.PORT_LIVENESS ?? 4099);
+
+const logger = new StructuredLogger();
 
 function startLivenessServer(): http.Server {
   const server = http.createServer((req, res) => {
@@ -21,20 +24,24 @@ function startLivenessServer(): http.Server {
   });
 
   server.on('error', (err) => {
-    console.error(
-      '[liveness] Server error:',
-      (err as NodeJS.ErrnoException).message,
+    logger.error(
+      `[liveness] Server error: ${(err as NodeJS.ErrnoException).message}`,
+      err.stack,
+      'Liveness',
     );
   });
 
   server.listen(LIVENESS_PORT, '0.0.0.0', () => {
-    console.log(`[liveness] Health server listening on port ${LIVENESS_PORT}`);
+    logger.log(
+      `[liveness] Health server listening on port ${LIVENESS_PORT}`,
+      'Liveness',
+    );
   });
 
   return server;
 }
 
-async function waitForDependencies(logger: any) {
+async function waitForDependencies() {
   await waitForRedis();
 
   const subgraphs = [
@@ -49,9 +56,9 @@ async function waitForDependencies(logger: any) {
     'http://analytics-srv:4009/analytics/graphql',
   ];
 
-  console.log('[startup] Waiting for subgraphs to be available...');
+  logger.log('[startup] Waiting for subgraphs to be available...', 'Startup');
   await Promise.all(subgraphs.map((url) => waitForService(url)));
-  logger.log('All subgraphs are reachable.');
+  logger.log('All subgraphs are reachable.', 'Startup');
 }
 
 async function setupProxies(app: NestExpressApplication) {
@@ -81,10 +88,7 @@ async function setupProxies(app: NestExpressApplication) {
 }
 
 async function bootstrap() {
-  const { StructuredLogger } = await import('@delivery-micro/shard');
-  const logger = new StructuredLogger();
-
-  await waitForDependencies(logger);
+  await waitForDependencies();
 
   // Lazy-load AppModule and NestJS
   const { AppModule } = require('./app.module');
@@ -124,20 +128,33 @@ async function bootstrap() {
     }
   });
 
-  console.log(
+  logger.log(
     `API Gateway is running on: https://delivery.test/graphql or http://localhost:${port}/graphql`,
+    'Startup',
   );
 }
 
 function runBootstrap() {
   bootstrap().catch((err) => {
-    console.error(
+    logger.error(
       'Bootstrap failed, retrying in 10s...',
-      err?.stack || err?.message || err,
+      err?.stack || err?.message || String(err),
+      'Startup',
     );
     setTimeout(() => runBootstrap(), 10000);
   });
 }
+
+// ─── Process-level error guards ─────────────────────────────────────────────
+process.on('unhandledRejection', (reason) => {
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  logger.error('Unhandled promise rejection', err.stack, 'Process');
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error(`Uncaught exception: ${err.message}`, err.stack, 'Process');
+  process.exit(1);
+});
 
 // Start Liveness Server, then trigger Bootstrap
 startLivenessServer();

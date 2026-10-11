@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
@@ -89,6 +90,8 @@ func (w *Worker) reconcileExpiredUploads(ctx context.Context) {
 		if updateErr := w.mediaRepo.UpdateStatus(ctx, session.MediaID, domain.MediaStatusUploading, domain.MediaStatusAborted); updateErr != nil {
 			slog.Error("Reconciliation: failed to mark media aborted", "mediaId", session.MediaID, "error", updateErr)
 		}
+
+		observability.RecordReconciliation("expire_upload")
 	}
 
 	if len(sessions) > 0 {
@@ -109,5 +112,6 @@ func (w *Worker) reconcileOutboxFailures(ctx context.Context) {
 			continue
 		}
 		_ = w.outboxRepo.MarkPublished(ctx, event.EventID)
+		observability.RecordReconciliation("republish_outbox")
 	}
 }

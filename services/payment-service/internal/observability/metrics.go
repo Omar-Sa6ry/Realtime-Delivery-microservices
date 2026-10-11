@@ -1,6 +1,8 @@
 package observability
 
 import (
+	"sync"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -15,16 +17,9 @@ type Metrics struct {
 	PaymentsRefundedTotal    *prometheus.CounterVec
 	PaymentsFailedTotal      *prometheus.CounterVec
 
-	// Payment operations by status
 	PaymentStatusChanges     *prometheus.CounterVec
-
-	// Payment amounts
 	PaymentAmountMinor       *prometheus.HistogramVec
-
-	// Payment latency
 	PaymentDurationSeconds   *prometheus.HistogramVec
-
-	// Provider calls
 	ProviderCallDuration     *prometheus.HistogramVec
 	ProviderCallTotal        *prometheus.CounterVec
 	ProviderCallErrors       *prometheus.CounterVec
@@ -46,7 +41,6 @@ type Metrics struct {
 	IdempotencyKeyMisses     *prometheus.CounterVec
 }
 
-// NewMetrics creates and registers all payment service metrics.
 func NewMetrics() *Metrics {
 	return &Metrics{
 		PaymentsCreatedTotal: promauto.NewCounterVec(prometheus.CounterOpts{
@@ -157,102 +151,94 @@ func NewMetrics() *Metrics {
 	}
 }
 
-// RecordPaymentCreated records a payment creation.
+var (
+	metricsOnce   sync.Once
+	metricsSingle *Metrics
+)
+
+func M() *Metrics {
+	metricsOnce.Do(func() {
+		metricsSingle = NewMetrics()
+	})
+	return metricsSingle
+}
+
 func (m *Metrics) RecordPaymentCreated(currency string, method string) {
 	m.PaymentsCreatedTotal.WithLabelValues(currency, method).Inc()
 }
 
-// RecordPaymentAuthorized records a payment authorization.
 func (m *Metrics) RecordPaymentAuthorized(currency string, method string) {
 	m.PaymentsAuthorizedTotal.WithLabelValues(currency, method).Inc()
 }
 
-// RecordPaymentCaptured records a payment capture.
 func (m *Metrics) RecordPaymentCaptured(currency string, method string) {
 	m.PaymentsCapturedTotal.WithLabelValues(currency, method).Inc()
 }
 
-// RecordPaymentCancelled records a payment cancellation.
 func (m *Metrics) RecordPaymentCancelled(currency string, method string) {
 	m.PaymentsCancelledTotal.WithLabelValues(currency, method).Inc()
 }
 
-// RecordPaymentRefunded records a payment refund.
 func (m *Metrics) RecordPaymentRefunded(currency string, method string) {
 	m.PaymentsRefundedTotal.WithLabelValues(currency, method).Inc()
 }
 
-// RecordPaymentFailed records a payment failure.
 func (m *Metrics) RecordPaymentFailed(currency string, method string, errorType string) {
 	m.PaymentsFailedTotal.WithLabelValues(currency, method, errorType).Inc()
 }
 
-// RecordPaymentStatusChange records a payment status change.
 func (m *Metrics) RecordPaymentStatusChange(fromStatus, toStatus string) {
 	m.PaymentStatusChanges.WithLabelValues(fromStatus, toStatus).Inc()
 }
 
-// RecordPaymentAmount records the payment amount.
 func (m *Metrics) RecordPaymentAmount(amount int64, currency, payType string) {
 	m.PaymentAmountMinor.WithLabelValues(currency, payType).Observe(float64(amount))
 }
 
-// RecordPaymentDuration records the payment operation duration.
 func (m *Metrics) RecordPaymentDuration(duration float64, operation, status string) {
 	m.PaymentDurationSeconds.WithLabelValues(operation, status).Observe(duration)
 }
 
-// RecordProviderCallDuration records the provider call duration.
 func (m *Metrics) RecordProviderCallDuration(duration float64, provider, operation, status string) {
 	m.ProviderCallDuration.WithLabelValues(provider, operation, status).Observe(duration)
 }
 
-// RecordProviderCall records a provider call.
 func (m *Metrics) RecordProviderCall(provider, operation, status string) {
 	m.ProviderCallTotal.WithLabelValues(provider, operation, status).Inc()
 }
 
-// RecordProviderError records a provider error.
 func (m *Metrics) RecordProviderError(provider, operation, errorType string) {
 	m.ProviderCallErrors.WithLabelValues(provider, operation, errorType).Inc()
 }
 
-// RecordWebhookEvent records a webhook event.
 func (m *Metrics) RecordWebhookEvent(eventType, status string) {
 	m.WebhookEventsReceived.WithLabelValues(eventType, status).Inc()
 }
 
-// RecordWebhookProcessingDuration records the webhook processing duration.
 func (m *Metrics) RecordWebhookProcessingDuration(duration float64, eventType, status string) {
 	m.WebhookProcessingDuration.WithLabelValues(eventType, status).Observe(duration)
 }
 
-// RecordOutboxMessagePublished records an outbox message publication.
 func (m *Metrics) RecordOutboxMessagePublished(topic, status string) {
 	m.OutboxMessagesPublished.WithLabelValues(topic, status).Inc()
 }
 
-// RecordOutboxProcessingDuration records the outbox processing duration.
 func (m *Metrics) RecordOutboxProcessingDuration(duration float64, topic, status string) {
 	m.OutboxProcessingDuration.WithLabelValues(topic, status).Observe(duration)
 }
 
-// RecordReconciliationRun records a reconciliation run.
 func (m *Metrics) RecordReconciliationRun(status string) {
 	m.ReconciliationRuns.WithLabelValues(status).Inc()
 }
 
-// RecordReconciliationDuration records the reconciliation duration.
 func (m *Metrics) RecordReconciliationDuration(duration float64, status string) {
 	m.ReconciliationDuration.WithLabelValues(status).Observe(duration)
 }
 
-// RecordIdempotencyHit records an idempotency key cache hit.
 func (m *Metrics) RecordIdempotencyHit(keyType string) {
 	m.IdempotencyKeyHits.WithLabelValues(keyType).Inc()
 }
 
-// RecordIdempotencyMiss records an idempotency key cache miss.
 func (m *Metrics) RecordIdempotencyMiss(keyType string) {
 	m.IdempotencyKeyMisses.WithLabelValues(keyType).Inc()
 }

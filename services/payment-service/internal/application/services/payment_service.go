@@ -14,8 +14,13 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/nats"
 	pgadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/postgres"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/ports"
 )
+
+// paymentMethod is the only payment method the platform currently supports
+// (Stripe card payments); it labels the business metrics.
+const paymentMethod = "card"
 
 type PaymentService struct {
 	paymentRepo  *pgadapter.PaymentRepository
@@ -64,10 +69,18 @@ type CreatePaymentResult struct {
 	CheckoutURL  string
 }
 
-func (s *PaymentService) CreatePayment(ctx context.Context, input CreatePaymentInput) (*CreatePaymentResult, error) {
+func (s *PaymentService) CreatePayment(ctx context.Context, input CreatePaymentInput) (result *CreatePaymentResult, err error) {
 	// Generate IDs.
 	paymentID := strconv.FormatInt(s.snowflake.NextID(), 10)
 	attemptID := strconv.FormatInt(s.snowflake.NextID(), 10)
+
+	op := observability.StartOperation(ctx, "create", paymentID)
+	ctx = op.Context()
+	op.AddAttribute("delivery.id", input.DeliveryID)
+	op.AddAttribute("user.id", input.UserID)
+	op.AddAttribute("amount_minor", input.AmountMinor)
+	op.AddAttribute("currency", input.Currency)
+	defer func() { op.Finish(err) }()
 
 	payment, err := domain.NewPayment(
 		paymentID, input.DeliveryID, input.UserID,
@@ -81,6 +94,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, input CreatePaymentI
 	if err := s.paymentRepo.Create(ctx, payment); err != nil {
 		return nil, fmt.Errorf("create_payment: persist: %w", err)
 	}
+	observability.M().RecordPaymentCreated(input.Currency, paymentMethod)
 
 	if err := s.publishEvent(ctx, pkgevents.PaymentCreated, paymentID, pkgevents.PaymentCreatedPayload{
 		PaymentID:     paymentID,
@@ -111,7 +125,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, input CreatePaymentI
 		if authErr.Category == ports.ErrCategoryTimeout {
 			attempt.MarkUnknown()
 			_ = s.attemptRepo.UpdateStatus(ctx, attemptID, domain.OperationStatusUnknown, "")
-			slog.Warn("create_payment: provider timeout — reconciliation required", "paymentID", paymentID)
+			slog.Warn("create_payment: provider timeout â€” reconciliation required", "paymentID", paymentID)
 			return &CreatePaymentResult{
 				PaymentID: paymentID,
 				Status:    payment.Status,
@@ -123,6 +137,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, input CreatePaymentI
 		_ = s.attemptRepo.UpdateStatus(ctx, attemptID, domain.OperationStatusFailed, "")
 		_ = payment.Fail()
 		_ = s.paymentRepo.UpdateConditional(ctx, payment, 0)
+		observability.M().RecordPaymentFailed(input.Currency, paymentMethod, string(authErr.Category))
 		return nil, fmt.Errorf("create_payment: authorization failed: %s", authErr.Message)
 	}
 
@@ -137,6 +152,7 @@ func (s *PaymentService) CreatePayment(ctx context.Context, input CreatePaymentI
 	if err := s.paymentRepo.UpdateConditional(ctx, payment, 0); err != nil {
 		return nil, fmt.Errorf("create_payment: update payment: %w", err)
 	}
+	observability.M().RecordPaymentAuthorized(input.Currency, paymentMethod)
 
 	// Publish authorized event.
 	now := time.Now().UTC()
@@ -177,8 +193,13 @@ type CapturePaymentInput struct {
 	CorrelationID  string
 }
 
-func (s *PaymentService) CapturePayment(ctx context.Context, input CapturePaymentInput) (*domain.Payment, error) {
-	payment, err := s.paymentRepo.FindByID(ctx, input.PaymentID)
+func (s *PaymentService) CapturePayment(ctx context.Context, input CapturePaymentInput) (payment *domain.Payment, err error) {
+	op := observability.StartOperation(ctx, "capture", input.PaymentID)
+	ctx = op.Context()
+	op.AddAttribute("amount_minor", input.AmountMinor)
+	defer func() { op.Finish(err) }()
+
+	payment, err = s.paymentRepo.FindByID(ctx, input.PaymentID)
 	if err != nil {
 		return nil, err
 	}
@@ -205,6 +226,7 @@ func (s *PaymentService) CapturePayment(ctx context.Context, input CapturePaymen
 		}
 		attempt.Fail(string(captureErr.Category), string(captureErr.Category), captureErr.Message)
 		_ = s.attemptRepo.UpdateStatus(ctx, attemptID, domain.OperationStatusFailed, "")
+		observability.M().RecordPaymentFailed(payment.Currency, paymentMethod, string(captureErr.Category))
 		return nil, fmt.Errorf("capture failed: %s", captureErr.Message)
 	}
 
@@ -219,6 +241,7 @@ func (s *PaymentService) CapturePayment(ctx context.Context, input CapturePaymen
 	if err := s.paymentRepo.UpdateConditional(ctx, payment, prevVersion); err != nil {
 		return nil, err
 	}
+	observability.M().RecordPaymentCaptured(payment.Currency, paymentMethod)
 
 	now := time.Now().UTC()
 	_ = s.publishEvent(ctx, pkgevents.PaymentCaptured, payment.ID, pkgevents.PaymentCapturedPayload{
@@ -257,8 +280,12 @@ type AuthorizePaymentInput struct {
 	CorrelationID  string
 }
 
-func (s *PaymentService) AuthorizePayment(ctx context.Context, input AuthorizePaymentInput) (*domain.Payment, error) {
-	payment, err := s.paymentRepo.FindByID(ctx, input.PaymentID)
+func (s *PaymentService) AuthorizePayment(ctx context.Context, input AuthorizePaymentInput) (payment *domain.Payment, err error) {
+	op := observability.StartOperation(ctx, "authorize", input.PaymentID)
+	ctx = op.Context()
+	defer func() { op.Finish(err) }()
+
+	payment, err = s.paymentRepo.FindByID(ctx, input.PaymentID)
 	if err != nil {
 		return nil, err
 	}
@@ -285,6 +312,7 @@ func (s *PaymentService) AuthorizePayment(ctx context.Context, input AuthorizePa
 		}
 		attempt.Fail(string(authErr.Category), string(authErr.Category), authErr.Message)
 		_ = s.attemptRepo.UpdateStatus(ctx, attemptID, domain.OperationStatusFailed, "")
+		observability.M().RecordPaymentFailed(payment.Currency, paymentMethod, string(authErr.Category))
 		return nil, fmt.Errorf("authorization failed: %s", authErr.Message)
 	}
 
@@ -299,6 +327,7 @@ func (s *PaymentService) AuthorizePayment(ctx context.Context, input AuthorizePa
 	if err := s.paymentRepo.UpdateConditional(ctx, payment, prevVersion); err != nil {
 		return nil, err
 	}
+	observability.M().RecordPaymentAuthorized(payment.Currency, paymentMethod)
 
 	now := time.Now().UTC()
 	_ = s.publishEvent(ctx, pkgevents.PaymentAuthorized, payment.ID, pkgevents.PaymentAuthorizedPayload{
@@ -318,8 +347,12 @@ func (s *PaymentService) AuthorizePayment(ctx context.Context, input AuthorizePa
 	return payment, nil
 }
 
-func (s *PaymentService) CancelAuthorization(ctx context.Context, paymentID, idempotencyKey string) (*domain.Payment, error) {
-	payment, err := s.paymentRepo.FindByID(ctx, paymentID)
+func (s *PaymentService) CancelAuthorization(ctx context.Context, paymentID, idempotencyKey string) (payment *domain.Payment, err error) {
+	op := observability.StartOperation(ctx, "cancel", paymentID)
+	ctx = op.Context()
+	defer func() { op.Finish(err) }()
+
+	payment, err = s.paymentRepo.FindByID(ctx, paymentID)
 	if err != nil {
 		return nil, err
 	}
@@ -343,6 +376,7 @@ func (s *PaymentService) CancelAuthorization(ctx context.Context, paymentID, ide
 		}
 		attempt.Fail(string(voidErr.Category), string(voidErr.Category), voidErr.Message)
 		_ = s.attemptRepo.UpdateStatus(ctx, attemptID, domain.OperationStatusFailed, "")
+		observability.M().RecordPaymentFailed(payment.Currency, paymentMethod, string(voidErr.Category))
 		return nil, fmt.Errorf("void failed: %s", voidErr.Message)
 	}
 
@@ -357,6 +391,7 @@ func (s *PaymentService) CancelAuthorization(ctx context.Context, paymentID, ide
 	if err := s.paymentRepo.UpdateConditional(ctx, payment, prevVersion); err != nil {
 		return nil, err
 	}
+	observability.M().RecordPaymentCancelled(payment.Currency, paymentMethod)
 
 	now := time.Now().UTC()
 	_ = s.publishEvent(ctx, pkgevents.PaymentCancelled, payment.ID, pkgevents.PaymentCancelledPayload{
@@ -378,7 +413,13 @@ type CreateRefundInput struct {
 	CorrelationID  string
 }
 
-func (s *PaymentService) CreateRefund(ctx context.Context, input CreateRefundInput) (*domain.Refund, error) {
+func (s *PaymentService) CreateRefund(ctx context.Context, input CreateRefundInput) (refund *domain.Refund, err error) {
+	op := observability.StartOperation(ctx, "refund", input.PaymentID)
+	ctx = op.Context()
+	op.AddAttribute("amount_minor", input.AmountMinor)
+	op.AddAttribute("reason", input.Reason)
+	defer func() { op.Finish(err) }()
+
 	payment, err := s.paymentRepo.FindByID(ctx, input.PaymentID)
 	if err != nil {
 		return nil, err
@@ -393,7 +434,7 @@ func (s *PaymentService) CreateRefund(ctx context.Context, input CreateRefundInp
 	}
 
 	refundID := strconv.FormatInt(s.snowflake.NextID(), 10)
-	refund, err := domain.NewRefund(
+	refund, err = domain.NewRefund(
 		refundID, payment.ID, payment.DeliveryID,
 		input.AmountMinor, payment.Currency, input.Reason,
 		input.IdempotencyKey, input.CorrelationID, input.PaymentID,
@@ -422,6 +463,7 @@ func (s *PaymentService) CreateRefund(ctx context.Context, input CreateRefundInp
 		_ = s.refundRepo.UpdateStatus(ctx, refund.ID, domain.RefundStatusFailed, "")
 		_ = payment.ReleaseRefundReservation(input.AmountMinor)
 		_ = s.paymentRepo.UpdateConditional(ctx, payment, payment.Version-1)
+		observability.M().RecordPaymentFailed(payment.Currency, paymentMethod, "provider_error")
 		return nil, fmt.Errorf("refund failed: %s", refErr.Message)
 	}
 
@@ -431,6 +473,7 @@ func (s *PaymentService) CreateRefund(ctx context.Context, input CreateRefundInp
 	prevVersion = payment.Version
 	_ = payment.CommitRefund(input.AmountMinor)
 	_ = s.paymentRepo.UpdateConditional(ctx, payment, prevVersion)
+	observability.M().RecordPaymentRefunded(payment.Currency, paymentMethod)
 
 	now := time.Now().UTC()
 	_ = s.publishEvent(ctx, pkgevents.PaymentRefunded, payment.ID, pkgevents.PaymentRefundedPayload{

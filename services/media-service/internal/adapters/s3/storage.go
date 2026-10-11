@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
@@ -34,6 +35,7 @@ func (a *StorageAdapter) CreateMultipartUpload(ctx context.Context, objectKey, c
 	}
 	out, err := a.client.s3Client.CreateMultipartUpload(ctx, input)
 	if err != nil {
+		observability.RecordS3Error("CreateMultipartUpload")
 		return "", fmt.Errorf("S3 CreateMultipartUpload %q: %w", objectKey, err)
 	}
 	return aws.ToString(out.UploadId), nil
@@ -57,6 +59,7 @@ func (a *StorageAdapter) GeneratePresignedParts(
 			o.Expires = expiry
 		})
 		if err != nil {
+			observability.RecordS3Error("PresignUploadPart")
 			return nil, fmt.Errorf("presign part %d for %q: %w", i, objectKey, err)
 		}
 		parts = append(parts, ports.PresignedPart{
@@ -84,6 +87,7 @@ func (a *StorageAdapter) GeneratePresignedGETWithRange(ctx context.Context, obje
 		o.Expires = expiry
 	})
 	if err != nil {
+		observability.RecordS3Error("PresignGetObject")
 		return "", fmt.Errorf("presign GET for %q: %w", objectKey, err)
 	}
 	return a.client.presignableURL(req.URL), nil
@@ -107,6 +111,7 @@ func (a *StorageAdapter) CompleteMultipartUpload(ctx context.Context, objectKey,
 		MultipartUpload: &types.CompletedMultipartUpload{Parts: completedParts},
 	})
 	if err != nil {
+		observability.RecordS3Error("CompleteMultipartUpload")
 		return fmt.Errorf("S3 CompleteMultipartUpload %q: %w", objectKey, err)
 	}
 	return nil
@@ -119,6 +124,7 @@ func (a *StorageAdapter) AbortMultipartUpload(ctx context.Context, objectKey, s3
 		UploadId: aws.String(s3UploadID),
 	})
 	if err != nil {
+		observability.RecordS3Error("AbortMultipartUpload")
 		return fmt.Errorf("S3 AbortMultipartUpload %q: %w", objectKey, err)
 	}
 	return nil
@@ -130,6 +136,7 @@ func (a *StorageAdapter) HeadObject(ctx context.Context, objectKey string) (*por
 		Key:    aws.String(objectKey),
 	})
 	if err != nil {
+		observability.RecordS3Error("HeadObject")
 		return nil, fmt.Errorf("S3 HeadObject %q: %w", objectKey, err)
 	}
 	return &ports.ObjectInfo{
@@ -146,6 +153,7 @@ func (a *StorageAdapter) DeleteObject(ctx context.Context, objectKey string) err
 		Key:    aws.String(objectKey),
 	})
 	if err != nil {
+		observability.RecordS3Error("DeleteObject")
 		return fmt.Errorf("S3 DeleteObject %q: %w", objectKey, err)
 	}
 	return nil
@@ -164,6 +172,7 @@ func (a *StorageAdapter) DeleteObjects(ctx context.Context, objectKeys []string)
 		Delete: &types.Delete{Objects: objects, Quiet: aws.Bool(true)},
 	})
 	if err != nil {
+		observability.RecordS3Error("DeleteObjects")
 		return fmt.Errorf("S3 DeleteObjects batch: %w", err)
 	}
 	return nil
@@ -184,6 +193,7 @@ func (a *StorageAdapter) GetObjectWithRange(ctx context.Context, objectKey, rang
 	}
 	out, err := a.client.s3Client.GetObject(ctx, input)
 	if err != nil {
+		observability.RecordS3Error("GetObject")
 		return nil, fmt.Errorf("S3 GetObject %q: %w", objectKey, err)
 	}
 	return out.Body, nil
@@ -197,6 +207,7 @@ func (a *StorageAdapter) PutObject(ctx context.Context, objectKey, contentType s
 		ContentType: aws.String(contentType),
 	})
 	if err != nil {
+		observability.RecordS3Error("PutObject")
 		return fmt.Errorf("S3 PutObject %q: %w", objectKey, err)
 	}
 	return nil
@@ -211,6 +222,7 @@ func (a *StorageAdapter) ListObjectsWithPrefix(ctx context.Context, prefix strin
 	for paginator.HasMorePages() {
 		page, err := paginator.NextPage(ctx)
 		if err != nil {
+			observability.RecordS3Error("ListObjectsV2")
 			return nil, fmt.Errorf("S3 ListObjectsV2 prefix %q: %w", prefix, err)
 		}
 		for _, obj := range page.Contents {

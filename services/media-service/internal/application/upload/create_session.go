@@ -9,6 +9,7 @@ import (
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	sharedratelimiter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/ratelimiter"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/validation"
 	"github.com/google/uuid"
@@ -79,9 +80,21 @@ func NewCreateSessionUseCase(
 	}
 }
 
-// Execute runs the full CreateUploadSession flow:
-// Auth → Validate → Quota → RateLimit → Idempotency → Create S3 Multipart → Persist → Return
+// Execute runs the CreateUploadSession flow and records media_upload_* metrics.
 func (uc *CreateSessionUseCase) Execute(ctx context.Context, in CreateSessionInput) (*CreateSessionOutput, error) {
+	out, err := uc.execute(ctx, in)
+	if err != nil {
+		observability.RecordUploadFailed(uploadFailureReason(err))
+		return nil, err
+	}
+	observability.RecordUploadStarted(in.ContentType)
+	observability.IncActiveUploads()
+	return out, nil
+}
+
+// execute runs the full CreateUploadSession flow:
+// Auth → Validate → Quota → RateLimit → Idempotency → Create S3 Multipart → Persist → Return
+func (uc *CreateSessionUseCase) execute(ctx context.Context, in CreateSessionInput) (*CreateSessionOutput, error) {
 	logger := sharedlogging.FromContext(ctx)
 
 	// 1. Input validation (size, content type, extension)
@@ -111,6 +124,7 @@ func (uc *CreateSessionUseCase) Execute(ctx context.Context, in CreateSessionInp
 			return nil, fmt.Errorf("idempotency check: %w", err)
 		}
 		if idem.Exists {
+			observability.RecordIdempotencyHit("createUploadSession")
 			return nil, domain.ErrIdempotencyConflict
 		}
 	}

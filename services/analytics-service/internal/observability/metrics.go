@@ -110,40 +110,32 @@ func NewMetrics() *Metrics {
 	}
 }
 
-// RecordConsumed records a consumed Kafka message.
 func (m *Metrics) RecordConsumed(topic string) {
 	m.EventsConsumedTotal.WithLabelValues(topic).Inc()
 }
 
-// RecordProcessed records a successfully transformed event with its latency.
 func (m *Metrics) RecordProcessed(eventType, outcome string, latencyMs float64) {
 	m.EventsProcessedTotal.WithLabelValues(eventType).Inc()
 	m.ProcessingLatencyMs.WithLabelValues(eventType, outcome).Observe(latencyMs)
 }
-
-// RecordFailed records a failed event.
 func (m *Metrics) RecordFailed(eventType string) {
 	m.EventsFailedTotal.WithLabelValues(eventType).Inc()
 }
 
-// RecordDuplicate records an idempotency-collapsed redelivery.
 func (m *Metrics) RecordDuplicate(topic string) {
 	m.EventsDuplicateTotal.WithLabelValues(topic).Inc()
 }
 
-// RecordDLQ records a DLQ routing.
 func (m *Metrics) RecordDLQ(topic string) {
 	m.EventsDLQTotal.WithLabelValues(topic).Inc()
 }
 
-// RecordBatchFlush records a table flush with row count and insert latency.
 func (m *Metrics) RecordBatchFlush(table, status string, rows int, insertSeconds float64) {
 	m.BatchFlushTotal.WithLabelValues(table, status).Inc()
 	m.BatchSize.WithLabelValues(table).Observe(float64(rows))
 	m.ClickHouseInsertLatency.WithLabelValues(table, status).Observe(insertSeconds)
 }
 
-// RecordQuery records a GraphQL query outcome with latency.
 func (m *Metrics) RecordQuery(query, status string, latencyMs float64) {
 	if status != "success" {
 		m.QueryErrorsTotal.WithLabelValues(query).Inc()
@@ -151,27 +143,22 @@ func (m *Metrics) RecordQuery(query, status string, latencyMs float64) {
 	m.QueryLatencyMs.WithLabelValues(query).Observe(latencyMs)
 }
 
-// RecordReplay records a replayed event outcome.
 func (m *Metrics) RecordReplay(topic, outcome string) {
 	m.ReplayEventsTotal.WithLabelValues(topic, outcome).Inc()
 }
 
-// RecordDataQualityIssue records a detected data quality issue.
 func (m *Metrics) RecordDataQualityIssue(issueType, severity string) {
 	m.DataQualityIssuesTotal.WithLabelValues(issueType, severity).Inc()
 }
 
-// SetFreshness updates the event lag gauge in seconds.
 func (m *Metrics) SetFreshness(seconds float64) {
 	m.FreshnessSeconds.Set(seconds)
 }
 
-// GetFreshnessSeconds returns the current freshness seconds value.
 func (m *Metrics) GetFreshnessSeconds() float64 {
 	return 0.0
 }
 
-// SetConsumerLag sets the lag gauge for a topic-partition.
 func (m *Metrics) SetConsumerLag(topic, partition string, lag float64) {
 	m.KafkaConsumerLag.WithLabelValues(topic, partition).Set(lag)
 }

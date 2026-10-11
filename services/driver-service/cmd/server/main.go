@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -27,18 +28,40 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/config"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
 	internalgql "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/graphql"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/workers"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/events"
 	pkgKafka "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/kafka"
 	pkgrmq "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/rabbitmq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 )
 
 func main() {
+	sharedlogging.InitLoggerWithStdlibBridge()
+
 	cfg := config.Load()
 	log.Printf("Driver Service starting — GraphQL: %s | gRPC: %s | Metrics: %s",
 		cfg.PortGraphQL, cfg.PortGRPC, cfg.PortMetrics)
+
+	tracer, err := observability.NewTracer(observability.TracerConfig{
+		ServiceName:  "driver-service",
+		OTLPEndpoint: cfg.OTELEndpoint,
+		SamplingRate: 1.0,
+	})
+	if err != nil {
+		slog.Warn("tracer init failed (non-fatal)", "error", err)
+	}
+	if tracer != nil {
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = tracer.Shutdown(ctx)
+		}()
+	}
 
 	// ─── MongoDB ──────────────────────────────────────────────────────────────
 	mongoCtx, mongoCancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -113,6 +136,7 @@ func main() {
 	_ = rmqPublisher
 
 	// ─── Application Service ──────────────────────────────────────────────────
+	driverMetrics := observability.NewMetrics()
 	dispatchPolicy := domain.NewDispatchPolicy()
 	eventPublisher := adapterkafka.NewEventPublisherAdapter(kafkaPub)
 	dispatchSvc := services.NewDispatchService(
@@ -122,6 +146,7 @@ func main() {
 		lockManager,
 		eventPublisher,
 		dispatchPolicy,
+		driverMetrics,
 	)
 
 	// ─── gRPC Clients ─────────────────────────────────────────────────────────
@@ -240,6 +265,25 @@ func main() {
 		}
 	}()
 
+	// ─── Metrics HTTP Server (scraped by Prometheus on PORT_DRIVER_METRICS) ───
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle("/metrics", promhttp.Handler())
+	metricsMux.HandleFunc("/healthz", internalgql.HealthHandler)
+
+	metricsSrv := &http.Server{
+		Addr:         ":" + cfg.PortMetrics,
+		Handler:      metricsMux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	go func() {
+		log.Printf("Metrics server listening on :%s", cfg.PortMetrics)
+		if err := metricsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("Metrics server error: %v", err)
+		}
+	}()
+
 	// ─── Graceful Shutdown ────────────────────────────────────────────────────
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -252,6 +296,7 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
 	_ = gqlServer.Shutdown(shutdownCtx)
+	_ = metricsSrv.Shutdown(shutdownCtx)
 
 	log.Println("Driver Service stopped.")
 }

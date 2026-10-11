@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
@@ -17,10 +18,10 @@ type DispatchService struct {
 	lockManager    ports.LockManager
 	eventPublisher ports.EventPublisher
 	dispatchPolicy *domain.DispatchPolicy
+	metrics        *observability.Metrics
 	mu             sync.Mutex
 }
 
-// NewDispatchService creates a new DispatchService.
 func NewDispatchService(
 	driverRepo ports.DriverRepository,
 	assignmentRepo ports.AssignmentRepository,
@@ -28,6 +29,7 @@ func NewDispatchService(
 	lockManager ports.LockManager,
 	eventPublisher ports.EventPublisher,
 	dispatchPolicy *domain.DispatchPolicy,
+	metrics *observability.Metrics,
 ) *DispatchService {
 	return &DispatchService{
 		driverRepo:     driverRepo,
@@ -36,6 +38,7 @@ func NewDispatchService(
 		lockManager:    lockManager,
 		eventPublisher: eventPublisher,
 		dispatchPolicy: dispatchPolicy,
+		metrics:        metrics,
 	}
 }
 
@@ -124,8 +127,41 @@ func (s *DispatchService) FindAvailableDrivers(ctx context.Context, lat, lng, ra
 	return policy.RankCandidates(candidates), nil
 }
 
-// ReserveDriver reserves a driver for a delivery using distributed locking and conditional state transition.
 func (s *DispatchService) ReserveDriver(ctx context.Context, driverID, deliveryID string) (bool, error) {
+	start := time.Now()
+	reserved, err := s.reserveDriver(ctx, driverID, deliveryID)
+
+	if s.metrics != nil {
+		switch {
+		case err != nil:
+			s.metrics.RecordDispatchRequest("failed")
+			s.metrics.RecordDispatchFailure(dispatchFailureReason(err))
+		case reserved:
+			s.metrics.RecordDispatchRequest("success")
+			s.metrics.RecordDispatchSuccess(driverID)
+		default:
+			s.metrics.RecordDispatchRequest("rejected")
+		}
+		s.metrics.RecordDispatchDuration("reserve", time.Since(start).Seconds())
+	}
+
+	return reserved, err
+}
+
+func dispatchFailureReason(err error) string {
+	switch err {
+	case domain.ErrDriverAlreadyReserved:
+		return "already_reserved"
+	case domain.ErrDriverNotFound:
+		return "driver_not_found"
+	case domain.ErrDriverNotAvailableForAssignment:
+		return "driver_not_available"
+	default:
+		return "internal_error"
+	}
+}
+
+func (s *DispatchService) reserveDriver(ctx context.Context, driverID, deliveryID string) (bool, error) {
 	acquired, err := s.lockManager.Acquire(ctx, driverID, 30*time.Second)
 	if err != nil {
 		log.Printf("dispatch service: failed to acquire lock for driver %s: %v", driverID, err)
@@ -183,6 +219,10 @@ func (s *DispatchService) ReserveDriver(ctx context.Context, driverID, deliveryI
 	// Publish assignment offered event (best-effort)
 	if err = s.eventPublisher.PublishAssignmentOffered(ctx, assignment.ID, assignment.DeliveryID, assignment.DriverID); err != nil {
 		log.Printf("dispatch service: failed to publish assignment offered event: %v", err)
+	}
+
+	if s.metrics != nil {
+		s.metrics.RecordAssignmentCreated(string(assignment.Status))
 	}
 
 	log.Printf("dispatch service: driver %s reserved for delivery %s", driverID, deliveryID)
@@ -254,6 +294,10 @@ func (s *DispatchService) AcceptAssignment(ctx context.Context, assignmentID, dr
 		log.Printf("dispatch service: failed to publish assignment accepted event: %v", err)
 	}
 
+	if s.metrics != nil {
+		s.metrics.RecordAssignmentAccepted(driverID)
+	}
+
 	log.Printf("dispatch service: assignment %s accepted by driver %s", assignmentID, driverID)
 	return nil
 }
@@ -296,6 +340,10 @@ func (s *DispatchService) RejectAssignment(ctx context.Context, assignmentID, dr
 
 	if err = s.eventPublisher.PublishAssignmentRejected(ctx, assignment.ID, assignment.DeliveryID, driverID, reason); err != nil {
 		log.Printf("dispatch service: failed to publish assignment rejected event: %v", err)
+	}
+
+	if s.metrics != nil {
+		s.metrics.RecordAssignmentRejected(driverID, reason)
 	}
 
 	log.Printf("dispatch service: assignment %s rejected by driver %s", assignmentID, driverID)
@@ -343,6 +391,9 @@ func (s *DispatchService) ReleaseDriverByAssignment(ctx context.Context, assignm
 	}
 
 	if newStatus == domain.AssignmentStatusExpired {
+		if s.metrics != nil {
+			s.metrics.RecordAssignmentExpired(assignment.DriverID)
+		}
 		if err = s.eventPublisher.PublishAssignmentExpired(ctx, assignmentID, assignment.DeliveryID); err != nil {
 			log.Printf("dispatch service: failed to publish assignment expired event: %v", err)
 		}

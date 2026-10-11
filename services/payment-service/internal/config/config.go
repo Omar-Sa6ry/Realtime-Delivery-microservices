@@ -13,11 +13,11 @@ import (
 
 type Config struct {
 	// Server
-	PortGraphQL       string
-	PortGRPC          string
-	PortMetrics       string
-	PortWebhook       string
-	NodeEnv           string
+	PortGraphQL string
+	PortGRPC    string
+	PortMetrics string
+	PortWebhook string
+	NodeEnv     string
 
 	// PostgreSQL
 	PostgresDSN string
@@ -55,10 +55,10 @@ type Config struct {
 	OTELEndpoint string
 
 	// Stripe
-	StripeSecretKey       string
-	StripeWebhookSecret   string
-	StripeSuccessURL      string
-	StripeFailURL         string
+	StripeSecretKey     string
+	StripeWebhookSecret string
+	StripeSuccessURL    string
+	StripeFailURL       string
 
 	// Delivery Service
 	DeliveryServiceURL string
@@ -109,17 +109,17 @@ func Load() (*Config, error) {
 	dbSSL := getEnv("DB_SSLMODE", getEnv("POSTGRES_SSLMODE", "disable"))
 
 	return &Config{
-		PortGraphQL:       getEnv("PORT_GRAPHQL", "4002"),
-		PortGRPC:          getEnv("PORT_GRPC", "50056"),
-		PortMetrics:       getEnv("PORT_METRICS", "9106"),
-		PortWebhook:       getEnv("PORT_WEBHOOK", "4012"),
-		NodeEnv:           getEnv("NODE_ENV", "development"),
-		DBUser:            dbUser,
-		DBPassword:        dbPass,
-		DBHost:            dbHost,
-		DBPort:            dbPort,
-		DBName:            dbName,
-		DBSSLMode:         dbSSL,
+		PortGraphQL: getEnv("PORT_GRAPHQL", "4002"),
+		PortGRPC:    getEnv("PORT_GRPC", "50056"),
+		PortMetrics: getEnv("PORT_METRICS", "9106"),
+		PortWebhook: getEnv("PORT_WEBHOOK", "4012"),
+		NodeEnv:     getEnv("NODE_ENV", "development"),
+		DBUser:      dbUser,
+		DBPassword:  dbPass,
+		DBHost:      dbHost,
+		DBPort:      dbPort,
+		DBName:      dbName,
+		DBSSLMode:   dbSSL,
 		PostgresDSN: func() string {
 			rawDSN := os.Getenv("POSTGRES_DSN")
 			// If POSTGRES_DSN is provided and does not contain unresolved placeholders like $(POSTGRES_USER)
@@ -129,13 +129,13 @@ func Load() (*Config, error) {
 			userInfo := url.UserPassword(dbUser, dbPass)
 			return fmt.Sprintf("postgres://%s@%s:%s/%s?sslmode=%s", userInfo.String(), dbHost, dbPort, dbName, dbSSL)
 		}(),
-		RedisHost:         getEnv("REDIS_HOST", "localhost"),
-		RedisPort:         getEnv("REDIS_PORT", "6379"),
-		KafkaBrokers:      getEnv("KAFKA_BROKERS", "localhost:9092"),
-		KafkaGroupID:      getEnv("KAFKA_GROUP_ID", "payment-service"),
-		KafkaClientID:     getEnv("KAFKA_CLIENT_ID", "payment-service"),
-		NATSUrl:           getEnv("NATS_URL", "nats://localhost:4222"),
-		SnowflakeWorkerID: getEnvInt64("SNOWFLAKE_WORKER_ID", 2),
+		RedisHost:            getEnv("REDIS_HOST", "localhost"),
+		RedisPort:            getEnv("REDIS_PORT", "6379"),
+		KafkaBrokers:         getEnv("KAFKA_BROKERS", "localhost:9092"),
+		KafkaGroupID:         getEnv("KAFKA_GROUP_ID", "payment-service"),
+		KafkaClientID:        getEnv("KAFKA_CLIENT_ID", "payment-service"),
+		NATSUrl:              getEnv("NATS_URL", "nats://localhost:4222"),
+		SnowflakeWorkerID:    getEnvInt64("SNOWFLAKE_WORKER_ID", 2),
 		ReconcileIntervalSec: getEnvDuration("RECONCILE_INTERVAL_SEC", 60*time.Second),
 		StuckThresholdSec:    getEnvDuration("STUCK_THRESHOLD_SEC", 30*time.Second),
 		OutboxBatchSize:      getEnvInt("OUTBOX_BATCH_SIZE", 100),

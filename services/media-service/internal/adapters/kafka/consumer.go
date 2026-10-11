@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/automation"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
 	kafkago "github.com/segmentio/kafka-go"
 )
@@ -107,12 +108,15 @@ func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 		}
 
 		if processErr := c.processWithRetry(ctx, msg, handler); processErr != nil {
+			observability.RecordProcessingFailed(c.reader.Config().Topic)
 			if dlqErr := c.routeToDLQ(ctx, msg, processErr); dlqErr != nil {
 				// Do not acknowledge a message if its DLQ handoff failed. The
 				// broker will redeliver it after the consumer restarts/rebalances.
 				slog.Error("DLQ handoff failed; leaving message uncommitted", "error", dlqErr, "topic", c.reader.Config().Topic, "offset", msg.Offset)
 				continue
 			}
+		} else {
+			observability.RecordProcessingCompleted(c.reader.Config().Topic)
 		}
 
 		// Commit after successful processing or a confirmed DLQ handoff — this
@@ -144,7 +148,10 @@ func (c *Consumer) processWithRetry(ctx context.Context, msg kafkago.Message, ha
 			delay = minDuration(delay*2, 30*time.Second) // capped exponential backoff
 		}
 
+		attemptStart := time.Now()
+		observability.RecordProcessingStarted(c.reader.Config().Topic)
 		lastErr = handler(ctx, msg)
+		observability.ObserveProcessingDuration(c.reader.Config().Topic, time.Since(attemptStart))
 		if lastErr == nil {
 			return nil
 		}
@@ -166,6 +173,15 @@ func (c *Consumer) routeToDLQ(ctx context.Context, msg kafkago.Message, reason e
 	)
 
 	observability.DeadLetterQueueTotal.WithLabelValues(topic).Inc()
+
+	// Application level alert: rides the same Alertmanager route/delivery
+	// pipeline as the Prometheus rules (MediaServiceDLQBacklog).
+	_, _ = automation.TriggerAlert(
+		"media-service",
+		"Media Kafka message routed to DLQ",
+		fmt.Sprintf("topic=%s offset=%d reason=%s", topic, msg.Offset, reason),
+		"CRITICAL",
+	)
 
 	if c.dlqProducer == nil {
 		return fmt.Errorf("DLQ producer is not configured for topic %q", topic)

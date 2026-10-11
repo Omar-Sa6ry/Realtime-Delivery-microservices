@@ -18,22 +18,23 @@ import (
 	// packages/go shared utilities
 	pkglogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	pkgmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
-	pkgsnowflake "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/snowflake"
 	pkgrmq "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/rabbitmq"
+	pkgsnowflake "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/snowflake"
+	sharedtracing "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/tracing"
 
 	// internal packages
+	grpcserver "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/grpc"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/kafka"
-	rmqadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/rabbitmq"
 	natsadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/nats"
 	pgadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/postgres"
 	stripeadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/providers/stripe"
+	rmqadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/rabbitmq"
 	webhookhandler "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/webhook"
-	grpcserver "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/grpc"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/application/services"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/config"
 	gql "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/graphql"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/workers"
-	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/application/services"
 )
 
 func main() {
@@ -62,7 +63,7 @@ func main() {
 	}
 	_ = sf // passed to application services
 
-	// PostgreSQL 
+	// PostgreSQL
 	db, err := pgadapter.Connect(
 		cfg.PostgresDSN,
 		cfg.DBUser,
@@ -87,7 +88,7 @@ func main() {
 	// Stripe Provider
 	stripeProvider := stripeadapter.NewStripeProvider(cfg.StripeSecretKey)
 
-	// Kafka Event Publisher 
+	// Kafka Event Publisher
 	brokers := splitBrokers(cfg.KafkaBrokers)
 	if err := kafka.EnsureTopics(brokers); err != nil {
 		slog.Warn("kafka topics setup failed (non-fatal)", "error", err)
@@ -131,7 +132,7 @@ func main() {
 	}
 
 	// Observability
-	paymentMetrics := observability.NewMetrics()
+	observability.M()
 	tracer, err := observability.NewTracer(observability.TracerConfig{
 		ServiceName:    "payment-service",
 		OTLPEndpoint:   cfg.OTELEndpoint,
@@ -148,7 +149,6 @@ func main() {
 			_ = tracer.Shutdown(ctx)
 		}()
 	}
-	_ = paymentMetrics
 
 	// Application Service
 	paymentSvc := services.NewPaymentService(
@@ -161,7 +161,7 @@ func main() {
 		sf,
 	)
 
-	//  11. Background Workers 
+	//  11. Background Workers
 	pool := workers.NewWorkerPool()
 
 	outboxWorker := workers.NewOutboxPublisher(outboxRepo, kafkaPublisher, cfg.OutboxBatchSize)
@@ -179,8 +179,7 @@ func main() {
 	pool.Start()
 	defer pool.Stop()
 
-	//  Metrics HTTP Server (port 9106) 
-	// Uses packages/go/metrics.StartMetricsServer which registers Prometheus handler.
+	//  Metrics HTTP Server (port 9106)
 	go func() {
 		slog.Info("metrics server starting", "port", cfg.PortMetrics)
 		if err := pkgmetrics.StartMetricsServer(cfg.PortMetrics); err != nil && err != http.ErrServerClosed {
@@ -188,7 +187,7 @@ func main() {
 		}
 	}()
 
-	//  gRPC Server (port 50056) 
+	//  gRPC Server (port 50056)
 	grpcSrv := grpcserver.NewGRPCServer(
 		cfg.PortGRPC,
 		paymentSvc,
@@ -207,7 +206,7 @@ func main() {
 	}()
 	defer grpcSrv.Stop()
 
-	// Stripe Webhook Server (port 4012) 
+	// Stripe Webhook Server (port 4012)
 	webhookHandler := webhookhandler.NewHandler(
 		cfg.StripeWebhookSecret,
 		paymentRepo,
@@ -218,7 +217,7 @@ func main() {
 	webhookRouter.POST("/webhook/payment", webhookHandler.Handle)
 	webhookSrv := &http.Server{
 		Addr:         ":" + cfg.PortWebhook,
-		Handler:      webhookRouter,
+		Handler:      sharedtracing.HTTPTracingMiddleware(pkgmetrics.HTTPMetricsMiddleware(webhookRouter)),
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
@@ -254,7 +253,7 @@ func main() {
 
 	mainSrv := &http.Server{
 		Addr:         ":" + cfg.PortGraphQL,
-		Handler:      router,
+		Handler:      sharedtracing.HTTPTracingMiddleware(pkgmetrics.HTTPMetricsMiddleware(router)),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

@@ -26,7 +26,6 @@ services:
     ports:
       - "4003:4003"
       - "50054:50054"
-      - "9104:9104"
     networks:
       default:
         aliases:
@@ -35,7 +34,6 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT_DELIVERY: ${PORT_DELIVERY:-4003}
       PORT_DELIVERY_GRPC: ${PORT_DELIVERY_GRPC:-50054}
-      PORT_METRICS: ${PORT_METRICS:-9104}
       DB_HOST: delivery-db-srv
       DB_PORT: 5432
       DB_USERNAME: ${POSTGRES_USER:-postgres}

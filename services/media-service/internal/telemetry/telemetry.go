@@ -24,9 +24,6 @@ type Config struct {
 	SampleRatio    float64
 }
 
-// InitTracer initializes an OpenTelemetry provider with resource metadata,
-// parent-based sampling, and W3C context propagation. Exporter delivery is
-// deployment-specific and can be attached by the runtime collector layer.
 func InitTracer(ctx context.Context, cfg Config) (*sdktrace.TracerProvider, error) {
 	if cfg.SampleRatio < 0 || cfg.SampleRatio > 1 {
 		return nil, fmt.Errorf("invalid trace sample ratio %v", cfg.SampleRatio)

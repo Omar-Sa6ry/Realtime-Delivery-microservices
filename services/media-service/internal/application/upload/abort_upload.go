@@ -7,6 +7,7 @@ import (
 
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
@@ -78,6 +79,7 @@ func (uc *AbortUploadUseCase) Execute(ctx context.Context, userID, uploadID stri
 
 	// Release the active upload slot
 	_ = uc.quotaRepo.DecrementActiveUpload(ctx, userID)
+	observability.DecActiveUploads()
 
 	logger.Info("Upload aborted", "uploadId", uploadID, "mediaId", session.MediaID, "userId", userID)
 	return nil

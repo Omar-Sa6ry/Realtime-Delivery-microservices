@@ -3,6 +3,7 @@ package observability
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -15,14 +16,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Tracer wraps the OpenTelemetry tracer for payment service.
 type Tracer struct {
 	provider *sdktrace.TracerProvider
 	tracer   trace.Tracer
 	serviceName string
 }
 
-// TracerConfig holds configuration for the tracer.
 type TracerConfig struct {
 	ServiceName    string
 	OTLPEndpoint   string
@@ -30,10 +29,15 @@ type TracerConfig struct {
 	EnableInsecure bool
 }
 
-// NewTracer creates a new OpenTelemetry tracer with Jaeger/OTLP exporter.
+// NewTracer creates a new OpenTelemetry tracer with an OTLP/gRPC exporter and
+// installs it as the process-wide tracer. Returns nil when no endpoint is
+// configured so the service can run untraced.
 func NewTracer(config TracerConfig) (*Tracer, error) {
 	if config.ServiceName == "" {
 		config.ServiceName = "payment-service"
+	}
+	if config.OTLPEndpoint == "" {
+		return nil, nil
 	}
 
 	// Create the OTLP exporter
@@ -46,7 +50,6 @@ func NewTracer(config TracerConfig) (*Tracer, error) {
 		return nil, fmt.Errorf("failed to create OTLP exporter: %w", err)
 	}
 
-	// Create resource with service name
 	res, err := resource.New(context.Background(),
 		resource.WithAttributes(
 			semconv.ServiceName(config.ServiceName),
@@ -64,10 +67,8 @@ func NewTracer(config TracerConfig) (*Tracer, error) {
 		sdktrace.WithSampler(sdktrace.ParentBased(sdktrace.TraceIDRatioBased(config.SamplingRate))),
 	)
 
-	// Set global tracer provider
 	otel.SetTracerProvider(provider)
 
-	// Set global propagator for W3C trace context
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
 		propagation.Baggage{},
@@ -75,29 +76,52 @@ func NewTracer(config TracerConfig) (*Tracer, error) {
 
 	tracer := provider.Tracer(config.ServiceName)
 
-	return &Tracer{
+	current := &Tracer{
 		provider:    provider,
 		tracer:      tracer,
 		serviceName: config.ServiceName,
-	}, nil
+	}
+	setCurrentTracer(current)
+	return current, nil
 }
 
-// Tracer returns the OpenTelemetry tracer.
+var (
+	currentMu sync.RWMutex
+	currentTr *Tracer
+)
+
+func setCurrentTracer(t *Tracer) {
+	currentMu.Lock()
+	defer currentMu.Unlock()
+	currentTr = t
+}
+
+func CurrentTracer() *Tracer {
+	currentMu.RLock()
+	defer currentMu.RUnlock()
+	return currentTr
+}
+
+func StartOperation(ctx context.Context, operation, paymentID string) *PaymentOperation {
+	t := CurrentTracer()
+	if t == nil {
+		return &PaymentOperation{ctx: ctx, name: operation, start: time.Now()}
+	}
+	return StartPaymentOperation(t, ctx, operation, paymentID)
+}
+
 func (t *Tracer) Tracer() trace.Tracer {
 	return t.tracer
 }
 
-// StartSpan starts a new span with the given name and options.
 func (t *Tracer) StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	return t.tracer.Start(ctx, name, opts...)
 }
 
-// StartSpanWithAttributes starts a new span with attributes.
 func (t *Tracer) StartSpanWithAttributes(ctx context.Context, name string, attrs ...attribute.KeyValue) (context.Context, trace.Span) {
 	return t.tracer.Start(ctx, name, trace.WithAttributes(attrs...))
 }
 
-// Shutdown gracefully shuts down the tracer provider.
 func (t *Tracer) Shutdown(ctx context.Context) error {
 	if t.provider != nil {
 		return t.provider.Shutdown(ctx)
@@ -105,7 +129,6 @@ func (t *Tracer) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// ExtractTraceID extracts the trace ID from the context.
 func ExtractTraceID(ctx context.Context) string {
 	span := trace.SpanFromContext(ctx)
 	if span == nil {
@@ -118,7 +141,6 @@ func ExtractTraceID(ctx context.Context) string {
 	return spanContext.TraceID().String()
 }
 
-// ExtractSpanID extracts the span ID from the context.
 func ExtractSpanID(ctx context.Context) string {
 	span := trace.SpanFromContext(ctx)
 	if span == nil {
@@ -131,7 +153,6 @@ func ExtractSpanID(ctx context.Context) string {
 	return spanContext.SpanID().String()
 }
 
-// AddEvent adds an event to the current span.
 func AddEvent(ctx context.Context, name string, attrs ...attribute.KeyValue) {
 	span := trace.SpanFromContext(ctx)
 	if span != nil {
@@ -139,7 +160,6 @@ func AddEvent(ctx context.Context, name string, attrs ...attribute.KeyValue) {
 	}
 }
 
-// RecordError records an error on the current span.
 func RecordError(ctx context.Context, err error, attrs ...attribute.KeyValue) {
 	span := trace.SpanFromContext(ctx)
 	if span != nil && err != nil {
@@ -147,7 +167,6 @@ func RecordError(ctx context.Context, err error, attrs ...attribute.KeyValue) {
 	}
 }
 
-// SetStatus sets the span status.
 func SetStatus(ctx context.Context, code int, description string) {
 	span := trace.SpanFromContext(ctx)
 	if span != nil {
@@ -159,7 +178,6 @@ func SetStatus(ctx context.Context, code int, description string) {
 	}
 }
 
-// WithPaymentAttributes adds payment-specific attributes to the context.
 func WithPaymentAttributes(ctx context.Context, paymentID, deliveryID, userID string, amount int64, currency string) context.Context {
 	return context.WithValue(ctx, paymentAttributesKey{}, paymentAttrs{
 		paymentID:  paymentID,
@@ -170,7 +188,6 @@ func WithPaymentAttributes(ctx context.Context, paymentID, deliveryID, userID st
 	})
 }
 
-// GetPaymentAttributes extracts payment attributes from the context.
 func GetPaymentAttributes(ctx context.Context) (string, string, string, int64, string) {
 	val := ctx.Value(paymentAttributesKey{})
 	if attrs, ok := val.(paymentAttrs); ok {
@@ -179,7 +196,6 @@ func GetPaymentAttributes(ctx context.Context) (string, string, string, int64, s
 	return "", "", "", 0, ""
 }
 
-// paymentAttributesKey is a context key for payment attributes.
 type paymentAttributesKey struct{}
 
 type paymentAttrs struct {
@@ -190,7 +206,6 @@ type paymentAttrs struct {
 	currency   string
 }
 
-// PaymentOperation represents a payment operation for tracing.
 type PaymentOperation struct {
 	tracer *Tracer
 	ctx    context.Context
@@ -199,7 +214,6 @@ type PaymentOperation struct {
 	start  time.Time
 }
 
-// StartPaymentOperation starts a new payment operation span.
 func StartPaymentOperation(t *Tracer, ctx context.Context, operation string, paymentID string) *PaymentOperation {
 	ctx, span := t.StartSpanWithAttributes(ctx, "payment."+operation,
 		attribute.String("payment.operation", operation),
@@ -214,7 +228,6 @@ func StartPaymentOperation(t *Tracer, ctx context.Context, operation string, pay
 	}
 }
 
-// Finish finishes the payment operation span.
 func (p *PaymentOperation) Finish(err error) {
 	if p.span != nil {
 		if err != nil {
@@ -227,19 +240,16 @@ func (p *PaymentOperation) Finish(err error) {
 	}
 }
 
-// AddAttribute adds an attribute to the span.
 func (p *PaymentOperation) AddAttribute(key string, value interface{}) {
 	if p.span != nil {
 		p.span.SetAttributes(attribute.String(p.name+"."+key, fmt.Sprintf("%v", value)))
 	}
 }
 
-// Context returns the context with the span.
 func (p *PaymentOperation) Context() context.Context {
 	return p.ctx
 }
 
-// GetTracerFromContext extracts the tracer from the context.
 func GetTracerFromContext(ctx context.Context) trace.Tracer {
 	span := trace.SpanFromContext(ctx)
 	if span == nil {

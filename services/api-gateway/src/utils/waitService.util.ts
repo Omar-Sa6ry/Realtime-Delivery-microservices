@@ -1,8 +1,8 @@
 import * as net from 'net';
+import { StructuredLogger } from '@delivery-micro/shard';
 
-/**
- * Wait until a GraphQL service responds successfully to a tiny health query.
- */
+const logger = new StructuredLogger();
+
 export async function waitForService(
   url: string,
   signal?: AbortSignal,
@@ -28,17 +28,26 @@ export async function waitForService(
       };
 
       if (response.ok && body.data?.__typename) {
-        console.log(`[startup] ${url} is ready.`);
+        logger.log(
+          `[startup] ${url} is ready (attempt ${attempt}).`,
+          'Startup',
+        );
         return;
       }
 
-      console.log(`[startup] ${url} is not ready. Retrying...`);
-    } catch {
-      console.log(`[startup] ${url} is unreachable. Retrying...`);
+      logger.warn(
+        `[startup] ${url} is not ready. Retrying...`,
+        'Startup',
+      );
+    } catch (err) {
+      logger.warn(
+        `[startup] ${url} is unreachable (${(err as Error).message}). Retrying...`,
+        'Startup',
+      );
     }
 
     if (signal?.aborted) {
-      console.warn(`[startup] Waiting for ${url} was cancelled.`);
+      logger.warn(`[startup] Waiting for ${url} was cancelled.`, 'Startup');
       return;
     }
 
@@ -47,9 +56,6 @@ export async function waitForService(
   }
 }
 
-/**
- * Wait until a TCP service, such as Redis, accepts a connection.
- */
 export async function waitForRedis(
   host = process.env.REDIS_HOST ?? 'redis-srv',
   port = Number(process.env.REDIS_PORT ?? 6379),
@@ -57,10 +63,13 @@ export async function waitForRedis(
   for (;;) {
     try {
       await canConnect(host, port);
-      console.log(`[startup] Redis is ready at ${host}:${port}.`);
+      logger.log(`[startup] Redis is ready at ${host}:${port}.`, 'Startup');
       return;
-    } catch {
-      console.log(`[startup] Redis is not ready. Retrying in 2s...`);
+    } catch (err) {
+      logger.log(
+        `[startup] Redis is not ready (${(err as Error).message}). Retrying in 2s...`,
+        'Startup',
+      );
       await sleep(2000);
     }
   }

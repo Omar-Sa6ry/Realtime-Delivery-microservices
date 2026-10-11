@@ -7,28 +7,30 @@ import (
 	"os"
 	"os/signal"
 	"time"
+
+	pkgmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
+	sharedtracing "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/tracing"
 )
 
-// Server ...
 type Server struct {
 	schema *Schema
 	httpServer *http.Server
 	stopChan  chan struct{}
 }
 
-// NewServer creates a new GraphQL server.
 func NewServer(sdl string) *Server {
 	return &Server{
 		schema: &Schema{sdl: sdl},
 	}
 }
 
-// Start starts the GraphQL server.
 func (s *Server) Start(addr string) error {
 	log.Printf("Starting GraphQL server on %s", addr)
 	s.httpServer = &http.Server{
-		Addr:    addr,
-		Handler: Handler(s.schema),
+		Addr: addr,
+		Handler: sharedtracing.HTTPTracingMiddleware(
+			pkgmetrics.HTTPMetricsMiddleware(Handler(s.schema)),
+		),
 	}
 
 	go func() {

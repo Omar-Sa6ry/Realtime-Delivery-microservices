@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"log"
 	"net"
 	"strings"
 
@@ -11,6 +10,11 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
+
+	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
+	pkgmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
+	sharedmiddleware "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/middleware"
+	sharedtracing "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/tracing"
 
 	pb "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/adapters/grpc/proto"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/application/services"
@@ -130,7 +134,7 @@ func (s *DriverGRPCServer) FindAvailableDrivers(ctx context.Context, req *pb.Fin
 
 	candidates, err := s.dispatch.FindAvailableDrivers(ctx, req.Latitude, req.Longitude, req.RadiusKm, vType, req.DeliveryId)
 	if err != nil {
-		log.Printf("grpc: FindAvailableDrivers error: %v", err)
+		sharedlogging.FromContext(ctx).Error("grpc: FindAvailableDrivers failed", "error", err)
 		return nil, translateError(lang, err)
 	}
 	var pbCandidates []*pb.DriverCandidate
@@ -156,7 +160,7 @@ func (s *DriverGRPCServer) ReserveDriver(ctx context.Context, req *pb.ReserveDri
 
 	reserved, err := s.dispatch.ReserveDriver(ctx, req.DriverId, req.DeliveryId)
 	if err != nil {
-		log.Printf("grpc: ReserveDriver error: %v", err)
+		sharedlogging.FromContext(ctx).Error("grpc: ReserveDriver failed", "error", err)
 		return nil, translateError(lang, err)
 	}
 	assignmentID := req.DeliveryId + "-" + req.DriverId
@@ -180,7 +184,7 @@ func (s *DriverGRPCServer) ReleaseDriver(ctx context.Context, req *pb.ReleaseDri
 			// Idempotent — already released
 			return &pb.ReleaseDriverResponse{Released: true, DriverId: req.DriverId}, nil
 		}
-		log.Printf("grpc: ReleaseDriver error: %v", err)
+		sharedlogging.FromContext(ctx).Error("grpc: ReleaseDriver failed", "error", err)
 		return nil, translateError(lang, err)
 	}
 	return &pb.ReleaseDriverResponse{Released: true, DriverId: req.DriverId}, nil
@@ -198,7 +202,7 @@ func (s *DriverGRPCServer) AssignDriver(ctx context.Context, req *pb.AssignDrive
 
 	reserved, err := s.dispatch.ReserveDriver(ctx, req.DriverId, req.DeliveryId)
 	if err != nil {
-		log.Printf("grpc: AssignDriver error: %v", err)
+		sharedlogging.FromContext(ctx).Error("grpc: AssignDriver failed", "error", err)
 		return nil, translateError(lang, err)
 	}
 
@@ -295,7 +299,13 @@ type GRPCServer struct {
 }
 
 func NewGRPCServer(dispatch *services.DispatchService, driverRepo ports.DriverRepository) *GRPCServer {
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			sharedmiddleware.UnaryServerMetadataInterceptor(),
+			pkgmetrics.UnaryServerMetricsInterceptor(),
+			sharedtracing.UnaryServerTracingInterceptor(),
+		),
+	)
 	driverHandler := NewDriverGRPCServer(dispatch, driverRepo)
 	pb.RegisterDriverServiceServer(srv, driverHandler)
 	reflection.Register(srv)

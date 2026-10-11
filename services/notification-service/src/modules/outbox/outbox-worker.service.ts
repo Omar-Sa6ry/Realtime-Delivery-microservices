@@ -16,7 +16,7 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
-import { NotificationNatsSubjects } from '@delivery-micro/shard';
+import { AlertService, NotificationNatsSubjects } from '@delivery-micro/shard';
 
 @Injectable()
 export class OutboxWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -28,6 +28,7 @@ export class OutboxWorkerService implements OnModuleInit, OnModuleDestroy {
     @InjectRepository(NotificationOutbox)
     private outboxRepository: Repository<NotificationOutbox>,
     private configService: ConfigService,
+    private readonly alerts: AlertService,
   ) {
     this.natsClient = ClientProxyFactory.create({
       transport: Transport.NATS,
@@ -78,6 +79,11 @@ export class OutboxWorkerService implements OnModuleInit, OnModuleDestroy {
           record.attemptCount += 1;
           if (record.attemptCount > 5) {
             record.status = OutboxStatus.FAILED;
+            void this.alerts.triggerAlert(
+              'Notification outbox record failed',
+              `Outbox record ${record.id} failed after ${record.attemptCount} attempts: ${error.message}`,
+              'CRITICAL',
+            );
           }
           await this.outboxRepository.save(record);
         }
@@ -86,6 +92,11 @@ export class OutboxWorkerService implements OnModuleInit, OnModuleDestroy {
       this.logger.error(
         `Error processing outbox: ${error.message}`,
         error.stack,
+      );
+      void this.alerts.triggerAlert(
+        'Notification outbox processing error',
+        `Error processing outbox: ${error.message}`,
+        'WARNING',
       );
     }
   }

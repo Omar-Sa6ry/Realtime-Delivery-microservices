@@ -14,14 +14,18 @@ import (
 	pb "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/grpc/proto"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/analytics"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/ports"
+
+	pkgmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
+	sharedmiddleware "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/middleware"
+	sharedtracing "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/tracing"
 )
 
 type Server struct {
 	pb.UnimplementedAnalyticsServiceServer
-	grpcServer       *grpc.Server
-	platformService  *analytics.PlatformOverviewService
-	driverService    *analytics.DriverAnalyticsService
-	port             string
+	grpcServer      *grpc.Server
+	platformService *analytics.PlatformOverviewService
+	driverService   *analytics.DriverAnalyticsService
+	port            string
 }
 
 func NewServer(
@@ -35,7 +39,13 @@ func NewServer(
 		port:            port,
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			sharedmiddleware.UnaryServerMetadataInterceptor(),
+			pkgmetrics.UnaryServerMetricsInterceptor(),
+			sharedtracing.UnaryServerTracingInterceptor(),
+		),
+	)
 	pb.RegisterAnalyticsServiceServer(grpcServer, s)
 	reflection.Register(grpcServer)
 	s.grpcServer = grpcServer

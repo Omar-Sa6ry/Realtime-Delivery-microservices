@@ -14,6 +14,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	kafkago "github.com/segmentio/kafka-go"
 
+	pkgmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
+	sharedtracing "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/tracing"
+
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/clickhouse"
 	grpcadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/grpc"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/adapters/idempotency"
@@ -32,8 +35,7 @@ import (
 )
 
 func main() {
-	logger := observability.Init()
-	_ = logger
+	observability.Init()
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -121,7 +123,7 @@ func main() {
 	})
 	go func() {
 		slog.Info("kafka consumer starting", "topics", kafkaadapter.AnalyticsTopics(), "group", cfg.KafkaGroupID)
-		if err := consumer.Run(ingestCtx, bridgeToPipeline(pipeline, analyticsMetrics)); err != nil {
+		if err := consumer.Run(ingestCtx, bridgeToPipeline(pipeline, analyticsMetrics, tracer)); err != nil {
 			slog.Error("kafka consumer failed", "error", err)
 		}
 	}()
@@ -213,7 +215,12 @@ func main() {
 	mux.Handle("/graphql", gqlHandler)
 	mux.Handle("/analytics/graphql", gqlHandler)
 
-	handler := gql.LanguageMiddleware(mux)
+	// Server span + RED metrics (app_requests_total / app_request_duration_seconds)
+	// for the GraphQL endpoints; the /metrics scrape endpoint is excluded by the
+	// metrics middleware itself.
+	handler := sharedtracing.HTTPTracingMiddleware(
+		pkgmetrics.HTTPMetricsMiddleware(gql.LanguageMiddleware(mux)),
+	)
 
 	mainSrv := &http.Server{
 		Addr:         ":" + cfg.PortGraphQL,
@@ -301,13 +308,19 @@ func extractMeta(data []byte) (eventType string, occurredAt time.Time) {
 	return meta.EventType, time.Time{}
 }
 
-func bridgeToPipeline(pipeline *ingestion.IngestionPipeline, metrics *observability.Metrics) kafkaadapter.Handler {
+func bridgeToPipeline(pipeline *ingestion.IngestionPipeline, metrics *observability.Metrics, tracer *observability.Tracer) kafkaadapter.Handler {
 	return func(ctx context.Context, topic string, msg kafkago.Message) error {
 		start := time.Now()
 		metrics.RecordConsumed(topic)
 		eventType, occurredAt := extractMeta(msg.Value)
 		if eventType == "" {
 			eventType = "unknown"
+		}
+
+		if tracer != nil {
+			spanCtx, span := tracer.StartConsumeSpan(ctx, topic, eventType, string(msg.Key))
+			defer span.End()
+			ctx = spanCtx
 		}
 
 		outcome, err := pipeline.Process(ctx, topic, int32(msg.Partition), msg.Offset, msg.Value)

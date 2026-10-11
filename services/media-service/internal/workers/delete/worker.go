@@ -9,6 +9,7 @@ import (
 	kafkago "github.com/segmentio/kafka-go"
 	kafkaadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/kafka"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
@@ -98,6 +99,8 @@ func (w *Worker) processDelete(ctx context.Context, payload deletePayload, trace
 	// Release storage quota
 	if releaseErr := w.quotaRepo.SubtractUsedBytes(ctx, payload.UserID, media.Size); releaseErr != nil {
 		slog.Error("Delete worker: failed to release quota", "userId", payload.UserID, "error", releaseErr)
+	} else if usage, usageErr := w.quotaRepo.GetUsage(ctx, payload.UserID); usageErr == nil {
+		observability.SetQuotaUsage(payload.UserID, usage.UsedBytes)
 	}
 
 	// Publish media.deleted event

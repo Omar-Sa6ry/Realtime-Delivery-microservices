@@ -14,6 +14,9 @@ import (
 	paymentpb "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/grpc/proto"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/application/services"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/i18n"
+
+	sharedmiddleware "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/middleware"
+	sharedtracing "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/tracing"
 )
 
 func extractLanguage(ctx context.Context) string {
@@ -29,15 +32,20 @@ func extractLanguage(ctx context.Context) string {
 }
 
 type GRPCServer struct {
-	server   *grpc.Server
-	port     string
-	service  *services.PaymentService
+	server  *grpc.Server
+	port    string
+	service *services.PaymentService
 }
 
-func NewGRPCServer(port string, service *services.PaymentService, interceptor grpc.UnaryServerInterceptor) *GRPCServer {
-	var opts []grpc.ServerOption
-	if interceptor != nil {
-		opts = append(opts, grpc.UnaryInterceptor(interceptor))
+func NewGRPCServer(port string, service *services.PaymentService, extra ...grpc.UnaryServerInterceptor) *GRPCServer {
+	opts := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(append(
+			[]grpc.UnaryServerInterceptor{
+				sharedmiddleware.UnaryServerMetadataInterceptor(),
+				sharedtracing.UnaryServerTracingInterceptor(),
+			},
+			extra...,
+		)...),
 	}
 
 	server := grpc.NewServer(opts...)

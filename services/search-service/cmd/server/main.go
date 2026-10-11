@@ -15,6 +15,7 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
 	sharedRabbitMQ "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/rabbitmq"
+	sharedtracing "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/tracing"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/indexing"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/reindex"
 	appSearch "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/search"
@@ -25,6 +26,7 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/infrastructure/redis"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/interfaces/graphql"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/interfaces/health"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/observability"
 )
 
 func main() {
@@ -40,6 +42,16 @@ func main() {
 	if err != nil {
 		slog.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
+	}
+
+	// OTLP tracer (no endpoint -> the service runs untraced).
+	tracer, err := observability.NewTracer(observability.TracerConfig{
+		ServiceName:  "search-service",
+		OTLPEndpoint: cfg.OTELEndpoint,
+		SamplingRate: cfg.OTELSamplingRate,
+	})
+	if err != nil {
+		slog.Warn("Tracer init failed (non-fatal)", "error", err)
 	}
 
 	// 1. Initialize OpenSearch
@@ -141,9 +153,10 @@ func main() {
 	mux.HandleFunc("/search/graphql", gqlServer.Handler())
 	mux.HandleFunc("/graphql", gqlServer.Handler())
 
-	// Wrap with metrics middleware
+	// Wrap with metrics and tracing middleware
 	var handler http.Handler = mux
 	handler = metrics.HTTPMetricsMiddleware(handler)
+	handler = sharedtracing.HTTPTracingMiddleware(handler)
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.PortGraphQL),
@@ -186,6 +199,14 @@ func main() {
 
 	if err := server.Shutdown(ctxShutdown); err != nil {
 		slog.Error("Server forced to shutdown", "error", err)
+	}
+
+	if tracer != nil {
+		ctxTracer, cancelTracer := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := tracer.Shutdown(ctxTracer); err != nil {
+			slog.Warn("Tracer shutdown failed", "error", err)
+		}
+		cancelTracer()
 	}
 
 	slog.Info("Search Service stopped.")

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
 	kafkago "github.com/segmentio/kafka-go"
 )
 
@@ -59,6 +60,7 @@ func (p *Producer) Publish(ctx context.Context, topic, key string, payload []byt
 	}
 
 	if err := p.writer.WriteMessages(ctx, msg); err != nil {
+		observability.RecordKafkaPublishFailure(topic)
 		return fmt.Errorf("kafka publish to topic %q: %w", topic, err)
 	}
 	return nil

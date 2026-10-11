@@ -9,6 +9,7 @@ import (
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/adapters/kafka"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/observability"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/validation"
 )
@@ -23,8 +24,11 @@ type CompleteUploadInput struct {
 
 // CompleteUploadOutput is returned to the gRPC handler after a successful completion.
 type CompleteUploadOutput struct {
-	MediaID string
-	Status  domain.MediaStatus
+	MediaID     string
+	Status      domain.MediaStatus
+	ContentType string
+	MediaType   string
+	Size        int64
 }
 
 // CompleteUploadUseCase orchestrates upload completion and post-upload verification.
@@ -62,9 +66,25 @@ func NewCompleteUploadUseCase(
 	}
 }
 
-// Execute runs the CompleteUpload flow:
-// Fetch session → Auth → Expiry → Lock → S3 Complete → Verify → Outbox → State transition
+// Execute runs the CompleteUpload flow and records media_upload_* metrics.
 func (uc *CompleteUploadUseCase) Execute(ctx context.Context, in CompleteUploadInput) (*CompleteUploadOutput, error) {
+	out, err := uc.execute(ctx, in)
+	if err != nil {
+		observability.RecordUploadFailed(uploadFailureReason(err))
+		return nil, err
+	}
+	observability.RecordUploadCompleted(out.ContentType)
+	observability.RecordUploadBytes(out.MediaType, out.Size)
+	observability.DecActiveUploads()
+	if usage, usageErr := uc.quotaRepo.GetUsage(ctx, in.UserID); usageErr == nil {
+		observability.SetQuotaUsage(in.UserID, usage.UsedBytes)
+	}
+	return out, nil
+}
+
+// execute runs the CompleteUpload flow:
+// Fetch session → Auth → Expiry → Lock → S3 Complete → Verify → Outbox → State transition
+func (uc *CompleteUploadUseCase) execute(ctx context.Context, in CompleteUploadInput) (*CompleteUploadOutput, error) {
 	logger := sharedlogging.FromContext(ctx)
 
 	// 1. Fetch the upload session
@@ -87,10 +107,17 @@ func (uc *CompleteUploadUseCase) Execute(ctx context.Context, in CompleteUploadI
 	if in.IdempotencyKey != "" {
 		idem, err := uc.cache.CheckAndStoreIdempotency(ctx, in.UserID, "complete:"+in.UploadID, nil, 24*time.Hour)
 		if err == nil && idem.Exists {
+			observability.RecordIdempotencyHit("completeUploadSession")
 			// Already completed — return success
 			media, _ := uc.mediaRepo.GetByID(ctx, session.MediaID)
 			if media != nil {
-				return &CompleteUploadOutput{MediaID: media.MediaID, Status: media.Status}, nil
+				return &CompleteUploadOutput{
+					MediaID:     media.MediaID,
+					Status:      media.Status,
+					ContentType: media.ContentType,
+					MediaType:   string(media.MediaType),
+					Size:        media.Size,
+				}, nil
 			}
 		}
 	}
@@ -188,5 +215,11 @@ func (uc *CompleteUploadUseCase) Execute(ctx context.Context, in CompleteUploadI
 		"size", media.Size,
 	)
 
-	return &CompleteUploadOutput{MediaID: media.MediaID, Status: domain.MediaStatusUploaded}, nil
+	return &CompleteUploadOutput{
+		MediaID:     media.MediaID,
+		Status:      domain.MediaStatusUploaded,
+		ContentType: media.ContentType,
+		MediaType:   string(media.MediaType),
+		Size:        media.Size,
+	}, nil
 }

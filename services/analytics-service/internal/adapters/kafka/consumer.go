@@ -10,6 +10,7 @@ import (
 
 	kafkago "github.com/segmentio/kafka-go"
 
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/automation"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/application/ingestion"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/domain"
 )
@@ -132,6 +133,16 @@ func (c *Consumer) processWithRetry(ctx context.Context, topic string, msg kafka
 
 func (c *Consumer) routeToDLQ(ctx context.Context, topic string, msg kafkago.Message, reason error) {
 	slog.Error("routing message to DLQ", "topic", topic, "offset", msg.Offset, "reason", reason.Error())
+
+	// Application level alert: rides the same Alertmanager route/delivery
+	// pipeline as the Prometheus rules (RabbitMQAppDLQGrowing style).
+	_, _ = automation.TriggerAlert(
+		"analytics-service",
+		"Analytics Kafka message routed to DLQ",
+		fmt.Sprintf("topic=%s partition=%d offset=%d reason=%s", topic, msg.Partition, msg.Offset, reason),
+		"CRITICAL",
+	)
+
 	if c.dlq == nil {
 		return
 	}

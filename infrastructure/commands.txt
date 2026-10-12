@@ -1,17 +1,16 @@
-#---commands---
-docker pull node:24.11.0
-
 #----Docker----
 taskkill /IM "Docker Desktop.exe" /F
 docker version
 & "C:\Program Files\Docker\Docker\Docker Desktop.exe"
 docker info
+docker pull gcr.io/k8s-minikube/kicbase:v0.0.48
 
 #----Minikube----
 minikube stop
 minikube delete
 minikube start --driver=docker --image-mirror-country=all --base-image=docker.io/kicbase/stable:v0.0.48
-minikube start --cpus 4 --memory 8192
+minikube start --driver=docker --cpus 6 --memory 15000
+# minikube start --driver=docker --cpus 4 --memory 7900   # lighter alternative
 
 minikube status
 minikube addons enable ingress
@@ -21,27 +20,78 @@ kubectl kustomize infrastructure/kubernetes/overlays/development
 & minikube -p minikube docker-env | Invoke-Expression
 
 kubectl get pods
+kubectl get svc
 kubectl get pvc
 kubectl get pv
+kubectl get events --sort-by=.metadata.creationTimestamp
 
-minikube tunnel
+minikube tunnel   # also auto-started by skaffold dev hook
 
 #----Skaffold----
 skaffold -f infrastructure\skaffold\skaffold.yaml delete
 skaffold -f infrastructure\skaffold\skaffold.yaml dev --cache-artifacts=true
-skaffold diagnose -f infrastructure\skaffold\skaffold.yaml # To check if safe
+skaffold -f infrastructure\skaffold\skaffold.yaml run --cache-artifacts=true   # one-shot deploy (no dev loop)
+skaffold -f infrastructure\skaffold\skaffold.yaml build                        # build images only
+skaffold -f infrastructure\skaffold\skaffold.yaml logs                         # tail app logs (dev mode)
+skaffold diagnose -f infrastructure\skaffold\skaffold.yaml   # To check if safe
 kubectl kustomize infrastructure\kubernetes\overlays\development # To check Kubernetes manifests are readable
 
-#-----Run All in dev-----
-docker-compose --env-file config\env\.env.development -f infrastructure\docker\compose.yml up --build -d
+# Note: all localhost port-forwards (services + Grafana/Prometheus/Alertmanager/Loki/Tempo/RabbitMQ/LocalStack)
+# are defined in infrastructure/skaffold/port-forwards.yaml and applied automatically by `skaffold dev`.
+# The manual `kubectl port-forward` commands below are only needed if you are NOT running skaffold.
+
+#----Kubectl debug----
+kubectl describe pod <pod-name>
+kubectl logs -f deployment/<deployment-name>
+kubectl logs <pod-name> -c <container-name>
+kubectl rollout restart deployment/<deployment-name>
+kubectl delete pod <pod-name>          # force pod recreation (Deployment recreates it)
+
+#----Stripe----
+stripe login
+stripe listen --forward-to localhost:4012/webhook/payment   # port 4012 is auto-forwarded by skaffold (port-forwards.yaml)
+
+#----Grafana----- (auto-forwarded by skaffold; manual fallback below)
+kubectl port-forward svc/grafana-srv 3000:3000
+#user: admin
+#password: admin
+http://localhost:3000/
+
+#----------Prometheus---------- (auto-forwarded by skaffold)
+Start-Process "http://localhost:9090"
+kubectl port-forward svc/prometheus-srv 9090:9090
+
+#----------Alertmanager---------- (auto-forwarded by skaffold)
+Start-Process "http://localhost:9093"
+kubectl port-forward svc/alertmanager-srv 9093:9093
+
+#----------Loki / Tempo---------- (auto-forwarded by skaffold)
+kubectl port-forward svc/loki-srv 3100:3100
+kubectl port-forward svc/tempo-srv 3200:3200
+
+#----------Discord relay health---------- (auto-forwarded by skaffold, local port 8081)
+curl http://localhost:8081/healthz
+
+#-----Run All in dev (Docker Compose)-----
+docker compose --env-file config\env\.env.development -f infrastructure\docker\compose.yml up --build -d
+docker compose --env-file config\env\.env.development -f infrastructure\docker\compose.yml ps
+docker compose --env-file config\env\.env.development -f infrastructure\docker\compose.yml logs -f <service-name>
+docker compose --env-file config\env\.env.development -f infrastructure\docker\compose.yml exec <service-name> sh
+docker compose --env-file config\env\.env.development -f infrastructure\docker\compose.yml down
 
 #-----Run Infra Separate-----
-docker-compose --env-file config\env\.env.development -f infrastructure\docker\compose.infra.yml up -d
+docker compose --env-file config\env\.env.development -f infrastructure\docker\compose.infra.yml up -d
+docker compose --env-file config\env\.env.development -f infrastructure\docker\compose.infra.yml down
 cd services/user-service
 npm run start:dev
 
-#----ToBase64String----
+#-----Run Integration (observability + selected services)-----
+docker compose --env-file config\env\.env.development -f infrastructure\docker\compose.integration.yml up -d
+docker compose --env-file config\env\.env.development -f infrastructure\docker\compose.integration.yml down
+
+#----ToBase64String / FromBase64String----
 powershell -Command "[Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('<YOUR_API_KEY>'))"
+powershell -Command "[System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('<BASE64_STRING>'))"
 
 #---nest---
 npx -y @nestjs/cli new name-service --package-manager npm --skip-git
@@ -51,7 +101,6 @@ npm i @apollo/subgraph @apollo/server @as-integrations/express5 @nestjs/bullmq @
 go mod init github.com/Omar-Sa6ry/realtime-delivery-microservices/services/delivery-service
 go get github.com/redis/go-redis/v9
 go get github.com/golang-jwt/jwt/v5
-go get github.com/redis/go-redis/v9
 go get github.com/spf13/viper # للـ Config
 go get github.com/99designs/gqlgen # للـ GraphQL
 go get github.com/nats-io/nats.go
@@ -67,7 +116,3 @@ go run github.com/99designs/gqlgen generate
 protoc --proto_path=. --go_out=services/delivery-service/internal/protos --go_opt=Mproto/user.proto=github.com/Omar-Sa6ry/realtime-delivery-microservices/services/delivery-service/internal/protos/user --go-grpc_out=services/delivery-service/internal/protos --go-grpc_opt=Mproto/user.proto=github.com/Omar-Sa6ry/realtime-delivery-microservices/services/delivery-service/internal/protos/user proto/user.proto
 protoc -I=proto --go_out=services/auction-service/internal/proto/auction --go_opt=paths=source_relative --go-grpc_out=services/auction-service/internal/proto/auction --go-grpc_opt=paths=source_relative proto/auction.proto
 protoc -I=proto --go_out=services/delivery-service/internal/protos/auction --go_opt=paths=source_relative --go-grpc_out=services/delivery-service/internal/protos/auction --go-grpc_opt=paths=source_relative proto/auction.proto
-
-#----Stripe----
-stripe login
-stripe listen --forward-to localhost:4012/webhook/payment #I Add For Skaffold File(Not Use This)

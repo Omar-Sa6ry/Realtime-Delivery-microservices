@@ -1,5 +1,3 @@
-
-
 services:
   # --- Infrastructure ---
   redis-srv:
@@ -16,7 +14,7 @@ services:
     command: ["-js", "-m", "8222"]
     ports:
       - "4222:4222"
-      - "8222:8222"
+      - "${NATS_MONITOR_PORT:-18222}:8222"
 
   user-db-srv:
     image: postgres:15
@@ -50,6 +48,22 @@ services:
     volumes:
       - notification_db_data:/var/lib/postgresql/data
 
+  driver-db-srv:
+    image: mongo:7
+    container_name: driver-db-srv
+    restart: unless-stopped
+    command: ["--bind_ip", "0.0.0.0", "--wiredTigerCacheSizeGB", "0.25"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - driver_db_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
   kafka-srv:
     image: apache/kafka:3.8.0
     container_name: kafka-srv
@@ -73,7 +87,7 @@ services:
       KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
 
   localstack-srv:
-    image: localstack/localstack:latest
+    image: localstack/localstack:3.8.0
     container_name: localstack-srv
     ports:
       - "4566:4566"
@@ -113,6 +127,26 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
+
+  clickhouse-srv:
+    image: clickhouse/clickhouse-server:24.12-alpine
+    container_name: clickhouse-srv
+    restart: unless-stopped
+    ports:
+      - "${CLICKHOUSE_HTTP_PORT:-18123}:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-analytics}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   # --- Microservices ---
   user-service:
@@ -181,6 +215,8 @@ services:
       PORT_MEDIA_WS: "4003"
       PORT_MEDIA_METRICS: "9102"
       PORT_MEDIA_GRPC: "50052"
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_SERVICE_NAME: "media-service"
       AWS_REGION: "us-east-1"
       # Use host.docker.internal so S3 presigned URLs are reachable from the
       # browser (LocalStack is published on the host at 4566).
@@ -247,6 +283,7 @@ services:
     environment:
       PORT_NOTIFICATION: ${PORT_NOTIFICATION:-4004}
       PORT_GRPC: ${PORT_GRPC:-50053}
+      SERVICE_NAME: notification-service
       DB_HOST: "notification-db-srv"
       DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${NOTIFICATION_DB_NAME:-delivery_notification_db}
@@ -370,6 +407,7 @@ services:
     environment:
       - discovery.type=single-node
       - plugins.security.disabled=true
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Admin_12345678
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
       - "9200:9200"
@@ -401,6 +439,8 @@ services:
       KAFKA_BROKERS: "kafka-srv:9092"
       NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
       RABBITMQ_URL: "amqp://${RABBITMQ_USER:-delivery}:${RABBITMQ_PASSWORD:-delivery-dev-password}@rabbitmq-srv:5672/${RABBITMQ_VHOST:-/}"
+      OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
+      OTEL_SAMPLING_RATE: ${OTEL_SAMPLING_RATE:-1.0}
     depends_on:
       redis-srv:
         condition: service_started
@@ -480,7 +520,6 @@ services:
     ports:
       - "4003:4003"
       - "50054:50054"
-      - "9104:9104"
     networks:
       default:
         aliases:
@@ -489,7 +528,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT_DELIVERY: ${PORT_DELIVERY:-4003}
       PORT_DELIVERY_GRPC: ${PORT_DELIVERY_GRPC:-50054}
-      PORT_METRICS: ${PORT_METRICS:-9104}
+      SERVICE_NAME: delivery-service
       DB_HOST: delivery-db-srv
       DB_PORT: 5432
       DB_USERNAME: ${POSTGRES_USER:-postgres}
@@ -555,6 +594,7 @@ services:
       LOCATION_STALE_SECONDS: "30"
       LOCK_TTL_MS: "5000"
       MAX_DISPATCH_ATTEMPTS: "5"
+      OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
       # LocalStack (for S3/DynamoDB - used by media-service pattern)
       AWS_DEFAULT_REGION: "us-east-1"
       AWS_ENDPOINT: "http://localstack-srv:4566"
@@ -562,6 +602,8 @@ services:
       AWS_SECRET_ACCESS_KEY: "test"
       RABBITMQ_URL: "amqp://${RABBITMQ_USER:-delivery}:${RABBITMQ_PASSWORD:-delivery-dev-password}@rabbitmq-srv:5672/${RABBITMQ_VHOST:-/}"
     depends_on:
+      driver-db-srv:
+        condition: service_healthy
       delivery-db-srv:
         condition: service_started
       redis-srv:
@@ -646,13 +688,71 @@ services:
       - ../../services/payment-service/internal:/workspace/services/payment-service/internal
       - ../../packages/go:/workspace/packages/go
 
+  # --- Analytics Service ---
+  analytics-service:
+    build:
+      context: ../..
+      dockerfile: services/analytics-service/Dockerfile
+    container_name: analytics-service
+    restart: unless-stopped
+    env_file:
+      - ../../config/env/.env.${APP_ENV:-development}
+    # Host port 4009 is already published by media-service, so the analytics
+    # GraphQL port is exposed on 4019 outside the Docker network.
+    ports:
+      - "4019:4009"
+      - "50057:50057"
+      - "9107:9107"
+    networks:
+      default:
+        aliases:
+          - analytics-srv
+    environment:
+      PORT_GRAPHQL: "4009"
+      PORT_GRPC: "50057"
+      PORT_METRICS: "9107"
+      CLICKHOUSE_HOST: "clickhouse-srv"
+      CLICKHOUSE_PORT: "9000"
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-analytics}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+      REDIS_HOST: "redis-srv"
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka-srv:9092}
+      KAFKA_GROUP_ID: "analytics-service"
+      KAFKA_CLIENT_ID: "analytics-service"
+      NATS_URL: ${NATS_URL:-nats://nats-srv:4222}
+      SNOWFLAKE_WORKER_ID: "5"
+      BATCH_SIZE: "500"
+      BATCH_FLUSH_MS: "500"
+      MAX_RETRY_ATTEMPTS: "5"
+      DLQ_TOPIC: "analytics.dlq"
+      CACHE_TTL_SECONDS: "300"
+      OTEL_ENDPOINT: ${OTEL_ENDPOINT:-}
+      NODE_ENV: ${NODE_ENV:-development}
+    depends_on:
+      clickhouse-srv:
+        condition: service_healthy
+      redis-srv:
+        condition: service_started
+      nats-srv:
+        condition: service_started
+      kafka-srv:
+        condition: service_started
+    volumes:
+      - ../../services/analytics-service/internal:/workspace/services/analytics-service/internal
+      - ../../packages/go:/workspace/packages/go
+
 volumes:
   delivery_db_data:
   user_db_data:
   notification_db_data:
+  driver_db_data:
   opensearch_data:
   payment_db_data:
   rabbitmq_data:
+  clickhouse_data:
+
 
 
 

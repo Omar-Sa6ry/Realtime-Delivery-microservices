@@ -1,6 +1,9 @@
 apiVersion: skaffold/v4beta3
 kind: Config
 
+requires:
+  - path: port-forwards.yaml
+
 manifests:
   kustomize:
     paths:
@@ -11,9 +14,27 @@ deploy:
   statusCheckDeadlineSeconds: 3600
   kubectl:
     hooks:
+      before:
+        - host:
+            command:
+              - "powershell"
+              - "-NoProfile"
+              - "-Command"
+              - "kubectl delete validatingwebhookconfigurations ingress-nginx-admission --ignore-not-found=true"
+
       after:
         - host:
-            command: ["powershell", "-Command", "Start-Process minikube -ArgumentList 'tunnel' -WindowStyle Minimized"]
+            command:
+              - "powershell"
+              - "-NoProfile"
+              - "-Command"
+              - "Start-Process stripe -ArgumentList 'listen --forward-to localhost:4012/webhook/payment' -WindowStyle Minimized"
+        - host:
+            command:
+              - "powershell"
+              - "-NoProfile"
+              - "-Command"
+              - "Start-Process minikube -ArgumentList 'tunnel' -WindowStyle Minimized"
 
 build:
   local:
@@ -103,6 +124,11 @@ build:
           - src: "protos/**/*.proto"
             dest: /usr/src/app/protos
 
+    - image: delivery/alertmanager-discord
+      context: infrastructure/observability/discord-relay
+      docker:
+        dockerfile: Dockerfile
+
 profiles:
   - name: test
     manifests:
@@ -114,20 +140,3 @@ profiles:
       kustomize:
         paths:
           - infrastructure/kubernetes/overlays/production
-
-portForward:
-
-  - resourceType: service
-    resourceName: api-gateway-srv
-    port: 4000
-    localPort: 4000
-
-  - resourceType: service
-    resourceName: payment-srv
-    port: 4012
-    localPort: 4012
-
-  - resourceType: service
-    resourceName: localstack-srv
-    port: 4566
-    localPort: 4566

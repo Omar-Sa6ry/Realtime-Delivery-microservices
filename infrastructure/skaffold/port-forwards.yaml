@@ -1,0 +1,137 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+
+metadata:
+  name: port-forwards
+  
+portForward:
+
+  # --- API Gateway (GraphQL + dedicated liveness server) ---
+  - resourceType: service
+    resourceName: api-gateway-srv
+    port: 4000
+    localPort: 4000
+  - resourceType: service
+    resourceName: api-gateway-srv
+    port: 4099
+    localPort: 4099
+
+  # --- User Service ---
+  - resourceType: service
+    resourceName: user-srv
+    port: 4001
+    localPort: 4001
+
+  # --- Payment Service (main + metrics + Stripe webhook) ---
+  - resourceType: service
+    resourceName: payment-srv
+    port: 4002
+    localPort: 4002
+  - resourceType: service
+    resourceName: payment-srv
+    port: 9106
+    localPort: 9106
+  - resourceType: service
+    resourceName: payment-srv
+    port: 4012
+    localPort: 4012
+
+  # --- Delivery Service ---
+  - resourceType: service
+    resourceName: delivery-srv
+    port: 4003
+    localPort: 4003
+
+  # --- Notification Service ---
+  - resourceType: service
+    resourceName: notification-srv
+    port: 4004
+    localPort: 4004
+
+  # --- Media Service (GraphQL + metrics) ---
+  - resourceType: service
+    resourceName: media-srv
+    port: 4005
+    localPort: 4005
+  - resourceType: service
+    resourceName: media-srv
+    port: 9102
+    localPort: 9102
+
+  # --- Realtime Service ---
+  - resourceType: service
+    resourceName: realtime-srv
+    port: 4006
+    localPort: 4006
+
+  # --- Search Service (GraphQL + metrics) ---
+  - resourceType: service
+    resourceName: search-srv
+    port: 4007
+    localPort: 4007
+  - resourceType: service
+    resourceName: search-srv
+    port: 9103
+    localPort: 9103
+
+  # --- Driver Service (GraphQL + metrics) ---
+  - resourceType: service
+    resourceName: driver-srv
+    port: 4008
+    localPort: 4008
+  - resourceType: service
+    resourceName: driver-srv
+    port: 9105
+    localPort: 9105
+
+  # --- Analytics Service (GraphQL + metrics) ---
+  - resourceType: service
+    resourceName: analytics-srv
+    port: 4009
+    localPort: 4009
+  - resourceType: service
+    resourceName: analytics-srv
+    port: 9107
+    localPort: 9107
+
+  # --- Observability stack ---
+  - resourceType: service
+    resourceName: prometheus-srv
+    port: 9090
+    localPort: 9090
+  - resourceType: service
+    resourceName: alertmanager-srv
+    port: 9093
+    localPort: 9093
+  - resourceType: service
+    resourceName: alertmanager-discord-srv
+    port: 8080
+    localPort: 8081
+  - resourceType: service
+    resourceName: grafana-srv
+    port: 3000
+    localPort: 3000
+  - resourceType: service
+    resourceName: loki-srv
+    port: 3100
+    localPort: 3100
+  - resourceType: service
+    resourceName: tempo-srv
+    port: 3200
+    localPort: 3200
+
+  # --- RabbitMQ (management + prometheus metrics) ---
+  - resourceType: service
+    resourceName: rabbitmq-srv
+    port: 15672
+    localPort: 15672
+  - resourceType: service
+    resourceName: rabbitmq-srv
+    port: 15692
+    localPort: 15692
+
+  # --- LocalStack (S3/DynamoDB) ---
+  - resourceType: service
+    resourceName: localstack-srv
+    port: 4566
+    localPort: 4566

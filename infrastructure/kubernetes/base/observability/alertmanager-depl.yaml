@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager-depl
+  namespace: default
+  labels:
+    app: alertmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      securityContext:
+        fsGroup: 65534
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.27.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - /usr/local/bin/docker-entrypoint.sh
+          ports:
+            - name: http
+              containerPort: 9093
+          envFrom:
+            - configMapRef:
+                name: observability-env
+          volumeMounts:
+            - name: alertmanager-config
+              mountPath: /etc/alertmanager/alertmanager.yml.tmpl
+              subPath: alertmanager.yml.tmpl
+            - name: alertmanager-config
+              mountPath: /usr/local/bin/docker-entrypoint.sh
+              subPath: docker-entrypoint.sh
+            - name: alertmanager-data
+              mountPath: /alertmanager
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            failureThreshold: 120
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: http
+            initialDelaySeconds: 120
+            periodSeconds: 15
+            failureThreshold: 120
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "10Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+      volumes:
+        - name: alertmanager-config
+          configMap:
+            name: alertmanager-config
+            defaultMode: 0755
+            items:
+              - key: alertmanager.yml.tmpl
+                path: alertmanager.yml.tmpl
+              - key: docker-entrypoint.sh
+                path: docker-entrypoint.sh
+                mode: 0755
+        - name: alertmanager-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager-srv
+  namespace: default
+  labels:
+    app: alertmanager
+spec:
+  type: ClusterIP
+  selector:
+    app: alertmanager
+  ports:
+    - name: http
+      port: 9093
+      targetPort: 9093
+      protocol: TCP

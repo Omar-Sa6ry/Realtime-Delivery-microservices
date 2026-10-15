@@ -15,16 +15,32 @@ processors:
     send_batch_size: 512
 
 exporters:
+  # Traces are stored in Tempo so they can be explored from Grafana.
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  # OTLP metrics are forwarded to Prometheus via remote_write so they appear
+  # in the same datasource as scrape-based metrics and trigger alert rules.
+  prometheusremotewrite:
+    endpoint: "http://prometheus:9090/api/v1/write"
+    tls:
+      insecure_skip_verify: true
   debug:
     verbosity: basic
 
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
 service:
+  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [debug]
+      exporters: [otlp/tempo]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [debug]
+      exporters: [prometheusremotewrite, debug]

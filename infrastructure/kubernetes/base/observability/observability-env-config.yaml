@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: observability-env
+  namespace: default
+data:
+  # Alertmanager delivers its webhook JSON schema here. This points at the
+  # alertmanager-discord relay, which reformats the payload into a Discord
+  # embed and forwards it to DISCORD_WEBHOOK_URL (stored in
+  # observability-secrets). Leave empty to keep alerts in the UI only.
+  ALERT_WEBHOOK_URL: "http://alertmanager-discord-srv:8080/webhook"

@@ -97,8 +97,8 @@
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
           "editorMode": "code",
-          "expr": "sum by (service, domain) (rate(rabbitmq_messages_dlq_total[5m]))",
-          "legendFormat": "{{service}} / {{domain}}",
+          "expr": "sum by (service, queue) (rate(rabbitmq_messages_dlq_total[5m]))",
+          "legendFormat": "{{service}} / {{queue}}",
           "refId": "A"
         }
       ],

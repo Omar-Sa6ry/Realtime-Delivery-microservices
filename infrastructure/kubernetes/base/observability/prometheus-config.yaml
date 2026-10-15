@@ -1,0 +1,207 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: default
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        env: development
+
+    rule_files:
+      - /etc/prometheus/alerts.yml
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ["alertmanager-srv:9093"]
+
+    scrape_configs:
+      - job_name: prometheus
+        static_configs:
+          - targets: ["localhost:9090"]
+
+      - job_name: alertmanager
+        static_configs:
+          - targets: ["alertmanager-srv:9093"]
+
+      - job_name: rabbitmq
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["rabbitmq-srv:15692"]
+
+      # Every application pod carries prometheus.io/scrape|port|path annotations,
+      # so pods are discovered dynamically instead of hardcoding service names.
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: replace
+            target_label: app
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+  alerts.yml: |
+    groups:
+      - name: platform
+        rules:
+          - alert: ScrapeTargetDown
+            expr: up == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Scrape target {{ $labels.job }} ({{ $labels.instance }}) is down"
+              description: "Prometheus cannot reach {{ $labels.instance }}. Verify the container is running and the metrics port is correct."
+
+          - alert: HighRequestErrorRate
+            expr: |
+              (
+                sum by (job) (rate(app_errors_total[5m]))
+                /
+                sum by (job) (rate(app_requests_total[5m]))
+              ) > 0.05
+              and
+              sum by (job) (rate(app_requests_total[5m])) > 0.2
+            for: 10m
+            labels:
+              severity: critical
+            annotations:
+              summary: "{{ $labels.job }} error rate is above 5%"
+              description: "More than one in twenty requests to {{ $labels.job }} is failing."
+
+          - alert: HighRequestLatencyP95
+            expr: |
+              histogram_quantile(
+                0.95,
+                sum by (job, le) (rate(app_request_duration_seconds_bucket[5m]))
+              ) > 2
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "{{ $labels.job }} p95 latency above 2s"
+              description: "95% of requests to {{ $labels.job }} take longer than 2 seconds."
+
+      - name: media-service
+        rules:
+          - alert: MediaServiceUploadFailures
+            expr: increase(media_upload_failed_total[10m]) > 10
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Media upload failures are elevated"
+              description: "{{ $value }} uploads failed in the last 10 minutes."
+
+          - alert: MediaServiceDLQBacklog
+            expr: increase(media_dlq_total[10m]) > 0
+            for: 10m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Messages are entering a media DLQ"
+              description: "Media messages are being dead-lettered instead of processed."
+
+          - alert: MediaServiceS3Errors
+            expr: increase(media_s3_errors_total[10m]) > 5
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "S3 errors are elevated"
+              description: "{{ $value }} S3 operations failed in the last 10 minutes."
+
+          - alert: MediaServiceProcessingP99
+            expr: histogram_quantile(0.99, sum by (job_type, le) (rate(media_processing_duration_seconds_bucket[10m]))) > 30
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Media processing p99 exceeds 30 seconds"
+              description: "The slowest 1% of media jobs ({{ $labels.job_type }}) take more than 30 seconds."
+
+          - alert: MediaServiceKafkaLag
+            expr: media_kafka_consumer_lag > 1000
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Kafka consumer lag is high"
+              description: "Consumer group {{ $labels.group }} on topic {{ $labels.topic }} is 1000+ messages behind."
+
+      - name: realtime-service
+        rules:
+          - alert: RealtimeBackpressureSaturation
+            expr: increase(realtime_backpressure_saturated_total[10m]) > 0
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Realtime sockets closed due to backpressure"
+              description: "Slow consumers are being disconnected from realtime-service."
+
+      - name: rabbitmq
+        rules:
+          - alert: RabbitMQNodeDown
+            expr: up{job="rabbitmq"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "RabbitMQ node is down"
+              description: "The rabbitmq_prometheus endpoint on :15692 is unreachable."
+
+          - alert: RabbitMQUnackedGrowing
+            expr: rabbitmq_queue_messages_unacked > 1000
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "RabbitMQ unacked messages are high"
+              description: "A consumer may be stuck: {{ $value }} messages delivered but not acknowledged."
+
+          - alert: RabbitMQDLQGrowing
+            expr: rabbitmq_queue_messages{queue="delivery.dlq.queue"} > 0
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Messages are accumulating in delivery.dlq.queue"
+              description: "{{ $value }} messages are waiting in the dead letter queue."
+
+      - name: messaging
+        rules:
+          - alert: RabbitMQAppDLQGrowing
+            expr: increase(rabbitmq_messages_dlq_total[10m]) > 0
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Application services are dead-lettering RabbitMQ messages"
+              description: "{{ $labels.service }} routed messages for queue {{ $labels.queue }} to a DLQ."
+
+          - alert: RabbitMQAppFailures
+            expr: sum by (service) (rate(rabbitmq_messages_failed_total[5m])) > 0.1
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "{{ $labels.service }} RabbitMQ publish/consume failures"
+              description: "{{ $labels.service }} is failing more than 6 RabbitMQ operations per minute."

@@ -64,6 +64,9 @@ type Connection struct {
 	Cancel   context.CancelFunc
 	RateLim  *rate.Limiter
 	LastPing time.Time
+	// closeOnce guards the teardown: both the read and the write pump defer
+	// closeConnection, so the second caller must not close Send again.
+	closeOnce sync.Once
 }
 
 type Hub struct {
@@ -259,11 +262,13 @@ func (h *Hub) unregisterConnection(c *Connection) {
 }
 
 func (h *Hub) closeConnection(c *Connection, reason string) {
-	h.unregisterConnection(c)
-	close(c.Send)
-	c.Cancel()
-	c.Conn.Close()
-	h.logger.Info("WebSocket closed", "userID", c.UserID, "reason", reason)
+	c.closeOnce.Do(func() {
+		h.unregisterConnection(c)
+		close(c.Send)
+		c.Cancel()
+		c.Conn.Close()
+		h.logger.Info("WebSocket closed", "userID", c.UserID, "reason", reason)
+	})
 }
 
 func (h *Hub) cleanupStaleConnections(ctx context.Context) {

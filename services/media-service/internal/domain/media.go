@@ -2,7 +2,6 @@ package domain
 
 import "time"
 
-// MediaStatus represents the lifecycle state of a media item.
 type MediaStatus string
 
 const (
@@ -19,8 +18,6 @@ const (
 	MediaStatusAborted     MediaStatus = "ABORTED"
 )
 
-// allowedTransitions defines the valid state machine transitions.
-// Any transition not listed here is forbidden and must return ErrInvalidStateTransition.
 var allowedTransitions = map[MediaStatus][]MediaStatus{
 	MediaStatusPending:     {MediaStatusUploading, MediaStatusFailed, MediaStatusAborted},
 	MediaStatusUploading:   {MediaStatusUploaded, MediaStatusAborted, MediaStatusFailed},
@@ -36,7 +33,6 @@ var allowedTransitions = map[MediaStatus][]MediaStatus{
 	MediaStatusAborted: {},
 }
 
-// MediaType categorises the media for processing decisions.
 type MediaType string
 
 const (
@@ -46,8 +42,6 @@ const (
 	MediaTypeOther    MediaType = "OTHER"
 )
 
-// Media is the central aggregate for a media item.
-// It is the source of truth for the lifecycle of a file in the system.
 type Media struct {
 	MediaID     string      `json:"mediaId"`
 	OwnerID     string      `json:"ownerId"`
@@ -63,7 +57,6 @@ type Media struct {
 	UpdatedAt   time.Time   `json:"updatedAt"`
 }
 
-// CanTransitionTo validates whether a transition from the current state to next is allowed.
 func (m *Media) CanTransitionTo(next MediaStatus) bool {
 	allowed, ok := allowedTransitions[m.Status]
 	if !ok {

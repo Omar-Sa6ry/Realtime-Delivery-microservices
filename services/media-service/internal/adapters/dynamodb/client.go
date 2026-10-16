@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-// If endpoint is non-empty it overrides the AWS endpoint (for DynamoDB Local / LocalStack).
 func NewClient(ctx context.Context, region, endpoint, accessKeyID, secretKey string) (*dynamodb.Client, error) {
 	optFns := []func(*awsconfig.LoadOptions) error{
 		awsconfig.WithRegion(region),
@@ -38,8 +37,6 @@ func NewClient(ctx context.Context, region, endpoint, accessKeyID, secretKey str
 	return dynamodb.NewFromConfig(cfg, clientOpts...), nil
 }
 
-// EnsureTableExists creates the DynamoDB table and GSIs if they do not already exist.
-// This is idempotent — calling it multiple times is safe.
 func EnsureTableExists(ctx context.Context, client *dynamodb.Client, tableName string) error {
 	_, err := client.DescribeTable(ctx, &dynamodb.DescribeTableInput{
 		TableName: aws.String(tableName),
@@ -105,8 +102,6 @@ func EnsureTableExists(ctx context.Context, client *dynamodb.Client, tableName s
 	return nil
 }
 
-// EnsureTTL enables DynamoDB's native TTL reaper for temporary upload sessions.
-// UploadRepository writes the TTL attribute as a Unix timestamp.
 func EnsureTTL(ctx context.Context, client *dynamodb.Client, tableName, attributeName string) error {
 	if attributeName == "" {
 		return fmt.Errorf("DynamoDB TTL attribute name is empty")

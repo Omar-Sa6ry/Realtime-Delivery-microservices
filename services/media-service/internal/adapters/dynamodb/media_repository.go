@@ -12,7 +12,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
 )
 
-// mediaItem is the DynamoDB Single-Table record for a Media aggregate.
 type mediaItem struct {
 	PK          string `dynamodbav:"PK"`
 	SK          string `dynamodbav:"SK"`
@@ -34,13 +33,11 @@ type mediaItem struct {
 	UpdatedAt   string `dynamodbav:"UpdatedAt"`
 }
 
-// MediaRepository implements ports.MediaRepository using DynamoDB.
 type MediaRepository struct {
 	client    *dynamodb.Client
 	tableName string
 }
 
-// NewMediaRepository creates a new MediaRepository.
 func NewMediaRepository(client *dynamodb.Client, tableName string) *MediaRepository {
 	return &MediaRepository{client: client, tableName: tableName}
 }
@@ -110,9 +107,6 @@ func (r *MediaRepository) GetByID(ctx context.Context, mediaID string) (*domain.
 	return itemToMedia(&item)
 }
 
-// UpdateStatus performs a conditional state transition.
-// Only succeeds if the current DynamoDB status equals expectedCurrent.
-// This is the core concurrency-safety mechanism — prevents race conditions between workers.
 func (r *MediaRepository) UpdateStatus(ctx context.Context, mediaID string, expectedCurrent, next domain.MediaStatus) error {
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
@@ -139,8 +133,6 @@ func (r *MediaRepository) UpdateStatus(ctx context.Context, mediaID string, expe
 	return nil
 }
 
-// ListByOwner uses GSI1 to query all media items for a given owner.
-// cursor is the base64-encoded last evaluated key from the previous page.
 func (r *MediaRepository) ListByOwner(ctx context.Context, ownerID string, limit int, cursor string) ([]*domain.Media, string, error) {
 	input := &dynamodb.QueryInput{
 		TableName:              aws.String(r.tableName),
@@ -187,12 +179,10 @@ func (r *MediaRepository) ListByOwner(ctx context.Context, ownerID string, limit
 	return items, nextCursor, nil
 }
 
-// Delete transitions a media item to the DELETED state.
 func (r *MediaRepository) Delete(ctx context.Context, mediaID string) error {
 	return r.UpdateStatus(ctx, mediaID, domain.MediaStatusDeleting, domain.MediaStatusDeleted)
 }
 
-// itemToMedia converts a DynamoDB item to a domain.Media struct.
 func itemToMedia(item *mediaItem) (*domain.Media, error) {
 	createdAt, _ := time.Parse(time.RFC3339Nano, item.CreatedAt)
 	updatedAt, _ := time.Parse(time.RFC3339Nano, item.UpdatedAt)

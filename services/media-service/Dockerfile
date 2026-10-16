@@ -8,12 +8,9 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /workspace
 
-# Copy dependency manifests first (monorepo + local replace target) so that
-# `go mod download` can run before the full source copy for better layer caching.
 COPY packages/go/go.mod packages/go/go.sum ./packages/go/
 COPY services/media-service/go.mod services/media-service/go.sum ./services/media-service/
 
-# Resolve dependencies (module cache is persisted across builds via BuildKit)
 WORKDIR /workspace/services/media-service
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download

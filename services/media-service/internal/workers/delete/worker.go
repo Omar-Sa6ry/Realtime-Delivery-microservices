@@ -13,15 +13,12 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// deletePayload is the expected payload structure from the delete event.
 type deletePayload struct {
 	MediaID   string `json:"mediaId"`
 	UserID    string `json:"userId"`
 	ObjectKey string `json:"objectKey"`
 }
 
-// Worker processes delete events from Kafka.
-// It deletes all S3 objects (original + all versions) and updates DynamoDB.
 type Worker struct {
 	mediaRepo   ports.MediaRepository
 	versionRepo ports.VersionRepository
@@ -29,8 +26,6 @@ type Worker struct {
 	storage     ports.ObjectStorage
 	publisher   ports.EventPublisher
 }
-
-// NewWorker creates a new delete worker.
 func NewWorker(
 	mediaRepo ports.MediaRepository,
 	versionRepo ports.VersionRepository,
@@ -47,7 +42,6 @@ func NewWorker(
 	}
 }
 
-// Handle processes a single Kafka message for media deletion.
 func (w *Worker) Handle(ctx context.Context, msg kafkago.Message) error {
 	var env kafkaadapter.EventEnvelope
 	if err := json.Unmarshal(msg.Value, &env); err != nil {
@@ -62,16 +56,9 @@ func (w *Worker) Handle(ctx context.Context, msg kafkago.Message) error {
 	return w.processDelete(ctx, payload, env.TraceID)
 }
 
-// processDelete performs the actual deletion:
-// 1. List all S3 objects under the media prefix
-// 2. Batch delete from S3
-// 3. Update DynamoDB status to DELETED
-// 4. Release quota
-// 5. Publish media.deleted event
 func (w *Worker) processDelete(ctx context.Context, payload deletePayload, traceID string) error {
 	slog.Info("Delete worker: processing", "mediaId", payload.MediaID, "userId", payload.UserID)
 
-	// Fetch media to get size before deletion (needed for quota)
 	media, err := w.mediaRepo.GetByID(ctx, payload.MediaID)
 	if err != nil {
 		return fmt.Errorf("fetch media for deletion: %w", err)

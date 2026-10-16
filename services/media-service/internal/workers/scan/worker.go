@@ -1,5 +1,3 @@
-// Package scan implements the malware scanning worker.
-// It consumes media.upload.completed events and scans with ClamAV daemon.
 package scan
 
 import (
@@ -21,7 +19,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// uploadCompletedPayload mirrors the media.upload.completed event payload.
 type uploadCompletedPayload struct {
 	MediaID     string `json:"mediaId"`
 	UserID      string `json:"userId"`
@@ -32,7 +29,6 @@ type uploadCompletedPayload struct {
 	MediaType   string `json:"mediaType"`
 }
 
-// Worker scans uploaded objects for malware before allowing processing.
 type Worker struct {
 	mediaRepo ports.MediaRepository
 	storage   ports.ObjectStorage
@@ -40,7 +36,6 @@ type Worker struct {
 	cfg       *config.Config
 }
 
-// NewWorker creates a new scan worker.
 func NewWorker(
 	mediaRepo ports.MediaRepository,
 	storage ports.ObjectStorage,
@@ -55,7 +50,6 @@ func NewWorker(
 	}
 }
 
-// Handle processes a single Kafka message from the media.upload.completed topic.
 func (w *Worker) Handle(ctx context.Context, msg kafkago.Message) error {
 	var env kafkaadapter.EventEnvelope
 	if err := json.Unmarshal(msg.Value, &env); err != nil {
@@ -71,12 +65,9 @@ func (w *Worker) Handle(ctx context.Context, msg kafkago.Message) error {
 	return w.scan(ctx, payload, env.TraceID)
 }
 
-// scan transitions the media to SCANNING, runs the malware check, then transitions
-// to PROCESSING (clean) or QUARANTINED (infected).
 func (w *Worker) scan(ctx context.Context, payload uploadCompletedPayload, traceID string) error {
 	slog.Info("Scan worker: starting", "mediaId", payload.MediaID)
 
-	// UPLOADED → SCANNING
 	if err := w.mediaRepo.UpdateStatus(ctx, payload.MediaID, domain.MediaStatusUploaded, domain.MediaStatusScanning); err != nil {
 		// If we can't transition, another worker already picked this up — skip.
 		slog.Warn("Scan worker: failed to transition to SCANNING (already taken?)", "mediaId", payload.MediaID, "error", err)
@@ -147,8 +138,6 @@ func (w *Worker) scan(ctx context.Context, payload uploadCompletedPayload, trace
 	return nil
 }
 
-// scanWithClamAV connects to the ClamAV daemon (clamd) via TCP and scans the S3 object.
-// Uses the CLAMAV_HOST and CLAMAV_PORT from config (default: clamav-srv:3310).
 func (w *Worker) scanWithClamAV(ctx context.Context, objectKey string) (infected bool, threat string, err error) {
 	host := w.cfg.ClamAVHost
 	port := w.cfg.ClamAVPort

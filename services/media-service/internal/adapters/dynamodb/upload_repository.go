@@ -32,18 +32,14 @@ type uploadItem struct {
 	ExpiresAt string `dynamodbav:"ExpiresAt"`
 	CreatedAt string `dynamodbav:"CreatedAt"`
 	UpdatedAt string `dynamodbav:"UpdatedAt"`
-	// DynamoDB TTL — set to ExpiresAt unix timestamp for auto-cleanup.
-	// This is the Redis-TTL-equivalent the user requested: no cron needed.
 	TTL int64 `dynamodbav:"TTL"`
 }
 
-// UploadRepository implements ports.UploadRepository using DynamoDB.
 type UploadRepository struct {
 	client    *dynamodb.Client
 	tableName string
 }
 
-// NewUploadRepository creates a new UploadRepository.
 func NewUploadRepository(client *dynamodb.Client, tableName string) *UploadRepository {
 	return &UploadRepository{client: client, tableName: tableName}
 }

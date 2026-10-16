@@ -12,7 +12,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
 )
 
-// outboxItem is the DynamoDB Single-Table record for an OutboxEvent.
 type outboxItem struct {
 	PK          string `dynamodbav:"PK"`
 	SK          string `dynamodbav:"SK"`
@@ -29,13 +28,11 @@ type outboxItem struct {
 	TTL         int64  `dynamodbav:"TTL"`
 }
 
-// OutboxRepository implements ports.OutboxRepository using DynamoDB.
 type OutboxRepository struct {
 	client    *dynamodb.Client
 	tableName string
 }
 
-// NewOutboxRepository creates a new OutboxRepository.
 func NewOutboxRepository(client *dynamodb.Client, tableName string) *OutboxRepository {
 	return &OutboxRepository{client: client, tableName: tableName}
 }
@@ -43,10 +40,6 @@ func NewOutboxRepository(client *dynamodb.Client, tableName string) *OutboxRepos
 func outboxPK(eventID string) string { return "OUTBOX#" + eventID }
 func outboxSK() string               { return "EVENT" }
 
-// Create inserts an outbox event into DynamoDB.
-// In production, this is called inside a DynamoDB TransactWriteItems alongside the media state change.
-// For simplicity, a regular PutItem is used here; callers that need transactional writes should
-// use the raw DynamoDB client and build the TransactWriteItems themselves.
 func (r *OutboxRepository) Create(ctx context.Context, event *domain.OutboxEvent) error {
 	now := event.CreatedAt.UTC().Format(time.RFC3339Nano)
 	item := outboxItem{
@@ -80,7 +73,6 @@ func (r *OutboxRepository) Create(ctx context.Context, event *domain.OutboxEvent
 	return nil
 }
 
-// ListPending queries GSI3 for PENDING outbox events ordered by creation time.
 func (r *OutboxRepository) ListPending(ctx context.Context, limit int) ([]*domain.OutboxEvent, error) {
 	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:              aws.String(r.tableName),
@@ -118,7 +110,6 @@ func (r *OutboxRepository) ListPending(ctx context.Context, limit int) ([]*domai
 	return events, nil
 }
 
-// MarkPublished atomically transitions an outbox event from PENDING to PUBLISHED.
 func (r *OutboxRepository) MarkPublished(ctx context.Context, eventID string) error {
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
@@ -143,7 +134,6 @@ func (r *OutboxRepository) MarkPublished(ctx context.Context, eventID string) er
 	return nil
 }
 
-// MarkFailed transitions an outbox event to FAILED after exhausting retries.
 func (r *OutboxRepository) MarkFailed(ctx context.Context, eventID, reason string) error {
 	_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName: aws.String(r.tableName),

@@ -19,7 +19,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// extractedMeta groups the extracted values.
 type extractedMeta struct {
 	Width      int32
 	Height     int32
@@ -27,7 +26,6 @@ type extractedMeta struct {
 	Format     string
 }
 
-// ffprobeOutput is a subset of ffprobe's JSON output.
 type ffprobeOutput struct {
 	Streams []struct {
 		CodecType string `json:"codec_type"`
@@ -41,16 +39,11 @@ type ffprobeOutput struct {
 	} `json:"format"`
 }
 
-// MetadataExtractor defines the strategy interface for extracting metadata from different media types.
 type MetadataExtractor interface {
-	// MediaType returns the media type this extractor handles.
 	MediaType() domain.MediaType
-
-	// Extract extracts metadata from the object in storage.
 	Extract(ctx context.Context, objectKey string) (extractedMeta, error)
 }
 
-// extractorRegistry holds all registered metadata extractors.
 type extractorRegistry struct {
 	extractors map[domain.MediaType]MetadataExtractor
 }
@@ -70,7 +63,6 @@ func (r *extractorRegistry) get(mediaType domain.MediaType) (MetadataExtractor, 
 	return e, ok
 }
 
-// ImageExtractor extracts metadata from image files using Go stdlib.
 type ImageExtractor struct {
 	storage ports.ObjectStorage
 }
@@ -102,7 +94,6 @@ func (e *ImageExtractor) Extract(ctx context.Context, objectKey string) (extract
 	}, nil
 }
 
-// VideoExtractor extracts metadata from video files using ffprobe.
 type VideoExtractor struct {
 	storage ports.ObjectStorage
 }
@@ -116,8 +107,6 @@ func (e *VideoExtractor) MediaType() domain.MediaType {
 }
 
 func (e *VideoExtractor) Extract(ctx context.Context, objectKey string) (extractedMeta, error) {
-	// Derive a download URL — for local/test use the object key directly.
-	// Production: replace with a presigned GET URL using e.storage.GeneratePresignedGET().
 	args := []string{
 		"-v", "quiet",
 		"-print_format", "json",
@@ -166,7 +155,6 @@ func (e *VideoExtractor) Extract(ctx context.Context, objectKey string) (extract
 	}, nil
 }
 
-// BuildExtractorRegistry creates and populates the extractor registry.
 func BuildExtractorRegistry(storage ports.ObjectStorage) *extractorRegistry {
 	registry := newExtractorRegistry()
 	registry.register(NewImageExtractor(storage))
@@ -174,7 +162,6 @@ func BuildExtractorRegistry(storage ports.ObjectStorage) *extractorRegistry {
 	return registry
 }
 
-// parseDurationMS converts an ffprobe duration string (seconds as float) to milliseconds.
 func parseDurationMS(s string) int64 {
 	s = strings.TrimSpace(s)
 	if s == "" {

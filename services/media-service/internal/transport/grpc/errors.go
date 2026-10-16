@@ -10,14 +10,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// ErrorMapper maps domain errors to gRPC status codes.
 type ErrorMapper interface {
-	// MapError maps a domain error to a gRPC status error.
-	// Returns nil if the error is not handled by this mapper.
 	MapError(err error) error
 }
 
-// errorMapperRegistry holds all registered error mappers.
 type errorMapperRegistry struct {
 	mappers []ErrorMapper
 }
@@ -39,7 +35,6 @@ func (r *errorMapperRegistry) mapError(err error) error {
 	return nil
 }
 
-// UnauthorizedErrorMapper maps unauthorized errors.
 type UnauthorizedErrorMapper struct{}
 
 func (m *UnauthorizedErrorMapper) MapError(err error) error {
@@ -49,7 +44,6 @@ func (m *UnauthorizedErrorMapper) MapError(err error) error {
 	return nil
 }
 
-// NotFoundErrorMapper maps not found errors.
 type NotFoundErrorMapper struct{}
 
 func (m *NotFoundErrorMapper) MapError(err error) error {
@@ -59,7 +53,6 @@ func (m *NotFoundErrorMapper) MapError(err error) error {
 	return nil
 }
 
-// QuarantinedErrorMapper maps quarantined errors.
 type QuarantinedErrorMapper struct{}
 
 func (m *QuarantinedErrorMapper) MapError(err error) error {
@@ -69,7 +62,6 @@ func (m *QuarantinedErrorMapper) MapError(err error) error {
 	return nil
 }
 
-// RateLimitErrorMapper maps rate limit errors.
 type RateLimitErrorMapper struct{}
 
 func (m *RateLimitErrorMapper) MapError(err error) error {
@@ -79,7 +71,6 @@ func (m *RateLimitErrorMapper) MapError(err error) error {
 	return nil
 }
 
-// BuildErrorMapperRegistry creates and populates the error mapper registry.
 func BuildErrorMapperRegistry() *errorMapperRegistry {
 	registry := newErrorMapperRegistry()
 	registry.register(&UnauthorizedErrorMapper{})
@@ -89,7 +80,6 @@ func BuildErrorMapperRegistry() *errorMapperRegistry {
 	return registry
 }
 
-// toGRPCStatus converts a domain error to a gRPC status error using the mapper registry.
 func toGRPCStatus(err error, registry *errorMapperRegistry) error {
 	if mapped := registry.mapError(err); mapped != nil {
 		return mapped

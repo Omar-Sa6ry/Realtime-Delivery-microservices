@@ -28,8 +28,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// compressibleMIMEPrefixes lists MIME type prefixes that benefit from gzip compression.
-// Formats already using lossy or lossless compression are excluded.
 var compressibleMIMEPrefixes = []string{
 	"text/",
 	"application/json",
@@ -41,7 +39,6 @@ var compressibleMIMEPrefixes = []string{
 	"application/csv",
 }
 
-// scanCompletedPayload mirrors the media.scan.completed event payload.
 type scanCompletedPayload struct {
 	MediaID     string `json:"mediaId"`
 	UserID      string `json:"userId"`
@@ -50,7 +47,6 @@ type scanCompletedPayload struct {
 	MediaType   string `json:"mediaType"`
 }
 
-// Worker compresses eligible files after they pass malware scanning.
 type Worker struct {
 	mediaRepo   ports.MediaRepository
 	versionRepo ports.VersionRepository
@@ -58,7 +54,6 @@ type Worker struct {
 	publisher   ports.EventPublisher
 }
 
-// NewWorker creates a new compression worker.
 func NewWorker(
 	mediaRepo ports.MediaRepository,
 	versionRepo ports.VersionRepository,
@@ -73,7 +68,6 @@ func NewWorker(
 	}
 }
 
-// Handle processes a single Kafka message from media.scan.completed.
 func (w *Worker) Handle(ctx context.Context, msg kafkago.Message) error {
 	var env kafkaadapter.EventEnvelope
 	if err := json.Unmarshal(msg.Value, &env); err != nil {
@@ -93,8 +87,6 @@ func (w *Worker) Handle(ctx context.Context, msg kafkago.Message) error {
 	return w.compress(ctx, payload, env.TraceID)
 }
 
-// compress downloads the original file, gzips it, uploads the compressed version to S3,
-// and saves the version record to DynamoDB.
 func (w *Worker) compress(ctx context.Context, payload scanCompletedPayload, traceID string) error {
 	start := time.Now()
 	slog.Info("Compression worker: starting", "mediaId", payload.MediaID, "contentType", payload.ContentType)
@@ -176,7 +168,6 @@ func (w *Worker) compress(ctx context.Context, payload scanCompletedPayload, tra
 	return nil
 }
 
-// isCompressible returns true if the MIME type benefits from gzip compression.
 func isCompressible(contentType string) bool {
 	// Strip parameters (e.g. "text/html; charset=utf-8" → "text/html")
 	if idx := strings.Index(contentType, ";"); idx >= 0 {
@@ -190,7 +181,6 @@ func isCompressible(contentType string) bool {
 	return false
 }
 
-// compressedObjectKey derives the S3 key for the compressed version.
 func compressedObjectKey(originalKey string) string {
 	return strings.TrimSuffix(originalKey, "/") + ".gz"
 }

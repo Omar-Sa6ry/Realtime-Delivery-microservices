@@ -12,8 +12,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/domain"
 )
 
-// QuotaRepository implements ports.QuotaRepository using DynamoDB atomic counters.
-// DynamoDB ADD expressions are used for concurrency-safe increments/decrements.
 type QuotaRepository struct {
 	client    *dynamodb.Client
 	tableName string
@@ -21,7 +19,6 @@ type QuotaRepository struct {
 	maxConc   int
 }
 
-// NewQuotaRepository creates a new QuotaRepository.
 func NewQuotaRepository(client *dynamodb.Client, tableName string, maxQuotaBytes int64, maxConcurrent int) *QuotaRepository {
 	return &QuotaRepository{
 		client:    client,
@@ -43,8 +40,6 @@ type quotaItem struct {
 	UpdatedAt     string `dynamodbav:"UpdatedAt"`
 }
 
-// GetUsage retrieves the current quota usage for a user.
-// If no record exists, returns a zero-usage quota (first-time user).
 func (r *QuotaRepository) GetUsage(ctx context.Context, userID string) (*domain.QuotaUsage, error) {
 	out, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(r.tableName),
@@ -80,8 +75,6 @@ func (r *QuotaRepository) GetUsage(ctx context.Context, userID string) (*domain.
 	}, nil
 }
 
-// IncrementUsage atomically increments the active upload counter.
-// Uses DynamoDB ADD which is atomic even under concurrent writes.
 func (r *QuotaRepository) IncrementUsage(ctx context.Context, userID string, _ int64) error {
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
@@ -100,7 +93,6 @@ func (r *QuotaRepository) IncrementUsage(ctx context.Context, userID string, _ i
 	return err
 }
 
-// DecrementActiveUpload atomically decrements the active upload counter.
 func (r *QuotaRepository) DecrementActiveUpload(ctx context.Context, userID string) error {
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
@@ -118,7 +110,6 @@ func (r *QuotaRepository) DecrementActiveUpload(ctx context.Context, userID stri
 	return err
 }
 
-// AddUsedBytes atomically adds bytes to the committed storage usage.
 func (r *QuotaRepository) AddUsedBytes(ctx context.Context, userID string, bytes int64) error {
 	_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName: aws.String(r.tableName),
@@ -134,7 +125,6 @@ func (r *QuotaRepository) AddUsedBytes(ctx context.Context, userID string, bytes
 	return err
 }
 
-// SubtractUsedBytes atomically subtracts bytes from the committed storage usage.
 func (r *QuotaRepository) SubtractUsedBytes(ctx context.Context, userID string, bytes int64) error {
 	return r.AddUsedBytes(ctx, userID, -bytes)
 }

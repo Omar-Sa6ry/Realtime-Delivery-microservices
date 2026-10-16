@@ -37,7 +37,6 @@ func (c *CacheAdapter) CheckAndStoreIdempotency(ctx context.Context, userID, key
 		return nil, fmt.Errorf("marshal idempotency payload: %w", err)
 	}
 
-	// SET NX returns OK (true) if the key was newly set, nil (false) if it already existed.
 	ok, err := c.client.SetNX(ctx, redisKey, payload, ttl).Result()
 	if err != nil {
 		return nil, fmt.Errorf("redis SetNX idempotency key: %w", err)
@@ -83,7 +82,6 @@ else
 end
 `)
 
-// ReleaseLock releases a distributed lock. It is a no-op if the token does not match.
 func (c *CacheAdapter) ReleaseLock(ctx context.Context, resource string, token ports.LockToken) error {
 	key := fmt.Sprintf("%s:%s", lockKeyPrefix, resource)
 	if err := releaseLockScript.Run(ctx, c.client, []string{key}, string(token)).Err(); err != nil && err != goredis.Nil {
@@ -97,7 +95,6 @@ func (c *CacheAdapter) SetUploadProgress(ctx context.Context, uploadID string, p
 	return c.client.Set(ctx, key, percent, ttl).Err()
 }
 
-// GetUploadProgress retrieves the cached upload progress for a session.
 func (c *CacheAdapter) GetUploadProgress(ctx context.Context, uploadID string) (int, bool, error) {
 	key := fmt.Sprintf("%s:%s", uploadProgressPrefix, uploadID)
 	val, err := c.client.Get(ctx, key).Int()
@@ -110,13 +107,11 @@ func (c *CacheAdapter) GetUploadProgress(ctx context.Context, uploadID string) (
 	return val, true, nil
 }
 
-// SetProcessingProgress stores processing progress percentage for a media item.
 func (c *CacheAdapter) SetProcessingProgress(ctx context.Context, mediaID string, percent int, ttl time.Duration) error {
 	key := fmt.Sprintf("%s:%s", processingPrefix, mediaID)
 	return c.client.Set(ctx, key, percent, ttl).Err()
 }
 
-// GetProcessingProgress retrieves the cached processing progress for a media item.
 func (c *CacheAdapter) GetProcessingProgress(ctx context.Context, mediaID string) (int, bool, error) {
 	key := fmt.Sprintf("%s:%s", processingPrefix, mediaID)
 	val, err := c.client.Get(ctx, key).Int()
@@ -129,7 +124,6 @@ func (c *CacheAdapter) GetProcessingProgress(ctx context.Context, mediaID string
 	return val, true, nil
 }
 
-// DeleteKey removes a single Redis key.
 func (c *CacheAdapter) DeleteKey(ctx context.Context, key string) error {
 	return c.client.Del(ctx, key).Err()
 }

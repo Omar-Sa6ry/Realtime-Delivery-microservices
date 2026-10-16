@@ -17,13 +17,11 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// MediaWSMessage represents a message sent over media WebSocket
 type MediaWSMessage struct {
 	Type string          `json:"type"`
 	Data json.RawMessage `json:"data"`
 }
 
-// UploadProgressData represents upload progress payload
 type UploadProgressData struct {
 	MediaID    string  `json:"mediaId"`
 	UploadID   string  `json:"uploadId"`
@@ -36,7 +34,6 @@ type UploadProgressData struct {
 	Status     string  `json:"status"`
 }
 
-// ProcessingProgressData represents processing progress payload
 type ProcessingProgressData struct {
 	MediaID string `json:"mediaId"`
 	Stage   string `json:"stage"` // scanning, image, video, compression, metadata
@@ -44,7 +41,6 @@ type ProcessingProgressData struct {
 	Message string `json:"message,omitempty"`
 }
 
-// MediaReadyData represents media ready payload
 type MediaReadyData struct {
 	MediaID     string   `json:"mediaId"`
 	MediaType   string   `json:"mediaType"`
@@ -52,18 +48,15 @@ type MediaReadyData struct {
 	DownloadURL string   `json:"downloadUrl,omitempty"`
 }
 
-// MediaDeletedData represents media deleted payload
 type MediaDeletedData struct {
 	MediaID string `json:"mediaId"`
 }
 
-// MediaFailedData represents media failed payload
 type MediaFailedData struct {
 	MediaID string `json:"mediaId"`
 	Reason  string `json:"reason"`
 }
 
-// Connection represents a WebSocket connection with user context
 type Connection struct {
 	Conn     *gorilla.Conn
 	UserID   string
@@ -73,7 +66,6 @@ type Connection struct {
 	LastPing time.Time
 }
 
-// Hub manages WebSocket connections and NATS subscriptions
 type Hub struct {
 	mu           sync.RWMutex
 	connections  map[string]map[*Connection]bool // userID -> connections
@@ -85,7 +77,6 @@ type Hub struct {
 	handlerReg   *handlerRegistry
 }
 
-// NewHub creates a new WebSocket hub
 func NewHub(natsClient *sharednats.NatsClient, logger *slog.Logger, cfg *config.Config) *Hub {
 	return &Hub{
 		connections: make(map[string]map[*Connection]bool),

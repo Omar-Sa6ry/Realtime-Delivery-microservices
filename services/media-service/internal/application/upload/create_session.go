@@ -15,7 +15,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// CreateSessionInput holds all parameters for the CreateUploadSession use case.
 type CreateSessionInput struct {
 	UserID         string
 	FileName       string
@@ -26,7 +25,6 @@ type CreateSessionInput struct {
 	IdempotencyKey string
 }
 
-// CreateSessionOutput is the result returned to the gRPC handler.
 type CreateSessionOutput struct {
 	MediaID        string
 	UploadID       string
@@ -37,7 +35,6 @@ type CreateSessionOutput struct {
 	ExpiresAt      time.Time
 }
 
-// CreateSessionUseCase orchestrates the upload session creation flow.
 type CreateSessionUseCase struct {
 	mediaRepo   ports.MediaRepository
 	uploadRepo  ports.UploadRepository
@@ -53,7 +50,6 @@ type CreateSessionUseCase struct {
 	maxFileSize   int64
 }
 
-// NewCreateSessionUseCase constructs the use case with all dependencies injected.
 func NewCreateSessionUseCase(
 	mediaRepo ports.MediaRepository,
 	uploadRepo ports.UploadRepository,
@@ -80,7 +76,6 @@ func NewCreateSessionUseCase(
 	}
 }
 
-// Execute runs the CreateUploadSession flow and records media_upload_* metrics.
 func (uc *CreateSessionUseCase) Execute(ctx context.Context, in CreateSessionInput) (*CreateSessionOutput, error) {
 	out, err := uc.execute(ctx, in)
 	if err != nil {
@@ -92,7 +87,6 @@ func (uc *CreateSessionUseCase) Execute(ctx context.Context, in CreateSessionInp
 	return out, nil
 }
 
-// execute runs the full CreateUploadSession flow:
 // Auth → Validate → Quota → RateLimit → Idempotency → Create S3 Multipart → Persist → Return
 func (uc *CreateSessionUseCase) execute(ctx context.Context, in CreateSessionInput) (*CreateSessionOutput, error) {
 	logger := sharedlogging.FromContext(ctx)

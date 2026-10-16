@@ -2,7 +2,6 @@ package domain
 
 import "time"
 
-// OutboxStatus tracks whether a domain event has been published to Kafka.
 type OutboxStatus string
 
 const (

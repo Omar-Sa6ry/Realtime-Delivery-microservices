@@ -20,7 +20,6 @@ const (
 	TopicDeleteFailed        = "media.delete.failed"
 )
 
-// ConsumerGroups defines independent consumer group IDs per worker type.
 const (
 	GroupScanner            = "media-scanner"
 	GroupImageWorker        = "media-image-worker"

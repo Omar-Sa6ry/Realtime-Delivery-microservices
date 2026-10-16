@@ -11,7 +11,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// AbortUploadUseCase handles the cancellation of an in-progress upload.
 type AbortUploadUseCase struct {
 	uploadRepo ports.UploadRepository
 	mediaRepo  ports.MediaRepository
@@ -20,7 +19,6 @@ type AbortUploadUseCase struct {
 	cache      ports.Cache
 }
 
-// NewAbortUploadUseCase constructs the use case.
 func NewAbortUploadUseCase(
 	uploadRepo ports.UploadRepository,
 	mediaRepo ports.MediaRepository,
@@ -37,7 +35,6 @@ func NewAbortUploadUseCase(
 	}
 }
 
-// Execute aborts an upload session:
 // Fetch → Auth → Lock → S3 Abort → State transition → Quota release
 func (uc *AbortUploadUseCase) Execute(ctx context.Context, userID, uploadID string) error {
 	logger := sharedlogging.FromContext(ctx)
@@ -85,18 +82,15 @@ func (uc *AbortUploadUseCase) Execute(ctx context.Context, userID, uploadID stri
 	return nil
 }
 
-// GetUploadStatusUseCase retrieves the current status of an upload session.
 type GetUploadStatusUseCase struct {
 	uploadRepo ports.UploadRepository
 	storage    ports.ObjectStorage
 }
 
-// NewGetUploadStatusUseCase constructs the use case.
 func NewGetUploadStatusUseCase(uploadRepo ports.UploadRepository, storage ports.ObjectStorage) *GetUploadStatusUseCase {
 	return &GetUploadStatusUseCase{uploadRepo: uploadRepo, storage: storage}
 }
 
-// UploadStatusOutput is returned to the gRPC handler.
 type UploadStatusOutput struct {
 	UploadID       string
 	Status         domain.UploadStatus
@@ -106,7 +100,6 @@ type UploadStatusOutput struct {
 	ExpiresAt      time.Time
 }
 
-// Execute fetches the upload session and computes missing parts.
 func (uc *GetUploadStatusUseCase) Execute(ctx context.Context, userID, uploadID string) (*UploadStatusOutput, error) {
 	session, err := uc.uploadRepo.GetByID(ctx, uploadID)
 	if err != nil {

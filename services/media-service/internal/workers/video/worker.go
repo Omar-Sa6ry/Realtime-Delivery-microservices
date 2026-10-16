@@ -26,7 +26,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// scanCompletedPayload is the scan.completed event payload.
 type scanCompletedPayload struct {
 	MediaID     string `json:"mediaId"`
 	UserID      string `json:"userId"`
@@ -37,7 +36,6 @@ type scanCompletedPayload struct {
 	MediaType   string `json:"mediaType"`
 }
 
-// videoProfile defines a single transcoding output rendition.
 type videoProfile struct {
 	Name        string
 	Height      int
@@ -45,14 +43,12 @@ type videoProfile struct {
 	VersionType domain.VersionType
 }
 
-// standardProfiles matches YouTube's adaptive bitrate ladder.
 var standardProfiles = []videoProfile{
 	{Name: "360p", Height: 360, Bitrate: "800k", VersionType: domain.VersionType360p},
 	{Name: "720p", Height: 720, Bitrate: "2500k", VersionType: domain.VersionType720p},
 	{Name: "1080p", Height: 1080, Bitrate: "5000k", VersionType: domain.VersionType1080p},
 }
 
-// Worker processes video media after upload and malware scanning.
 type Worker struct {
 	mediaRepo      ports.MediaRepository
 	versionRepo    ports.VersionRepository
@@ -61,7 +57,6 @@ type Worker struct {
 	realtimePub    ports.RealtimePublisher
 }
 
-// NewWorker creates a new video transcoding worker.
 func NewWorker(
 	mediaRepo ports.MediaRepository,
 	versionRepo ports.VersionRepository,
@@ -78,7 +73,6 @@ func NewWorker(
 	}
 }
 
-// Handle processes a single Kafka message from media.scan.completed.
 func (w *Worker) Handle(ctx context.Context, msg kafkago.Message) error {
 	var env kafkaadapter.EventEnvelope
 	if err := json.Unmarshal(msg.Value, &env); err != nil {
@@ -98,7 +92,6 @@ func (w *Worker) Handle(ctx context.Context, msg kafkago.Message) error {
 	return w.processVideo(ctx, payload, env.TraceID)
 }
 
-// processVideo orchestrates FFmpeg transcoding and HLS generation.
 func (w *Worker) processVideo(ctx context.Context, payload scanCompletedPayload, traceID string) error {
 	slog.Info("Video worker: starting transcoding", "mediaId", payload.MediaID)
 
@@ -231,7 +224,6 @@ func (w *Worker) processVideo(ctx context.Context, payload scanCompletedPayload,
 	return nil
 }
 
-// generateThumbnail extracts a JPEG thumbnail from the first frame using FFmpeg.
 func (w *Worker) generateThumbnail(ctx context.Context, payload scanCompletedPayload, traceID, inputPath, tmpDir string) error {
 	thumbPath := filepath.Join(tmpDir, "thumbnail.jpg")
 	args := []string{
@@ -268,7 +260,6 @@ func (w *Worker) generateThumbnail(ctx context.Context, payload scanCompletedPay
 	return nil
 }
 
-// transcodeProfile runs FFmpeg for a single resolution profile.
 func (w *Worker) transcodeProfile(ctx context.Context, payload scanCompletedPayload, traceID, inputPath, tmpDir string, profile videoProfile) error {
 	outputName := fmt.Sprintf("%s.mp4", profile.Name)
 	outputPath := filepath.Join(tmpDir, outputName)
@@ -310,7 +301,6 @@ func (w *Worker) transcodeProfile(ctx context.Context, payload scanCompletedPayl
 	return nil
 }
 
-// generateHLS creates an HLS master playlist with all quality levels.
 func (w *Worker) generateHLS(ctx context.Context, payload scanCompletedPayload, traceID, inputPath, tmpDir string) error {
 	hlsDir := filepath.Join(tmpDir, "hls")
 	if err := os.MkdirAll(hlsDir, 0o755); err != nil {
@@ -375,7 +365,6 @@ func (w *Worker) generateHLS(ctx context.Context, payload scanCompletedPayload, 
 	return nil
 }
 
-// runFFmpeg executes an FFmpeg command using the system-installed binary.
 func runFFmpeg(ctx context.Context, args []string) error {
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 	var stderr bytes.Buffer
@@ -386,7 +375,6 @@ func runFFmpeg(ctx context.Context, args []string) error {
 	return nil
 }
 
-// buildVersionKey derives the S3 object key for a transcoded rendition from the original key.
 func buildVersionKey(originalKey, versionName, ext string) string {
 	for _, suffix := range []string{"/original/", "/originals/"} {
 		idx := len(originalKey) - len(originalKey)

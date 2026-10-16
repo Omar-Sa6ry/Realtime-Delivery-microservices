@@ -8,7 +8,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// UploadRequest carries all client-provided parameters for CreateUploadSession.
 type UploadRequest struct {
 	FileName    string
 	ContentType string
@@ -24,7 +23,6 @@ type Validator struct {
 	minFileSize       int64
 }
 
-// NewValidator creates a Validator with all sub-validators wired in.
 func NewValidator(
 	allowedTypes map[string]struct{},
 	storage ports.ObjectStorage,

@@ -10,13 +10,11 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// RealtimePublisher publishes realtime progress events to NATS
 type RealtimePublisher struct {
 	client *sharednats.NatsClient
 	logger *slog.Logger
 }
 
-// NewRealtimePublisher creates a new realtime publisher
 func NewRealtimePublisher(client *sharednats.NatsClient, logger *slog.Logger) *RealtimePublisher {
 	return &RealtimePublisher{
 		client: client,
@@ -24,7 +22,6 @@ func NewRealtimePublisher(client *sharednats.NatsClient, logger *slog.Logger) *R
 	}
 }
 
-// PublishProgress publishes a progress event to NATS for WebSocket fan-out
 func (p *RealtimePublisher) PublishProgress(ctx context.Context, subject string, payload interface{}) error {
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -40,5 +37,4 @@ func (p *RealtimePublisher) PublishProgress(ctx context.Context, subject string,
 	return nil
 }
 
-// Compile-time check that RealtimePublisher implements ports.RealtimePublisher
 var _ ports.RealtimePublisher = (*RealtimePublisher)(nil)

@@ -12,29 +12,23 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// GetMediaUseCase retrieves a single media item by ID.
 type GetMediaUseCase struct {
 	mediaRepo   ports.MediaRepository
 	versionRepo ports.VersionRepository
 }
 
-// NewGetMediaUseCase constructs the use case.
 func NewGetMediaUseCase(mediaRepo ports.MediaRepository, versionRepo ports.VersionRepository) *GetMediaUseCase {
 	return &GetMediaUseCase{mediaRepo: mediaRepo, versionRepo: versionRepo}
 }
 
-// MediaOutput combines a media item with its processed versions.
 type MediaOutput struct {
 	Media    *domain.Media
 	Versions []*domain.MediaVersion
 }
-
-// GetByID retrieves a media item without ownership checks (for internal / admin use).
 func (uc *GetMediaUseCase) GetByID(ctx context.Context, mediaID string) (*domain.Media, error) {
 	return uc.mediaRepo.GetByID(ctx, mediaID)
 }
 
-// ExecuteForMedia fetches versions for an already authorized media item.
 func (uc *GetMediaUseCase) ExecuteForMedia(ctx context.Context, m *domain.Media) (*MediaOutput, error) {
 	versions, err := uc.versionRepo.ListByMedia(ctx, m.MediaID)
 	if err != nil {
@@ -43,7 +37,6 @@ func (uc *GetMediaUseCase) ExecuteForMedia(ctx context.Context, m *domain.Media)
 	return &MediaOutput{Media: m, Versions: versions}, nil
 }
 
-// Execute fetches the media and its versions, enforcing ownership.
 func (uc *GetMediaUseCase) Execute(ctx context.Context, userID, mediaID string) (*MediaOutput, error) {
 	m, err := uc.mediaRepo.GetByID(ctx, mediaID)
 	if err != nil {
@@ -56,7 +49,6 @@ func (uc *GetMediaUseCase) Execute(ctx context.Context, userID, mediaID string) 
 	return uc.ExecuteForMedia(ctx, m)
 }
 
-// ListMediaInput holds parameters for listing media items.
 type ListMediaInput struct {
 	OwnerID      string
 	Limit        int
@@ -64,17 +56,14 @@ type ListMediaInput struct {
 	StatusFilter string
 }
 
-// ListMediaUseCase lists paginated media items for an owner.
 type ListMediaUseCase struct {
 	mediaRepo ports.MediaRepository
 }
 
-// NewListMediaUseCase constructs the use case.
 func NewListMediaUseCase(mediaRepo ports.MediaRepository) *ListMediaUseCase {
 	return &ListMediaUseCase{mediaRepo: mediaRepo}
 }
 
-// Execute returns a paginated list of media items.
 func (uc *ListMediaUseCase) Execute(ctx context.Context, in ListMediaInput) ([]*domain.Media, string, error) {
 	limit := in.Limit
 	if limit <= 0 || limit > 100 {
@@ -83,7 +72,6 @@ func (uc *ListMediaUseCase) Execute(ctx context.Context, in ListMediaInput) ([]*
 	return uc.mediaRepo.ListByOwner(ctx, in.OwnerID, limit, in.Cursor)
 }
 
-// DeleteMediaUseCase handles the asynchronous deletion of a media item.
 type DeleteMediaUseCase struct {
 	mediaRepo  ports.MediaRepository
 	outboxRepo ports.OutboxRepository
@@ -91,7 +79,6 @@ type DeleteMediaUseCase struct {
 	cache      ports.Cache
 }
 
-// NewDeleteMediaUseCase constructs the use case.
 func NewDeleteMediaUseCase(
 	mediaRepo ports.MediaRepository,
 	outboxRepo ports.OutboxRepository,
@@ -106,7 +93,6 @@ func NewDeleteMediaUseCase(
 	}
 }
 
-// ExecuteWithAdmin marks a media item for deletion, allowing admin bypass.
 func (uc *DeleteMediaUseCase) ExecuteWithAdmin(ctx context.Context, userID, mediaID, idempotencyKey string, isAdmin bool) error {
 	logger := sharedlogging.FromContext(ctx)
 
@@ -162,7 +148,6 @@ func (uc *DeleteMediaUseCase) ExecuteWithAdmin(ctx context.Context, userID, medi
 	return nil
 }
 
-// Execute marks a media item for deletion and enqueues a delete event via the outbox.
 func (uc *DeleteMediaUseCase) Execute(ctx context.Context, userID, mediaID, idempotencyKey string) error {
 	return uc.ExecuteWithAdmin(ctx, userID, mediaID, idempotencyKey, false)
 }

@@ -14,7 +14,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/validation"
 )
 
-// CompleteUploadInput holds all parameters for the CompleteUpload use case.
 type CompleteUploadInput struct {
 	UserID         string
 	UploadID       string
@@ -22,7 +21,6 @@ type CompleteUploadInput struct {
 	IdempotencyKey string
 }
 
-// CompleteUploadOutput is returned to the gRPC handler after a successful completion.
 type CompleteUploadOutput struct {
 	MediaID     string
 	Status      domain.MediaStatus
@@ -31,7 +29,6 @@ type CompleteUploadOutput struct {
 	Size        int64
 }
 
-// CompleteUploadUseCase orchestrates upload completion and post-upload verification.
 type CompleteUploadUseCase struct {
 	uploadRepo  ports.UploadRepository
 	mediaRepo   ports.MediaRepository
@@ -43,7 +40,6 @@ type CompleteUploadUseCase struct {
 	validator   *validation.Validator
 }
 
-// NewCompleteUploadUseCase constructs the use case with all dependencies injected.
 func NewCompleteUploadUseCase(
 	uploadRepo ports.UploadRepository,
 	mediaRepo ports.MediaRepository,
@@ -66,7 +62,6 @@ func NewCompleteUploadUseCase(
 	}
 }
 
-// Execute runs the CompleteUpload flow and records media_upload_* metrics.
 func (uc *CompleteUploadUseCase) Execute(ctx context.Context, in CompleteUploadInput) (*CompleteUploadOutput, error) {
 	out, err := uc.execute(ctx, in)
 	if err != nil {
@@ -82,7 +77,6 @@ func (uc *CompleteUploadUseCase) Execute(ctx context.Context, in CompleteUploadI
 	return out, nil
 }
 
-// execute runs the CompleteUpload flow:
 // Fetch session → Auth → Expiry → Lock → S3 Complete → Verify → Outbox → State transition
 func (uc *CompleteUploadUseCase) execute(ctx context.Context, in CompleteUploadInput) (*CompleteUploadOutput, error) {
 	logger := sharedlogging.FromContext(ctx)

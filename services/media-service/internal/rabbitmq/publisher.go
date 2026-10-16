@@ -48,7 +48,6 @@ func (p *MediaRabbitMQPublisher) PublishProcessed(ctx context.Context, mediaType
 	return p.pub.Publish(ctx, shared.ExchangeMedia, rk, "media.processed", payload, opts)
 }
 
-// Close closes the underlying publisher channel (not the shared connection).
 func (p *MediaRabbitMQPublisher) Close() error {
 	if p == nil || p.pub == nil {
 		return nil

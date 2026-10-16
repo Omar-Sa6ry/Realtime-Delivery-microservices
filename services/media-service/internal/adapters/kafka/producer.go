@@ -15,7 +15,6 @@ type Producer struct {
 	writer *kafkago.Writer
 }
 
-// NewProducer creates a new Kafka producer.
 func NewProducer(brokers []string) *Producer {
 	writer := &kafkago.Writer{
 		Addr:         kafkago.TCP(brokers...),
@@ -36,8 +35,6 @@ func NewProducer(brokers []string) *Producer {
 	return &Producer{writer: writer}
 }
 
-// EventEnvelope is the standard schema for all Kafka messages published by the media service.
-// Consumers depend on this structure; do not change field names without a versioning strategy.
 type EventEnvelope struct {
 	EventID   string          `json:"eventId"`
 	EventType string          `json:"eventType"`

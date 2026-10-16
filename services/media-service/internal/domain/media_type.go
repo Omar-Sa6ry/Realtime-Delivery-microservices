@@ -4,16 +4,11 @@ import (
 	"strings"
 )
 
-// MediaTypeClassifier defines the strategy interface for classifying media types from MIME content types.
 type MediaTypeClassifier interface {
-	// MediaType returns the media type this classifier handles.
 	MediaType() MediaType
-
-	// Matches returns true if this classifier matches the given content type.
 	Matches(contentType string) bool
 }
 
-// MediaTypeClassifierRegistry holds all registered classifiers.
 type MediaTypeClassifierRegistry struct {
 	classifiers []MediaTypeClassifier
 }
@@ -35,7 +30,6 @@ func (r *MediaTypeClassifierRegistry) Classify(contentType string) MediaType {
 	return MediaTypeOther
 }
 
-// ImageClassifier classifies image/* content types.
 type ImageClassifier struct{}
 
 func (c *ImageClassifier) MediaType() MediaType {
@@ -46,7 +40,6 @@ func (c *ImageClassifier) Matches(contentType string) bool {
 	return strings.HasPrefix(contentType, "image/")
 }
 
-// VideoClassifier classifies video/* content types.
 type VideoClassifier struct{}
 
 func (c *VideoClassifier) MediaType() MediaType {
@@ -57,9 +50,7 @@ func (c *VideoClassifier) Matches(contentType string) bool {
 	return strings.HasPrefix(contentType, "video/")
 }
 
-// DocumentClassifier classifies document content types.
 type DocumentClassifier struct {
-	// MIME types that are considered documents
 	documentTypes map[string]bool
 }
 
@@ -82,7 +73,6 @@ func (c *DocumentClassifier) Matches(contentType string) bool {
 	return c.documentTypes[contentType]
 }
 
-// BuildMediaTypeClassifierRegistry creates and populates the classifier registry.
 func BuildMediaTypeClassifierRegistry() *MediaTypeClassifierRegistry {
 	registry := NewMediaTypeClassifierRegistry()
 	registry.Register(&ImageClassifier{})
@@ -91,10 +81,8 @@ func BuildMediaTypeClassifierRegistry() *MediaTypeClassifierRegistry {
 	return registry
 }
 
-// DefaultMediaTypeRegistry is the default registry for media type classification.
 var DefaultMediaTypeRegistry = BuildMediaTypeClassifierRegistry()
 
-// DeriveMediaType infers the MediaType from the MIME content type using the default registry.
 func DeriveMediaType(contentType string) MediaType {
 	return DefaultMediaTypeRegistry.Classify(contentType)
 }

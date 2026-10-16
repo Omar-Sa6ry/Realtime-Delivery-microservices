@@ -16,10 +16,8 @@ import (
 
 type MessageHandler func(ctx context.Context, msg kafkago.Message) error
 
-// ErrPermanent wraps an error to signal that it should NOT be retried and must go to the DLQ.
 var ErrPermanent = errors.New("permanent processing failure")
 
-// Consumer wraps a kafka-go Reader with controlled, graceful consumption.
 type Consumer struct {
 	reader      *kafkago.Reader
 	maxRetries  int
@@ -27,7 +25,6 @@ type Consumer struct {
 	dlqProducer *Producer // optional: publish failed messages to a DLQ topic
 }
 
-// ConsumerConfig holds parameters for creating a Consumer.
 type ConsumerConfig struct {
 	Brokers    []string
 	Topic      string
@@ -36,7 +33,6 @@ type ConsumerConfig struct {
 	DLQ        *Producer // may be nil — failed messages are just logged
 }
 
-// NewConsumer creates a Kafka consumer bound to a single topic and consumer group.
 func NewConsumer(cfg ConsumerConfig) *Consumer {
 	reader := kafkago.NewReader(kafkago.ReaderConfig{
 		Brokers:        cfg.Brokers,
@@ -110,8 +106,6 @@ func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 		if processErr := c.processWithRetry(ctx, msg, handler); processErr != nil {
 			observability.RecordProcessingFailed(c.reader.Config().Topic)
 			if dlqErr := c.routeToDLQ(ctx, msg, processErr); dlqErr != nil {
-				// Do not acknowledge a message if its DLQ handoff failed. The
-				// broker will redeliver it after the consumer restarts/rebalances.
 				slog.Error("DLQ handoff failed; leaving message uncommitted", "error", dlqErr, "topic", c.reader.Config().Topic, "offset", msg.Offset)
 				continue
 			}
@@ -119,8 +113,6 @@ func (c *Consumer) Run(ctx context.Context, handler MessageHandler) error {
 			observability.RecordProcessingCompleted(c.reader.Config().Topic)
 		}
 
-		// Commit after successful processing or a confirmed DLQ handoff — this
-		// preserves at-least-once delivery without silently dropping failures.
 		if commitErr := c.reader.CommitMessages(ctx, msg); commitErr != nil {
 			slog.Error("Failed to commit Kafka offset", "error", commitErr, "topic", c.reader.Config().Topic)
 		}
@@ -173,9 +165,6 @@ func (c *Consumer) routeToDLQ(ctx context.Context, msg kafkago.Message, reason e
 	)
 
 	observability.DeadLetterQueueTotal.WithLabelValues(topic).Inc()
-
-	// Application level alert: rides the same Alertmanager route/delivery
-	// pipeline as the Prometheus rules (MediaServiceDLQBacklog).
 	_, _ = automation.TriggerAlert(
 		"media-service",
 		"Media Kafka message routed to DLQ",
@@ -208,7 +197,6 @@ func minDuration(a, b time.Duration) time.Duration {
 	return b
 }
 
-// Close gracefully shuts down the consumer.
 func (c *Consumer) Close() error {
 	return c.reader.Close()
 }

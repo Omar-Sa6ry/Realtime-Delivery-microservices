@@ -7,16 +7,11 @@ import (
 	sharedws "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/websocket"
 )
 
-// MessageHandler defines the strategy interface for handling specific client message types.
 type MessageHandler interface {
-	// MessageType returns the message type this handler processes.
 	MessageType() sharedws.ClientMessageType
-
-	// Handle processes the message and returns a response to send back to the client.
 	Handle(conn *Connection, msg sharedws.ClientMessage) (sharedws.ServerMessage, error)
 }
 
-// handlerRegistry holds all registered message handlers.
 type handlerRegistry struct {
 	handlers map[sharedws.ClientMessageType]MessageHandler
 }
@@ -36,7 +31,6 @@ func (r *handlerRegistry) get(msgType sharedws.ClientMessageType) (MessageHandle
 	return h, ok
 }
 
-// PingHandler handles PING messages.
 type PingHandler struct{}
 
 func (h *PingHandler) MessageType() sharedws.ClientMessageType {
@@ -51,7 +45,6 @@ func (h *PingHandler) Handle(conn *Connection, msg sharedws.ClientMessage) (shar
 	}, nil
 }
 
-// SubscribeDeliveryHandler handles SUBSCRIBE_DELIVERY messages.
 type SubscribeDeliveryHandler struct{}
 
 func (h *SubscribeDeliveryHandler) MessageType() sharedws.ClientMessageType {
@@ -59,8 +52,6 @@ func (h *SubscribeDeliveryHandler) MessageType() sharedws.ClientMessageType {
 }
 
 func (h *SubscribeDeliveryHandler) Handle(conn *Connection, msg sharedws.ClientMessage) (sharedws.ServerMessage, error) {
-	// For media, we could subscribe to specific media IDs
-	// For now, just ack
 	return sharedws.ServerMessage{
 		Type:      sharedws.ServerMessageSubscribed,
 		RequestID: msg.RequestID,
@@ -68,7 +59,6 @@ func (h *SubscribeDeliveryHandler) Handle(conn *Connection, msg sharedws.ClientM
 	}, nil
 }
 
-// BuildHandlerRegistry creates and populates the message handler registry.
 func BuildHandlerRegistry() *handlerRegistry {
 	registry := newHandlerRegistry()
 	registry.register(&PingHandler{})

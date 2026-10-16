@@ -8,10 +8,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// Publisher is the Outbox Publisher worker.
-// It polls DynamoDB for PENDING outbox events and publishes them to Kafka.
-// This is the reliability backbone — it guarantees at-least-once delivery even if
-// Kafka was unavailable at the time of the state change.
 type Publisher struct {
 	outboxRepo ports.OutboxRepository
 	publisher  ports.EventPublisher
@@ -19,7 +15,6 @@ type Publisher struct {
 	batchSize  int
 }
 
-// NewPublisher creates a new outbox publisher.
 func NewPublisher(outboxRepo ports.OutboxRepository, publisher ports.EventPublisher, interval time.Duration) *Publisher {
 	return &Publisher{
 		outboxRepo: outboxRepo,
@@ -29,7 +24,6 @@ func NewPublisher(outboxRepo ports.OutboxRepository, publisher ports.EventPublis
 	}
 }
 
-// Run starts the polling loop. Blocks until ctx is cancelled.
 func (p *Publisher) Run(ctx context.Context) {
 	slog.Info("Outbox publisher started", "interval", p.interval, "batchSize", p.batchSize)
 	ticker := time.NewTicker(p.interval)
@@ -46,7 +40,6 @@ func (p *Publisher) Run(ctx context.Context) {
 	}
 }
 
-// processBatch fetches and publishes a batch of pending outbox events.
 func (p *Publisher) processBatch(ctx context.Context) {
 	events, err := p.outboxRepo.ListPending(ctx, p.batchSize)
 	if err != nil {

@@ -11,13 +11,11 @@ import (
 	kafkago "github.com/segmentio/kafka-go"
 )
 
-// DLQManager handles Dead Letter Queue operations
 type DLQManager struct {
 	producer ports.EventPublisher
 	logger   *slog.Logger
 }
 
-// NewDLQManager creates a new DLQ manager
 func NewDLQManager(producer ports.EventPublisher, logger *slog.Logger) *DLQManager {
 	return &DLQManager{
 		producer: producer,
@@ -25,10 +23,8 @@ func NewDLQManager(producer ports.EventPublisher, logger *slog.Logger) *DLQManag
 	}
 }
 
-// DLQMessage aliases the shared port model so all adapters use one wire contract.
 type DLQMessage = ports.DLQMessage
 
-// ListDLQTopics returns all DLQ topics for media service
 func (m *DLQManager) ListDLQTopics() []string {
 	return []string{
 		kafkaadapter.TopicUploadCompleted + ".dlq",
@@ -45,7 +41,6 @@ func (m *DLQManager) ListDLQTopics() []string {
 	}
 }
 
-// ReplayDLQMessage replays a single message from DLQ back to its original topic
 func (m *DLQManager) ReplayDLQMessage(ctx context.Context, topic string, msg DLQMessage) error {
 	// Remove .dlq suffix to get original topic
 	originalTopic := topic
@@ -73,7 +68,6 @@ func (m *DLQManager) ReplayDLQMessage(ctx context.Context, topic string, msg DLQ
 	return nil
 }
 
-// ReplayAllDLQMessages replays all messages from a DLQ topic
 func (m *DLQManager) ReplayAllDLQMessages(ctx context.Context, brokers []string, topic string, maxMessages int) (int, error) {
 	dlqTopic := topic
 	if len(topic) > 4 && topic[len(topic)-4:] != ".dlq" {
@@ -132,7 +126,6 @@ func (m *DLQManager) ReplayAllDLQMessages(ctx context.Context, brokers []string,
 	return replayed, nil
 }
 
-// GetDLQStats returns statistics about DLQ messages
 func (m *DLQManager) GetDLQStats(ctx context.Context, brokers []string, topics []string) (map[string]int, error) {
 	stats := make(map[string]int)
 
@@ -164,5 +157,4 @@ func (m *DLQManager) GetDLQStats(ctx context.Context, brokers []string, topics [
 	return stats, nil
 }
 
-// Compile-time check
 var _ ports.DLQManager = (*DLQManager)(nil)

@@ -2,7 +2,6 @@ package domain
 
 import "time"
 
-// UploadStatus represents the status of an upload session.
 type UploadStatus string
 
 const (
@@ -13,7 +12,6 @@ const (
 	UploadStatusExpired   UploadStatus = "EXPIRED"
 )
 
-// UploadPart represents a single S3 multipart upload part.
 type UploadPart struct {
 	PartNumber int    `json:"partNumber"`
 	ETag       string `json:"eTag"`
@@ -34,12 +32,10 @@ type UploadSession struct {
 	UpdatedAt      time.Time    `json:"updatedAt"`
 }
 
-// IsExpired reports whether the upload session TTL has elapsed.
 func (s *UploadSession) IsExpired() bool {
 	return time.Now().After(s.ExpiresAt)
 }
 
-// MissingPartNumbers returns the list of part numbers not yet completed.
 func (s *UploadSession) MissingPartNumbers() []int {
 	completed := make(map[int]struct{}, len(s.CompletedParts))
 	for _, p := range s.CompletedParts {

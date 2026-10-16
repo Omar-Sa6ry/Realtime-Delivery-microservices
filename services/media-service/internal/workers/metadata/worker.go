@@ -21,7 +21,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// scanCompletedPayload mirrors the media.scan.completed event payload.
 type scanCompletedPayload struct {
 	MediaID     string `json:"mediaId"`
 	UserID      string `json:"userId"`
@@ -30,7 +29,6 @@ type scanCompletedPayload struct {
 	MediaType   string `json:"mediaType"`
 }
 
-// Worker extracts technical metadata from uploaded files after malware scanning.
 type Worker struct {
 	mediaRepo   ports.MediaRepository
 	versionRepo ports.VersionRepository
@@ -39,7 +37,6 @@ type Worker struct {
 	extractors  *extractorRegistry
 }
 
-// NewWorker creates a new metadata extraction worker.
 func NewWorker(
 	mediaRepo ports.MediaRepository,
 	versionRepo ports.VersionRepository,
@@ -55,7 +52,6 @@ func NewWorker(
 	}
 }
 
-// Handle processes a single Kafka message from media.scan.completed.
 func (w *Worker) Handle(ctx context.Context, msg kafkago.Message) error {
 	var env kafkaadapter.EventEnvelope
 	if err := json.Unmarshal(msg.Value, &env); err != nil {
@@ -70,7 +66,6 @@ func (w *Worker) Handle(ctx context.Context, msg kafkago.Message) error {
 	return w.extract(ctx, payload, env.TraceID)
 }
 
-// extract dispatches to the correct extractor based on media type.
 func (w *Worker) extract(ctx context.Context, payload scanCompletedPayload, traceID string) error {
 	slog.Info("Metadata worker: extracting", "mediaId", payload.MediaID, "mediaType", payload.MediaType)
 
@@ -104,7 +99,6 @@ func (w *Worker) persistMeta(ctx context.Context, payload scanCompletedPayload, 
 		CreatedAt:   time.Now().UTC(),
 	})
 
-	// Publish processing.completed
 	eventData, _ := kafkaadapter.MarshalEnvelope(uuid.NewString(), kafkaadapter.TopicProcessingCompleted, traceID,
 		map[string]interface{}{
 			"mediaId":    payload.MediaID,

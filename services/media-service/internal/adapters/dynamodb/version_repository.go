@@ -28,20 +28,17 @@ type versionItem struct {
 	CreatedAt   string `dynamodbav:"CreatedAt"`
 }
 
-// VersionRepository implements ports.VersionRepository using DynamoDB.
 type VersionRepository struct {
 	client    *dynamodb.Client
 	tableName string
 }
 
-// NewVersionRepository creates a new VersionRepository.
 func NewVersionRepository(client *dynamodb.Client, tableName string) *VersionRepository {
 	return &VersionRepository{client: client, tableName: tableName}
 }
 
 func versionSK(versionType string) string { return "VERSION#" + versionType }
 
-// Create inserts a MediaVersion record under the parent media's PK.
 func (r *VersionRepository) Create(ctx context.Context, v *domain.MediaVersion) error {
 	now := v.CreatedAt.UTC().Format(time.RFC3339Nano)
 	item := versionItem{
@@ -72,7 +69,6 @@ func (r *VersionRepository) Create(ctx context.Context, v *domain.MediaVersion) 
 	return err
 }
 
-// ListByMedia queries all VERSION# items under a media's partition key.
 func (r *VersionRepository) ListByMedia(ctx context.Context, mediaID string) ([]*domain.MediaVersion, error) {
 	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:              aws.String(r.tableName),

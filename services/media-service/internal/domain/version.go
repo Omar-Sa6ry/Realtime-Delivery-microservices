@@ -2,7 +2,6 @@ package domain
 
 import "time"
 
-// VersionType represents a specific processed rendition of a media item.
 type VersionType string
 
 const (

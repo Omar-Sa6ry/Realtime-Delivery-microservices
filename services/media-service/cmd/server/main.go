@@ -261,7 +261,7 @@ func main() {
 		mediaRepo, versionRepo, storage, downloadRateLimiter, cfg.S3PresignedURLExpiry,
 	)
 
-	// ── GraphQL Federation Subgraph Server
+	// GraphQL Federation Subgraph Server
 	dlqManager := dlq.NewDLQManager(producer, logger)
 	renewPresignedUC := upload.NewRenewPresignedUseCase(uploadRepo, storage, cacheAdapter, cfg.S3PresignedURLExpiry)
 	gqlHandler := gqltransport.NewHandler(
@@ -326,7 +326,7 @@ func main() {
 		}
 	}()
 
-	// ── Image consumer: media.scan.completed → image worker
+	// Image consumer: media.scan.completed → image worker
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
@@ -345,7 +345,7 @@ func main() {
 		}
 	}()
 
-	// ── Video consumer: media.scan.completed → video worker
+	// Video consumer: media.scan.completed → video worker
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
@@ -364,7 +364,7 @@ func main() {
 		}
 	}()
 
-	// ── Compression consumer: media.scan.completed → compression worker
+	// Compression consumer: media.scan.completed → compression worker
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
@@ -383,7 +383,7 @@ func main() {
 		}
 	}()
 
-	// ── Metadata consumer: media.scan.completed → metadata worker
+	// Metadata consumer: media.scan.completed → metadata worker
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
@@ -402,7 +402,7 @@ func main() {
 		}
 	}()
 
-	// ── Delete consumer: media.delete.requested → delete worker
+	// Delete consumer: media.delete.requested → delete worker
 	go func() {
 		consumer := kafkaadapter.NewConsumer(kafkaadapter.ConsumerConfig{
 			Brokers:    cfg.KafkaBrokers,
@@ -421,14 +421,14 @@ func main() {
 		}
 	}()
 
-	// ── Scheduler
+	// Scheduler
 	sched := scheduler.NewScheduler(ctx)
 	reconcileExpr := fmt.Sprintf("@every %ds", int(cfg.ReconcileInterval.Seconds()))
 	sched.Add("reconciliation", reconcileExpr, reconciler.Run)
 	sched.Start()
 	defer sched.Stop()
 
-	// ── System Stats Logging ──
+	// System Stats Logging ──
 	go func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
@@ -443,7 +443,7 @@ func main() {
 		}
 	}()
 
-	// ── Signal Handling & Graceful Shutdown ───
+	// Signal Handling & Graceful Shutdown ───
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 

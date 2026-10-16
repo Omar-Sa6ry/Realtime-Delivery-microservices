@@ -105,9 +105,6 @@ func (c *Client) EnsureBucketPolicy(ctx context.Context) error {
 	return nil
 }
 
-// EnsureBucketLifecycle configures automatic cleanup for abandoned multipart uploads.
-// The rule is idempotent because PutBucketLifecycleConfiguration replaces the
-// bucket configuration with the same stable rule ID.
 func (c *Client) EnsureBucketLifecycle(ctx context.Context, abortAfterDays int) error {
 	if abortAfterDays < 1 {
 		return fmt.Errorf("invalid multipart lifecycle days: %d", abortAfterDays)

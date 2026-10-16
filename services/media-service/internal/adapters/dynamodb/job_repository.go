@@ -36,7 +36,6 @@ type JobRepository struct {
 	tableName string
 }
 
-// NewJobRepository creates a new JobRepository.
 func NewJobRepository(client *dynamodb.Client, tableName string) *JobRepository {
 	return &JobRepository{client: client, tableName: tableName}
 }

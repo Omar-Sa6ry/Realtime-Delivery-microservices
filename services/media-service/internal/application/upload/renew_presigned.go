@@ -9,14 +9,12 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// RenewPresignedInput holds parameters for renewing presigned URLs.
 type RenewPresignedInput struct {
 	UserID        string
 	UploadID      string
 	ExpirySeconds int
 }
 
-// RenewPresignedOutput holds the renewed presigned URLs.
 type RenewPresignedOutput struct {
 	UploadID       string
 	S3UploadID     string
@@ -26,7 +24,6 @@ type RenewPresignedOutput struct {
 	ExpiresAt      time.Time
 }
 
-// RenewPresignedUseCase renews presigned URLs for an existing upload session.
 type RenewPresignedUseCase struct {
 	uploadRepo    ports.UploadRepository
 	storage       ports.ObjectStorage
@@ -34,7 +31,6 @@ type RenewPresignedUseCase struct {
 	defaultExpiry time.Duration
 }
 
-// NewRenewPresignedUseCase constructs the use case.
 func NewRenewPresignedUseCase(
 	uploadRepo ports.UploadRepository,
 	storage ports.ObjectStorage,
@@ -49,7 +45,6 @@ func NewRenewPresignedUseCase(
 	}
 }
 
-// Execute renews the presigned URLs for an upload session.
 func (uc *RenewPresignedUseCase) Execute(ctx context.Context, in RenewPresignedInput) (*RenewPresignedOutput, error) {
 	// 1. Fetch upload session
 	session, err := uc.uploadRepo.GetByID(ctx, in.UploadID)

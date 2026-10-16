@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-// allowedExtensions maps content types to their permitted file extensions.
 var allowedExtensions = map[string][]string{
 	"image/jpeg":                    {".jpg", ".jpeg"},
 	"image/png":                     {".png"},

@@ -10,7 +10,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/media-service/internal/ports"
 )
 
-// GetDownloadUrlInput holds parameters for the download URL generation.
 type GetDownloadUrlInput struct {
 	UserID        string
 	IsAdmin       bool
@@ -20,14 +19,12 @@ type GetDownloadUrlInput struct {
 	Range         string // Optional Range header (e.g., "bytes=0-1023")
 }
 
-// SECURITY: This URL is returned to the caller but NEVER logged.
 type GetDownloadUrlOutput struct {
 	URL         string
 	ExpiresAt   time.Time
 	ContentType string
 }
 
-// GetDownloadUrlUseCase generates a presigned GET URL for authorised media access.
 type GetDownloadUrlUseCase struct {
 	mediaRepo     ports.MediaRepository
 	versionRepo   ports.VersionRepository
@@ -36,7 +33,6 @@ type GetDownloadUrlUseCase struct {
 	defaultExpiry time.Duration
 }
 
-// NewGetDownloadUrlUseCase constructs the use case.
 func NewGetDownloadUrlUseCase(
 	mediaRepo ports.MediaRepository,
 	versionRepo ports.VersionRepository,
@@ -53,9 +49,6 @@ func NewGetDownloadUrlUseCase(
 	}
 }
 
-// Execute performs auth → rate limit → presign URL generation.
-// The presigned URL is returned directly to the client; S3 handles the download.
-// This service NEVER proxies file bytes — download traffic bypasses the application entirely.
 func (uc *GetDownloadUrlUseCase) Execute(ctx context.Context, in GetDownloadUrlInput) (*GetDownloadUrlOutput, error) {
 	// 1. Rate limit download URL generation
 	rateLimitKey := fmt.Sprintf("download:%s", in.UserID)
@@ -106,7 +99,6 @@ func (uc *GetDownloadUrlUseCase) Execute(ctx context.Context, in GetDownloadUrlI
 	}
 
 	// 5. Generate presigned GET URL (with optional Range header for resumable downloads)
-	// SECURITY: URL is NOT logged — it grants direct S3 access.
 	url, err := uc.storage.GeneratePresignedGETWithRange(ctx, objectKey, in.Range, expiry)
 	if err != nil {
 		return nil, fmt.Errorf("%w: GeneratePresignedGET: %s", domain.ErrS3OperationFailed, err.Error())

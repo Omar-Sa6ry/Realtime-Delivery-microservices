@@ -27,7 +27,6 @@ import (
 	"time"
 )
 
-// uploadCompletedPayload is the event payload for media.upload.completed.
 type uploadCompletedPayload struct {
 	MediaID     string `json:"mediaId"`
 	UserID      string `json:"userId"`
@@ -38,8 +37,6 @@ type uploadCompletedPayload struct {
 	MediaType   string `json:"mediaType"`
 }
 
-// Worker processes image media after upload.
-// It generates a thumbnail and an optimised version, then uploads both to S3.
 type Worker struct {
 	mediaRepo   ports.MediaRepository
 	versionRepo ports.VersionRepository
@@ -49,7 +46,6 @@ type Worker struct {
 	realtimePub ports.RealtimePublisher
 }
 
-// NewWorker creates a new image processing worker.
 func NewWorker(
 	mediaRepo ports.MediaRepository,
 	versionRepo ports.VersionRepository,
@@ -68,7 +64,6 @@ func NewWorker(
 	}
 }
 
-// Handle processes a single Kafka message for image processing.
 func (w *Worker) Handle(ctx context.Context, msg kafkago.Message) error {
 	var env kafkaadapter.EventEnvelope
 	if err := json.Unmarshal(msg.Value, &env); err != nil {
@@ -88,12 +83,9 @@ func (w *Worker) Handle(ctx context.Context, msg kafkago.Message) error {
 	return w.processImage(ctx, payload, env.TraceID)
 }
 
-// processImage downloads the original, generates thumbnail + optimised versions, uploads to S3.
-// Pre-condition: media is already in PROCESSING state (set by the scan worker).
 func (w *Worker) processImage(ctx context.Context, payload uploadCompletedPayload, traceID string) error {
 	slog.Info("Image worker: processing", "mediaId", payload.MediaID)
 
-	// Report progress via Redis TTL key (expires automatically — no separate cleanup needed)
 	_ = w.cache.SetProcessingProgress(ctx, payload.MediaID, 10, 2*time.Hour)
 	_ = w.realtimePub.PublishProgress(ctx, sharednats.RealtimeMediaProcessingProgress, map[string]interface{}{
 		"mediaId": payload.MediaID,
@@ -206,7 +198,6 @@ func (w *Worker) processImage(ctx context.Context, payload uploadCompletedPayloa
 	return nil
 }
 
-// generateAndUpload resizes the image and uploads it to S3 as a new version via PutObject.
 func (w *Worker) generateAndUpload(ctx context.Context, payload uploadCompletedPayload, traceID string, src image.Image, maxW, maxH int, versionType domain.VersionType) error {
 	resized := resizeImage(src, maxW, maxH)
 
@@ -254,9 +245,6 @@ func (w *Worker) generateAndUpload(ctx context.Context, payload uploadCompletedP
 	return nil
 }
 
-// generateAndUploadModernFormat encodes a resized PNG through FFmpeg into a
-// modern browser format and persists its object and metadata atomically enough
-// for the idempotent worker retry path.
 func (w *Worker) generateAndUploadModernFormat(ctx context.Context, payload uploadCompletedPayload, traceID string, src image.Image, maxW, maxH int, format, contentType, codec string, versionType domain.VersionType) error {
 	resized := resizeImage(src, maxW, maxH)
 	var input bytes.Buffer
@@ -300,7 +288,6 @@ func (w *Worker) generateAndUploadModernFormat(ctx context.Context, payload uplo
 	return nil
 }
 
-// resizeImage scales an image to fit within maxW x maxH maintaining aspect ratio.
 func resizeImage(src image.Image, maxW, maxH int) image.Image {
 	srcBounds := src.Bounds()
 	srcW := srcBounds.Dx()
@@ -321,7 +308,6 @@ func resizeImage(src image.Image, maxW, maxH int) image.Image {
 	return dst
 }
 
-// buildVersionKey constructs the S3 key for a processed version.
 func buildVersionKey(originalKey, versionType, ext string) string {
 	// Replace "/original/" with "/{versionType}/"
 	parts := strings.SplitN(originalKey, "/original/", 2)

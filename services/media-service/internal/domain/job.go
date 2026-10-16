@@ -2,7 +2,6 @@ package domain
 
 import "time"
 
-// JobType identifies the kind of background processing job.
 type JobType string
 
 const (
@@ -15,7 +14,6 @@ const (
 	JobTypeImageProcess       JobType = "IMAGE_PROCESS"
 )
 
-// JobStatus tracks the lifecycle of a background job.
 type JobStatus string
 
 const (
@@ -26,8 +24,6 @@ const (
 	JobStatusDLQ       JobStatus = "DLQ"
 )
 
-// MediaJob represents a single background processing task for a media item.
-// Jobs are created in DynamoDB and picked up by Kafka consumers (workers).
 type MediaJob struct {
 	JobID       string    `json:"jobId"`
 	MediaID     string    `json:"mediaId"`
@@ -42,7 +38,6 @@ type MediaJob struct {
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
-// IsRetryable returns true if the job can be retried (attempts < maxAttempts).
 func (j *MediaJob) IsRetryable() bool {
 	return j.Attempts < j.MaxAttempts
 }

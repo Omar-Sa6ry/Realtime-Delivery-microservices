@@ -19,7 +19,6 @@ type PaymentRepository interface {
 	FindByUserID(ctx context.Context, userID string) ([]*domain.Payment, error)
 	FindByIDs(ctx context.Context, ids []string) ([]*domain.Payment, error)
 	FindByProviderPaymentID(ctx context.Context, providerPaymentID string) (*domain.Payment, error)
-	// Returns ErrConcurrentModification if the version does not match.
 	UpdateConditional(ctx context.Context, p *domain.Payment, expectedVersion int64) error
 }
 

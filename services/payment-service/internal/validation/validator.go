@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-// Common validation errors.
 var (
 	ErrInvalidAmount       = errors.New("invalid amount: must be positive")
 	ErrInvalidCurrency     = errors.New("invalid currency code")
@@ -26,7 +25,6 @@ var (
 	ErrInvalidProvider     = errors.New("invalid provider name")
 )
 
-// Valid currency codes (ISO 4217)
 var validCurrencies = map[string]bool{
 	"USD": true, "EUR": true, "GBP": true, "JPY": true,
 	"CAD": true, "AUD": true, "CHF": true, "CNY": true,
@@ -35,7 +33,6 @@ var validCurrencies = map[string]bool{
 	"DKK": true, "PLN": true, "CZK": true, "HUF": true,
 }
 
-// Valid payment statuses
 var validStatuses = map[string]bool{
 	"pending":   true,
 	"authorized": true,
@@ -47,21 +44,18 @@ var validStatuses = map[string]bool{
 	"refund_pending": true,
 }
 
-// Valid payment methods
 var validMethods = map[string]bool{
 	"stripe": true,
 	"cash":   true,
 	"card":   true,
 }
 
-// Valid payment types
 var validPaymentTypes = map[string]bool{
 	"payment": true,
 	"refund":  true,
 	"webhook": true,
 }
 
-// Valid webhook event types
 var validWebhookTypes = map[string]bool{
 	"payment.created":                true,
 	"payment.authorization.started":  true,
@@ -77,13 +71,11 @@ var validWebhookTypes = map[string]bool{
 	"payment.failed":                 true,
 }
 
-// Valid providers
 var validProviders = map[string]bool{
 	"stripe": true,
 	"mock":   true,
 }
 
-// ValidateAmount validates that the amount is positive.
 func ValidateAmount(amount int64) error {
 	if amount <= 0 {
 		return ErrInvalidAmount
@@ -91,7 +83,6 @@ func ValidateAmount(amount int64) error {
 	return nil
 }
 
-// ValidateCurrency validates the currency code.
 func ValidateCurrency(currency string) error {
 	if currency == "" {
 		return ErrInvalidCurrency
@@ -103,7 +94,6 @@ func ValidateCurrency(currency string) error {
 	return nil
 }
 
-// ValidatePaymentID validates the payment ID format.
 func ValidatePaymentID(paymentID string) error {
 	if paymentID == "" {
 		return ErrInvalidPaymentID
@@ -115,7 +105,6 @@ func ValidatePaymentID(paymentID string) error {
 	return nil
 }
 
-// ValidateDeliveryID validates the delivery ID format.
 func ValidateDeliveryID(deliveryID string) error {
 	if deliveryID == "" {
 		return ErrInvalidDeliveryID
@@ -127,7 +116,6 @@ func ValidateDeliveryID(deliveryID string) error {
 	return nil
 }
 
-// ValidateUserID validates the user ID format.
 func ValidateUserID(userID string) error {
 	if userID == "" {
 		return ErrInvalidUserID
@@ -139,7 +127,6 @@ func ValidateUserID(userID string) error {
 	return nil
 }
 
-// ValidateCorrelationID validates the correlation ID.
 func ValidateCorrelationID(correlationID string) error {
 	if correlationID == "" {
 		return ErrInvalidCorrelationID
@@ -151,7 +138,6 @@ func ValidateCorrelationID(correlationID string) error {
 	return nil
 }
 
-// ValidateCausationID validates the causation ID.
 func ValidateCausationID(causationID string) error {
 	if causationID == "" {
 		return ErrInvalidCausationID
@@ -162,7 +148,6 @@ func ValidateCausationID(causationID string) error {
 	return nil
 }
 
-// ValidateStatus validates the payment status.
 func ValidateStatus(status string) error {
 	if status == "" {
 		return ErrInvalidStatus
@@ -173,7 +158,6 @@ func ValidateStatus(status string) error {
 	return nil
 }
 
-// ValidateMethod validates the payment method.
 func ValidateMethod(method string) error {
 	if method == "" {
 		return ErrInvalidPaymentType
@@ -184,7 +168,6 @@ func ValidateMethod(method string) error {
 	return nil
 }
 
-// ValidateReason validates the refund reason.
 func ValidateReason(reason string) error {
 	if strings.TrimSpace(reason) == "" {
 		return ErrInvalidReason
@@ -195,7 +178,6 @@ func ValidateReason(reason string) error {
 	return nil
 }
 
-// ValidateRefundAmount validates the refund amount against the original amount.
 func ValidateRefundAmount(refundAmount, originalAmount int64) error {
 	if refundAmount <= 0 {
 		return ErrInvalidRefundAmount
@@ -206,7 +188,6 @@ func ValidateRefundAmount(refundAmount, originalAmount int64) error {
 	return nil
 }
 
-// ValidateWebhookEventType validates the webhook event type.
 func ValidateWebhookEventType(eventType string) error {
 	if eventType == "" {
 		return ErrInvalidWebhookType
@@ -217,7 +198,6 @@ func ValidateWebhookEventType(eventType string) error {
 	return nil
 }
 
-// ValidateProvider validates the provider name.
 func ValidateProvider(provider string) error {
 	if provider == "" {
 		return ErrInvalidProvider
@@ -228,7 +208,6 @@ func ValidateProvider(provider string) error {
 	return nil
 }
 
-// ValidatePaymentInput validates the payment creation input.
 type PaymentInput struct {
 	DeliveryID    string
 	UserID        string
@@ -238,7 +217,6 @@ type PaymentInput struct {
 	CausationID   string
 }
 
-// ValidatePaymentInput validates all payment input fields.
 func ValidatePaymentInput(input PaymentInput) error {
 	if err := ValidateDeliveryID(input.DeliveryID); err != nil {
 		return err
@@ -261,14 +239,12 @@ func ValidatePaymentInput(input PaymentInput) error {
 	return nil
 }
 
-// ValidateAuthorizationInput validates the authorization input.
 type AuthorizationInput struct {
 	PaymentID     string
 	CorrelationID string
 	CausationID   string
 }
 
-// ValidateAuthorizationInput validates the authorization input.
 func ValidateAuthorizationInput(input AuthorizationInput) error {
 	if err := ValidatePaymentID(input.PaymentID); err != nil {
 		return err
@@ -282,7 +258,6 @@ func ValidateAuthorizationInput(input AuthorizationInput) error {
 	return nil
 }
 
-// ValidateCaptureInput validates the capture input.
 type CaptureInput struct {
 	PaymentID     string
 	AmountMinor   int64
@@ -290,7 +265,6 @@ type CaptureInput struct {
 	CausationID   string
 }
 
-// ValidateCaptureInput validates the capture input.
 func ValidateCaptureInput(input CaptureInput) error {
 	if err := ValidatePaymentID(input.PaymentID); err != nil {
 		return err
@@ -307,14 +281,12 @@ func ValidateCaptureInput(input CaptureInput) error {
 	return nil
 }
 
-// ValidateCancelInput validates the cancel input.
 type CancelInput struct {
 	PaymentID     string
 	CorrelationID string
 	CausationID   string
 }
 
-// ValidateCancelInput validates the cancel input.
 func ValidateCancelInput(input CancelInput) error {
 	if err := ValidatePaymentID(input.PaymentID); err != nil {
 		return err
@@ -328,7 +300,6 @@ func ValidateCancelInput(input CancelInput) error {
 	return nil
 }
 
-// ValidateRefundInput validates the refund input.
 type RefundInput struct {
 	PaymentID     string
 	AmountMinor   int64
@@ -337,7 +308,6 @@ type RefundInput struct {
 	CausationID   string
 }
 
-// ValidateRefundInput validates the refund input.
 func ValidateRefundInput(input RefundInput) error {
 	if err := ValidatePaymentID(input.PaymentID); err != nil {
 		return err
@@ -357,7 +327,6 @@ func ValidateRefundInput(input RefundInput) error {
 	return nil
 }
 
-// ValidateRefundAmountAgainstOriginal validates refund amount against original.
 func ValidateRefundAmountAgainstOriginal(refundAmount, originalAmount int64) error {
 	if refundAmount <= 0 {
 		return ErrInvalidRefundAmount
@@ -368,7 +337,6 @@ func ValidateRefundAmountAgainstOriginal(refundAmount, originalAmount int64) err
 	return nil
 }
 
-// ValidateISO8601Timestamp validates an ISO 8601 timestamp.
 func ValidateISO8601Timestamp(timestamp string) error {
 	if timestamp == "" {
 		return errors.New("timestamp cannot be empty")
@@ -380,14 +348,12 @@ func ValidateISO8601Timestamp(timestamp string) error {
 	return nil
 }
 
-// SanitizeString sanitizes a string for safe use.
 func SanitizeString(input string) string {
 	// Remove control characters
 	re := regexp.MustCompile(`[\x00-\x1f\x7f]`)
 	return re.ReplaceAllString(input, "")
 }
 
-// ValidateAmountString validates an amount string.
 func ValidateAmountString(amountStr string) (int64, error) {
 	amount, err := strconv.ParseInt(strings.TrimSpace(amountStr), 10, 64)
 	if err != nil {
@@ -399,7 +365,6 @@ func ValidateAmountString(amountStr string) (int64, error) {
 	return amount, nil
 }
 
-// ValidateDateRange validates a date range.
 func ValidateDateRange(start, end string) error {
 	if start == "" || end == "" {
 		return errors.New("date range cannot be empty")
@@ -418,13 +383,11 @@ func ValidateDateRange(start, end string) error {
 	return nil
 }
 
-// IsValidUUID validates a UUID string.
 func IsValidUUID(uuid string) bool {
 	uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	return uuidRegex.MatchString(strings.ToLower(uuid))
 }
 
-// ValidateID validates a generic ID string.
 func ValidateID(id, prefix string) error {
 	if id == "" {
 		return errors.New("ID cannot be empty")

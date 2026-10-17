@@ -24,7 +24,6 @@ func EnsurePaymentTopology(conn *shared.Connection) error {
 	})
 }
 
-// PublishAuthorized publishes a payment.authorized event.
 func (p *RabbitMQPublisher) PublishAuthorized(ctx context.Context, payload interface{}, opts *shared.PublishOptions) error {
 	if p == nil || p.pub == nil {
 		return fmt.Errorf("payment RabbitMQPublisher is not initialized")
@@ -32,7 +31,6 @@ func (p *RabbitMQPublisher) PublishAuthorized(ctx context.Context, payload inter
 	return p.pub.Publish(ctx, shared.ExchangePayments, shared.PaymentsRoutingKeyAuthorized, "payment.authorized", payload, opts)
 }
 
-// PublishFailed publishes a payment.failed event.
 func (p *RabbitMQPublisher) PublishFailed(ctx context.Context, payload interface{}, opts *shared.PublishOptions) error {
 	if p == nil || p.pub == nil {
 		return fmt.Errorf("payment RabbitMQPublisher is not initialized")
@@ -40,7 +38,6 @@ func (p *RabbitMQPublisher) PublishFailed(ctx context.Context, payload interface
 	return p.pub.Publish(ctx, shared.ExchangePayments, shared.PaymentsRoutingKeyFailed, "payment.failed", payload, opts)
 }
 
-// PublishRefunded publishes a payment.refunded event.
 func (p *RabbitMQPublisher) PublishRefunded(ctx context.Context, payload interface{}, opts *shared.PublishOptions) error {
 	if p == nil || p.pub == nil {
 		return fmt.Errorf("payment RabbitMQPublisher is not initialized")
@@ -48,7 +45,6 @@ func (p *RabbitMQPublisher) PublishRefunded(ctx context.Context, payload interfa
 	return p.pub.Publish(ctx, shared.ExchangePayments, shared.PaymentsRoutingKeyRefunded, "payment.refunded", payload, opts)
 }
 
-// Close closes the underlying publisher channel (not the shared connection).
 func (p *RabbitMQPublisher) Close() error {
 	if p == nil || p.pub == nil {
 		return nil

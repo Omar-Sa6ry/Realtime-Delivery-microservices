@@ -18,8 +18,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/ports"
 )
 
-// paymentMethod is the only payment method the platform currently supports
-// (Stripe card payments); it labels the business metrics.
 const paymentMethod = "card"
 
 type PaymentService struct {

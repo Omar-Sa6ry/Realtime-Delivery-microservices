@@ -10,12 +10,10 @@ type IdempotencyRepository struct {
 	db *sql.DB
 }
 
-// NewIdempotencyRepository creates a new IdempotencyRepository.
 func NewIdempotencyRepository(db *sql.DB) *IdempotencyRepository {
 	return &IdempotencyRepository{db: db}
 }
 
-// Store saves an idempotency key with its result.
 func (r *IdempotencyRepository) Store(key string, result string) error {
 	query := `INSERT INTO idempotency_keys (key, result, created_at) VALUES ($1, $2, NOW()) ON CONFLICT (key) DO UPDATE SET result = EXCLUDED.result, created_at = NOW()`
 	_, err := r.db.Exec(query, key, result)
@@ -25,7 +23,6 @@ func (r *IdempotencyRepository) Store(key string, result string) error {
 	return nil
 }
 
-// Retrieve retrieves a previously stored result for a key.
 func (r *IdempotencyRepository) Retrieve(key string) (string, bool) {
 	query := `SELECT result FROM idempotency_keys WHERE key = $1`
 	var result string
@@ -39,7 +36,6 @@ func (r *IdempotencyRepository) Retrieve(key string) (string, bool) {
 	return result, true
 }
 
-// Delete removes a stored idempotency key.
 func (r *IdempotencyRepository) Delete(key string) error {
 	query := `DELETE FROM idempotency_keys WHERE key = $1`
 	result, err := r.db.Exec(query, key)
@@ -53,7 +49,6 @@ func (r *IdempotencyRepository) Delete(key string) error {
 	return nil
 }
 
-// Exists checks if a key exists.
 func (r *IdempotencyRepository) Exists(key string) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM idempotency_keys WHERE key = $1)`
 	var exists bool

@@ -25,12 +25,10 @@ func NewRabbitMQConsumer(conn *shared.Connection, handler DispatchResponseHandle
 	return &RabbitMQConsumer{consumer: c, handler: handler}
 }
 
-// Run consumes until ctx is cancelled using the handler given at construction.
 func (c *RabbitMQConsumer) Run(ctx context.Context) error {
 	return c.RunWithHandler(ctx, c.handler)
 }
 
-// RunWithHandler consumes until ctx is cancelled using an explicit handler.
 func (c *RabbitMQConsumer) RunWithHandler(ctx context.Context, handler DispatchResponseHandler) error {
 	if handler == nil {
 		handler = func(_ context.Context, _ *shared.EventEnvelope) error { return nil }

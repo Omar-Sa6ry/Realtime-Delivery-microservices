@@ -15,7 +15,6 @@ type LockManager struct {
 	ttl      time.Duration
 }
 
-// NewLockManager creates a new LockManager.
 func NewLockManager(client *redis.Client, ctx context.Context, lockName string, ttl time.Duration) *LockManager {
 	return &LockManager{client: client, ctx: ctx, lockName: lockName, ttl: ttl}
 }
@@ -34,8 +33,6 @@ func (l *LockManager) Acquire() (bool, error) {
 	return false, nil
 }
 
-// TryRenewal attempts to renew the TTL on an existing lock.
-// Returns true if the renewal was successful.
 func (l *LockManager) TryRenewal() (bool, error) {
 	// Use Lua script for atomic check-and-renew
 	script := `

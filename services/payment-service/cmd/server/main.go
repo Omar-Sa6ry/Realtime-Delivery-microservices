@@ -15,14 +15,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 
-	// packages/go shared utilities
 	pkglogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
 	pkgmetrics "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/metrics"
 	pkgrmq "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/rabbitmq"
 	pkgsnowflake "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/snowflake"
 	sharedtracing "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/tracing"
 
-	// internal packages
 	grpcserver "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/grpc"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/kafka"
 	natsadapter "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/adapters/nats"

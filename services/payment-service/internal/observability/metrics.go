@@ -7,7 +7,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-// Metrics holds all Prometheus metrics for the payment service.
 type Metrics struct {
 	// Payment operations
 	PaymentsCreatedTotal     *prometheus.CounterVec

@@ -7,12 +7,10 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 )
 
-// GetPaymentQuery represents the query to retrieve a payment.
 type GetPaymentQuery struct {
 	PaymentID string
 }
 
-// Handle executes the get payment query.
 func (q *GetPaymentQuery) Handle(
 	service *services.PaymentService,
 ) (*domain.Payment, error) {
@@ -22,7 +20,6 @@ func (q *GetPaymentQuery) Handle(
 	)
 }
 
-// GetPaymentQueryFactory creates a GetPaymentQuery.
 func GetPaymentQueryFactory(paymentID string) *GetPaymentQuery {
 	return &GetPaymentQuery{
 		PaymentID: paymentID,

@@ -13,9 +13,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/domain/search"
 )
 
-// HandleIndexEvent routes one RabbitMQ envelope to the existing indexing.Service.
-// Unknown event types are logged and skipped (nil error → ack, no retry).
-// A nil service falls back to log-only mode so the consumer still acks.
 func HandleIndexEvent(ctx context.Context, svc *indexing.Service, env *shared.EventEnvelope) error {
 	if env == nil {
 		return fmt.Errorf("%w: nil envelope", shared.ErrPermanent)

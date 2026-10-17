@@ -22,15 +22,12 @@ type SearchRabbitMQConsumer struct {
 	driversHandler shared.MessageHandler
 }
 
-// envelope into HandleIndexEvent (which reuses indexing.Service).
 func NewSearchRabbitMQConsumer(conn *shared.Connection, svc *indexing.Service) *SearchRabbitMQConsumer {
 	return NewSearchRabbitMQConsumerWithHandler(conn, func(ctx context.Context, env *shared.EventEnvelope) error {
 		return HandleIndexEvent(ctx, svc, env)
 	})
 }
 
-// NewSearchRabbitMQConsumerWithHandler builds a multi-source consumer with an
-// explicit callback (useful for tests or custom pipelines).
 func NewSearchRabbitMQConsumerWithHandler(conn *shared.Connection, handler IndexEventHandler) *SearchRabbitMQConsumer {
 	if handler == nil {
 		handler = func(_ context.Context, _ *shared.EventEnvelope) error { return nil }
@@ -79,8 +76,6 @@ func NewSearchRabbitMQConsumerWithHandler(conn *shared.Connection, handler Index
 	}
 }
 
-// Start runs the consume loops for all bound exchanges until ctx is cancelled.
-// It blocks; callers should run it in a goroutine. It returns when ctx is done.
 func (c *SearchRabbitMQConsumer) Start(ctx context.Context) error {
 	errCh := make(chan error, 4)
 	go func() {

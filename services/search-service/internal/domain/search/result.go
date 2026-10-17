@@ -7,14 +7,12 @@ import (
 	"time"
 )
 
-// Pagination
 
 type PaginationInput struct {
 	Limit  int    `json:"limit"`
 	Cursor string `json:"cursor"`
 }
 
-// PageInfo carries pagination metadata in every SearchResult.
 type PageInfo struct {
 	HasNextPage bool   `json:"hasNextPage"`
 	Cursor      string `json:"cursor,omitempty"`
@@ -28,8 +26,6 @@ const (
 	SortDesc SortOrder = "desc"
 )
 
-// Geo
-
 type GeoPoint struct {
 	Lat float64 `json:"lat"`
 	Lon float64 `json:"lon"`
@@ -40,8 +36,6 @@ type GeoAddress struct {
 	Country  string   `json:"country"`
 	Location GeoPoint `json:"location"`
 }
-
-// Search Documents
 
 type DeliveryDocument struct {
 	DeliveryID    string     `json:"delivery_id"`
@@ -68,7 +62,6 @@ type DriverDocument struct {
 	SourceVersion int64     `json:"source_version"`
 }
 
-// MediaDocument is the OpenSearch search projection for a media item.
 type MediaDocument struct {
 	MediaID       string    `json:"media_id"`
 	OwnerID       string    `json:"owner_id"`
@@ -82,7 +75,6 @@ type MediaDocument struct {
 	SourceVersion int64     `json:"source_version"`
 }
 
-// UserDocument is the OpenSearch projection used by the single user-search endpoint.
 type UserDocument struct {
 	ID        string    `json:"id"`
 	FirstName string    `json:"first_name"`
@@ -93,14 +85,11 @@ type UserDocument struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// Search Queries
-
 type DeliverySearchSort struct {
 	Field string    `json:"field"` // created_at | updated_at | status
 	Order SortOrder `json:"order"`
 }
 
-// DeliverySearchQuery carries all parameters for a delivery search operation.
 type DeliverySearchQuery struct {
 	Query      string               `json:"query,omitempty"`
 	Status     string               `json:"status,omitempty"`
@@ -123,7 +112,6 @@ type DriverSearchSort struct {
 	Order SortOrder `json:"order"`
 }
 
-// DriverSearchQuery carries all parameters for a driver search operation.
 type DriverSearchQuery struct {
 	Query       string             `json:"query,omitempty"`
 	Status      string             `json:"status,omitempty"`
@@ -138,7 +126,6 @@ type DriverSearchQuery struct {
 	UserRole string `json:"-"`
 }
 
-// MediaSearchQuery carries all parameters for a media search operation.
 type MediaSearchQuery struct {
 	Query      string          `json:"query,omitempty"`
 	MediaType  string          `json:"mediaType,omitempty"`
@@ -151,14 +138,12 @@ type MediaSearchQuery struct {
 	UserRole string `json:"-"`
 }
 
-// GeoDistanceFilter is a center-point + radius geo filter.
 type GeoDistanceFilter struct {
 	Lat      float64 `json:"lat"`
 	Lon      float64 `json:"lon"`
 	RadiusKm float64 `json:"radiusKm"`
 }
 
-// GeoSearchQuery is used by NearbyDeliveries / NearbyDrivers.
 type GeoSearchQuery struct {
 	Lat        float64         `json:"lat"`
 	Lon        float64         `json:"lon"`
@@ -168,7 +153,6 @@ type GeoSearchQuery struct {
 	UserRole   string          `json:"-"`
 }
 
-// AutocompleteQuery is used by the autocomplete endpoint.
 type AutocompleteQuery struct {
 	Prefix string `json:"prefix"`
 	Index  string `json:"index"` // deliveries | drivers | media
@@ -182,15 +166,11 @@ type UserSearchQuery struct {
 	Pagination PaginationInput `json:"pagination"`
 }
 
-//  Search Results ──
-
-// SearchResult is a generic paginated search result container.
 type SearchResult[T any] struct {
 	Items    []T      `json:"items"`
 	PageInfo PageInfo `json:"pageInfo"`
 }
 
-// AutocompleteResult holds prefix-match suggestions.
 type AutocompleteResult struct {
 	Suggestions []string `json:"suggestions"`
 }
@@ -202,7 +182,6 @@ type searchCursorPayload struct {
 	SortValues []interface{} `json:"sv"`
 }
 
-// EncodeCursor serialises OpenSearch sort values into an opaque base64 cursor.
 func EncodeCursor(sortValues []interface{}) (string, error) {
 	cp := searchCursorPayload{SortValues: sortValues}
 	data, err := json.Marshal(cp)
@@ -212,7 +191,6 @@ func EncodeCursor(sortValues []interface{}) (string, error) {
 	return base64.StdEncoding.EncodeToString(data), nil
 }
 
-// DecodeCursor decodes a base64 cursor back to OpenSearch sort values.
 func DecodeCursor(cursor string) ([]interface{}, error) {
 	if cursor == "" {
 		return nil, nil

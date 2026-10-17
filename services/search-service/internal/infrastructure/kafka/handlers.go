@@ -14,16 +14,11 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-// EventHandler defines the strategy interface for handling specific event types.
 type EventHandler interface {
-	// EventType returns the event type string this handler processes.
 	EventType() string
-
-	// Handle processes the event payload and returns an error if processing fails.
 	Handle(ctx context.Context, payload json.RawMessage, traceID string) error
 }
 
-// handlerRegistry holds all registered event handlers.
 type handlerRegistry struct {
 	handlers map[string]EventHandler
 }
@@ -43,7 +38,6 @@ func (r *handlerRegistry) get(eventType string) (EventHandler, bool) {
 	return h, ok
 }
 
-// baseHandler provides common functionality for event handlers.
 type baseHandler struct {
 	indexingService *indexing.Service
 	eventType       string
@@ -61,7 +55,6 @@ func (b *baseHandler) logWarn(msg string, fields ...interface{}) {
 	slog.Warn(msg, fields...)
 }
 
-// DeliveryCreatedHandler handles delivery.created events.
 type DeliveryCreatedHandler struct {
 	baseHandler
 }
@@ -109,7 +102,6 @@ func (h *DeliveryCreatedHandler) Handle(ctx context.Context, payload json.RawMes
 	return h.indexingService.UpsertDelivery(ctx, doc)
 }
 
-// DeliveryUpdatedHandler handles delivery update events (assigned, accepted, picked_up, in_transit, completed, cancelled).
 type DeliveryUpdatedHandler struct {
 	baseHandler
 }
@@ -140,7 +132,6 @@ func (h *DeliveryUpdatedHandler) Handle(ctx context.Context, payload json.RawMes
 	return h.indexingService.UpsertDelivery(ctx, doc)
 }
 
-// DeliveryDeletedHandler handles delivery.deleted events.
 type DeliveryDeletedHandler struct {
 	baseHandler
 }
@@ -162,7 +153,6 @@ func (h *DeliveryDeletedHandler) Handle(ctx context.Context, payload json.RawMes
 	return h.indexingService.DeleteDelivery(ctx, p.DeliveryID)
 }
 
-// DriverCreatedHandler handles driver.created and driver.updated events.
 type DriverCreatedHandler struct {
 	baseHandler
 }
@@ -200,7 +190,6 @@ func (h *DriverCreatedHandler) Handle(ctx context.Context, payload json.RawMessa
 	return h.indexingService.UpsertDriver(ctx, doc)
 }
 
-// DriverDeletedHandler handles driver.deleted events.
 type DriverDeletedHandler struct {
 	baseHandler
 }
@@ -222,7 +211,6 @@ func (h *DriverDeletedHandler) Handle(ctx context.Context, payload json.RawMessa
 	return h.indexingService.DeleteDriver(ctx, p.DriverID)
 }
 
-// MediaUploadCreatedHandler handles media.upload.created events.
 type MediaUploadCreatedHandler struct {
 	baseHandler
 }
@@ -256,7 +244,6 @@ func (h *MediaUploadCreatedHandler) Handle(ctx context.Context, payload json.Raw
 	return h.indexingService.UpsertMedia(ctx, doc)
 }
 
-// MediaUploadCompletedHandler handles media.upload.completed events.
 type MediaUploadCompletedHandler struct {
 	baseHandler
 }
@@ -290,7 +277,6 @@ func (h *MediaUploadCompletedHandler) Handle(ctx context.Context, payload json.R
 	return h.indexingService.UpsertMedia(ctx, doc)
 }
 
-// MediaReadyHandler handles media.ready events.
 type MediaReadyHandler struct {
 	baseHandler
 }
@@ -329,7 +315,6 @@ func (h *MediaReadyHandler) Handle(ctx context.Context, payload json.RawMessage,
 	return h.indexingService.UpsertMedia(ctx, doc)
 }
 
-// MediaDeletedHandler handles media.deleted events.
 type MediaDeletedHandler struct {
 	baseHandler
 }
@@ -388,7 +373,6 @@ func (h *UserCreatedHandler) Handle(ctx context.Context, payload json.RawMessage
 	return h.indexingService.UpsertUser(ctx, doc)
 }
 
-// UserUpdatedHandler handles user.updated events.
 type UserUpdatedHandler struct {
 	baseHandler
 }
@@ -425,7 +409,6 @@ func (h *UserUpdatedHandler) Handle(ctx context.Context, payload json.RawMessage
 	return h.indexingService.UpsertUser(ctx, doc)
 }
 
-// UserDeletedHandler handles user.deleted events.
 type UserDeletedHandler struct {
 	baseHandler
 }
@@ -447,7 +430,6 @@ func (h *UserDeletedHandler) Handle(ctx context.Context, payload json.RawMessage
 	return h.indexingService.DeleteUser(ctx, p.UserID)
 }
 
-// BuildRegistry creates and populates the handler registry with all event handlers.
 func BuildRegistry(svc *indexing.Service) *handlerRegistry {
 	registry := newHandlerRegistry()
 
@@ -493,14 +475,12 @@ func BuildRegistry(svc *indexing.Service) *handlerRegistry {
 	return registry
 }
 
-// registerForTypes registers a single handler for multiple event types.
 func (r *handlerRegistry) registerForTypes(h EventHandler, types []string) {
 	for _, t := range types {
 		r.handlers[t] = h
 	}
 }
 
-// HandleEvent dispatches the event to the appropriate handler using the registry.
 func (cm *ConsumerManager) HandleEvent(ctx context.Context, registry *handlerRegistry, msg kafka.Message) error {
 	env, err := events.UnmarshalEnvelope(msg.Value)
 	if err != nil {

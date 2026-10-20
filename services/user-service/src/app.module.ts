@@ -63,13 +63,8 @@ import { AppResolver } from './app.resolver';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        host:
-          config.get<string>('DB_HOST', 'localhost') === 'user-db-srv' &&
-          process.env.NODE_ENV !== 'production' &&
-          !process.env.KUBERNETES_SERVICE_HOST
-            ? 'localhost'
-            : config.get<string>('DB_HOST', 'localhost'),
-        port: Number(config.get<number>('DB_PORT', 5433)) || 5433,
+        host: config.get<string>('DB_HOST', 'localhost'),
+        port: Number(config.get<number>('DB_PORT', 5432)) || 5432,
         username:
           config.get<string>('POSTGRES_USER') ||
           config.get<string>('DB_USERNAME', 'postgres'),

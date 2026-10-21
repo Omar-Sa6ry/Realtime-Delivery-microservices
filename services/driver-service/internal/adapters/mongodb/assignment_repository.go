@@ -12,14 +12,12 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// AssignmentRepository implements data access for assignments using MongoDB.
 type AssignmentRepository struct {
 	client     *mongo.Client
 	database   string
 	collection string
 }
 
-// NewAssignmentRepository creates a new AssignmentRepository.
 func NewAssignmentRepository(client *mongo.Client, database, collection string) *AssignmentRepository {
 	return &AssignmentRepository{
 		client:     client,
@@ -28,7 +26,6 @@ func NewAssignmentRepository(client *mongo.Client, database, collection string) 
 	}
 }
 
-// FindByID retrieves an assignment by ID.
 func (r *AssignmentRepository) FindByID(ctx context.Context, id string) (*domain.Assignment, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	var result domain.Assignment
@@ -42,7 +39,6 @@ func (r *AssignmentRepository) FindByID(ctx context.Context, id string) (*domain
 	return &result, nil
 }
 
-// FindActiveByDriver finds the active/offered assignment for a driver.
 func (r *AssignmentRepository) FindActiveByDriver(ctx context.Context, driverID string) (*domain.Assignment, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	var result domain.Assignment
@@ -59,7 +55,6 @@ func (r *AssignmentRepository) FindActiveByDriver(ctx context.Context, driverID 
 	return &result, nil
 }
 
-// FindByDeliveryID finds assignment by delivery ID.
 func (r *AssignmentRepository) FindByDeliveryID(ctx context.Context, deliveryID string) (*domain.Assignment, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	var result domain.Assignment
@@ -75,21 +70,18 @@ func (r *AssignmentRepository) FindByDeliveryID(ctx context.Context, deliveryID 
 	return &result, nil
 }
 
-// Save saves or updates an assignment (upsert by ID).
 func (r *AssignmentRepository) Save(ctx context.Context, assignment *domain.Assignment) error {
 	col := r.client.Database(r.database).Collection(r.collection)
 	_, err := col.ReplaceOne(ctx, bson.M{"_id": assignment.ID}, assignment, options.Replace().SetUpsert(true))
 	return err
 }
 
-// UpdateStatus updates assignment status.
 func (r *AssignmentRepository) UpdateStatus(ctx context.Context, id string, status string) error {
 	col := r.client.Database(r.database).Collection(r.collection)
 	_, err := col.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{"status": status, "updatedAt": time.Now()}})
 	return err
 }
 
-// ExpireOffers marks OFFERED assignments older than the given duration as EXPIRED.
 func (r *AssignmentRepository) ExpireOffers(ctx context.Context, olderThan time.Duration) ([]string, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	cutoff := time.Now().Add(-olderThan)
@@ -114,7 +106,6 @@ func (r *AssignmentRepository) ExpireOffers(ctx context.Context, olderThan time.
 	return expiredIDs, nil
 }
 
-// EnsureIndexes creates indexes for common query patterns.
 func (r *AssignmentRepository) EnsureIndexes(ctx context.Context) error {
 	col := r.client.Database(r.database).Collection(r.collection)
 	indexModels := []mongo.IndexModel{

@@ -60,7 +60,6 @@ func (s *Server) Start(addr string) error {
 	return nil
 }
 
-// Stop stops the HTTP server.
 func (s *Server) Stop() {
 	if s.httpServer != nil {
 		s.httpServer.Shutdown(context.Background())

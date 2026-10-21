@@ -5,7 +5,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
 )
 
-// DriverRepository defines the interface for driver data access.
 type DriverRepository interface {
 	FindByID(ctx context.Context, id string) (*domain.Driver, error)
 	FindByIDs(ctx context.Context, ids []string) ([]*domain.Driver, error)

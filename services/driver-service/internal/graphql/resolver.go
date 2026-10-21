@@ -16,7 +16,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// RootResolver implements the GraphQL schema resolvers.
 type RootResolver struct {
 	driverRepo        ports.DriverRepository
 	assignmentRepo    ports.AssignmentRepository
@@ -30,7 +29,6 @@ type RootResolver struct {
 	deliveryClient    ports.DeliveryServiceClient
 }
 
-// NewRootResolver constructs a new RootResolver with all application dependencies.
 func NewRootResolver(
 	driverRepo ports.DriverRepository,
 	assignmentRepo ports.AssignmentRepository,

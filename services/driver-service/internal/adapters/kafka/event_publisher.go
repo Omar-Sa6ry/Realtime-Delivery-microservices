@@ -10,12 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// EventPublisherAdapter wraps KafkaPublisher and implements ports.EventPublisher.
 type EventPublisherAdapter struct {
 	pub *KafkaPublisher
 }
 
-// NewEventPublisherAdapter creates an EventPublisherAdapter that satisfies ports.EventPublisher.
 func NewEventPublisherAdapter(pub *KafkaPublisher) *EventPublisherAdapter {
 	return &EventPublisherAdapter{pub: pub}
 }

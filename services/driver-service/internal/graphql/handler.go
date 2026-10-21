@@ -11,7 +11,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/i18n"
 )
 
-// ExtractLanguage determines the user language preference from Accept-Language or query parameter.
 func ExtractLanguage(r *http.Request) string {
 	if lang := r.Header.Get("x-lang"); lang != "" {
 		return i18n.NormalizeLang(lang)
@@ -26,7 +25,6 @@ func ExtractLanguage(r *http.Request) string {
 	return i18n.NormalizeLang(accept)
 }
 
-// ExtractUserID retrieves the user ID from headers (e.g., set by API gateway/ingress).
 func ExtractUserID(r *http.Request) string {
 	if uid := r.Header.Get("x-user-id"); uid != "" {
 		return uid
@@ -37,7 +35,6 @@ func ExtractUserID(r *http.Request) string {
 	return ""
 }
 
-// ExtractUserRole retrieves the user role from headers.
 func ExtractUserRole(r *http.Request) string {
 	if role := r.Header.Get("x-user-role"); role != "" {
 		return role
@@ -48,7 +45,6 @@ func ExtractUserRole(r *http.Request) string {
 	return ""
 }
 
-// HealthHandler serves liveness and readiness probe requests.
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	lang := ExtractLanguage(r)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -60,13 +56,11 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GraphQLHandler wraps the parsed GraphQL schema into an http.HandlerFunc.
 type GraphQLHandler struct {
 	schema  *gql.Schema
 	loaders *Loaders
 }
 
-// NewHandler creates a real Apollo Federation-compatible GraphQL subgraph HTTP handler.
 func NewHandler(rootResolver *RootResolver, loaders *Loaders) http.HandlerFunc {
 	// Parse schema with Federation options (schema definition)
 	schema, err := gql.ParseSchema(DriverSubgraphSDL, rootResolver, gql.UseStringDescriptions())

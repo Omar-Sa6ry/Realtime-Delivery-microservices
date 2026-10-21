@@ -1,6 +1,5 @@
 package graphql
 
-// DriverSubgraphSDL is the GraphQL SDL for the driver subgraph (Apollo Federation v2).
 const DriverSubgraphSDL = `directive @key(fields: String!) repeatable on OBJECT | INTERFACE
 directive @shareable on OBJECT | FIELD_DEFINITION
 directive @external on FIELD_DEFINITION

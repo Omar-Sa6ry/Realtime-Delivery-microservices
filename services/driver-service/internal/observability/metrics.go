@@ -5,7 +5,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-// Metrics holds all Prometheus metrics for the driver service.
 type Metrics struct {
 	// Dispatch metrics
 	DispatchRequestsTotal     *prometheus.CounterVec
@@ -48,7 +47,6 @@ type Metrics struct {
 	AssignmentStateGauge *prometheus.GaugeVec
 }
 
-// NewMetrics creates and registers all Prometheus metrics.
 func NewMetrics() *Metrics {
 	return &Metrics{
 		// Dispatch metrics
@@ -216,102 +214,82 @@ func NewMetrics() *Metrics {
 	}
 }
 
-// RecordDispatchRequest increments dispatch request counter.
 func (m *Metrics) RecordDispatchRequest(status string) {
 	m.DispatchRequestsTotal.WithLabelValues(status).Inc()
 }
 
-// RecordDispatchSuccess increments successful dispatch counter.
 func (m *Metrics) RecordDispatchSuccess(driverID string) {
 	m.DispatchSuccessTotal.WithLabelValues(driverID).Inc()
 }
 
-// RecordDispatchFailure increments failed dispatch counter.
 func (m *Metrics) RecordDispatchFailure(reason string) {
 	m.DispatchFailureTotal.WithLabelValues(reason).Inc()
 }
 
-// RecordDispatchDuration records dispatch operation duration.
 func (m *Metrics) RecordDispatchDuration(operation string, durationSeconds float64) {
 	m.DispatchDurationSeconds.WithLabelValues(operation).Observe(durationSeconds)
 }
 
-// RecordAssignmentCreated increments assignment counter.
 func (m *Metrics) RecordAssignmentCreated(status string) {
 	m.DriverAssignmentTotal.WithLabelValues(status).Inc()
 }
 
-// RecordAssignmentAccepted increments accepted assignment counter.
 func (m *Metrics) RecordAssignmentAccepted(driverID string) {
 	m.DriverAssignmentAcceptTotal.WithLabelValues(driverID).Inc()
 }
 
-// RecordAssignmentRejected increments rejected assignment counter.
 func (m *Metrics) RecordAssignmentRejected(driverID, reason string) {
 	m.DriverAssignmentRejectTotal.WithLabelValues(driverID, reason).Inc()
 }
 
-// RecordAssignmentExpired increments expired assignment counter.
 func (m *Metrics) RecordAssignmentExpired(driverID string) {
 	m.DriverAssignmentExpireTotal.WithLabelValues(driverID).Inc()
 }
 
-// RecordReservationConflict increments reservation conflict counter.
 func (m *Metrics) RecordReservationConflict(driverID string) {
 	m.DriverReservationConflictTotal.WithLabelValues(driverID).Inc()
 }
 
-// RecordLocationUpdate increments location update counter.
 func (m *Metrics) RecordLocationUpdate(driverID string) {
 	m.DriverLocationUpdatesTotal.WithLabelValues(driverID).Inc()
 }
 
-// RecordStaleLocation increments stale location counter.
 func (m *Metrics) RecordStaleLocation(driverID string) {
 	m.DriverLocationStaleTotal.WithLabelValues(driverID).Inc()
 }
 
-// RecordGeoQueryDuration records Redis GEO query duration.
 func (m *Metrics) RecordGeoQueryDuration(operation string, durationSeconds float64) {
 	m.RedisGeoQueryDurationSeconds.WithLabelValues(operation).Observe(durationSeconds)
 }
 
-// RecordLockContention increments lock contention counter.
 func (m *Metrics) RecordLockContention(driverID string) {
 	m.RedisLockContentionTotal.WithLabelValues(driverID).Inc()
 }
 
-// RecordKafkaPublishFailure increments Kafka publish failure counter.
 func (m *Metrics) RecordKafkaPublishFailure(topic string) {
 	m.KafkaPublishFailuresTotal.WithLabelValues(topic).Inc()
 }
 
-// SetKafkaConsumerLag sets Kafka consumer lag gauge.
 func (m *Metrics) SetKafkaConsumerLag(topic string, partition int, lag float64) {
 	m.KafkaConsumerLag.WithLabelValues(topic, string(rune(partition))).Set(lag)
 }
 
-// RecordNATPublishFailure increments NATS publish failure counter.
 func (m *Metrics) RecordNATPublishFailure(subject string) {
 	m.NATPublishFailuresTotal.WithLabelValues(subject).Inc()
 }
 
-// RecordGrpcRequestDuration records gRPC request duration.
 func (m *Metrics) RecordGrpcRequestDuration(method, status string, durationSeconds float64) {
 	m.GrpcRequestDurationSeconds.WithLabelValues(method, status).Observe(durationSeconds)
 }
 
-// SetDriverState sets driver state gauge.
 func (m *Metrics) SetDriverState(driverID string, state float64) {
 	m.DriverStateGauge.WithLabelValues(driverID).Set(state)
 }
 
-// SetDriverCount sets driver count per status gauge.
 func (m *Metrics) SetDriverCount(status string, count float64) {
 	m.DriverCountGauge.WithLabelValues(status).Set(count)
 }
 
-// SetAssignmentState sets assignment state gauge.
 func (m *Metrics) SetAssignmentState(assignmentID, driverID string, state float64) {
 	m.AssignmentStateGauge.WithLabelValues(assignmentID, driverID).Set(state)
 }

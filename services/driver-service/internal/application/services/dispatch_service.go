@@ -262,7 +262,6 @@ func (s *DispatchService) ReleaseDriver(ctx context.Context, driverID, deliveryI
 	return nil
 }
 
-// AcceptAssignment accepts a driver's assignment offer.
 func (s *DispatchService) AcceptAssignment(ctx context.Context, assignmentID, driverID string) error {
 	assignment, err := s.assignmentRepo.FindByID(ctx, assignmentID)
 	if err != nil {
@@ -302,7 +301,6 @@ func (s *DispatchService) AcceptAssignment(ctx context.Context, assignmentID, dr
 	return nil
 }
 
-// RejectAssignment rejects a driver's assignment offer.
 func (s *DispatchService) RejectAssignment(ctx context.Context, assignmentID, driverID, reason string) error {
 	assignment, err := s.assignmentRepo.FindByID(ctx, assignmentID)
 	if err != nil {
@@ -350,7 +348,6 @@ func (s *DispatchService) RejectAssignment(ctx context.Context, assignmentID, dr
 	return nil
 }
 
-// ReleaseDriverByAssignment releases a driver by assignment ID.
 func (s *DispatchService) ReleaseDriverByAssignment(ctx context.Context, assignmentID string) error {
 	assignment, err := s.assignmentRepo.FindByID(ctx, assignmentID)
 	if err != nil {
@@ -407,7 +404,6 @@ func (s *DispatchService) ReleaseDriverByAssignment(ctx context.Context, assignm
 	return nil
 }
 
-// ValidateDriverID validates a driver ID using the driver repository.
 func (s *DispatchService) ValidateDriverID(ctx context.Context, driverID string) (bool, string) {
 	driver, err := s.driverRepo.FindByID(ctx, driverID)
 	if err != nil || driver == nil {
@@ -416,7 +412,6 @@ func (s *DispatchService) ValidateDriverID(ctx context.Context, driverID string)
 	return true, string(driver.Status)
 }
 
-// ValidateUserID validates that a user ID has a linked driver profile.
 func (s *DispatchService) ValidateUserID(ctx context.Context, userID string) (bool, string) {
 	driver, err := s.driverRepo.FindByUserID(ctx, userID)
 	if err != nil || driver == nil {

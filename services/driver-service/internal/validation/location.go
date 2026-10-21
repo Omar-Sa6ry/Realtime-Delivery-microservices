@@ -5,7 +5,6 @@ import (
 	"regexp"
 )
 
-// ValidateLocation validates driver location coordinates.
 func ValidateLocation(latitude, longitude string) error {
 	latRegex := regexp.MustCompile(`^[-]?[0-9]\d{0,2}\.?\d*$`)
 	lngRegex := regexp.MustCompile(`^[-]?(1[0-7]\d{1}\.\d*|[0-9]?\d{1,2}\.\d*)$`)
@@ -37,7 +36,6 @@ func ValidateLocation(latitude, longitude string) error {
 	return nil
 }
 
-// ValidateDriverID validates driver ID format.
 func ValidateDriverID(driverID string) error {
 	if driverID == "" {
 		return fmt.Errorf("driver ID is required")
@@ -50,7 +48,6 @@ func ValidateDriverID(driverID string) error {
 	return nil
 }
 
-// ValidateAssignmentID validates assignment ID format.
 func ValidateAssignmentID(assignmentID string) error {
 	if assignmentID == "" {
 		return fmt.Errorf("assignment ID is required")

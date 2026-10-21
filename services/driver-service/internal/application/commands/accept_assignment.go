@@ -9,7 +9,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// AcceptAssignmentCommand accepts a driver's assignment offer.
 type AcceptAssignmentCommand struct {
 	assignmentID string
 	driverID     string
@@ -17,7 +16,6 @@ type AcceptAssignmentCommand struct {
 	eventPublisher ports.EventPublisher
 }
 
-// NewAcceptAssignmentCommand creates a new AcceptAssignmentCommand.
 func NewAcceptAssignmentCommand(assignmentID, driverID string, assignmentRepo ports.AssignmentRepository,
 	eventPublisher ports.EventPublisher) *AcceptAssignmentCommand {
 
@@ -29,7 +27,6 @@ func NewAcceptAssignmentCommand(assignmentID, driverID string, assignmentRepo po
 	}
 }
 
-// Execute accepts the assignment offer.
 func (c *AcceptAssignmentCommand) Execute(ctx context.Context) error {
 	// Find assignment by ID
 	assignment, err := c.assignmentRepo.FindByID(ctx, c.assignmentID)

@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Review represents a rating and comment given by a user to a driver for a specific delivery.
 type Review struct {
 	ID         string
 	DriverID   string
@@ -18,7 +17,6 @@ type Review struct {
 	UpdatedAt  time.Time
 }
 
-// NewReview creates a new review with basic validation.
 func NewReview(driverID, userID, deliveryID string, rating float64, comment string) (*Review, error) {
 	if driverID == "" || userID == "" || deliveryID == "" {
 		return nil, ErrInvalidArgument

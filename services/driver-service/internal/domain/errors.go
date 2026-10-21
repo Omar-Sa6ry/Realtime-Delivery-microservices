@@ -30,7 +30,6 @@ var (
 	ErrInternal                = &Error{Code: "internal_error", Message: "internal error"}
 )
 
-// Error represents a domain error with a code and message.
 type Error struct {
 	Code    string
 	Message string
@@ -40,12 +39,10 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("[%s] %s", e.Code, e.Message)
 }
 
-// Is checks if the error matches the given code.
 func (e *Error) IsCode(code string) bool {
 	return e.Code == code
 }
 
-// Unwrap implements the builtin error interface.
 func (e *Error) Unwrap() error {
 	return e
 }

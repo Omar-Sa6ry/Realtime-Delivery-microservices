@@ -5,7 +5,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
 )
 
-// EventPublisher defines the interface for publishing events to Kafka and NATS.
 type EventPublisher interface {
 	PublishDriverCreated(ctx context.Context, driverID, userID string) error
 	PublishDriverUpdated(ctx context.Context, driverID string, vehicleType domain.VehicleType, capabilities []string) error

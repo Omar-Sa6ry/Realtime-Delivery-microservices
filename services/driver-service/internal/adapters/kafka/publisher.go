@@ -8,12 +8,10 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-// KafkaPublisher implements event publishing to Kafka topics.
 type KafkaPublisher struct {
 	writer *kafka.Writer
 }
 
-// NewKafkaPublisher creates a new KafkaPublisher.
 func NewKafkaPublisher(brokers []string, defaultTopic string) *KafkaPublisher {
 	return &KafkaPublisher{
 		writer: &kafka.Writer{
@@ -25,7 +23,6 @@ func NewKafkaPublisher(brokers []string, defaultTopic string) *KafkaPublisher {
 	}
 }
 
-// PublishMessage publishes a message to a specific Kafka topic with a key.
 func (p *KafkaPublisher) PublishMessage(ctx context.Context, topic, key string, value []byte) error {
 	msg := kafka.Message{
 		Topic: topic,
@@ -40,7 +37,6 @@ func (p *KafkaPublisher) PublishMessage(ctx context.Context, topic, key string, 
 	return p.writer.WriteMessages(ctx, msg)
 }
 
-// Close closes the underlying Kafka writer.
 func (p *KafkaPublisher) Close() error {
 	return p.writer.Close()
 }

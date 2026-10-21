@@ -9,7 +9,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// RejectAssignmentCommand rejects a driver's assignment offer.
 type RejectAssignmentCommand struct {
 	assignmentID string
 	driverID     string
@@ -18,7 +17,6 @@ type RejectAssignmentCommand struct {
 	eventPublisher ports.EventPublisher
 }
 
-// NewRejectAssignmentCommand creates a new RejectAssignmentCommand.
 func NewRejectAssignmentCommand(assignmentID, driverID, reason string, assignmentRepo ports.AssignmentRepository,
 	eventPublisher ports.EventPublisher) *RejectAssignmentCommand {
 
@@ -31,7 +29,6 @@ func NewRejectAssignmentCommand(assignmentID, driverID, reason string, assignmen
 	}
 }
 
-// Execute rejects the assignment offer.
 func (c *RejectAssignmentCommand) Execute(ctx context.Context) error {
 	// Find assignment by ID
 	assignment, err := c.assignmentRepo.FindByID(ctx, c.assignmentID)
@@ -64,10 +61,6 @@ func (c *RejectAssignmentCommand) Execute(ctx context.Context) error {
 		log.Printf("reject_assignment: failed to save assignment %s: %v", c.assignmentID, err)
 		return err
 	}
-
-	// Release driver back to AVAILABLE
-	// Use the driverID already available in the command
-	// Driver state release was handled when assignment was rejected above
 
 	// Publish assignment rejected event
 	err = c.eventPublisher.PublishAssignmentRejected(ctx, assignment.ID, assignment.DeliveryID, c.driverID, c.reason)

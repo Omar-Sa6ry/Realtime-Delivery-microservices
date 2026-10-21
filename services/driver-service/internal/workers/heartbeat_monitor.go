@@ -9,20 +9,17 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// HeartbeatMonitor periodically checks driver heartbeat status and marks stale drivers as unavailable.
 type HeartbeatMonitor struct {
 	driverRepo    ports.DriverRepository
 	locationStore ports.LocationStore
 }
 
-// NewHeartbeatMonitor creates a new heartbeat monitor.
 func NewHeartbeatMonitor(driverRepo ports.DriverRepository) *HeartbeatMonitor {
 	return &HeartbeatMonitor{
 		driverRepo: driverRepo,
 	}
 }
 
-// Run starts the heartbeat monitoring loop and blocks until ctx is cancelled.
 func (h *HeartbeatMonitor) Run(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()

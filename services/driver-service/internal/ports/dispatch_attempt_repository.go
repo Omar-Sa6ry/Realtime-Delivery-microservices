@@ -6,7 +6,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
 )
 
-// DispatchAttemptRepository defines the interface for dispatch attempt data access.
 type DispatchAttemptRepository interface {
 	Save(ctx context.Context, attempt *domain.DispatchAttempt) error
 	FindByDeliveryID(ctx context.Context, deliveryID string) ([]*domain.DispatchAttempt, error)

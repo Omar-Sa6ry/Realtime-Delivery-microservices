@@ -11,14 +11,12 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// IdempotencyRepository implements idempotency store using MongoDB.
 type IdempotencyRepository struct {
 	client     *mongo.Client
 	database   string
 	collection string
 }
 
-// NewIdempotencyRepository creates a new IdempotencyRepository.
 func NewIdempotencyRepository(client *mongo.Client, database, collection string) *IdempotencyRepository {
 	return &IdempotencyRepository{
 		client:     client,
@@ -27,7 +25,6 @@ func NewIdempotencyRepository(client *mongo.Client, database, collection string)
 	}
 }
 
-// CheckAndStore checks if a key exists and stores the result atomically.
 func (r *IdempotencyRepository) CheckAndStore(ctx context.Context, key string, result []byte, ttl int) (bool, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 
@@ -53,28 +50,24 @@ func (r *IdempotencyRepository) CheckAndStore(ctx context.Context, key string, r
 	return false, nil // Key already existed
 }
 
-// Exists checks if a key exists.
 func (r *IdempotencyRepository) Exists(ctx context.Context, key string) (bool, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	count, err := col.CountDocuments(ctx, bson.M{"_id": key})
 	return count > 0, err
 }
 
-// Delete removes an idempotency key.
 func (r *IdempotencyRepository) Delete(ctx context.Context, key string) error {
 	col := r.client.Database(r.database).Collection(r.collection)
 	_, err := col.DeleteOne(ctx, bson.M{"_id": key})
 	return err
 }
 
-// CleanupExpired removes expired idempotency keys.
 func (r *IdempotencyRepository) CleanupExpired(ctx context.Context) (int64, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	result, err := col.DeleteMany(ctx, bson.M{"expiresAt": bson.M{"$lt": time.Now()}})
 	return result.DeletedCount, err
 }
 
-// EnsureIndex creates the necessary indexes.
 func (r *IdempotencyRepository) EnsureIndex(ctx context.Context) error {
 	col := r.client.Database(r.database).Collection(r.collection)
 	indexModels := []mongo.IndexModel{

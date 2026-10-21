@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-// Handler returns a GraphQL HTTP handler function using the provided schema.
 func Handler(s *Schema) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {

@@ -7,13 +7,11 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// GetAssignmentQuery retrieves assignment information by ID.
 type GetAssignmentQuery struct {
 	AssignmentID string
 	assignmentRepo ports.AssignmentRepository
 }
 
-// NewGetAssignmentQuery creates a new GetAssignmentQuery.
 func NewGetAssignmentQuery(assignmentID string, assignmentRepo ports.AssignmentRepository) *GetAssignmentQuery {
 	return &GetAssignmentQuery{
 		AssignmentID: assignmentID,
@@ -21,7 +19,6 @@ func NewGetAssignmentQuery(assignmentID string, assignmentRepo ports.AssignmentR
 	}
 }
 
-// Execute retrieves assignment information by ID.
 func (q *GetAssignmentQuery) Execute(ctx context.Context) (*domain.Assignment, error) {
 	assignment, err := q.assignmentRepo.FindByID(ctx, q.AssignmentID)
 	if err != nil {

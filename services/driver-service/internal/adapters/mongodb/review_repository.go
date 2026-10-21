@@ -11,14 +11,12 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// ReviewRepository implements ReviewRepository interface using MongoDB.
 type ReviewRepository struct {
 	client     *mongo.Client
 	database   string
 	collection string
 }
 
-// NewReviewRepository creates a new ReviewRepository.
 func NewReviewRepository(client *mongo.Client, database, collection string) *ReviewRepository {
 	return &ReviewRepository{
 		client:     client,
@@ -27,14 +25,12 @@ func NewReviewRepository(client *mongo.Client, database, collection string) *Rev
 	}
 }
 
-// Create saves a new review in MongoDB.
 func (r *ReviewRepository) Create(ctx context.Context, review *domain.Review) error {
 	col := r.client.Database(r.database).Collection(r.collection)
 	_, err := col.InsertOne(ctx, review)
 	return err
 }
 
-// FindByDriverID retrieves reviews for a given driver with pagination.
 func (r *ReviewRepository) FindByDriverID(ctx context.Context, driverID string, skip, limit int) ([]*domain.Review, int64, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	filter := bson.M{"driverid": driverID} // using lower case as mongo driver serializes struct tags
@@ -63,7 +59,6 @@ func (r *ReviewRepository) FindByDriverID(ctx context.Context, driverID string, 
 	return reviews, total, nil
 }
 
-// FindByDeliveryID retrieves a review by delivery ID.
 func (r *ReviewRepository) FindByDeliveryID(ctx context.Context, deliveryID string) (*domain.Review, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	var review domain.Review
@@ -77,7 +72,6 @@ func (r *ReviewRepository) FindByDeliveryID(ctx context.Context, deliveryID stri
 	return &review, nil
 }
 
-// CalculateAverageRating computes the average rating and count for a driver using an aggregation pipeline.
 func (r *ReviewRepository) CalculateAverageRating(ctx context.Context, driverID string) (float64, int64, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 
@@ -113,7 +107,6 @@ func (r *ReviewRepository) CalculateAverageRating(ctx context.Context, driverID 
 	return result.AverageRating, result.TotalReviews, nil
 }
 
-// EnsureIndexes creates indexes for common query patterns.
 func (r *ReviewRepository) EnsureIndexes(ctx context.Context) error {
 	col := r.client.Database(r.database).Collection(r.collection)
 	indexModels := []mongo.IndexModel{

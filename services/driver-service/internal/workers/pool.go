@@ -6,7 +6,6 @@ import (
 	"sync"
 )
 
-// WorkerPool manages a pool of background workers for operational tasks.
 type WorkerPool struct {
 	workers   []*worker
 	stopChan  chan struct{}
@@ -14,14 +13,12 @@ type WorkerPool struct {
 	maxWorkers int
 }
 
-// worker represents a single background worker.
 type worker struct {
 	id        int
 	stopChan  chan struct{}
 	taskChan  chan func() error
 }
 
-// NewWorkerPool creates a new worker pool with the specified number of workers.
 func NewWorkerPool(numWorkers int) *WorkerPool {
 	pool := &WorkerPool{
 		stopChan:   make(chan struct{}),
@@ -40,7 +37,6 @@ func NewWorkerPool(numWorkers int) *WorkerPool {
 	return pool
 }
 
-// Start starts all workers in the pool.
 func (p *WorkerPool) Start(ctx context.Context) {
 	for _, w := range p.workers {
 		p.wg.Add(1)
@@ -48,19 +44,16 @@ func (p *WorkerPool) Start(ctx context.Context) {
 	}
 }
 
-// Stop stops all workers in the pool.
 func (p *WorkerPool) Stop() {
 	close(p.stopChan)
 	p.wg.Wait()
 }
 
-// Submit submits a goroutine-based task to run in background.
 func (p *WorkerPool) Submit(task func()) {
 	go task()
 }
 
 
-// ErrWorkerPoolFull is returned when the worker pool task queue is full.
 var ErrWorkerPoolFull = func() error { return errWorkerPoolFull{} }()
 
 type errWorkerPoolFull struct{}
@@ -69,7 +62,6 @@ func (e errWorkerPoolFull) Error() string {
 	return "worker pool task queue full"
 }
 
-// run is the main loop for each worker.
 func (w *worker) run() {
 	defer func() {
 

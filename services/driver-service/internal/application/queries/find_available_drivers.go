@@ -8,7 +8,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// FindAvailableDriversQuery finds drivers available near the given coordinates.
 type FindAvailableDriversQuery struct {
 	Lat          float64
 	Lng          float64
@@ -19,7 +18,6 @@ type FindAvailableDriversQuery struct {
 	locationStore ports.LocationStore
 }
 
-// NewFindAvailableDriversQuery creates a new FindAvailableDriversQuery.
 func NewFindAvailableDriversQuery(lat, lng, radiusKm float64, vehicleType domain.VehicleType, deliveryID string,
 	driverRepo ports.DriverRepository, locationStore ports.LocationStore) *FindAvailableDriversQuery {
 
@@ -34,14 +32,7 @@ func NewFindAvailableDriversQuery(lat, lng, radiusKm float64, vehicleType domain
 	}
 }
 
-// Execute finds available drivers using Redis GEO search and MongoDB state filtering.
 func (q *FindAvailableDriversQuery) Execute(ctx context.Context) ([]domain.Candidate, error) {
-	// Use Redis GEO to find nearby drivers
-	// Filter by AVAILABLE state from MongoDB
-	// Rank candidates by distance
-
-	// GEOSearch would be implemented via locationStore
-	// For now, find drivers by status from MongoDB
 	drivers, err := q.driverRepo.FindAvailableByLocation(ctx, q.Lat, q.Lng, q.RadiusKm, q.VehicleType)
 	if err != nil {
 		log.Printf("find_available_drivers: failed to find available drivers: %v", err)

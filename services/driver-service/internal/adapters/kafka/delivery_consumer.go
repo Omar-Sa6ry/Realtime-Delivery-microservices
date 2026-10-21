@@ -14,7 +14,6 @@ import (
 	kafkago "github.com/segmentio/kafka-go"
 )
 
-// DeliveryCreatedConsumer listens for delivery.created events and dispatches an available driver.
 type DeliveryCreatedConsumer struct {
 	consumer       *pkgKafka.Consumer
 	dispatchSvc    *services.DispatchService
@@ -22,7 +21,6 @@ type DeliveryCreatedConsumer struct {
 	eventPublisher ports.EventPublisher
 }
 
-// DeliveryCreatedPayloadExtended captures the payload fields sent by delivery-service outbox.
 type DeliveryCreatedPayloadExtended struct {
 	DeliveryID string `json:"deliveryId"`
 	CustomerID string `json:"customerId"`
@@ -69,7 +67,6 @@ func parseCoordinate(val interface{}, fallback float64) float64 {
 	return fallback
 }
 
-// NewDeliveryCreatedConsumer initializes the consumer.
 func NewDeliveryCreatedConsumer(brokers []string, groupID string, dispatchSvc *services.DispatchService, assignmentRepo ports.AssignmentRepository, eventPublisher ports.EventPublisher) *DeliveryCreatedConsumer {
 	consumer := pkgKafka.NewConsumer(pkgKafka.ConsumerConfig{
 		Brokers:    brokers,
@@ -86,13 +83,11 @@ func NewDeliveryCreatedConsumer(brokers []string, groupID string, dispatchSvc *s
 	}
 }
 
-// Start runs the consumer loop until ctx is cancelled.
 func (c *DeliveryCreatedConsumer) Start(ctx context.Context) error {
 	slog.Info("DeliveryCreatedConsumer started listening for delivery.created events")
 	return c.consumer.Run(ctx, c.handleMessage)
 }
 
-// Close closes the underlying consumer.
 func (c *DeliveryCreatedConsumer) Close() error {
 	return c.consumer.Close()
 }

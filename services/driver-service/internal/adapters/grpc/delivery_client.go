@@ -11,7 +11,6 @@ type deliveryServiceClientAdapter struct {
 	client pb.DeliveryServiceClient
 }
 
-// NewDeliveryServiceClientAdapter creates a new ports.DeliveryServiceClient adapter using gRPC.
 func NewDeliveryServiceClientAdapter(client pb.DeliveryServiceClient) ports.DeliveryServiceClient {
 	return &deliveryServiceClientAdapter{client: client}
 }

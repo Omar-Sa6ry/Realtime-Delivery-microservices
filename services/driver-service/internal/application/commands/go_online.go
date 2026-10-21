@@ -9,14 +9,12 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// GoOnlineCommand transitions a driver from OFFLINE to AVAILABLE state.
 type GoOnlineCommand struct {
 	driverID   string
 	driverRepo ports.DriverRepository
 	eventPublisher ports.EventPublisher
 }
 
-// NewGoOnlineCommand creates a new GoOnlineCommand.
 func NewGoOnlineCommand(driverID string, driverRepo ports.DriverRepository, eventPublisher ports.EventPublisher) *GoOnlineCommand {
 	return &GoOnlineCommand{
 		driverID:       driverID,
@@ -25,7 +23,6 @@ func NewGoOnlineCommand(driverID string, driverRepo ports.DriverRepository, even
 	}
 }
 
-// Execute transitions the driver to online state.
 func (c *GoOnlineCommand) Execute(ctx context.Context) error {
 	// Find driver by ID
 	driver, err := c.driverRepo.FindByID(ctx, c.driverID)

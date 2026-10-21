@@ -9,7 +9,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// ReserveDriverCommand reserves a driver for a delivery assignment.
 type ReserveDriverCommand struct {
 	driverID     string
 	deliveryID   string
@@ -20,7 +19,6 @@ type ReserveDriverCommand struct {
 	dispatchPolicy *domain.DispatchPolicy
 }
 
-// NewReserveDriverCommand creates a new ReserveDriverCommand.
 func NewReserveDriverCommand(driverID, deliveryID string, driverRepo ports.DriverRepository,
 	assignmentRepo ports.AssignmentRepository, lockManager ports.LockManager,
 	eventPublisher ports.EventPublisher, dispatchPolicy *domain.DispatchPolicy) *ReserveDriverCommand {
@@ -36,7 +34,6 @@ func NewReserveDriverCommand(driverID, deliveryID string, driverRepo ports.Drive
 	}
 }
 
-// Execute reserves the driver for the delivery.
 func (c *ReserveDriverCommand) Execute(ctx context.Context) (bool, error) {
 	// Acquire distributed lock for the driver
 	acquired, err := c.lockManager.Acquire(ctx, "lock:driver:"+c.driverID, 30*time.Second)

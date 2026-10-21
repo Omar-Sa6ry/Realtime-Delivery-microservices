@@ -6,18 +6,14 @@ import (
 	"strings"
 )
 
-// Schema represents the driver service GraphQL schema.
 type Schema struct {
-	// Schema SDL (Schema Definition Language) string
 	sdl string
 }
 
-// SetSDLSets the GraphQL schema SDL.
 func (s *Schema) SetSDLSdl(sdl string) {
 	s.sdl = sdl
 }
 
-// Handler returns a GraphQL HTTP handler function.
 func (s *Schema) Handler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {

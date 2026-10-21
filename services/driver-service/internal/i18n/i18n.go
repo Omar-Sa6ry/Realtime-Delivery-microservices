@@ -110,7 +110,6 @@ var messages = map[string]map[string]string{
 	},
 }
 
-// NormalizeLang normalizes the language code, defaulting to "en".
 func NormalizeLang(lang string) string {
 	lang = strings.TrimSpace(strings.ToLower(lang))
 	if strings.HasPrefix(lang, "ar") {
@@ -119,8 +118,6 @@ func NormalizeLang(lang string) string {
 	return DefaultLang
 }
 
-// Translate returns the translated string for a given key in the specified language.
-// Defaults to English ("en") if key or language is not found.
 func Translate(lang, key string) string {
 	normalized := NormalizeLang(lang)
 	if langMap, ok := messages[normalized]; ok {
@@ -137,12 +134,10 @@ func Translate(lang, key string) string {
 	return key
 }
 
-// T is an alias for Translate
 func T(lang, key string) string {
 	return Translate(lang, key)
 }
 
-// FromContext extracts language from context or returns default "en"
 func FromContext(ctx context.Context) string {
 	if ctx == nil {
 		return DefaultLang
@@ -153,7 +148,6 @@ func FromContext(ctx context.Context) string {
 	return DefaultLang
 }
 
-// WithLanguage returns a context containing the specified language
 func WithLanguage(ctx context.Context, lang string) context.Context {
 	return context.WithValue(ctx, LangKey, NormalizeLang(lang))
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/domain"
 )
 
-// AssignmentRepository defines the interface for assignment data access.
 type AssignmentRepository interface {
 	FindByID(ctx context.Context, id string) (*domain.Assignment, error)
 	FindActiveByDriver(ctx context.Context, driverID string) (*domain.Assignment, error)

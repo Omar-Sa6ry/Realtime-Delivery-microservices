@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// RegisterDriverCommand represents the input for registering a driver.
 type RegisterDriverCommand struct {
 	UserID       string
 	VehicleType  domain.VehicleType
@@ -21,14 +20,12 @@ type RegisterDriverCommand struct {
 	IsActive     bool
 }
 
-// RegisterDriverHandler handles driver registration.
 type RegisterDriverHandler struct {
 	driverRepo     ports.DriverRepository
 	eventPublisher ports.EventPublisher
 	userClient     proto.UserServiceClient
 }
 
-// NewRegisterDriverHandler creates a new RegisterDriverHandler.
 func NewRegisterDriverHandler(
 	driverRepo ports.DriverRepository,
 	eventPublisher ports.EventPublisher,
@@ -41,7 +38,6 @@ func NewRegisterDriverHandler(
 	}
 }
 
-// Execute performs the registration.
 func (h *RegisterDriverHandler) Execute(ctx context.Context, cmd RegisterDriverCommand) (*domain.Driver, error) {
 	// 0. Check if driver profile already exists for this userID
 	existingDriver, err := h.driverRepo.FindByUserID(ctx, cmd.UserID)

@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// Driver represents a driver aggregate root with its state machine.
 type Driver struct {
 	mu           sync.Mutex
 	ID           string       `json:"id" bson:"_id"`
@@ -23,7 +22,6 @@ type Driver struct {
 	UpdatedAt    time.Time    `json:"updatedAt" bson:"updatedAt"`
 }
 
-// DriverStatus represents the operational state of a driver.
 type DriverStatus string
 
 const (
@@ -34,21 +32,18 @@ const (
 	DriverStatusBlocked  DriverStatus = "BLOCKED"
 )
 
-// Valid statuses for the public state machine.
 var validDriverStatuses = map[DriverStatus]bool{
 	DriverStatusOffline:  true,
 	DriverStatusAvailable: true,
 	DriverStatusBusy:     true,
 }
 
-// DriverStatusTransition represents a transition action.
 type DriverStatusTransition struct {
 	From   DriverStatus
 	Action string
 	To     DriverStatus
 }
 
-// DriverTransitionMap maps actions to allowed transitions for each state.
 var DriverTransitionMap = map[DriverStatus][]DriverStatusTransition{
 	DriverStatusOffline: {
 		{From: DriverStatusOffline, Action: "GoOnline", To: DriverStatusAvailable},
@@ -62,7 +57,6 @@ var DriverTransitionMap = map[DriverStatus][]DriverStatusTransition{
 	},
 }
 
-// IsValidTransition checks if a transition from one status to another via an action is valid.
 func IsValidDriverTransition(from, to DriverStatus, action string) bool {
 	transitions, ok := DriverTransitionMap[from]
 	if !ok {
@@ -76,7 +70,6 @@ func IsValidDriverTransition(from, to DriverStatus, action string) bool {
 	return false
 }
 
-// GoOnline transitions a driver from OFFLINE to AVAILABLE.
 func (d *Driver) GoOnline() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -95,7 +88,6 @@ func (d *Driver) GoOnline() error {
 	return nil
 }
 
-// GoOffline transitions a driver from AVAILABLE to OFFLINE.
 func (d *Driver) GoOffline() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -108,7 +100,6 @@ func (d *Driver) GoOffline() error {
 	return nil
 }
 
-// Reserve transitions a driver from AVAILABLE to BUSY (reserved for a delivery).
 func (d *Driver) Reserve() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -127,7 +118,6 @@ func (d *Driver) Reserve() error {
 	return nil
 }
 
-// CompleteDelivery transitions a driver from BUSY to AVAILABLE after delivery completion.
 func (d *Driver) CompleteDelivery() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -140,7 +130,6 @@ func (d *Driver) CompleteDelivery() error {
 	return nil
 }
 
-// Block prevents the driver from accepting new assignments or going online.
 func (d *Driver) Block() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -149,7 +138,6 @@ func (d *Driver) Block() error {
 	return nil
 }
 
-// Unblock restores the driver's permissions.
 func (d *Driver) Unblock() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -158,7 +146,6 @@ func (d *Driver) Unblock() error {
 	return nil
 }
 
-// Activate enables the driver.
 func (d *Driver) Activate() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -167,7 +154,6 @@ func (d *Driver) Activate() error {
 	return nil
 }
 
-// Deactivate disables the driver.
 func (d *Driver) Deactivate() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -179,7 +165,6 @@ func (d *Driver) Deactivate() error {
 	return nil
 }
 
-// UpdateRating updates the driver's overall rating.
 func (d *Driver) UpdateRating(averageRating float64, totalReviews int64) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -188,7 +173,6 @@ func (d *Driver) UpdateRating(averageRating float64, totalReviews int64) {
 	d.UpdatedAt = time.Now()
 }
 
-// String returns the human-readable status.
 func (d *Driver) String() string {
 	return string(d.Status)
 }
@@ -203,19 +187,16 @@ const (
 	VehicleTypeVan        VehicleType = "VAN"
 )
 
-// VehicleInfo represents vehicle details for a driver.
 type VehicleInfo struct {
 	Type        VehicleType `json:"type" bson:"type"` // CAR, MOTORCYCLE, TRUCK, BICYCLE, VAN
 	PlateNumber string      `json:"plateNumber" bson:"plateNumber"`
 	CapacityKg  int64       `json:"capacityKg" bson:"capacityKg"`
 }
 
-// IsValid checks if the driver status is a valid public state.
 func (s DriverStatus) IsValid() bool {
 	return validDriverStatuses[s]
 }
 
-// Ensure DriverStatusIsValidError checks if status is valid.
 func IsDriverStatusValid(s DriverStatus) bool {
 	return s.IsValid()
 }

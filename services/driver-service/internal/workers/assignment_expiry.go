@@ -9,13 +9,11 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// DispatchServiceForWorkers is a minimal interface that workers need from DispatchService.
 type DispatchServiceForWorkers interface {
 	ReleaseDriver(ctx context.Context, driverID, deliveryID string) error
 	ReleaseDriverByAssignment(ctx context.Context, assignmentID string) error
 }
 
-// AssignmentExpiryWorker periodically checks for expired assignment offers and releases them.
 type AssignmentExpiryWorker struct {
 	assignmentRepo ports.AssignmentRepository
 	dispatch       DispatchServiceForWorkers
@@ -28,7 +26,6 @@ func NewAssignmentExpiryWorker(assignmentRepo ports.AssignmentRepository, dispat
 	}
 }
 
-// Run starts the expiry checking loop and blocks until ctx is cancelled.
 func (w *AssignmentExpiryWorker) Run(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -64,4 +61,4 @@ func (w *AssignmentExpiryWorker) checkExpiredAssignments(ctx context.Context) {
 			}
 		}
 	}
-}
+}

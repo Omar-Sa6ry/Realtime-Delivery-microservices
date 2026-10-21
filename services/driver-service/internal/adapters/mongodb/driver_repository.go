@@ -12,14 +12,12 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// DriverRepository implements data access for drivers using MongoDB.
 type DriverRepository struct {
 	client     *mongo.Client
 	database   string
 	collection string
 }
 
-// NewDriverRepository creates a new DriverRepository.
 func NewDriverRepository(client *mongo.Client, database, collection string) *DriverRepository {
 	return &DriverRepository{
 		client:     client,
@@ -28,7 +26,6 @@ func NewDriverRepository(client *mongo.Client, database, collection string) *Dri
 	}
 }
 
-// FindByID retrieves a driver by ID.
 func (r *DriverRepository) FindByID(ctx context.Context, id string) (*domain.Driver, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	var result domain.Driver
@@ -42,7 +39,6 @@ func (r *DriverRepository) FindByID(ctx context.Context, id string) (*domain.Dri
 	return &result, nil
 }
 
-// FindByIDs retrieves multiple drivers in a single query by their IDs.
 func (r *DriverRepository) FindByIDs(ctx context.Context, ids []string) ([]*domain.Driver, error) {
 	if len(ids) == 0 {
 		return []*domain.Driver{}, nil
@@ -59,7 +55,6 @@ func (r *DriverRepository) FindByIDs(ctx context.Context, ids []string) ([]*doma
 	return drivers, nil
 }
 
-// FindByUserID retrieves a driver by linked user ID (for gRPC validation).
 func (r *DriverRepository) FindByUserID(ctx context.Context, userID string) (*domain.Driver, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	var result domain.Driver
@@ -73,7 +68,6 @@ func (r *DriverRepository) FindByUserID(ctx context.Context, userID string) (*do
 	return &result, nil
 }
 
-// FindAvailableByLocation finds available drivers near given coordinates,
 func (r *DriverRepository) FindAvailableByLocation(ctx context.Context, lat, lng, radiusKm float64, vehicleType domain.VehicleType) ([]*domain.Driver, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	filter := bson.M{"status": "AVAILABLE", "isBlocked": false, "isActive": true}
@@ -94,7 +88,6 @@ func (r *DriverRepository) FindAvailableByLocation(ctx context.Context, lat, lng
 	return drivers, nil
 }
 
-// FindByStatus finds drivers by status.
 func (r *DriverRepository) FindByStatus(ctx context.Context, status string) ([]*domain.Driver, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	cursor, err := col.Find(ctx, bson.M{"status": status})
@@ -108,14 +101,12 @@ func (r *DriverRepository) FindByStatus(ctx context.Context, status string) ([]*
 	return drivers, nil
 }
 
-// Save saves or updates a driver (upsert by ID).
 func (r *DriverRepository) Save(ctx context.Context, driver *domain.Driver) error {
 	col := r.client.Database(r.database).Collection(r.collection)
 	_, err := col.ReplaceOne(ctx, bson.M{"_id": driver.ID}, driver, options.Replace().SetUpsert(true))
 	return err
 }
 
-// EnsureIndexes creates indexes for common query patterns.
 func (r *DriverRepository) EnsureIndexes(ctx context.Context) error {
 	col := r.client.Database(r.database).Collection(r.collection)
 	indexModels := []mongo.IndexModel{
@@ -128,7 +119,6 @@ func (r *DriverRepository) EnsureIndexes(ctx context.Context) error {
 	return err
 }
 
-// DeleteExpiredLocations removes stale location entries (used by reconciliation).
 func (r *DriverRepository) DeleteExpiredLocations(ctx context.Context, olderThan time.Duration) (int64, error) {
 	col := r.client.Database(r.database).Collection(r.collection)
 	cutoff := time.Now().Add(-olderThan)
@@ -143,7 +133,6 @@ func (r *DriverRepository) DeleteExpiredLocations(ctx context.Context, olderThan
 	return result.ModifiedCount, nil
 }
 
-// UpdateRating updates only the driver's rating and rating count.
 func (r *DriverRepository) UpdateRating(ctx context.Context, driverID string, averageRating float64, totalReviews int64) error {
 	col := r.client.Database(r.database).Collection(r.collection)
 	update := bson.M{

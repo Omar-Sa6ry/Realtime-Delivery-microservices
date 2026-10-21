@@ -7,13 +7,11 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// GetDriverQuery retrieves driver information by ID.
 type GetDriverQuery struct {
 	DriverID string
 	driverRepo ports.DriverRepository
 }
 
-// NewGetDriverQuery creates a new GetDriverQuery.
 func NewGetDriverQuery(driverID string, driverRepo ports.DriverRepository) *GetDriverQuery {
 	return &GetDriverQuery{
 		DriverID: driverID,
@@ -21,7 +19,6 @@ func NewGetDriverQuery(driverID string, driverRepo ports.DriverRepository) *GetD
 	}
 }
 
-// Execute retrieves driver information by ID.
 func (q *GetDriverQuery) Execute(ctx context.Context) (*domain.Driver, error) {
 	driver, err := q.driverRepo.FindByID(ctx, q.DriverID)
 	if err != nil {

@@ -11,7 +11,6 @@ type RabbitMQPublisher struct {
 	pub *shared.Publisher
 }
 
-// NewRabbitMQPublisher creates a driver RabbitMQ publisher bound to conn.
 func NewRabbitMQPublisher(conn *shared.Connection) *RabbitMQPublisher {
 	return &RabbitMQPublisher{pub: shared.NewPublisher(conn)}
 }
@@ -44,7 +43,6 @@ func (p *RabbitMQPublisher) PublishDriverEvent(ctx context.Context, routingKey, 
 	return p.pub.Publish(ctx, shared.ExchangeDrivers, routingKey, eventType, payload, opts)
 }
 
-// Close closes the underlying publisher channel (not the shared connection).
 func (p *RabbitMQPublisher) Close() error {
 	if p == nil || p.pub == nil {
 		return nil

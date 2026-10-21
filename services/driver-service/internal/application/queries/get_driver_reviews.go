@@ -7,14 +7,12 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// GetDriverReviewsQuery retrieves driver reviews with pagination and stats.
 type GetDriverReviewsQuery struct {
 	DriverID string
 	Page     int
 	Limit    int
 }
 
-// DriverReviewsResult encapsulates the reviews and pagination stats.
 type DriverReviewsResult struct {
 	Reviews       []*domain.Review
 	TotalItems    int64
@@ -24,13 +22,10 @@ type DriverReviewsResult struct {
 	Limit         int
 }
 
-// GetDriverReviewsHandler handles the GetDriverReviewsQuery.
 type GetDriverReviewsHandler struct {
 	reviewRepo ports.ReviewRepository
 	driverRepo ports.DriverRepository
 }
-
-// NewGetDriverReviewsHandler creates a new handler.
 func NewGetDriverReviewsHandler(reviewRepo ports.ReviewRepository, driverRepo ports.DriverRepository) *GetDriverReviewsHandler {
 	return &GetDriverReviewsHandler{
 		reviewRepo: reviewRepo,
@@ -38,7 +33,6 @@ func NewGetDriverReviewsHandler(reviewRepo ports.ReviewRepository, driverRepo po
 	}
 }
 
-// Execute returns the reviews for a driver.
 func (h *GetDriverReviewsHandler) Execute(ctx context.Context, query GetDriverReviewsQuery) (*DriverReviewsResult, error) {
 	// Verify driver exists
 	driver, err := h.driverRepo.FindByID(ctx, query.DriverID)

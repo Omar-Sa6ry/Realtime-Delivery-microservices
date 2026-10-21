@@ -7,7 +7,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// RateDriverCommand represents the command to rate a driver.
 type RateDriverCommand struct {
 	DriverID   string
 	UserID     string
@@ -16,7 +15,6 @@ type RateDriverCommand struct {
 	Comment    string
 }
 
-// RateDriverHandler handles the RateDriverCommand.
 type RateDriverHandler struct {
 	driverRepo     ports.DriverRepository
 	reviewRepo     ports.ReviewRepository
@@ -24,7 +22,6 @@ type RateDriverHandler struct {
 	assignmentRepo ports.AssignmentRepository
 }
 
-// NewRateDriverHandler creates a new RateDriverHandler.
 func NewRateDriverHandler(
 	driverRepo ports.DriverRepository,
 	reviewRepo ports.ReviewRepository,
@@ -39,7 +36,6 @@ func NewRateDriverHandler(
 	}
 }
 
-// Execute handles the rate driver process.
 func (h *RateDriverHandler) Execute(ctx context.Context, cmd RateDriverCommand) (*domain.Review, error) {
 	// 1. Verify driver exists
 	driver, err := h.driverRepo.FindByID(ctx, cmd.DriverID)

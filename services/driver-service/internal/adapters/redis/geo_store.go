@@ -12,17 +12,14 @@ import (
 
 const geoKey = "drivers:locations"
 
-// GeoStore implements geo operations using Redis GEO commands.
 type GeoStore struct {
 	client *redis.Client
 }
 
-// NewGeoStore creates a new GeoStore.
 func NewGeoStore(client *redis.Client) *GeoStore {
 	return &GeoStore{client: client}
 }
 
-// GEOAdd adds or updates a driver's location in the Redis GEO set.
 func (g *GeoStore) GEOAdd(ctx context.Context, longitude, latitude, driverID string) error {
 	lng, err := strconv.ParseFloat(longitude, 64)
 	if err != nil {
@@ -39,8 +36,6 @@ func (g *GeoStore) GEOAdd(ctx context.Context, longitude, latitude, driverID str
 	}).Err()
 }
 
-// GEOSearch searches for drivers within a radius of the given coordinates.
-// returned location names separately via GEORADIUS if needed.
 func (g *GeoStore) GEOSearch(ctx context.Context, longitude, latitude, radiusKm float64) error {
 	_, err := g.client.GeoSearchLocation(ctx, geoKey, &redis.GeoSearchLocationQuery{
 		GeoSearchQuery: redis.GeoSearchQuery{
@@ -85,17 +80,14 @@ func (g *GeoStore) GEOSearchDrivers(ctx context.Context, longitude, latitude, ra
 	return driverResults, nil
 }
 
-// NearbyDriversSorted returns nearby drivers sorted by distance ascending.
 func (g *GeoStore) NearbyDriversSorted(ctx context.Context, longitude, latitude, radiusKm float64) ([]ports.GeoDriverResult, error) {
 	return g.GEOSearchDrivers(ctx, longitude, latitude, radiusKm)
 }
 
-// SetDriverLocation stores a driver's location using GEO commands.
 func (g *GeoStore) SetDriverLocation(ctx context.Context, driverID, latitude, longitude string) error {
 	return g.GEOAdd(ctx, longitude, latitude, driverID)
 }
 
-// GetDriverLocation retrieves a driver's current location.
 func (g *GeoStore) GetDriverLocation(ctx context.Context, driverID string) (string, string, error) {
 	positions, err := g.client.GeoPos(ctx, geoKey, driverID).Result()
 	if err != nil {
@@ -109,7 +101,6 @@ func (g *GeoStore) GetDriverLocation(ctx context.Context, driverID string) (stri
 	return lat, lng, nil
 }
 
-// RemoveDriver removes a driver from the GEO set (e.g., when they go offline).
 func (g *GeoStore) RemoveDriver(ctx context.Context, driverID string) error {
 	return g.client.ZRem(ctx, geoKey, driverID).Err()
 }

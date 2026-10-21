@@ -23,7 +23,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// extractLanguage extracts the client's language preference from gRPC metadata.
 func extractLanguage(ctx context.Context) string {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if langs := md.Get("x-lang"); len(langs) > 0 && langs[0] != "" {
@@ -36,14 +35,12 @@ func extractLanguage(ctx context.Context) string {
 	return i18n.FromContext(ctx)
 }
 
-// DriverGRPCServer implements the DriverService gRPC service.
 type DriverGRPCServer struct {
 	pb.UnimplementedDriverServiceServer
 	dispatch   *services.DispatchService
 	driverRepo ports.DriverRepository
 }
 
-// NewDriverGRPCServer creates a new DriverGRPCServer.
 func NewDriverGRPCServer(dispatch *services.DispatchService, driverRepo ports.DriverRepository) *DriverGRPCServer {
 	return &DriverGRPCServer{
 		dispatch:   dispatch,
@@ -51,7 +48,6 @@ func NewDriverGRPCServer(dispatch *services.DispatchService, driverRepo ports.Dr
 	}
 }
 
-// translateError maps domain errors to translated gRPC status errors.
 func translateError(lang string, err error) error {
 	if err == nil {
 		return nil
@@ -110,7 +106,6 @@ func toProtoVehicleType(vt domain.VehicleType) pb.VehicleType {
 	}
 }
 
-// FindAvailableDrivers finds available drivers near a pickup point.
 func (s *DriverGRPCServer) FindAvailableDrivers(ctx context.Context, req *pb.FindAvailableDriversRequest) (*pb.FindAvailableDriversResponse, error) {
 	lang := extractLanguage(ctx)
 	if req.DeliveryId == "" {
@@ -148,7 +143,6 @@ func (s *DriverGRPCServer) FindAvailableDrivers(ctx context.Context, req *pb.Fin
 	return &pb.FindAvailableDriversResponse{Candidates: pbCandidates}, nil
 }
 
-// ReserveDriver reserves a driver for a delivery using distributed lock.
 func (s *DriverGRPCServer) ReserveDriver(ctx context.Context, req *pb.ReserveDriverRequest) (*pb.ReserveDriverResponse, error) {
 	lang := extractLanguage(ctx)
 	if req.DriverId == "" {
@@ -172,7 +166,6 @@ func (s *DriverGRPCServer) ReserveDriver(ctx context.Context, req *pb.ReserveDri
 	}, nil
 }
 
-// ReleaseDriver releases a driver from their current assignment.
 func (s *DriverGRPCServer) ReleaseDriver(ctx context.Context, req *pb.ReleaseDriverRequest) (*pb.ReleaseDriverResponse, error) {
 	lang := extractLanguage(ctx)
 	if req.DriverId == "" {
@@ -190,7 +183,6 @@ func (s *DriverGRPCServer) ReleaseDriver(ctx context.Context, req *pb.ReleaseDri
 	return &pb.ReleaseDriverResponse{Released: true, DriverId: req.DriverId}, nil
 }
 
-// AssignDriver directly assigns a driver to a delivery (after acceptance).
 func (s *DriverGRPCServer) AssignDriver(ctx context.Context, req *pb.AssignDriverRequest) (*pb.AssignDriverResponse, error) {
 	lang := extractLanguage(ctx)
 	if req.DriverId == "" {
@@ -215,7 +207,6 @@ func (s *DriverGRPCServer) AssignDriver(ctx context.Context, req *pb.AssignDrive
 	}, nil
 }
 
-// GetDriver returns driver info by driver ID.
 func (s *DriverGRPCServer) GetDriver(ctx context.Context, req *pb.GetDriverRequest) (*pb.GetDriverResponse, error) {
 	lang := extractLanguage(ctx)
 	if req.DriverId == "" {
@@ -235,7 +226,6 @@ func (s *DriverGRPCServer) GetDriver(ctx context.Context, req *pb.GetDriverReque
 	}, nil
 }
 
-// GetDriverStatus returns the current operational status of a driver.
 func (s *DriverGRPCServer) GetDriverStatus(ctx context.Context, req *pb.GetDriverStatusRequest) (*pb.GetDriverStatusResponse, error) {
 	lang := extractLanguage(ctx)
 	if req.DriverId == "" {
@@ -251,7 +241,6 @@ func (s *DriverGRPCServer) GetDriverStatus(ctx context.Context, req *pb.GetDrive
 	}, nil
 }
 
-// ValidateID validates a driver ID or user ID and returns existence + status.
 func (s *DriverGRPCServer) ValidateID(ctx context.Context, req *pb.ValidateIDRequest) (*pb.ValidateIDResponse, error) {
 	lang := extractLanguage(ctx)
 	if req.Id == "" {

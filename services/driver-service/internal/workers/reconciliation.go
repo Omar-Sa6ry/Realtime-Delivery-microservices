@@ -9,13 +9,11 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// ReconciliationWorker periodically inspects and repairs inconsistent state in the system.
 type ReconciliationWorker struct {
 	driverRepo     ports.DriverRepository
 	assignmentRepo ports.AssignmentRepository
 }
 
-// NewReconciliationWorker creates a new reconciliation worker.
 func NewReconciliationWorker(driverRepo ports.DriverRepository, assignmentRepo ports.AssignmentRepository) *ReconciliationWorker {
 	return &ReconciliationWorker{
 		driverRepo:     driverRepo,
@@ -23,7 +21,6 @@ func NewReconciliationWorker(driverRepo ports.DriverRepository, assignmentRepo p
 	}
 }
 
-// Run starts the reconciliation loop and blocks until ctx is cancelled.
 func (w *ReconciliationWorker) Run(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()

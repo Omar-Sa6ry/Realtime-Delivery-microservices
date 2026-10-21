@@ -2,7 +2,6 @@ package ports
 
 import "context"
 
-// DeliveryInfo represents basic delivery information required by driver service.
 type DeliveryInfo struct {
 	DeliveryID string
 	CustomerID string
@@ -12,7 +11,6 @@ type DeliveryInfo struct {
 	Currency   string
 }
 
-// OpenDeliveryInfo represents open/unassigned delivery summary for drivers to browse.
 type OpenDeliveryInfo struct {
 	ID             string
 	CustomerID     string
@@ -26,7 +24,6 @@ type OpenDeliveryInfo struct {
 	CreatedAt      string
 }
 
-// DeliveryServiceClient defines the port for interacting with the delivery-service.
 type DeliveryServiceClient interface {
 	GetDelivery(ctx context.Context, deliveryID string) (*DeliveryInfo, error)
 	GetOpenDeliveries(ctx context.Context, page, limit int32) ([]*OpenDeliveryInfo, int32, error)

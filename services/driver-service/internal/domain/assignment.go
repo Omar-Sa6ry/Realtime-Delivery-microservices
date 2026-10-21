@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-// Assignment represents a driver assignment aggregate root with its state machine.
 type Assignment struct {
 	mu            sync.Mutex
 	ID            string           `json:"id" bson:"_id"`
@@ -24,7 +23,6 @@ type Assignment struct {
 	UpdatedAt     time.Time        `json:"updatedAt" bson:"updatedAt"`
 }
 
-// AssignmentStatus represents the state of a driver assignment.
 type AssignmentStatus string
 
 const (
@@ -38,7 +36,6 @@ const (
 	AssignmentStatusCancelled AssignmentStatus = "CANCELLED"
 )
 
-// Valid assignment statuses for the public state machine.
 var validAssignmentStatuses = map[AssignmentStatus]bool{
 	AssignmentStatusNone:      true,
 	AssignmentStatusOffered:   true,
@@ -50,14 +47,12 @@ var validAssignmentStatuses = map[AssignmentStatus]bool{
 	AssignmentStatusCancelled: true,
 }
 
-// AssignmentTransition represents a transition action.
 type AssignmentTransition struct {
 	From   AssignmentStatus
 	Action string
 	To     AssignmentStatus
 }
 
-// AssignmentTransitionMap maps actions to allowed transitions for each state.
 var AssignmentTransitionMap = map[AssignmentStatus][]AssignmentTransition{
 	AssignmentStatusNone: {
 		{From: AssignmentStatusNone, Action: "create", To: AssignmentStatusOffered},
@@ -84,7 +79,6 @@ var AssignmentTransitionMap = map[AssignmentStatus][]AssignmentTransition{
 	},
 }
 
-// IsValidTransition checks if a transition from one status to another via an action is valid.
 func IsValidAssignmentTransition(from, to AssignmentStatus, action string) bool {
 	transitions, ok := AssignmentTransitionMap[from]
 	if !ok {
@@ -98,7 +92,6 @@ func IsValidAssignmentTransition(from, to AssignmentStatus, action string) bool 
 	return false
 }
 
-// CreateAssignment creates a new assignment from NONE to OFFERED.
 func (a *Assignment) CreateAssignment() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -115,7 +108,6 @@ func (a *Assignment) CreateAssignment() error {
 	return nil
 }
 
-// Accept transitions an assignment from OFFERED to ACCEPTED.
 func (a *Assignment) Accept() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -130,7 +122,6 @@ func (a *Assignment) Accept() error {
 	return nil
 }
 
-// Reject transitions an assignment from OFFERED to REJECTED.
 func (a *Assignment) Reject() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -145,7 +136,6 @@ func (a *Assignment) Reject() error {
 	return nil
 }
 
-// Expire transitions an assignment from OFFERED to EXPIRED based on timeout.
 func (a *Assignment) Expire() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -158,7 +148,6 @@ func (a *Assignment) Expire() error {
 	return nil
 }
 
-// Start transitions an assignment from ACCEPTED to ACTIVE when delivery starts.
 func (a *Assignment) Start() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -171,7 +160,6 @@ func (a *Assignment) Start() error {
 	return nil
 }
 
-// Complete transitions an assignment from ACTIVE to COMPLETED when delivery finishes.
 func (a *Assignment) Complete() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -186,7 +174,6 @@ func (a *Assignment) Complete() error {
 	return nil
 }
 
-// Cancel transitions an assignment to CANCELLED from OFFERED, ACCEPTED, or ACTIVE.
 func (a *Assignment) Cancel() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -209,17 +196,14 @@ func (a *Assignment) Cancel() error {
 	}
 }
 
-// IsValid checks if the assignment status is a valid public state.
 func (s AssignmentStatus) IsValid() bool {
 	return validAssignmentStatuses[s]
 }
 
-// String returns the human-readable status.
 func (s AssignmentStatus) String() string {
 	return string(s)
 }
 
-// AssignmentDuration returns the duration the assignment has been in its current state.
 func (a *Assignment) Duration() time.Duration {
 	switch a.Status {
 	case AssignmentStatusOffered:
@@ -240,12 +224,10 @@ func (a *Assignment) Duration() time.Duration {
 	}
 }
 
-// ValidateOfferExpensess validates that the offer has not expired.
 func (a *Assignment) ValidateOfferExpires() bool {
 	return time.Now().Before(a.ExpiresAt)
 }
 
-// Ensure AssignmentStatusIsValidError checks if status is valid.
 func IsAssignmentStatusValid(s AssignmentStatus) bool {
 	return s.IsValid()
 }

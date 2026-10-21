@@ -9,7 +9,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/driver-service/internal/ports"
 )
 
-// ReleaseDriverCommand releases a driver from their current assignment.
 type ReleaseDriverCommand struct {
 	driverID       string
 	deliveryID     string
@@ -18,7 +17,6 @@ type ReleaseDriverCommand struct {
 	eventPublisher ports.EventPublisher
 }
 
-// NewReleaseDriverCommand creates a new ReleaseDriverCommand.
 func NewReleaseDriverCommand(driverID, deliveryID string, driverRepo ports.DriverRepository,
 	assignmentRepo ports.AssignmentRepository, eventPublisher ports.EventPublisher) *ReleaseDriverCommand {
 
@@ -31,7 +29,6 @@ func NewReleaseDriverCommand(driverID, deliveryID string, driverRepo ports.Drive
 	}
 }
 
-// Execute releases the driver from their assignment.
 func (c *ReleaseDriverCommand) Execute(ctx context.Context) error {
 	// FindActiveByDriver now returns (*domain.Assignment, error)
 	assignment, err := c.assignmentRepo.FindActiveByDriver(ctx, c.driverID)

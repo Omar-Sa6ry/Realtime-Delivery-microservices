@@ -1,6 +1,5 @@
 package i18n
 
-// English messages (same pattern as payment-service).
 var enMessages = map[string]string{
 	// Server / System
 	"server.healthy": "Analytics service is healthy",

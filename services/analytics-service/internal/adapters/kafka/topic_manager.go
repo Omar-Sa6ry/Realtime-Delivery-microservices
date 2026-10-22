@@ -4,7 +4,6 @@ import (
 	pkgkafka "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/kafka"
 )
 
-// Delivery domain topics — one topic per event type, mirroring DeliveryKafkaTopics in the TS package.
 const (
 	TopicDeliveryCreated        = "delivery.created"
 	TopicDeliveryDriverAssigned = "delivery.driver.assigned"
@@ -18,7 +17,6 @@ const (
 	TopicDeliveryDeleted        = "delivery.deleted"
 )
 
-// Driver domain topics.
 const (
 	TopicDriverAvailable           = "driver.available"
 	TopicDriverUnavailable         = "driver.unavailable"
@@ -29,7 +27,6 @@ const (
 	TopicDriverAssignmentReleased  = "driver.assignment.released"
 )
 
-// Payment domain topics.
 const (
 	TopicPaymentCreated               = "payment.created"
 	TopicPaymentAuthorizationStarted  = "payment.authorization.started"
@@ -46,7 +43,6 @@ const (
 	TopicPaymentFailed                = "payment.failed"
 )
 
-// Notification domain topics.
 const (
 	TopicNotificationCreated   = "notification.created"
 	TopicNotificationSent      = "notification.sent"
@@ -57,8 +53,6 @@ const (
 
 const ConsumerGroup = "analytics-service"
 
-// AnalyticsTopics returns all Kafka topics the analytics service consumes.
-// These MUST mirror the topics published by the producer services exactly.
 func AnalyticsTopics() []string {
 	return []string{
 		// Delivery

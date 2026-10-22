@@ -6,10 +6,6 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/analytics-service/internal/domain"
 )
 
-// driverAssignmentEvents are the assignment lifecycle events with fact rows.
-// Availability signals (driver.available/unavailable) carry no measurable
-// assignment and land as raw rows only — current availability stays owned
-// by Driver & Dispatch.
 var driverAssignmentEvents = map[string]domain.AssignmentResult{
 	"driver.assignment.offered":  domain.AssignmentOffered,
 	"driver.assignment.accepted": domain.AssignmentAccepted,
@@ -18,12 +14,10 @@ var driverAssignmentEvents = map[string]domain.AssignmentResult{
 	"driver.assignment.released": domain.AssignmentReleased,
 }
 
-// DriverHandler transforms driver.* events into assignment facts.
 type DriverHandler struct {
 	BaseHandler
 }
 
-// Handles reports whether the full event type belongs to this handler.
 func (h *DriverHandler) Handles(eventType string) bool {
 	if _, ok := driverAssignmentEvents[eventType]; ok {
 		return true
@@ -31,7 +25,6 @@ func (h *DriverHandler) Handles(eventType string) bool {
 	return eventType == "driver.available" || eventType == "driver.unavailable"
 }
 
-// Handle builds the assignment fact (or raw-only for availability signals).
 func (h *DriverHandler) Handle(ctx context.Context, env *domain.EventEnvelope, payload Payload) (*FactBatch, error) {
 	_ = ctx
 	batch := &FactBatch{}

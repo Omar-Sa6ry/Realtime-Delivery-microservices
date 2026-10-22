@@ -13,7 +13,6 @@ const (
 	FutureTimestampTolerance              = 5 * time.Minute
 )
 
-// IsSupported reports whether v can be processed by this service version.
 func (v EventVersion) IsSupported() bool {
 	return v >= 1 && v <= MaxSupportedEventVersion
 }

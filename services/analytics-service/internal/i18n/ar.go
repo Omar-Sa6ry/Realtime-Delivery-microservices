@@ -1,6 +1,5 @@
 package i18n
 
-// Arabic messages (same pattern as payment-service).
 var arMessages = map[string]string{
 	// Server / System
 	"server.healthy": "خدمة التحليلات تعمل بصحة جيدة",

@@ -23,7 +23,6 @@ func (s DataQualitySeverity) IsValid() bool {
 	}
 }
 
-// Data quality issue types
 const (
 	IssueNegativeDuration     = "negative_duration"
 	IssueOutOfOrderTimestamps = "out_of_order_timestamps"

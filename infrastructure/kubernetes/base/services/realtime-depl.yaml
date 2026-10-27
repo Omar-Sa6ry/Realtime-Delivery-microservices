@@ -12,6 +12,10 @@ spec:
     metadata:
       labels:
         app: realtime
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4006"
+        prometheus.io/path: "/realtime/metrics"
     spec:
       initContainers:
         - name: wait-for-redis
@@ -50,33 +54,36 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             requests:
-              cpu: "100m"
-              memory: "256Mi"
+              cpu: "10m"
+              memory: "10Mi"
             limits:
               cpu: "1000m"
               memory: "1Gi"
           ports:
             - containerPort: 4006
           startupProbe:
-            tcpSocket:
+            httpGet:
+              path: /realtime/health
               port: 4006
-            initialDelaySeconds: 45
+            initialDelaySeconds: 120
             periodSeconds: 10
-            failureThreshold: 60
+            failureThreshold: 120
             timeoutSeconds: 10
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /realtime/ready
               port: 4006
-            initialDelaySeconds: 5
+            initialDelaySeconds: 120
             periodSeconds: 10
-            failureThreshold: 30
+            failureThreshold: 120
             timeoutSeconds: 5
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /realtime/health
               port: 4006
-            initialDelaySeconds: 30
+            initialDelaySeconds: 120
             periodSeconds: 20
-            failureThreshold: 6
+            failureThreshold: 120
             timeoutSeconds: 5
           env:
             - name: NODE_OPTIONS
@@ -130,6 +137,12 @@ spec:
 
             - name: DRIVER_SERVICE_GRPC_URL
               value: 'driver-srv:50055'
+            - name: SERVICE_NAME
+              value: 'realtime-service'
+            - name: OTEL_ENDPOINT
+              value: 'otel-collector-srv:4317'
+            - name: ALERTMANAGER_URL
+              value: 'http://alertmanager-srv:9093'
 
 ---
 apiVersion: v1

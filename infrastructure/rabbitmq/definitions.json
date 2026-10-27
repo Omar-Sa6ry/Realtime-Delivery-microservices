@@ -17,13 +17,27 @@
       "priority": 10
     }
   ],
-  "users": [],
+  "users": [
+    {
+      "name": "delivery",
+      "password": "delivery-dev-password",
+      "tags": ["administrator"]
+    }
+  ],
   "vhosts": [
     {
       "name": "/"
     }
   ],
-  "permissions": [],
+  "permissions": [
+    {
+      "user": "delivery",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
   "topic_permissions": [],
   "exchanges": [
     {

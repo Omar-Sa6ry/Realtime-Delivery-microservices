@@ -26,12 +26,12 @@ spec:
           readinessProbe:
             tcpSocket:
               port: 6379
-            initialDelaySeconds: 2
+            initialDelaySeconds: 120
             periodSeconds: 2
           livenessProbe:
             tcpSocket:
               port: 6379
-            initialDelaySeconds: 10
+            initialDelaySeconds: 120
             periodSeconds: 10
 ---
 apiVersion: v1

@@ -35,7 +35,7 @@ spec:
         resources:
           requests:
             cpu: "100m"
-            memory: "256Mi"
+            memory: "128Mi"
           limits:
             cpu: "1000m"
             memory: "2Gi"
@@ -47,7 +47,7 @@ spec:
         startupProbe:
           tcpSocket:
             port: 27017
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 60
@@ -61,10 +61,10 @@ spec:
         livenessProbe:
           tcpSocket:
             port: 27017
-          initialDelaySeconds: 30
+          initialDelaySeconds: 20
           periodSeconds: 10
           timeoutSeconds: 3
-          failureThreshold: 5
+          failureThreshold: 30
       volumes:
       - name: data
         persistentVolumeClaim:

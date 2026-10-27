@@ -56,8 +56,8 @@ spec:
           value: "-Xms256m -Xmx512m"
         resources:
           requests:
-            cpu: "250m"
-            memory: "512Mi"
+            cpu: "10m"
+            memory: "10Mi"
           limits:
             cpu: "1000m"
             memory: "1536Mi"
@@ -69,13 +69,13 @@ spec:
         readinessProbe:
           tcpSocket:
             port: 9092
-          initialDelaySeconds: 5
+          initialDelaySeconds: 120
           periodSeconds: 10
-          failureThreshold: 36
+          failureThreshold: 120
         livenessProbe:
           tcpSocket:
             port: 9092
-          initialDelaySeconds: 10
+          initialDelaySeconds: 120
           periodSeconds: 20
 ---
 apiVersion: v1

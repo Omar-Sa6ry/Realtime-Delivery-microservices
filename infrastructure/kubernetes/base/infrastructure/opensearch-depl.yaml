@@ -20,8 +20,8 @@ spec:
           image: opensearchproject/opensearch:2.18.0
           resources:
             requests:
-              cpu: "150m"
-              memory: "512Mi"
+              cpu: "10m"
+              memory: "10Mi"
             limits:
               cpu: "2000m"
               memory: "2Gi"
@@ -46,19 +46,19 @@ spec:
           startupProbe:
             tcpSocket:
               port: 9200
-            initialDelaySeconds: 30
+            initialDelaySeconds: 120
             periodSeconds: 10
-            failureThreshold: 240
+            failureThreshold: 120
           readinessProbe:
             tcpSocket:
               port: 9200
-            initialDelaySeconds: 10
+            initialDelaySeconds: 120
             periodSeconds: 10
-            failureThreshold: 30
+            failureThreshold: 120
           livenessProbe:
             tcpSocket:
               port: 9200
-            initialDelaySeconds: 30
+            initialDelaySeconds: 120
             periodSeconds: 20
 ---
 apiVersion: v1

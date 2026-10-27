@@ -12,6 +12,10 @@ spec:
     metadata:
       labels:
         app: search
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9103"
+        prometheus.io/path: "/metrics"
     spec:
       initContainers:
         - name: wait-for-kafka
@@ -40,8 +44,8 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             requests:
-              cpu: "100m"
-              memory: "128Mi"
+              cpu: "10m"
+              memory: "10Mi"
             limits:
               cpu: "500m"
               memory: "512Mi"
@@ -51,25 +55,28 @@ spec:
             - containerPort: 9103
               name: metrics
           startupProbe:
-            tcpSocket:
+            httpGet:
+              path: /health/live
               port: 4007
-            initialDelaySeconds: 45
+            initialDelaySeconds: 120
             periodSeconds: 5
             failureThreshold: 120
             timeoutSeconds: 5
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /health/ready
               port: 4007
-            initialDelaySeconds: 5
+            initialDelaySeconds: 120
             periodSeconds: 5
-            failureThreshold: 60
+            failureThreshold: 120
             timeoutSeconds: 5
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /health/live
               port: 4007
-            initialDelaySeconds: 30
+            initialDelaySeconds: 120
             periodSeconds: 20
-            failureThreshold: 6
+            failureThreshold: 120
             timeoutSeconds: 5
           env:
             - name: NODE_ENV
@@ -105,6 +112,8 @@ spec:
               value: "search-service"
             - name: NATS_URL
               value: "nats://nats-srv:4222"
+            - name: OTEL_ENDPOINT
+              value: "otel-collector-srv:4317"
             - name: RABBITMQ_URL
               valueFrom:
                 secretKeyRef:

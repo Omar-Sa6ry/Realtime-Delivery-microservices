@@ -82,8 +82,8 @@ spec:
               key: RABBITMQ_URL
         resources:
           requests:
-            cpu: "50m"
-            memory: "128Mi"
+            cpu: "10m"
+            memory: "10Mi"
           limits:
             cpu: "500m"
             memory: "512Mi"
@@ -91,25 +91,25 @@ spec:
           httpGet:
             path: /healthz
             port: graphql
-          initialDelaySeconds: 45
+          initialDelaySeconds: 120
           periodSeconds: 5
-          failureThreshold: 180
+          failureThreshold: 120
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /healthz
             port: graphql
-          initialDelaySeconds: 10
+          initialDelaySeconds: 120
           periodSeconds: 5
-          failureThreshold: 60
+          failureThreshold: 120
           timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
             port: graphql
-          initialDelaySeconds: 30
+          initialDelaySeconds: 120
           periodSeconds: 20
-          failureThreshold: 6
+          failureThreshold: 120
           timeoutSeconds: 5
         # FFmpeg and temporary media operations use the dedicated writable /tmp volume.
         securityContext:

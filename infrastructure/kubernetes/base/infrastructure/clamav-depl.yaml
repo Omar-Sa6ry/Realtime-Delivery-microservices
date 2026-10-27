@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clamav-depl
+  namespace: default
+  labels:
+    app: clamav
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clamav
+  template:
+    metadata:
+      labels:
+        app: clamav
+    spec:
+      containers:
+        - name: clamav
+          image: clamav/clamav:1.4
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: clamav
+              containerPort: 3310
+          readinessProbe:
+            tcpSocket:
+              port: clamav
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 20
+          livenessProbe:
+            tcpSocket:
+              port: clamav
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          volumeMounts:
+            - name: clamav-data
+              mountPath: /var/lib/clamav
+      volumes:
+        - name: clamav-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clamav-srv
+  namespace: default
+  labels:
+    app: clamav
+spec:
+  type: ClusterIP
+  selector:
+    app: clamav
+  ports:
+    - name: clamav
+      port: 3310
+      targetPort: 3310
+      protocol: TCP

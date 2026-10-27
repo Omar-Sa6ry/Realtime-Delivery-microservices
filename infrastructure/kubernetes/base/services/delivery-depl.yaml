@@ -12,6 +12,10 @@ spec:
     metadata:
       labels:
         app: delivery
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4003"
+        prometheus.io/path: "/metrics"
     spec:
       initContainers:
         - name: wait-for-db
@@ -30,8 +34,8 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             requests:
-              cpu: "100m"
-              memory: "256Mi"
+              cpu: "10m"
+              memory: "10Mi"
             limits:
               cpu: "1000m"
               memory: "1Gi"
@@ -41,25 +45,28 @@ spec:
             - name: grpc
               containerPort: 50054
           startupProbe:
-            tcpSocket:
+            httpGet:
+              path: /health/live
               port: 4003
-            initialDelaySeconds: 45
+            initialDelaySeconds: 120
             periodSeconds: 5
-            failureThreshold: 240
+            failureThreshold: 120
             timeoutSeconds: 5
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /health/ready
               port: 4003
-            initialDelaySeconds: 10
+            initialDelaySeconds: 120
             periodSeconds: 3
             failureThreshold: 120
             timeoutSeconds: 5
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /health/live
               port: 4003
-            initialDelaySeconds: 30
+            initialDelaySeconds: 120
             periodSeconds: 20
-            failureThreshold: 6
+            failureThreshold: 120
             timeoutSeconds: 5
           env:
             - name: NODE_OPTIONS
@@ -68,8 +75,6 @@ spec:
               value: "4003"
             - name: PORT_DELIVERY_GRPC
               value: "50054"
-            - name: PORT_METRICS
-              value: "9104"
             - name: DB_HOST
               value: delivery-db-srv
             - name: DB_PORT
@@ -78,6 +83,8 @@ spec:
               value: delivery_delivery_db
             - name: NODE_ENV
               value: development
+            - name: SERVICE_NAME
+              value: delivery-service
             - name: JWT_EXPIRE
               value: 36000s
             - name: JWT_SECRET
@@ -108,6 +115,10 @@ spec:
                 secretKeyRef:
                   name: rabbitmq-secret
                   key: RABBITMQ_URL
+            - name: OTEL_ENDPOINT
+              value: "otel-collector-srv:4317"
+            - name: ALERTMANAGER_URL
+              value: "http://alertmanager-srv:9093"
 ---
 apiVersion: v1
 kind: Service

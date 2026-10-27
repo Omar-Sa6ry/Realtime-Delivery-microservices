@@ -60,32 +60,32 @@ spec:
           # Quorum-queue init + definitions import transiently needs > 1.5Gi;
           # 2 OOM-kills observed at 1536Mi during boot (beam.smp).
           requests:
-            cpu: "250m"
-            memory: "1Gi"
+            cpu: "100m"
+            memory: "256Mi"
           limits:
             cpu: "2000m"
             memory: "3Gi"
         startupProbe:
           tcpSocket:
             port: 5672
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           periodSeconds: 5
-          failureThreshold: 240
+          failureThreshold: 60
           timeoutSeconds: 5
         readinessProbe:
           tcpSocket:
             port: 5672
           initialDelaySeconds: 5
-          periodSeconds: 10
+          periodSeconds: 5
           timeoutSeconds: 5
-          failureThreshold: 6
+          failureThreshold: 30
         livenessProbe:
           tcpSocket:
             port: 5672
-          initialDelaySeconds: 30
-          periodSeconds: 20
+          initialDelaySeconds: 15
+          periodSeconds: 15
           timeoutSeconds: 5
-          failureThreshold: 5
+          failureThreshold: 30
       volumes:
       - name: rabbitmq-config
         configMap:

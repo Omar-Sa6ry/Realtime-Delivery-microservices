@@ -38,5 +38,7 @@ data:
   OUTBOX_BATCH_SIZE: "100"
 
   # Observability
-  OTEL_ENDPOINT: ""
+  OTEL_ENDPOINT: "otel-collector-srv:4317"
   DELIVERY_SERVICE_URL: "http://delivery-srv:4003"
+  SERVICE_NAME: "payment-service"
+  ALERTMANAGER_URL: "http://alertmanager-srv:9093"

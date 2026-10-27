@@ -12,6 +12,10 @@ spec:
     metadata:
       labels:
         app: notification
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4004"
+        prometheus.io/path: "/notification/metrics"
     spec:
       initContainers:
         - name: wait-for-db
@@ -30,8 +34,8 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             requests:
-              cpu: "100m"
-              memory: "256Mi"
+              cpu: "10m"
+              memory: "10Mi"
             limits:
               cpu: "1000m"
               memory: "1Gi"
@@ -39,25 +43,29 @@ spec:
             - containerPort: 4004 
             - containerPort: 50053
           startupProbe:
-            tcpSocket:
+            httpGet:
+              path: /notification/health
               port: 4004
-            initialDelaySeconds: 45
+            initialDelaySeconds: 120
             periodSeconds: 5
-            failureThreshold: 300
+            failureThreshold: 120
             timeoutSeconds: 5
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /notification/ready
               port: 4004
-            initialDelaySeconds: 10
+            initialDelaySeconds: 120
             periodSeconds: 5
             failureThreshold: 120
             timeoutSeconds: 5
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /notification/health
               port: 4004
-            initialDelaySeconds: 5
+            initialDelaySeconds: 120
             periodSeconds: 20
-            failureThreshold: 6
+            failureThreshold: 120
+            timeoutSeconds: 5
           env:
             - name: NODE_OPTIONS
               value: "--max-old-space-size=768"
@@ -75,6 +83,8 @@ spec:
 
             - name: NODE_ENV
               value: 'development'
+            - name: SERVICE_NAME
+              value: notification-service
 
             - name: JWT_EXPIRE
               value: '36000s'
@@ -185,6 +195,10 @@ spec:
                 secretKeyRef:
                   name: notification-secrets
                   key: WEB_PUSH_PRIVATE_KEY
+            - name: OTEL_ENDPOINT
+              value: 'otel-collector-srv:4317'
+            - name: ALERTMANAGER_URL
+              value: 'http://alertmanager-srv:9093'
 
 ---
 apiVersion: v1

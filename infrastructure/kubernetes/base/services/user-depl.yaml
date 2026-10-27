@@ -12,6 +12,10 @@ spec:
     metadata:
       labels:
         app: user
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4001"
+        prometheus.io/path: "/user/metrics"
     spec:
       initContainers:
         - name: wait-for-db
@@ -30,8 +34,8 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             requests:
-              cpu: "100m"
-              memory: "256Mi"
+              cpu: "10m"
+              memory: "10Mi"
             limits:
               cpu: "1000m"
               memory: "1Gi"
@@ -39,23 +43,26 @@ spec:
             - containerPort: 4001
             - containerPort: 50051
           startupProbe:
-            tcpSocket:
+            httpGet:
+              path: /user/health
               port: 4001
-            initialDelaySeconds: 45
+            initialDelaySeconds: 120
             periodSeconds: 5
-            failureThreshold: 240
+            failureThreshold: 120
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /user/ready
               port: 4001
-            initialDelaySeconds: 10
+            initialDelaySeconds: 120
             periodSeconds: 3
             failureThreshold: 120
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /user/health
               port: 4001
-            initialDelaySeconds: 5
+            initialDelaySeconds: 120
             periodSeconds: 20
-            failureThreshold: 6
+            failureThreshold: 120
           env:
             - name: NODE_OPTIONS
               value: "--max-old-space-size=768"
@@ -114,6 +121,12 @@ spec:
                 secretKeyRef:
                   name: rabbitmq-secret
                   key: RABBITMQ_URL
+            - name: SERVICE_NAME
+              value: "user-service"
+            - name: OTEL_ENDPOINT
+              value: "otel-collector-srv:4317"
+            - name: ALERTMANAGER_URL
+              value: "http://alertmanager-srv:9093"
 ---
 apiVersion: v1
 kind: Service

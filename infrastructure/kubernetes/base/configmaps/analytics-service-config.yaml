@@ -24,4 +24,6 @@ data:
     MAX_RETRY_ATTEMPTS: "5"
     DLQ_TOPIC: "analytics.dlq"
     CACHE_TTL_SECONDS: "300"
-    OTEL_ENDPOINT: ""
+    OTEL_ENDPOINT: "otel-collector-srv:4317"
+    SERVICE_NAME: "analytics-service"
+    ALERTMANAGER_URL: "http://alertmanager-srv:9093"

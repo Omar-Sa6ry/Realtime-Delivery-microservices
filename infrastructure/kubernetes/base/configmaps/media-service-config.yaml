@@ -74,6 +74,12 @@ data:
   # FFmpeg
   FFMPEG_BINARY: "/usr/bin/ffmpeg"
 
+  # Observability (OTLP/gRPC -> otel-collector -> Tempo)
+  OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector-srv:4317"
+  OTEL_SERVICE_NAME: "media-service"
+  SERVICE_NAME: "media-service"
+  ALERTMANAGER_URL: "http://alertmanager-srv:9093"
+
   # This development value is overridden by production configuration when needed.
   # Keep production secrets and credentials in Kubernetes Secrets, not this file.
 

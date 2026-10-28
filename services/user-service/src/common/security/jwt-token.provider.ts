@@ -24,7 +24,8 @@ export class JwtTokenProvider {
   ) {}
 
   async generateTokens(payload: TokenPayload): Promise<TokenResult> {
-    const secret = this.configService.get<string>('JWT_SECRET') || 'default_secret';
+    const secret =
+      this.configService.get<string>('JWT_SECRET') || 'default_secret';
     const expiresInSeconds = 3600 * 24; // 1 day access token
 
     const accessToken = await this.jwtService.signAsync(
@@ -58,7 +59,8 @@ export class JwtTokenProvider {
 
   async verifyAccessToken(token: string): Promise<TokenPayload | null> {
     try {
-      const secret = this.configService.get<string>('JWT_SECRET') || 'default_secret';
+      const secret =
+        this.configService.get<string>('JWT_SECRET') || 'default_secret';
       const decoded = await this.jwtService.verifyAsync(token, { secret });
       return {
         userId: decoded.userId || decoded.sub,
@@ -74,7 +76,8 @@ export class JwtTokenProvider {
 
   async verifyRefreshToken(token: string): Promise<TokenPayload | null> {
     try {
-      const secret = this.configService.get<string>('JWT_SECRET') || 'default_secret';
+      const secret =
+        this.configService.get<string>('JWT_SECRET') || 'default_secret';
       const decoded = await this.jwtService.verifyAsync(token, { secret });
       if (decoded.type !== 'refresh') return null;
       return {

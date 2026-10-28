@@ -29,7 +29,7 @@ describe('UserService', () => {
     updatedAt: new Date('2024-01-01'),
     resetToken: undefined,
     resetTokenExpiry: undefined,
-  } as User;
+  };
 
   const mockAddress: Address = {
     id: 'addr-123',
@@ -40,11 +40,11 @@ describe('UserService', () => {
     state: 'NY',
     postalCode: '10001',
     latitude: 40.7128,
-    longitude: -74.0060,
+    longitude: -74.006,
     isDefault: true,
     createdAt: new Date('2024-01-01'),
     user: mockUser,
-  } as Address;
+  };
 
   beforeEach(async () => {
     dbUserService = {
@@ -142,7 +142,9 @@ describe('UserService', () => {
       const result = await service.findByEmail('test@example.com');
 
       expect(result).toEqual(mockUser);
-      expect(dbUserService.findByEmail).toHaveBeenCalledWith('test@example.com');
+      expect(dbUserService.findByEmail).toHaveBeenCalledWith(
+        'test@example.com',
+      );
     });
   });
 
@@ -161,7 +163,10 @@ describe('UserService', () => {
       const result = await service.updateProfile('user-123', updateInput);
 
       expect(result).toEqual(updatedUser);
-      expect(dbUserService.updateProfile).toHaveBeenCalledWith('user-123', updateInput);
+      expect(dbUserService.updateProfile).toHaveBeenCalledWith(
+        'user-123',
+        updateInput,
+      );
       expect(redisService.hSet).toHaveBeenCalled();
       expect(rmqPublisher.publishUserUpdated).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -196,7 +201,10 @@ describe('UserService', () => {
 
       await service.changePassword('user-123', changePasswordInput);
 
-      expect(dbUserService.changePassword).toHaveBeenCalledWith('user-123', changePasswordInput);
+      expect(dbUserService.changePassword).toHaveBeenCalledWith(
+        'user-123',
+        changePasswordInput,
+      );
       expect(redisService.hSet).toHaveBeenCalled();
       expect(redisService.expire).toHaveBeenCalledWith('user:user-123', 3600);
     });
@@ -236,7 +244,10 @@ describe('UserService', () => {
 
       await service.updateUserRole('user-123', Role.MERCHANT);
 
-      expect(dbUserService.updateUserRole).toHaveBeenCalledWith('user-123', Role.MERCHANT);
+      expect(dbUserService.updateUserRole).toHaveBeenCalledWith(
+        'user-123',
+        Role.MERCHANT,
+      );
       expect(redisService.hSet).toHaveBeenCalled();
       expect(rmqPublisher.publishUserUpdated).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -254,7 +265,10 @@ describe('UserService', () => {
 
       await service.toggleUserActive('user-123', false);
 
-      expect(dbUserService.toggleUserActive).toHaveBeenCalledWith('user-123', false);
+      expect(dbUserService.toggleUserActive).toHaveBeenCalledWith(
+        'user-123',
+        false,
+      );
       expect(redisService.hSet).toHaveBeenCalled();
       expect(rmqPublisher.publishUserUpdated).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -296,7 +310,9 @@ describe('UserService', () => {
       const result = await service.addAddress('user-123', { title: 'Home' });
 
       expect(result).toEqual(mockAddress);
-      expect(dbUserService.addAddress).toHaveBeenCalledWith('user-123', { title: 'Home' });
+      expect(dbUserService.addAddress).toHaveBeenCalledWith('user-123', {
+        title: 'Home',
+      });
       expect(dbUserService.findById).toHaveBeenCalledWith('user-123');
       expect(redisService.hSet).toHaveBeenCalled();
     });
@@ -309,7 +325,10 @@ describe('UserService', () => {
 
       await service.deleteAddress('user-123', 'addr-123');
 
-      expect(dbUserService.deleteAddress).toHaveBeenCalledWith('user-123', 'addr-123');
+      expect(dbUserService.deleteAddress).toHaveBeenCalledWith(
+        'user-123',
+        'addr-123',
+      );
       expect(dbUserService.findById).toHaveBeenCalledWith('user-123');
       expect(redisService.hSet).toHaveBeenCalled();
     });
@@ -322,7 +341,10 @@ describe('UserService', () => {
 
       await service.setDefaultAddress('user-123', 'addr-123');
 
-      expect(dbUserService.setDefaultAddress).toHaveBeenCalledWith('user-123', 'addr-123');
+      expect(dbUserService.setDefaultAddress).toHaveBeenCalledWith(
+        'user-123',
+        'addr-123',
+      );
       expect(dbUserService.findById).toHaveBeenCalledWith('user-123');
       expect(redisService.hSet).toHaveBeenCalled();
     });
@@ -330,7 +352,11 @@ describe('UserService', () => {
 
   describe('countUsersThisMonthAndLastMonth', () => {
     it('should delegate to dbUserService', async () => {
-      const expected = { totalUsers: 100, usersThisMonth: 10, percentageIncrease: 25 };
+      const expected = {
+        totalUsers: 100,
+        usersThisMonth: 10,
+        percentageIncrease: 25,
+      };
       dbUserService.countUsersThisMonthAndLastMonth.mockResolvedValue(expected);
 
       const result = await service.countUsersThisMonthAndLastMonth();

@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { MediaGrpcService } from './grpc-media.service';
 import { ConfigService } from '@nestjs/config';
 import * as grpc from '@grpc/grpc-js';
@@ -66,9 +69,11 @@ describe('MediaGrpcService', () => {
 
   describe('resolveMediaUrl', () => {
     it('should resolve media URL successfully', async () => {
-      mockClient.ResolveMediaUrl.mockImplementation((args, metadata, options, callback) => {
-        callback(null, mockResolveResult);
-      });
+      mockClient.ResolveMediaUrl.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(null, mockResolveResult);
+        },
+      );
 
       const result = await service.resolveMediaUrl({
         mediaId: 'media-123',
@@ -88,88 +93,137 @@ describe('MediaGrpcService', () => {
     });
 
     it('should throw BadRequestException on PERMISSION_DENIED', async () => {
-      const error = { code: grpc.status.PERMISSION_DENIED, details: 'access denied' };
-      mockClient.ResolveMediaUrl.mockImplementation((args, metadata, options, callback) => {
-        callback(error, null);
-      });
+      const error = {
+        code: grpc.status.PERMISSION_DENIED,
+        details: 'access denied',
+      };
+      mockClient.ResolveMediaUrl.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(error, null);
+        },
+      );
 
       await expect(
-        service.resolveMediaUrl({ mediaId: 'media-123', requesterId: 'user-123' }),
+        service.resolveMediaUrl({
+          mediaId: 'media-123',
+          requesterId: 'user-123',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException on NOT_FOUND', async () => {
       const error = { code: grpc.status.NOT_FOUND, details: 'not found' };
-      mockClient.ResolveMediaUrl.mockImplementation((args, metadata, options, callback) => {
-        callback(error, null);
-      });
+      mockClient.ResolveMediaUrl.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(error, null);
+        },
+      );
 
       await expect(
-        service.resolveMediaUrl({ mediaId: 'media-123', requesterId: 'user-123' }),
+        service.resolveMediaUrl({
+          mediaId: 'media-123',
+          requesterId: 'user-123',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException on FAILED_PRECONDITION', async () => {
-      const error = { code: grpc.status.FAILED_PRECONDITION, details: 'not ready' };
-      mockClient.ResolveMediaUrl.mockImplementation((args, metadata, options, callback) => {
-        callback(error, null);
-      });
+      const error = {
+        code: grpc.status.FAILED_PRECONDITION,
+        details: 'not ready',
+      };
+      mockClient.ResolveMediaUrl.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(error, null);
+        },
+      );
 
       await expect(
-        service.resolveMediaUrl({ mediaId: 'media-123', requesterId: 'user-123' }),
+        service.resolveMediaUrl({
+          mediaId: 'media-123',
+          requesterId: 'user-123',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException on RESOURCE_EXHAUSTED', async () => {
-      const error = { code: grpc.status.RESOURCE_EXHAUSTED, details: 'rate limit' };
-      mockClient.ResolveMediaUrl.mockImplementation((args, metadata, options, callback) => {
-        callback(error, null);
-      });
+      const error = {
+        code: grpc.status.RESOURCE_EXHAUSTED,
+        details: 'rate limit',
+      };
+      mockClient.ResolveMediaUrl.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(error, null);
+        },
+      );
 
       await expect(
-        service.resolveMediaUrl({ mediaId: 'media-123', requesterId: 'user-123' }),
+        service.resolveMediaUrl({
+          mediaId: 'media-123',
+          requesterId: 'user-123',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw ServiceUnavailableException on UNAVAILABLE', async () => {
       const error = { code: grpc.status.UNAVAILABLE, details: 'unavailable' };
-      mockClient.ResolveMediaUrl.mockImplementation((args, metadata, options, callback) => {
-        callback(error, null);
-      });
+      mockClient.ResolveMediaUrl.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(error, null);
+        },
+      );
 
       await expect(
-        service.resolveMediaUrl({ mediaId: 'media-123', requesterId: 'user-123' }),
+        service.resolveMediaUrl({
+          mediaId: 'media-123',
+          requesterId: 'user-123',
+        }),
       ).rejects.toThrow(ServiceUnavailableException);
     });
 
     it('should throw ServiceUnavailableException on DEADLINE_EXCEEDED', async () => {
       const error = { code: grpc.status.DEADLINE_EXCEEDED, details: 'timeout' };
-      mockClient.ResolveMediaUrl.mockImplementation((args, metadata, options, callback) => {
-        callback(error, null);
-      });
+      mockClient.ResolveMediaUrl.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(error, null);
+        },
+      );
 
       await expect(
-        service.resolveMediaUrl({ mediaId: 'media-123', requesterId: 'user-123' }),
+        service.resolveMediaUrl({
+          mediaId: 'media-123',
+          requesterId: 'user-123',
+        }),
       ).rejects.toThrow(ServiceUnavailableException);
     });
 
     it('should throw ServiceUnavailableException for unknown error codes', async () => {
       const error = { code: grpc.status.UNKNOWN, details: 'unknown error' };
-      mockClient.ResolveMediaUrl.mockImplementation((args, metadata, options, callback) => {
-        callback(error, null);
-      });
+      mockClient.ResolveMediaUrl.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(error, null);
+        },
+      );
 
       await expect(
-        service.resolveMediaUrl({ mediaId: 'media-123', requesterId: 'user-123' }),
+        service.resolveMediaUrl({
+          mediaId: 'media-123',
+          requesterId: 'user-123',
+        }),
       ).rejects.toThrow(ServiceUnavailableException);
     });
 
     it('should use default versionType and expirySeconds', async () => {
-      mockClient.ResolveMediaUrl.mockImplementation((args, metadata, options, callback) => {
-        callback(null, mockResolveResult);
-      });
+      mockClient.ResolveMediaUrl.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(null, mockResolveResult);
+        },
+      );
 
-      await service.resolveMediaUrl({ mediaId: 'media-123', requesterId: 'user-123' });
+      await service.resolveMediaUrl({
+        mediaId: 'media-123',
+        requesterId: 'user-123',
+      });
 
       expect(mockClient.ResolveMediaUrl).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -185,9 +239,11 @@ describe('MediaGrpcService', () => {
 
   describe('getMedia', () => {
     it('should get media info successfully', async () => {
-      mockClient.GetMedia.mockImplementation((args, metadata, options, callback) => {
-        callback(null, mockGetMediaResult);
-      });
+      mockClient.GetMedia.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(null, mockGetMediaResult);
+        },
+      );
 
       const result = await service.getMedia('media-123', 'user-123');
 
@@ -205,10 +261,15 @@ describe('MediaGrpcService', () => {
     });
 
     it('should throw BadRequestException on PERMISSION_DENIED', async () => {
-      const error = { code: grpc.status.PERMISSION_DENIED, details: 'access denied' };
-      mockClient.GetMedia.mockImplementation((args, metadata, options, callback) => {
-        callback(error, null);
-      });
+      const error = {
+        code: grpc.status.PERMISSION_DENIED,
+        details: 'access denied',
+      };
+      mockClient.GetMedia.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(error, null);
+        },
+      );
 
       await expect(service.getMedia('media-123', 'user-123')).rejects.toThrow(
         BadRequestException,
@@ -217,9 +278,11 @@ describe('MediaGrpcService', () => {
 
     it('should throw ServiceUnavailableException on UNAVAILABLE', async () => {
       const error = { code: grpc.status.UNAVAILABLE, details: 'unavailable' };
-      mockClient.GetMedia.mockImplementation((args, metadata, options, callback) => {
-        callback(error, null);
-      });
+      mockClient.GetMedia.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(error, null);
+        },
+      );
 
       await expect(service.getMedia('media-123', 'user-123')).rejects.toThrow(
         ServiceUnavailableException,

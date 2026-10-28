@@ -9,7 +9,7 @@ describe('BcryptPasswordHasher', () => {
   let mockBcrypt: jest.Mocked<typeof bcrypt>;
 
   beforeEach(async () => {
-    mockBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
+    mockBcrypt = bcrypt;
     const module: TestingModule = await Test.createTestingModule({
       providers: [BcryptPasswordHasher],
     }).compile();
@@ -24,7 +24,8 @@ describe('BcryptPasswordHasher', () => {
   describe('hash', () => {
     it('should hash plain text password', async () => {
       const plainText = 'password123';
-      const hashedPassword = '$2b$10$hashedpassword12345678901234567890123456789012';
+      const hashedPassword =
+        '$2b$10$hashedpassword12345678901234567890123456789012';
       mockBcrypt.hash.mockResolvedValue(hashedPassword);
 
       const result = await service.hash(plainText);

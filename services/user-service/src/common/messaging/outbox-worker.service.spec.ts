@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OutboxWorkerService } from './outbox-worker.service';
 import { Repository } from 'typeorm';
 import { Outbox } from '../database/entities/outbox.entity';
-import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import {
+  ClientProxy,
+  ClientProxyFactory,
+  Transport,
+} from '@nestjs/microservices';
 import { Queue } from 'bullmq';
 import { ConfigService } from '@nestjs/config';
 
@@ -34,7 +38,7 @@ describe('OutboxWorkerService', () => {
     payload: { userId: 'user-123', email: 'test@example.com' },
     processed: false,
     createdAt: new Date(),
-  } as Outbox;
+  };
 
   beforeEach(async () => {
     outboxRepo = {
@@ -68,7 +72,9 @@ describe('OutboxWorkerService', () => {
       return callback(mockTransactionManager);
     });
 
-    mockClientProxyFactory = ClientProxyFactory as jest.Mocked<typeof ClientProxyFactory>;
+    mockClientProxyFactory = ClientProxyFactory as jest.Mocked<
+      typeof ClientProxyFactory
+    >;
     mockClientProxyFactory.create.mockReturnValue(mockClient);
 
     jest.useFakeTimers();
@@ -149,7 +155,10 @@ describe('OutboxWorkerService', () => {
 
     it('should process unprocessed events', async () => {
       mockTransactionManager.find.mockResolvedValue([mockOutboxEvent]);
-      mockTransactionManager.save.mockResolvedValue({ ...mockOutboxEvent, processed: true });
+      mockTransactionManager.save.mockResolvedValue({
+        ...mockOutboxEvent,
+        processed: true,
+      });
 
       await service.reconcileOutbox();
 
@@ -160,7 +169,10 @@ describe('OutboxWorkerService', () => {
         lock: { mode: 'pessimistic_write', onLocked: 'skip_locked' },
       });
       expect(mockClient.connect).toHaveBeenCalled();
-      expect(mockClient.emit).toHaveBeenCalledWith('user.created', mockOutboxEvent.payload);
+      expect(mockClient.emit).toHaveBeenCalledWith(
+        'user.created',
+        mockOutboxEvent.payload,
+      );
       expect(mockTransactionManager.save).toHaveBeenCalledWith(
         expect.objectContaining({ processed: true }),
       );
@@ -190,7 +202,9 @@ describe('OutboxWorkerService', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-      outboxRepo.manager.transaction.mockRejectedValueOnce(new Error('DB error'));
+      outboxRepo.manager.transaction.mockRejectedValueOnce(
+        new Error('DB error'),
+      );
 
       await expect(service.reconcileOutbox()).resolves.toBeUndefined();
     });

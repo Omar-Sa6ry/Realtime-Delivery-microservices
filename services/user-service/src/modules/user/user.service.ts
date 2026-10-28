@@ -67,7 +67,10 @@ export class UserService {
     return updatedUser;
   }
 
-  async changePassword(userId: string, input: ChangePasswordInput): Promise<void> {
+  async changePassword(
+    userId: string,
+    input: ChangePasswordInput,
+  ): Promise<void> {
     const updatedUser = await this.dbUserService.changePassword(userId, input);
     await this.refreshCache(updatedUser);
     // Password change does not carry PII to RabbitMQ — no event published.
@@ -106,7 +109,7 @@ export class UserService {
 
   async addAddress(userId: string, input: any): Promise<Address> {
     const address = await this.dbUserService.addAddress(userId, input);
-    
+
     // Refresh user cache
     const updatedUser = await this.dbUserService.findById(userId);
     if (updatedUser) {
@@ -118,7 +121,7 @@ export class UserService {
 
   async deleteAddress(userId: string, addressId: string): Promise<void> {
     await this.dbUserService.deleteAddress(userId, addressId);
-    
+
     // Refresh user cache
     const updatedUser = await this.dbUserService.findById(userId);
     if (updatedUser) {
@@ -128,7 +131,7 @@ export class UserService {
 
   async setDefaultAddress(userId: string, addressId: string): Promise<void> {
     await this.dbUserService.setDefaultAddress(userId, addressId);
-    
+
     // Refresh user cache
     const updatedUser = await this.dbUserService.findById(userId);
     if (updatedUser) {
@@ -136,7 +139,11 @@ export class UserService {
     }
   }
 
-  async countUsersThisMonthAndLastMonth(): Promise<{ totalUsers: number; usersThisMonth: number; percentageIncrease: number }> {
+  async countUsersThisMonthAndLastMonth(): Promise<{
+    totalUsers: number;
+    usersThisMonth: number;
+    percentageIncrease: number;
+  }> {
     return this.dbUserService.countUsersThisMonthAndLastMonth();
   }
 }

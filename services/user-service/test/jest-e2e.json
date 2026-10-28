@@ -5,5 +5,12 @@
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "testTimeout": 60000,
+  "maxWorkers": 1,
+  "setupFilesAfterEnv": [],
+  "moduleNameMapper": {
+    "^@delivery-micro/shard$": "<rootDir>/../node_modules/@delivery-micro/shard",
+    "^@bts-soft/core$": "<rootDir>/../node_modules/@bts-soft/core"
   }
 }

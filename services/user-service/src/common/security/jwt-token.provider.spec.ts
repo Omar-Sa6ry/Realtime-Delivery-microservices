@@ -70,8 +70,12 @@ describe('JwtTokenProvider', () => {
       const firstCall = jwtService.signAsync.mock.calls[0];
       const secondCall = jwtService.signAsync.mock.calls[1];
 
-      expect(firstCall[1]).toEqual(expect.objectContaining({ secret: 'test-secret' }));
-      expect(secondCall[1]).toEqual(expect.objectContaining({ secret: 'test-secret' }));
+      expect(firstCall[1]).toEqual(
+        expect.objectContaining({ secret: 'test-secret' }),
+      );
+      expect(secondCall[1]).toEqual(
+        expect.objectContaining({ secret: 'test-secret' }),
+      );
     });
 
     it('should use default secret if not in config', async () => {
@@ -83,7 +87,9 @@ describe('JwtTokenProvider', () => {
       await service.generateTokens(mockPayload);
 
       const firstCall = jwtService.signAsync.mock.calls[0];
-      expect(firstCall[1]).toEqual(expect.objectContaining({ secret: 'default_secret' }));
+      expect(firstCall[1]).toEqual(
+        expect.objectContaining({ secret: 'default_secret' }),
+      );
     });
 
     it('should include correct payload in access token', async () => {
@@ -176,7 +182,10 @@ describe('JwtTokenProvider', () => {
     });
 
     it('should fallback to sub if userId not present', async () => {
-      jwtService.verifyAsync.mockResolvedValue({ sub: 'user-456', email: 'test@example.com' });
+      jwtService.verifyAsync.mockResolvedValue({
+        sub: 'user-456',
+        email: 'test@example.com',
+      });
 
       const result = await service.verifyAccessToken('token');
 
@@ -222,7 +231,10 @@ describe('JwtTokenProvider', () => {
 
     it('should use default secret if not in config', async () => {
       configService.get.mockReturnValue(undefined);
-      jwtService.verifyAsync.mockResolvedValue({ sub: 'user-123', type: 'refresh' });
+      jwtService.verifyAsync.mockResolvedValue({
+        sub: 'user-123',
+        type: 'refresh',
+      });
 
       await service.verifyRefreshToken('token');
 

@@ -101,7 +101,13 @@ describe('UserFactory', () => {
     });
 
     it('should generate unique ID using IdGenerator', () => {
-      factory.createUser('test@example.com', 'hashed', 'John', 'Doe', Role.USER);
+      factory.createUser(
+        'test@example.com',
+        'hashed',
+        'John',
+        'Doe',
+        Role.USER,
+      );
 
       expect(IdGenerator.generate).toHaveBeenCalledWith('snowflake');
     });

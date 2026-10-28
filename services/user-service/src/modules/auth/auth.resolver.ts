@@ -38,7 +38,7 @@ export class AuthResolver {
       statusCode: 201,
       message: await this.i18n.t('user.REGISTER_SUCCESS'),
       data,
-    } as AuthResponse;
+    };
   }
 
   @Mutation(() => AuthResponse)
@@ -54,7 +54,7 @@ export class AuthResolver {
       statusCode: 200,
       message: await this.i18n.t('user.LOGIN_SUCCESS'),
       data,
-    } as AuthResponse;
+    };
   }
 
   @Mutation(() => BooleanResponse)
@@ -72,7 +72,7 @@ export class AuthResolver {
       statusCode: 200,
       message: await this.i18n.t('user.FORGET_PASSWORD_SUCCESS'),
       data: true,
-    } as BooleanResponse;
+    };
   }
 
   @Mutation(() => BooleanResponse)
@@ -90,7 +90,7 @@ export class AuthResolver {
       statusCode: 200,
       message: await this.i18n.t('user.RESET_PASSWORD_SUCCESS'),
       data: true,
-    } as BooleanResponse;
+    };
   }
 
   @Mutation(() => BooleanResponse)
@@ -105,7 +105,7 @@ export class AuthResolver {
       statusCode: 200,
       message: await this.i18n.t('user.LOGOUT_SUCCESS'),
       data: true,
-    } as BooleanResponse;
+    };
   }
 
   @Mutation(() => AuthResponse)
@@ -118,6 +118,6 @@ export class AuthResolver {
       statusCode: 200,
       message: await this.i18n.t('user.REFRESH_TOKEN_SUCCESS'),
       data,
-    } as AuthResponse;
+    };
   }
 }

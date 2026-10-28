@@ -9,7 +9,12 @@ import { JwtTokenProvider } from '../../common/security/jwt-token.provider';
 import { RedisSessionRepository } from '../../common/database/repositories/redis-session.repository';
 import { OutboxWorkerService } from '../../common/messaging/outbox-worker.service';
 import { NotificationService } from '@bts-soft/core';
-import { KafkaService, Role, rolePermissionsMap, UserKafkaTopics } from '@delivery-micro/shard';
+import {
+  KafkaService,
+  Role,
+  rolePermissionsMap,
+  UserKafkaTopics,
+} from '@delivery-micro/shard';
 import { UserFactory } from './user.factory';
 import { I18nService } from 'nestjs-i18n';
 import { UserRabbitMQPublisher } from '../rabbitmq/rabbitmq.publisher';
@@ -51,7 +56,7 @@ describe('AuthService', () => {
     updatedAt: new Date('2024-01-01'),
     resetToken: undefined,
     resetTokenExpiry: undefined,
-  } as User;
+  };
 
   const mockTokens = {
     accessToken: 'access-token-123',
@@ -119,7 +124,7 @@ describe('AuthService', () => {
 
     userFactory = {
       createUser: jest.fn().mockReturnValue(mockUser),
-    } as unknown as jest.Mocked<UserFactory>;
+    };
 
     i18n = {
       t: jest.fn((key: string) => key),
@@ -233,7 +238,9 @@ describe('AuthService', () => {
         .mockResolvedValueOnce(mockUser)
         .mockResolvedValueOnce(null);
 
-      await expect(service.register(registerInput)).rejects.toThrow(BadRequestException);
+      await expect(service.register(registerInput)).rejects.toThrow(
+        BadRequestException,
+      );
       // The code uses Promise.all, so either error could be thrown first
       expect(i18n.t).toHaveBeenCalled();
     });
@@ -243,7 +250,9 @@ describe('AuthService', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(mockUser);
 
-      await expect(service.register(registerInput)).rejects.toThrow(BadRequestException);
+      await expect(service.register(registerInput)).rejects.toThrow(
+        BadRequestException,
+      );
       expect(i18n.t).toHaveBeenCalled();
     });
 
@@ -252,7 +261,9 @@ describe('AuthService', () => {
         .mockResolvedValueOnce(mockUser)
         .mockResolvedValueOnce(mockUser);
 
-      await expect(service.register(registerInput)).rejects.toThrow(BadRequestException);
+      await expect(service.register(registerInput)).rejects.toThrow(
+        BadRequestException,
+      );
       expect(i18n.t).toHaveBeenCalled();
     });
 
@@ -291,7 +302,10 @@ describe('AuthService', () => {
       expect(userRepo.findOne).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
       });
-      expect(passwordHasher.compare).toHaveBeenCalledWith('password123', 'hashed-password');
+      expect(passwordHasher.compare).toHaveBeenCalledWith(
+        'password123',
+        'hashed-password',
+      );
       expect(tokenProvider.generateTokens).toHaveBeenCalled();
       expect(sessionRepo.createSession).toHaveBeenCalled();
     });
@@ -299,7 +313,9 @@ describe('AuthService', () => {
     it('should throw BadRequestException if user not found', async () => {
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.login(loginInput)).rejects.toThrow(BadRequestException);
+      await expect(service.login(loginInput)).rejects.toThrow(
+        BadRequestException,
+      );
       expect(i18n.t).toHaveBeenCalledWith('user.INVALID_CREDENTIALS');
     });
 
@@ -307,7 +323,9 @@ describe('AuthService', () => {
       userRepo.findOne.mockResolvedValue(mockUser);
       passwordHasher.compare.mockResolvedValue(false);
 
-      await expect(service.login(loginInput)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginInput)).rejects.toThrow(
+        UnauthorizedException,
+      );
       expect(i18n.t).toHaveBeenCalledWith('user.INVALID_CREDENTIALS');
     });
   });
@@ -318,7 +336,11 @@ describe('AuthService', () => {
     };
 
     it('should generate reset token and send email', async () => {
-      const userWithToken = { ...mockUser, resetToken: '123456', resetTokenExpiry: new Date() };
+      const userWithToken = {
+        ...mockUser,
+        resetToken: '123456',
+        resetTokenExpiry: new Date(),
+      };
       userRepo.findOne.mockResolvedValue(mockUser);
       userRepo.save.mockResolvedValue(userWithToken);
 
@@ -345,7 +367,9 @@ describe('AuthService', () => {
     it('should not throw if user not found (security)', async () => {
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.forgetPassword(forgetPasswordInput)).resolves.toBeUndefined();
+      await expect(
+        service.forgetPassword(forgetPasswordInput),
+      ).resolves.toBeUndefined();
       expect(userRepo.save).not.toHaveBeenCalled();
       expect(notificationService.send).not.toHaveBeenCalled();
     });
@@ -356,7 +380,9 @@ describe('AuthService', () => {
       notificationService.send.mockRejectedValue(new Error('Email failed'));
       kafkaService.emit.mockRejectedValue(new Error('Kafka failed'));
 
-      await expect(service.forgetPassword(forgetPasswordInput)).resolves.toBeUndefined();
+      await expect(
+        service.forgetPassword(forgetPasswordInput),
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -374,7 +400,10 @@ describe('AuthService', () => {
       };
       userRepo.findOne.mockResolvedValue(userWithToken);
       passwordHasher.hash.mockResolvedValue('new-hashed-password');
-      userRepo.save.mockResolvedValue({ ...userWithToken, passwordHash: 'new-hashed-password' });
+      userRepo.save.mockResolvedValue({
+        ...userWithToken,
+        passwordHash: 'new-hashed-password',
+      });
 
       await service.resetPassword(resetPasswordInput);
 
@@ -418,7 +447,10 @@ describe('AuthService', () => {
     it('should revoke session', async () => {
       await service.logout('user-123', 'session-123');
 
-      expect(sessionRepo.revokeSession).toHaveBeenCalledWith('user-123', 'session-123');
+      expect(sessionRepo.revokeSession).toHaveBeenCalledWith(
+        'user-123',
+        'session-123',
+      );
     });
   });
 
@@ -451,9 +483,16 @@ describe('AuthService', () => {
       expect(result).toBeDefined();
       expect(result.accessToken).toBe('access-token-123');
       expect(result.refreshToken).toBe('refresh-token-123');
-      expect(tokenProvider.verifyRefreshToken).toHaveBeenCalledWith('refresh-token-123');
-      expect(sessionRepo.getSession).toHaveBeenCalledWith('user-123', 'session-123');
-      expect(userRepo.findOne).toHaveBeenCalledWith({ where: { id: 'user-123' } });
+      expect(tokenProvider.verifyRefreshToken).toHaveBeenCalledWith(
+        'refresh-token-123',
+      );
+      expect(sessionRepo.getSession).toHaveBeenCalledWith(
+        'user-123',
+        'session-123',
+      );
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'user-123' },
+      });
       expect(tokenProvider.generateTokens).toHaveBeenCalled();
       expect(sessionRepo.createSession).toHaveBeenCalled();
     });

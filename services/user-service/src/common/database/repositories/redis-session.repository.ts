@@ -21,12 +21,20 @@ export class RedisSessionRepository {
     return `user:refresh:${refreshTokenHash}`;
   }
 
-  async createSession(userId: string, sessionId: string, data: UserSessionData, ttlSeconds: number): Promise<void> {
+  async createSession(
+    userId: string,
+    sessionId: string,
+    data: UserSessionData,
+    ttlSeconds: number,
+  ): Promise<void> {
     const key = this.sessionKey(userId, sessionId);
     await this.redisService.set(key, data, ttlSeconds);
   }
 
-  async getSession(userId: string, sessionId: string): Promise<UserSessionData | null> {
+  async getSession(
+    userId: string,
+    sessionId: string,
+  ): Promise<UserSessionData | null> {
     const key = this.sessionKey(userId, sessionId);
     const data = await this.redisService.get(key);
     return data ? (data as UserSessionData) : null;
@@ -47,12 +55,18 @@ export class RedisSessionRepository {
     }
   }
 
-  async storeRefreshToken(refreshTokenHash: string, userId: string, ttlSeconds: number): Promise<void> {
+  async storeRefreshToken(
+    refreshTokenHash: string,
+    userId: string,
+    ttlSeconds: number,
+  ): Promise<void> {
     const key = this.refreshKey(refreshTokenHash);
     await this.redisService.set(key, { userId }, ttlSeconds);
   }
 
-  async getUserIdByRefreshToken(refreshTokenHash: string): Promise<string | null> {
+  async getUserIdByRefreshToken(
+    refreshTokenHash: string,
+  ): Promise<string | null> {
     const key = this.refreshKey(refreshTokenHash);
     const data: any = await this.redisService.get(key);
     return data?.userId || null;

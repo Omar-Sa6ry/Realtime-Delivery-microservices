@@ -18,7 +18,6 @@ import { MediaModule } from './modules/media/media.module';
 import { User } from './common/database/entities/user.entity';
 import { Address } from './common/database/entities/address.entity';
 import { Outbox } from './common/database/entities/outbox.entity';
-import { UserService } from './modules/user/user.service';
 import {
   LoggingModule,
   MetricsModule,

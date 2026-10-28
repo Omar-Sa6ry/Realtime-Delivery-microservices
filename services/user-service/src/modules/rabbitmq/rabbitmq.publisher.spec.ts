@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRabbitMQPublisher } from './rabbitmq.publisher';
-import { RabbitMQService, RabbitMQExchanges, UsersRoutingKeys } from '@delivery-micro/shard';
+import {
+  RabbitMQService,
+  RabbitMQExchanges,
+  UsersRoutingKeys,
+} from '@delivery-micro/shard';
 
 describe('UserRabbitMQPublisher', () => {
   let service: UserRabbitMQPublisher;
@@ -101,10 +105,15 @@ describe('UserRabbitMQPublisher', () => {
     });
 
     it('should not throw if publish fails (best-effort)', async () => {
-      rabbitmqService.publish.mockRejectedValue(new Error('RMQ connection failed'));
+      rabbitmqService.publish.mockRejectedValue(
+        new Error('RMQ connection failed'),
+      );
 
       await expect(
-        service.publishUserCreated({ id: 'user-123', email: 'test@example.com' }),
+        service.publishUserCreated({
+          id: 'user-123',
+          email: 'test@example.com',
+        }),
       ).resolves.toBeUndefined();
     });
   });
@@ -165,7 +174,9 @@ describe('UserRabbitMQPublisher', () => {
     });
 
     it('should not throw if publish fails (best-effort)', async () => {
-      rabbitmqService.publish.mockRejectedValue(new Error('RMQ connection failed'));
+      rabbitmqService.publish.mockRejectedValue(
+        new Error('RMQ connection failed'),
+      );
 
       await expect(
         service.publishUserUpdated({ id: 'user-123' }),
@@ -190,9 +201,13 @@ describe('UserRabbitMQPublisher', () => {
     });
 
     it('should not throw if publish fails (best-effort)', async () => {
-      rabbitmqService.publish.mockRejectedValue(new Error('RMQ connection failed'));
+      rabbitmqService.publish.mockRejectedValue(
+        new Error('RMQ connection failed'),
+      );
 
-      await expect(service.publishUserDeleted('user-123')).resolves.toBeUndefined();
+      await expect(
+        service.publishUserDeleted('user-123'),
+      ).resolves.toBeUndefined();
     });
   });
 });

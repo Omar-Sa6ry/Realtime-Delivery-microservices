@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DbUserService } from './db-user.service';
 import { Repository, DataSource, QueryRunner, EntityManager } from 'typeorm';
 import { User } from '../../common/database/entities/user.entity';
@@ -40,7 +44,7 @@ describe('DbUserService', () => {
     updatedAt: new Date('2024-01-01'),
     resetToken: undefined,
     resetTokenExpiry: undefined,
-  } as User;
+  };
 
   const mockAddress: Address = {
     id: 'addr-123',
@@ -51,11 +55,11 @@ describe('DbUserService', () => {
     state: 'NY',
     postalCode: '10001',
     latitude: 40.7128,
-    longitude: -74.0060,
+    longitude: -74.006,
     isDefault: true,
     createdAt: new Date('2024-01-01'),
     user: mockUser,
-  } as Address;
+  };
 
   beforeEach(async () => {
     userRepo = {
@@ -134,7 +138,9 @@ describe('DbUserService', () => {
       const result = await service.findById('user-123');
 
       expect(result).toEqual(mockUser);
-      expect(userRepo.findOne).toHaveBeenCalledWith({ where: { id: 'user-123' } });
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'user-123' },
+      });
     });
 
     it('should return null if not found', async () => {
@@ -179,14 +185,20 @@ describe('DbUserService', () => {
 
     beforeEach(() => {
       userRepo.findOne.mockResolvedValue(mockUser);
-      queryRunner.manager.save.mockResolvedValue({ ...mockUser, firstName: 'Jane', lastName: 'Smith' });
+      queryRunner.manager.save.mockResolvedValue({
+        ...mockUser,
+        firstName: 'Jane',
+        lastName: 'Smith',
+      });
     });
 
     it('should update profile and create outbox event', async () => {
       const result = await service.updateProfile('user-123', updateInput);
 
       expect(result).toBeDefined();
-      expect(userRepo.findOne).toHaveBeenCalledWith({ where: { id: 'user-123' } });
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'user-123' },
+      });
       expect(queryRunner.connect).toHaveBeenCalled();
       expect(queryRunner.startTransaction).toHaveBeenCalled();
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
@@ -207,15 +219,17 @@ describe('DbUserService', () => {
     it('should throw BadRequestException if user not found', async () => {
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.updateProfile('user-123', updateInput)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.updateProfile('user-123', updateInput),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should rollback transaction on error', async () => {
       queryRunner.manager.save.mockRejectedValue(new Error('DB error'));
 
-      await expect(service.updateProfile('user-123', updateInput)).rejects.toThrow('DB error');
+      await expect(
+        service.updateProfile('user-123', updateInput),
+      ).rejects.toThrow('DB error');
       expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
     });
 
@@ -267,9 +281,14 @@ describe('DbUserService', () => {
         ...updateInput,
         avatarMediaId: 'media-123',
       };
-      mediaGrpcService.resolveMediaUrl.mockRejectedValue(new Error('Persistent error'));
+      mediaGrpcService.resolveMediaUrl.mockRejectedValue(
+        new Error('Persistent error'),
+      );
       userRepo.findOne.mockResolvedValue(mockUser);
-      queryRunner.manager.save.mockResolvedValue({ ...mockUser, imageUrl: undefined });
+      queryRunner.manager.save.mockResolvedValue({
+        ...mockUser,
+        imageUrl: undefined,
+      });
 
       const result = await service.updateProfile('user-123', inputWithMedia);
 
@@ -282,9 +301,9 @@ describe('DbUserService', () => {
         imageUrl: 'not-a-valid-url',
       };
 
-      await expect(service.updateProfile('user-123', invalidInput)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.updateProfile('user-123', invalidInput),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -298,9 +317,15 @@ describe('DbUserService', () => {
       userRepo.findOne.mockResolvedValue(mockUser);
       passwordHasher.compare.mockResolvedValue(true);
       passwordHasher.hash.mockResolvedValue('new-hashed-password');
-      userRepo.save.mockResolvedValue({ ...mockUser, passwordHash: 'new-hashed-password' });
+      userRepo.save.mockResolvedValue({
+        ...mockUser,
+        passwordHash: 'new-hashed-password',
+      });
 
-      const result = await service.changePassword('user-123', changePasswordInput);
+      const result = await service.changePassword(
+        'user-123',
+        changePasswordInput,
+      );
 
       expect(result).toBeDefined();
       expect(passwordHasher.compare).toHaveBeenCalledWith(
@@ -314,18 +339,18 @@ describe('DbUserService', () => {
     it('should throw BadRequestException if user not found', async () => {
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.changePassword('user-123', changePasswordInput)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.changePassword('user-123', changePasswordInput),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw UnauthorizedException if old password is invalid', async () => {
       userRepo.findOne.mockResolvedValue(mockUser);
       passwordHasher.compare.mockResolvedValue(false);
 
-      await expect(service.changePassword('user-123', changePasswordInput)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        service.changePassword('user-123', changePasswordInput),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -344,7 +369,9 @@ describe('DbUserService', () => {
     it('should throw NotFoundException if user not found', async () => {
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.promoteUserToAdmin('user-123')).rejects.toThrow(NotFoundException);
+      await expect(service.promoteUserToAdmin('user-123')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -362,9 +389,9 @@ describe('DbUserService', () => {
     it('should throw NotFoundException if user not found', async () => {
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.updateUserRole('user-123', 'merchant')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.updateUserRole('user-123', 'merchant'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -409,7 +436,9 @@ describe('DbUserService', () => {
     it('should throw NotFoundException if user not found', async () => {
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.deleteUser('user-123')).rejects.toThrow(NotFoundException);
+      await expect(service.deleteUser('user-123')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -431,14 +460,17 @@ describe('DbUserService', () => {
     it('should throw NotFoundException if user not found', async () => {
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.addAddress('user-123', { title: 'Home' })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.addAddress('user-123', { title: 'Home' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should set other addresses to non-default when new address is default', async () => {
       const existingAddress = { ...mockAddress, isDefault: true };
-      userRepo.findOne.mockResolvedValue({ ...mockUser, addresses: [existingAddress] });
+      userRepo.findOne.mockResolvedValue({
+        ...mockUser,
+        addresses: [existingAddress],
+      });
       addressRepo.save.mockResolvedValue({ ...mockAddress, isDefault: true });
 
       await service.addAddress('user-123', {
@@ -455,7 +487,10 @@ describe('DbUserService', () => {
 
   describe('deleteAddress', () => {
     it('should delete address if belongs to user', async () => {
-      userRepo.findOne.mockResolvedValue({ ...mockUser, addresses: [mockAddress] });
+      userRepo.findOne.mockResolvedValue({
+        ...mockUser,
+        addresses: [mockAddress],
+      });
       addressRepo.delete.mockResolvedValue({ affected: 1, raw: [] });
 
       await service.deleteAddress('user-123', 'addr-123');
@@ -466,17 +501,17 @@ describe('DbUserService', () => {
     it('should throw NotFoundException if user not found', async () => {
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.deleteAddress('user-123', 'addr-123')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.deleteAddress('user-123', 'addr-123'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException if address not found for user', async () => {
       userRepo.findOne.mockResolvedValue({ ...mockUser, addresses: [] });
 
-      await expect(service.deleteAddress('user-123', 'addr-123')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.deleteAddress('user-123', 'addr-123'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -484,8 +519,14 @@ describe('DbUserService', () => {
     it('should set address as default', async () => {
       const addr1 = { ...mockAddress, id: 'addr-1', isDefault: true };
       const addr2 = { ...mockAddress, id: 'addr-2', isDefault: false };
-      userRepo.findOne.mockResolvedValue({ ...mockUser, addresses: [addr1, addr2] });
-      addressRepo.save.mockResolvedValue([{ ...addr1, isDefault: false }, { ...addr2, isDefault: true }]);
+      userRepo.findOne.mockResolvedValue({
+        ...mockUser,
+        addresses: [addr1, addr2],
+      });
+      addressRepo.save.mockResolvedValue([
+        { ...addr1, isDefault: false },
+        { ...addr2, isDefault: true },
+      ]);
 
       await service.setDefaultAddress('user-123', 'addr-2');
 
@@ -497,17 +538,17 @@ describe('DbUserService', () => {
     it('should throw NotFoundException if user not found', async () => {
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.setDefaultAddress('user-123', 'addr-123')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.setDefaultAddress('user-123', 'addr-123'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException if address not found for user', async () => {
       userRepo.findOne.mockResolvedValue({ ...mockUser, addresses: [] });
 
-      await expect(service.setDefaultAddress('user-123', 'addr-123')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.setDefaultAddress('user-123', 'addr-123'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

@@ -46,7 +46,7 @@ export class UserResolver {
       statusCode: 200,
       message: await this.i18n.t('user.USER_RETRIEVED'),
       data: user || undefined,
-    } as UserResponse;
+    };
   }
 
   @Query(() => UserResponse)
@@ -60,7 +60,7 @@ export class UserResolver {
       statusCode: 200,
       message: await this.i18n.t('user.PROFILE_RETRIEVED'),
       data: user || undefined,
-    } as UserResponse;
+    };
   }
 
   @Mutation(() => BooleanResponse)
@@ -77,7 +77,7 @@ export class UserResolver {
       statusCode: 200,
       message: await this.i18n.t('user.PASSWORD_CHANGED'),
       data: true,
-    } as BooleanResponse;
+    };
   }
 
   @Mutation(() => UserResponse)
@@ -94,7 +94,7 @@ export class UserResolver {
       statusCode: 200,
       message: await this.i18n.t('user.PROFILE_UPDATED'),
       data: user,
-    } as UserResponse;
+    };
   }
 
   @Mutation(() => BooleanResponse)
@@ -106,7 +106,7 @@ export class UserResolver {
       statusCode: 200,
       message: await this.i18n.t('user.USER_PROMOTED'),
       data: true,
-    } as BooleanResponse;
+    };
   }
 
   @Mutation(() => BooleanResponse)
@@ -121,7 +121,7 @@ export class UserResolver {
       statusCode: 200,
       message: await this.i18n.t('user.USER_STATUS_UPDATED'),
       data: true,
-    } as BooleanResponse;
+    };
   }
 
   @Mutation(() => BooleanResponse)
@@ -133,7 +133,7 @@ export class UserResolver {
       statusCode: 200,
       message: await this.i18n.t('user.USER_DELETED'),
       data: true,
-    } as BooleanResponse;
+    };
   }
 
   @Mutation(() => AddressResponse)
@@ -149,7 +149,7 @@ export class UserResolver {
       statusCode: 200,
       message: await this.i18n.t('user.ADDRESS_ADDED'),
       data: address,
-    } as AddressResponse;
+    };
   }
 
   @Mutation(() => BooleanResponse)
@@ -165,7 +165,7 @@ export class UserResolver {
       statusCode: 200,
       message: await this.i18n.t('user.ADDRESS_DELETED'),
       data: true,
-    } as BooleanResponse;
+    };
   }
 
   @Query(() => AddressListResponse)
@@ -178,7 +178,7 @@ export class UserResolver {
       statusCode: 200,
       message: await this.i18n.t('user.ADDRESSES_RETRIEVED'),
       data: user?.addresses || [],
-    } as AddressListResponse;
+    };
   }
 
   @Mutation(() => BooleanResponse)
@@ -194,6 +194,6 @@ export class UserResolver {
       statusCode: 200,
       message: await this.i18n.t('user.DEFAULT_ADDRESS_UPDATED'),
       data: true,
-    } as BooleanResponse;
+    };
   }
 }

@@ -39,7 +39,12 @@ describe('RedisSessionRepository', () => {
 
   describe('createSession', () => {
     it('should store session data with TTL', async () => {
-      await service.createSession('user-123', 'session-123', mockSessionData, 3600);
+      await service.createSession(
+        'user-123',
+        'session-123',
+        mockSessionData,
+        3600,
+      );
 
       expect(redisService.set).toHaveBeenCalledWith(
         'user:session:user-123:session-123',
@@ -56,7 +61,9 @@ describe('RedisSessionRepository', () => {
       const result = await service.getSession('user-123', 'session-123');
 
       expect(result).toEqual(mockSessionData);
-      expect(redisService.get).toHaveBeenCalledWith('user:session:user-123:session-123');
+      expect(redisService.get).toHaveBeenCalledWith(
+        'user:session:user-123:session-123',
+      );
     });
 
     it('should return null if session not found', async () => {
@@ -72,7 +79,9 @@ describe('RedisSessionRepository', () => {
     it('should delete session key', async () => {
       await service.revokeSession('user-123', 'session-123');
 
-      expect(redisService.del).toHaveBeenCalledWith('user:session:user-123:session-123');
+      expect(redisService.del).toHaveBeenCalledWith(
+        'user:session:user-123:session-123',
+      );
     });
   });
 
@@ -86,7 +95,9 @@ describe('RedisSessionRepository', () => {
 
       await service.revokeAllUserSessions('user-123');
 
-      expect((redisService as any).keys).toHaveBeenCalledWith('user:session:user-123:*');
+      expect((redisService as any).keys).toHaveBeenCalledWith(
+        'user:session:user-123:*',
+      );
       expect(redisService.del).toHaveBeenCalledTimes(2);
       expect(redisService.del).toHaveBeenCalledWith(keys[0]);
       expect(redisService.del).toHaveBeenCalledWith(keys[1]);
@@ -128,7 +139,9 @@ describe('RedisSessionRepository', () => {
       const result = await service.getUserIdByRefreshToken('token-hash-123');
 
       expect(result).toBe('user-123');
-      expect(redisService.get).toHaveBeenCalledWith('user:refresh:token-hash-123');
+      expect(redisService.get).toHaveBeenCalledWith(
+        'user:refresh:token-hash-123',
+      );
     });
 
     it('should return null if refresh token not found', async () => {
@@ -152,7 +165,9 @@ describe('RedisSessionRepository', () => {
     it('should delete refresh token key', async () => {
       await service.revokeRefreshToken('token-hash-123');
 
-      expect(redisService.del).toHaveBeenCalledWith('user:refresh:token-hash-123');
+      expect(redisService.del).toHaveBeenCalledWith(
+        'user:refresh:token-hash-123',
+      );
     });
   });
 });

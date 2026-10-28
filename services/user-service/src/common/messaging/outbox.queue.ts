@@ -3,7 +3,11 @@ import { Job } from 'bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Outbox } from '../database/entities/outbox.entity';
-import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import {
+  ClientProxy,
+  ClientProxyFactory,
+  Transport,
+} from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 
@@ -18,7 +22,10 @@ export class OutboxProcessor extends WorkerHost {
     private readonly configService: ConfigService,
   ) {
     super();
-    const natsUrl = this.configService.get<string>('NATS_URL', 'nats://localhost:4222');
+    const natsUrl = this.configService.get<string>(
+      'NATS_URL',
+      'nats://localhost:4222',
+    );
     this.client = ClientProxyFactory.create({
       transport: Transport.NATS,
       options: {
@@ -31,24 +38,29 @@ export class OutboxProcessor extends WorkerHost {
   async process(job: Job<any, any, string>): Promise<void> {
     const { outboxId } = job.data;
     const event = await this.outboxRepo.findOne({ where: { id: outboxId } });
-    
+
     if (!event || event.processed) {
       return;
     }
 
     try {
       await this.client.connect();
-      
+
       // Publish event to NATS
       this.client.emit(event.eventType, event.payload);
-      
+
       // Mark as processed
       event.processed = true;
       await this.outboxRepo.save(event);
-      
-      this.logger.log(`Outbox event [${event.eventType}] processed via BullMQ for aggregate ${event.aggregateId}`);
+
+      this.logger.log(
+        `Outbox event [${event.eventType}] processed via BullMQ for aggregate ${event.aggregateId}`,
+      );
     } catch (err) {
-      this.logger.error(`Failed to process outbox event ${outboxId} via BullMQ`, err);
+      this.logger.error(
+        `Failed to process outbox event ${outboxId} via BullMQ`,
+        err,
+      );
       throw err;
     }
   }

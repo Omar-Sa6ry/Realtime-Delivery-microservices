@@ -50,7 +50,8 @@ export class MediaGrpcService implements OnModuleInit, OnModuleDestroy {
   private readonly protoPath: string;
 
   constructor(configService: ConfigService) {
-    this.address = configService.get<string>('MEDIA_SERVICE_GRPC_URL') || 'media-srv:50052';
+    this.address =
+      configService.get<string>('MEDIA_SERVICE_GRPC_URL') || 'media-srv:50052';
     this.protoPath = join(process.cwd(), '../../protos/media.proto');
   }
 
@@ -65,16 +66,23 @@ export class MediaGrpcService implements OnModuleInit, OnModuleDestroy {
     const proto = grpc.loadPackageDefinition(packageDefinition) as any;
     const MediaServiceCtor = proto.media?.MediaService;
     if (!MediaServiceCtor) {
-      throw new Error('media.proto must define package "media" service "MediaService"');
+      throw new Error(
+        'media.proto must define package "media" service "MediaService"',
+      );
     }
-    this.client = new MediaServiceCtor(this.address, grpc.credentials.createInsecure());
+    this.client = new MediaServiceCtor(
+      this.address,
+      grpc.credentials.createInsecure(),
+    );
   }
 
   onModuleDestroy(): void {
     this.client?.close();
   }
 
-  async resolveMediaUrl(args: ResolveMediaUrlArgs): Promise<ResolveMediaUrlResult> {
+  async resolveMediaUrl(
+    args: ResolveMediaUrlArgs,
+  ): Promise<ResolveMediaUrlResult> {
     const call = promisify(this.client.ResolveMediaUrl.bind(this.client));
     const deadline = new Date(Date.now() + 5000);
 
@@ -101,7 +109,10 @@ export class MediaGrpcService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async getMedia(mediaId: string, requesterId: string): Promise<GetMediaResult> {
+  async getMedia(
+    mediaId: string,
+    requesterId: string,
+  ): Promise<GetMediaResult> {
     const call = promisify(this.client.GetMedia.bind(this.client));
     const deadline = new Date(Date.now() + 5000);
 
@@ -137,7 +148,9 @@ export class MediaGrpcService implements OnModuleInit, OnModuleDestroy {
     const code = err?.code;
     const message = String(err?.details || err?.message || 'unknown');
     if (code === grpc.status.PERMISSION_DENIED) {
-      throw new BadRequestException('media link rejected: access denied on media-service');
+      throw new BadRequestException(
+        'media link rejected: access denied on media-service',
+      );
     }
     if (code === grpc.status.NOT_FOUND) {
       throw new BadRequestException('media link rejected: media not found');
@@ -148,9 +161,16 @@ export class MediaGrpcService implements OnModuleInit, OnModuleDestroy {
     if (code === grpc.status.RESOURCE_EXHAUSTED) {
       throw new BadRequestException('media rate limit exceeded');
     }
-    if (code === grpc.status.UNAVAILABLE || code === grpc.status.DEADLINE_EXCEEDED) {
-      throw new ServiceUnavailableException(`media-service unreachable (${operation})`);
+    if (
+      code === grpc.status.UNAVAILABLE ||
+      code === grpc.status.DEADLINE_EXCEEDED
+    ) {
+      throw new ServiceUnavailableException(
+        `media-service unreachable (${operation})`,
+      );
     }
-    throw new ServiceUnavailableException(`media-service call failed (${operation})`);
+    throw new ServiceUnavailableException(
+      `media-service call failed (${operation})`,
+    );
   }
 }

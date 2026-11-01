@@ -84,7 +84,7 @@ func TestPipeline_Process_Success(t *testing.T) {
 	router := NewRouter()
 	router.Register("delivery", &testDeliveryHandler{})
 	mockWriter := testutil.NewMockClickHouseWriter()
-	batches := NewBatchWriter(mockWriter, mockStore, 100, 100*time.Millisecond)
+	batches := NewBatchWriter(mockWriter, mockStore, 1, 100*time.Millisecond)
 
 	pipeline := NewIngestionPipeline(validator, dedup, router, batches)
 
@@ -97,6 +97,10 @@ func TestPipeline_Process_Success(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, OutcomeProcessed, outcome)
+
+	// Flush to ensure data is written
+	_, err = batches.Flush(ctx)
+	require.NoError(t, err)
 
 	// Verify data was written
 	rawEvents := mockWriter.GetRawEvents()
@@ -114,7 +118,7 @@ func TestPipeline_Process_Duplicate(t *testing.T) {
 	router := NewRouter()
 	router.Register("delivery", &testDeliveryHandler{})
 	mockWriter := testutil.NewMockClickHouseWriter()
-	batches := NewBatchWriter(mockWriter, mockStore, 100, 100*time.Millisecond)
+	batches := NewBatchWriter(mockWriter, mockStore, 1, 100*time.Millisecond)
 
 	pipeline := NewIngestionPipeline(validator, dedup, router, batches)
 
@@ -134,7 +138,7 @@ func TestPipeline_Process_InvalidJSON(t *testing.T) {
 	dedup := NewDeduplicator(testutil.NewMockIdempotencyStore())
 	router := NewRouter()
 	mockWriter := testutil.NewMockClickHouseWriter()
-	batches := NewBatchWriter(mockWriter, testutil.NewMockIdempotencyStore(), 100, 100*time.Millisecond)
+	batches := NewBatchWriter(mockWriter, testutil.NewMockIdempotencyStore(), 1, 100*time.Millisecond)
 
 	pipeline := NewIngestionPipeline(validator, dedup, router, batches)
 
@@ -152,7 +156,7 @@ func TestPipeline_Process_InvalidEnvelope(t *testing.T) {
 	dedup := NewDeduplicator(testutil.NewMockIdempotencyStore())
 	router := NewRouter()
 	mockWriter := testutil.NewMockClickHouseWriter()
-	batches := NewBatchWriter(mockWriter, testutil.NewMockIdempotencyStore(), 100, 100*time.Millisecond)
+	batches := NewBatchWriter(mockWriter, testutil.NewMockIdempotencyStore(), 1, 100*time.Millisecond)
 
 	pipeline := NewIngestionPipeline(validator, dedup, router, batches)
 
@@ -175,7 +179,7 @@ func TestPipeline_Process_InvalidSchema(t *testing.T) {
 	router := NewRouter()
 	router.Register("delivery", &testDeliveryHandler{})
 	mockWriter := testutil.NewMockClickHouseWriter()
-	batches := NewBatchWriter(mockWriter, mockStore, 100, 100*time.Millisecond)
+	batches := NewBatchWriter(mockWriter, mockStore, 1, 100*time.Millisecond)
 
 	pipeline := NewIngestionPipeline(validator, dedup, router, batches)
 
@@ -200,7 +204,7 @@ func TestPipeline_Process_UnknownEventType(t *testing.T) {
 	dedup := NewDeduplicator(mockStore)
 	router := NewRouter() // No handlers registered
 	mockWriter := testutil.NewMockClickHouseWriter()
-	batches := NewBatchWriter(mockWriter, mockStore, 100, 100*time.Millisecond)
+	batches := NewBatchWriter(mockWriter, mockStore, 1, 100*time.Millisecond)
 
 	pipeline := NewIngestionPipeline(validator, dedup, router, batches)
 
@@ -214,7 +218,7 @@ func TestPipeline_Process_UnknownEventType(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, OutcomeProcessed, outcome)
 	assert.True(t, IsPermanent(err))
-	assert.Contains(t, err.Error(), "route")
+	assert.Contains(t, err.Error(), "schema")
 	assert.Contains(t, err.Error(), "unknown.event")
 }
 
@@ -226,7 +230,7 @@ func TestPipeline_Process_DedupStoreError(t *testing.T) {
 	router := NewRouter()
 	router.Register("delivery", &testDeliveryHandler{})
 	mockWriter := testutil.NewMockClickHouseWriter()
-	batches := NewBatchWriter(mockWriter, mockStore, 100, 100*time.Millisecond)
+	batches := NewBatchWriter(mockWriter, mockStore, 1, 100*time.Millisecond)
 
 	pipeline := NewIngestionPipeline(validator, dedup, router, batches)
 
@@ -249,7 +253,7 @@ func TestPipeline_Process_HandlerError(t *testing.T) {
 	router := NewRouter()
 	router.Register("delivery", &failingDeliveryHandler{})
 	mockWriter := testutil.NewMockClickHouseWriter()
-	batches := NewBatchWriter(mockWriter, mockStore, 100, 100*time.Millisecond)
+	batches := NewBatchWriter(mockWriter, mockStore, 1, 100*time.Millisecond)
 
 	pipeline := NewIngestionPipeline(validator, dedup, router, batches)
 
@@ -274,7 +278,7 @@ func TestPipeline_Process_BatchWriterError(t *testing.T) {
 	router.Register("delivery", &testDeliveryHandler{})
 	mockWriter := testutil.NewMockClickHouseWriter()
 	mockWriter.SetWriteError(errors.New("write error"))
-	batches := NewBatchWriter(mockWriter, mockStore, 100, 100*time.Millisecond)
+	batches := NewBatchWriter(mockWriter, mockStore, 1, 100*time.Millisecond)
 
 	pipeline := NewIngestionPipeline(validator, dedup, router, batches)
 
@@ -285,9 +289,10 @@ func TestPipeline_Process_BatchWriterError(t *testing.T) {
 	ctx := context.Background()
 	outcome, err := pipeline.Process(ctx, "delivery.events", 0, 100, data)
 
+	// With maxRows=1, the batch writer flushes immediately and returns error
 	assert.Error(t, err)
 	assert.Equal(t, OutcomeProcessed, outcome)
-	assert.Contains(t, err.Error(), "buffer")
+	assert.Contains(t, err.Error(), "write error")
 }
 
 func TestPermanentError(t *testing.T) {

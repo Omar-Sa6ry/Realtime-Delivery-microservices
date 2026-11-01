@@ -45,7 +45,15 @@ func TestPaymentHandler_Handles(t *testing.T) {
 func TestPaymentHandler_Handle_PaymentCreated(t *testing.T) {
 	handler := &PaymentHandler{}
 	env := testutil.NewTestEventEnvelope("payment.created", "evt-123", "payment-456")
-	payload, _ := testutil.NewTestPaymentCreatedPayload("payment-456", "delivery-789")
+	payload := []byte(`{
+		"paymentId": "payment-456",
+		"deliveryId": "delivery-789",
+		"userId": "user-123",
+		"amount": "100.50",
+		"currency": "USD",
+		"provider": "STRIPE",
+		"status": "PENDING"
+	}`)
 	p := unmarshalPayload(payload)
 
 	ctx := context.Background()
@@ -64,7 +72,7 @@ func TestPaymentHandler_Handle_PaymentCreated(t *testing.T) {
 	assert.Equal(t, "user-123", tx.UserID)
 	assert.Equal(t, "STRIPE", tx.Provider)
 	assert.Equal(t, domain.TransactionAuthorization, tx.TransactionType)
-	assert.Equal(t, "PENDING", tx.Status) // .started -> PENDING
+	assert.Equal(t, "PENDING", tx.Status)
 	assert.Equal(t, "100.50", tx.Amount)
 	assert.Equal(t, "USD", tx.Currency)
 }

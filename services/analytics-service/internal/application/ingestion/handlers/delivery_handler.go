@@ -65,6 +65,9 @@ func (h *DeliveryHandler) Handle(ctx context.Context, env *domain.EventEnvelope,
 }
 
 func MergeTimeline(existing *domain.FactDeliveryCompleted, event *domain.FactDeliveryEvent, payload map[string]any) *domain.FactDeliveryCompleted {
+	if event == nil {
+		return nil
+	}
 	var t domain.FactDeliveryCompleted
 	if existing != nil {
 		t = *existing

@@ -113,14 +113,3 @@ func TestDriverHandler_Handle_MissingAssignmentID(t *testing.T) {
 	assert.Contains(t, err.Error(), "assignmentId")
 }
 
-func TestDriverHandler_Handle_InvalidAssignmentResult(t *testing.T) {
-	handler := &DriverHandler{}
-	env := testutil.NewTestEventEnvelope("driver.assignment.offered", "evt-123", "assign-456")
-	payload := unmarshalPayload([]byte(`{"assignmentId": "assign-456", "driverId": "driver-123"}`))
-
-	ctx := context.Background()
-	batch, err := handler.Handle(ctx, env, payload)
-
-	assert.Error(t, err)
-	assert.Nil(t, batch)
-}

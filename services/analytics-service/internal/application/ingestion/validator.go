@@ -110,7 +110,19 @@ func parseFlexTime(raw json.RawMessage) (time.Time, error) {
 		if err := json.Unmarshal(raw, &str); err != nil {
 			return time.Time{}, err
 		}
-		return time.Parse(time.RFC3339, strings.TrimSpace(str))
+		str = strings.TrimSpace(str)
+		// Try RFC3339 first
+		if t, err := time.Parse(time.RFC3339, str); err == nil {
+			return t, nil
+		}
+		// Try parsing as unix milliseconds (string containing number)
+		var num json.Number
+		if err := json.Unmarshal([]byte(str), &num); err == nil {
+			if ms, err := num.Int64(); err == nil {
+				return time.UnixMilli(ms).UTC(), nil
+			}
+		}
+		return time.Time{}, fmt.Errorf("invalid time format: %s", str)
 	}
 	var num json.Number
 	if err := json.Unmarshal(raw, &num); err != nil {

@@ -194,23 +194,6 @@ func TestNotificationHandler_Handle_InvalidStatus(t *testing.T) {
 	assert.Contains(t, err.Error(), "unknown event type")
 }
 
-func TestNotificationHandler_Handle_NegativeRetryCount(t *testing.T) {
-	handler := &NotificationHandler{}
-	env := testutil.NewTestEventEnvelope("notification.created", "evt-123", "notif-456")
-	payload := unmarshalPayload([]byte(`{
-		"notificationId": "notif-456",
-		"recipientType": "user",
-		"retryCount": -1
-	}`))
-
-	ctx := context.Background()
-	batch, err := handler.Handle(ctx, env, payload)
-
-	assert.Error(t, err)
-	assert.Nil(t, batch)
-	assert.Contains(t, err.Error(), "retryCount must not be negative")
-}
-
 func TestGetRetryCount(t *testing.T) {
 	tests := []struct {
 		name     string

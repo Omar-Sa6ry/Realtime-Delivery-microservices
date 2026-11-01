@@ -84,7 +84,7 @@ func TestFetchCached_NilCache(t *testing.T) {
 }
 
 func TestFetchCached_CacheGetError(t *testing.T) {
-	cache := testutil.NewMockCacheRepository()
+	_ = testutil.NewMockCacheRepository()
 	// We can't easily simulate Get error with current mock, so skip this test
 }
 
@@ -147,7 +147,7 @@ func TestDeliveryAnalyticsService_GetDeliveryAnalytics_InvalidRange(t *testing.T
 
 	_, err := svc.GetDeliveryAnalytics(context.Background(), filter, "test-scope")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "out of order timestamps")
+	assert.Contains(t, err.Error(), "timestamps out of order")
 }
 
 func TestNewDriverAnalyticsService(t *testing.T) {

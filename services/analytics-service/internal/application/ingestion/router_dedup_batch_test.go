@@ -292,7 +292,8 @@ func TestBatchWriter_Add_FlushOnThreshold(t *testing.T) {
 
 	// Add first batch (1 row)
 	batch1 := &handlers.FactBatch{
-		Raw: []*domain.RawEventLanding{testutil.NewTestRawEventLanding("delivery.created", "evt-1", "delivery-1")},
+		Raw:  []*domain.RawEventLanding{testutil.NewTestRawEventLanding("delivery.created", "evt-1", "delivery-1")},
+		Seen: []*domain.IdempotencyRecord{testutil.NewTestIdempotencyRecord("evt-1", "delivery", "delivery-1")},
 	}
 	ids, err := batchWriter.Add(ctx, batch1)
 	assert.NoError(t, err)
@@ -300,7 +301,8 @@ func TestBatchWriter_Add_FlushOnThreshold(t *testing.T) {
 
 	// Add second batch (should trigger flush)
 	batch2 := &handlers.FactBatch{
-		Raw: []*domain.RawEventLanding{testutil.NewTestRawEventLanding("delivery.created", "evt-2", "delivery-2")},
+		Raw:  []*domain.RawEventLanding{testutil.NewTestRawEventLanding("delivery.created", "evt-2", "delivery-2")},
+		Seen: []*domain.IdempotencyRecord{testutil.NewTestIdempotencyRecord("evt-2", "delivery", "delivery-2")},
 	}
 	ids, err = batchWriter.Add(ctx, batch2)
 	assert.NoError(t, err)
@@ -319,7 +321,8 @@ func TestBatchWriter_Flush(t *testing.T) {
 	ctx := context.Background()
 
 	batch := &handlers.FactBatch{
-		Raw: []*domain.RawEventLanding{testutil.NewTestRawEventLanding("delivery.created", "evt-1", "delivery-1")},
+		Raw:  []*domain.RawEventLanding{testutil.NewTestRawEventLanding("delivery.created", "evt-1", "delivery-1")},
+		Seen: []*domain.IdempotencyRecord{testutil.NewTestIdempotencyRecord("evt-1", "delivery", "delivery-1")},
 	}
 	batchWriter.Add(ctx, batch)
 

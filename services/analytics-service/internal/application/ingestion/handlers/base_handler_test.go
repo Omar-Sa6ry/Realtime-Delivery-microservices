@@ -20,6 +20,7 @@ func TestBaseHandler_NewRawLanding(t *testing.T) {
 	env.CorrelationID = "corr-789"
 	env.CausationID = "cause-012"
 	env.IngestedAt = time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+	env.Producer = "delivery-service"
 
 	raw := handler.NewRawLanding(env)
 

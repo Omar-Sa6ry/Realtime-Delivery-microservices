@@ -17,7 +17,7 @@ query GetDriverServiceInfo {
 mutation RegisterDriver {
   registerDriver(
     input: {
-      userId: "356369776609595392"
+      userId: "364851396022898688"
       plateNumber: "ABC-123"
       capacityKg: 50
       vehicleType: MOTORCYCLE
@@ -53,7 +53,7 @@ mutation RegisterDriver {
 
 # Get Driver by ID (User / Driver / Admin)
 query GetDriver {
-  driver(id: "3674db6d-f48f-4161-a911-0b458b39c835") {
+  driver(id: "1fe315a0-8066-435b-a000-4602effa2356") {
     success
     statusCode
     message
@@ -88,7 +88,7 @@ mutation UpdateDriverProfile {
       plateNumber: "XYZ-456"
       capacityKg: 20
       serviceArea: "Giza"
-      driverId: "c2075b3a-631c-4edf-a810-7e1eda187a92"
+      driverId: "1fe315a0-8066-435b-a000-4602effa2356"
     }
   ) {
     success
@@ -235,7 +235,7 @@ mutation GoOffline {
 
 # Get Driver Operational Status (Driver / Admin)
 query GetDriverStatus {
-  driverStatus(driverId: "2d2c39ec-8f2c-4983-b3e3-fa6c7110cf79") {
+  driverStatus(driverId: "1fe315a0-8066-435b-a000-4602effa2356") {
     success
     statusCode
     message
@@ -346,6 +346,37 @@ mutation SuspendDriver {
   }
 }
 
+
+# Deactivate Driver (Admin)
+mutation DeactivateDriver {
+  deactivateDriver(driverId: "598a51a0-240e-4154-82c8-1b040f0c36a4") {
+    success
+    statusCode
+    message
+    data {
+      id
+      user {
+        id
+        email
+        firstName
+        lastName
+        role
+      }
+      status
+      vehicleType
+      plateNumber
+      createdAt
+      isActive
+      capacityKg
+      capabilities
+      isBlocked
+      serviceArea
+      updatedAt
+    }
+  }
+}
+
+
 # Get Nearby Drivers (User / Admin)
 query GetNearbyDrivers {
   nearbyDrivers(
@@ -395,7 +426,7 @@ query GetNearbyDrivers {
 
 # Get Driver Active Assignment (Driver / Admin)
 query GetDriverActiveAssignment {
-  driverActiveAssignment(driverId: "f8e08fb8-8da1-474d-9172-474cc03f2068") {
+  driverActiveAssignment(driverId: "ec91cbe4-d3b7-44d1-bb1e-1dbc78da988e") {
     success
     statusCode
     message
@@ -411,7 +442,6 @@ query GetDriverActiveAssignment {
       status
       attemptNumber
       offeredAt
-      isActive
       expiresAt
       acceptedAt
       rejectedAt
@@ -421,6 +451,43 @@ query GetDriverActiveAssignment {
     }
   }
 }
+
+
+
+# Get Dispatch Attempts for a Delivery (Admin)
+query GetDispatchAttempts($deliveryId: ID!) {
+  dispatchAttempts(deliveryId: $deliveryId) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        id
+        delivery {
+          id
+        }
+        driver {
+          id
+        }
+        distanceMeters
+        attemptNumber
+        result
+        reason
+        createdAt
+      }
+    }
+  }
+}
+{
+  "deliveryId": "364857843767054336"
+}
+
 
 # Accept Assignment (Driver)
 mutation AcceptAssignment {
@@ -434,7 +501,6 @@ mutation AcceptAssignment {
     timeStamp
     data {
       id
-      isActive
       delivery {
         id
       }
@@ -467,7 +533,6 @@ mutation RejectAssignment {
     timeStamp
     data {
       id
-      isActive
       delivery {
         id
       }
@@ -487,95 +552,79 @@ mutation RejectAssignment {
   }
 }
 
-# Get Dispatch Attempts for a Delivery (Admin)
-query GetDispatchAttempts($deliveryId: ID!) {
-  dispatchAttempts(deliveryId: $deliveryId) {
+# Get Assignment by ID (Driver / Admin)
+query GetAssignment {
+  assignment(id: "365060439215706112-313509ab-be87-4b3a-a52a-d5ea8e7be271") {
     success
     statusCode
     message
     timeStamp
     data {
-      paginationInfo {
-        totalItems
-        currentPage
-        nextPage
+      id
+      delivery {
+        id
       }
+      driver {
+        id
+      }
+      status
+      attemptNumber
+      offeredAt
+      expiresAt
+      acceptedAt
+      rejectedAt
+      completedAt
+      createdAt
+      updatedAt
+    }
+  }
+}
+
+
+
+# Query Open and Unassigned Deliveries Available for Drivers (Driver)
+query GetDriverAvailableDeliveries {
+  availableDeliveries {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      totalItems
       items {
         id
-        isActive
-        delivery {
-          id
-        }
-        driver {
-          id
-        }
-        distanceMeters
-        attemptNumber
-        result
-        reason
+        customerId
+        status
+        pickupCity
+        pickupCountry
+        dropoffCity
+        dropoffCountry
+        amount
+        currency
         createdAt
       }
     }
   }
 }
-{
-  "deliveryId": "356558490791055360"
-}
 
-# Get Assignment by ID (Driver / Admin)
-query GetAssignment {
-  assignment(id: "356568538971901952-c4c53144-d916-4fbd-b007-c4192c8ab858") {
+# Self-Accept an Open Delivery (Driver)
+mutation SelfAcceptDelivery {
+  selfAcceptDelivery(
+    deliveryId: "365061659779141632"
+    idempotencyKey: "self-accept-354294205775876096-driver1"
+  ) {
     success
     statusCode
     message
     timeStamp
     data {
       id
-      isActive
-      delivery {
-        id
-      }
-      driver {
-        id
-      }
+      deliveryId
+      driverId
       status
-      attemptNumber
       offeredAt
-      expiresAt
       acceptedAt
-      rejectedAt
-      completedAt
-      createdAt
-      updatedAt
-    }
-  }
-}
-
-# Deactivate Driver (Admin)
-mutation DeactivateDriver {
-  deactivateDriver(driverId: "598a51a0-240e-4154-82c8-1b040f0c36a4") {
-    success
-    statusCode
-    message
-    data {
-      id
-      user {
-        id
-        email
-        firstName
-        lastName
-        role
-      }
-      status
-      vehicleType
-      plateNumber
-      createdAt
-      isActive
-      capacityKg
-      capabilities
-      isBlocked
-      serviceArea
-      updatedAt
+      expiresAt
     }
   }
 }
@@ -618,7 +667,7 @@ mutation RateDriver($input: RateDriverInput!) {
 
 # Get Driver Reviews (Driver / Admin)
 query GetDriverReviews {
-  driverReviews(driverId: "598a51a0-240e-4154-82c8-1b040f0c36a4", page: 1, limit: 10) {
+  driverReviews(driverId: "e4173f29-2c26-4f2c-8baf-21f2fa058b09", page: 1, limit: 10) {
     success
     statusCode
     message
@@ -643,53 +692,6 @@ query GetDriverReviews {
       }
       averageRating
       totalReviews
-    }
-  }
-}
-
-# Query Open and Unassigned Deliveries Available for Drivers (Driver / Admin)
-query GetDriverAvailableDeliveries {
-  availableDeliveries {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      totalItems
-      items {
-        id
-        customerId
-        status
-        pickupCity
-        pickupCountry
-        dropoffCity
-        dropoffCountry
-        amount
-        currency
-        createdAt
-      }
-    }
-  }
-}
-
-# Self-Accept an Open Delivery (Driver)
-mutation SelfAcceptDelivery {
-  selfAcceptDelivery(
-    deliveryId: "354294205775876096"
-    idempotencyKey: "self-accept-354294205775876096-driver1"
-  ) {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      id
-      deliveryId
-      driverId
-      status
-      offeredAt
-      acceptedAt
-      expiresAt
     }
   }
 }

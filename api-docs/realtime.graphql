@@ -1,3 +1,45 @@
+# Check if realtime service is reachable (Public)
+query {
+  pingForRealtime {
+    statusCode
+    message
+    success
+    data
+  }
+}
+
+# Get connection status for a specific user (User / Driver / Admin)
+query {
+  getConnectionStatus(userId: "user-001") {
+    statusCode
+    message
+    success
+    data {
+      isConnected
+      lastSeen
+      connectionCount
+    }
+  }
+}
+
+# Get active connections count by role (Admin)
+query {
+  getActiveConnections {
+    statusCode
+    message
+    success
+    data {
+      total
+      byRole {
+        customers
+        drivers
+        admins
+      }
+    }
+  }
+}
+
+
 # ==============================================================================
 # REALTIME WEBSOCKETS TESTING GUIDE (POSTMAN & CLIENT APPS)
 # ==============================================================================

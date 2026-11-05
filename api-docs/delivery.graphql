@@ -39,7 +39,7 @@ mutation CreateDelivery {
         latitude: 30.0131
         longitude: 31.2089
       }
-      idempotencyKey: "decreate-123456789c0123e45r67c8"
+      idempotencyKey: "decreate-12345678c9c01c23ef45r67wc8"
     }
   ) {
     success
@@ -49,12 +49,10 @@ mutation CreateDelivery {
     data {
       id
       driver {
-        email
+        id
       }
       customer {
-        email
-        firstName
-        role
+        id
       }
       status
       paymentStatus
@@ -84,7 +82,7 @@ mutation CreateDelivery {
 
 # Get Allowed Next State Transitions for a Delivery (User / Driver / Admin)
 query GetDeliveryNextStatuses {
-  deliveryNextStatuses(id: "354303639159836672") {
+  deliveryNextStatuses(id: "365064478569533440") {
     success
     statusCode
     message
@@ -95,12 +93,12 @@ query GetDeliveryNextStatuses {
   }
 }
 
-# Transition Delivery Status across State Machine (Driver / Admin)
+# Transition Delivery Status across State Machine (Admin)
 # Allowed statuses: PENDING_PAYMENT, PAYMENT_CONFIRMED, DRIVER_ASSIGNED, DRIVER_ACCEPTED, PICKED_UP, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED
 mutation TransitionDelivery {
   transitionDelivery(
     input: {
-      deliveryId: "354303639159836672"
+      deliveryId: "365061659779141632"
       status: DRIVER_ACCEPTED
       note: "Driver assigned to pickup package"
     }
@@ -112,12 +110,10 @@ mutation TransitionDelivery {
     data {
       id
       driver {
-        email
+        id
       }
       customer {
-        email
-        firstName
-        role
+        id
       }
       status
       paymentStatus
@@ -155,7 +151,7 @@ mutation TransitionDelivery {
 # Cancel a Delivery (User / Admin)
 mutation CancelDelivery {
   cancelDelivery(
-    deliveryId: "354301801656225792"
+    deliveryId: "365065405678489600"
     reason: "Customer requested cancellation before pickup"
   ) {
     success
@@ -187,12 +183,10 @@ query GetMyDeliveries {
       items {
         id
         driver {
-          email
+          id
         }
         customer {
-          email
-          firstName
-          role
+          id
         }
         status
         paymentStatus
@@ -222,7 +216,7 @@ query GetMyDeliveries {
 
 # Get Delivery by ID including Full Address, Status History & Timestamps (User / Driver / Admin)
 query GetDelivery {
-  delivery(id: "354294205775876096") {
+  delivery(id: "365065405678489600") {
     success
     statusCode
     message
@@ -230,12 +224,10 @@ query GetDelivery {
     data {
       id
       driver {
-        email
+        id
       }
       customer {
-        email
-        firstName
-        role
+        id
       }
       status
       paymentStatus

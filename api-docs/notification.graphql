@@ -1,0 +1,139 @@
+# Check if notification service is reachable (Public)
+query {
+  pingForNotification {
+    statusCode
+    message
+    success
+    data
+  }
+}
+
+# Get notifications for the current user (User / Driver / Admin)
+query {
+  myNotifications {
+    statusCode
+    message
+    success
+    data {
+      totalCount
+      items {
+        id
+        type
+        title
+        createdAt
+        body
+        priority
+        readAt
+        deliveries {
+          id
+          channel
+          status
+          sentAt
+          deliveredAt
+        }
+      }
+    }
+  }
+}
+
+# Get a specific notification by ID (User / Driver / Admin)
+query {
+  notification(id: "365065336560553984") {
+    statusCode
+    message
+    success
+    data {
+      id
+      type
+      title
+      createdAt
+      body
+      priority
+      readAt
+      deliveries {
+        id
+        channel
+        status
+        sentAt
+        deliveredAt
+      }
+    }
+  }
+}
+
+# Mark a notification as read (User / Driver / Admin)
+mutation {
+  markNotificationAsRead(id: "365065336560553984") {
+    statusCode
+    message
+    success
+  }
+}
+
+# Mark all notifications as read (User / Driver / Admin)
+mutation {
+  markAllNotificationsAsRead {
+    statusCode
+    message
+    success
+  }
+}
+
+# Delete a notification (User / Driver / Admin)
+mutation {
+  deleteNotification(id: "365065517569937408") {
+    statusCode
+    message
+    success
+  }
+}
+
+# Get unread notification count (User / Driver / Admin)
+query {
+  unreadNotificationCount {
+    statusCode
+    message
+    success
+    data
+  }
+}
+
+# Get current notification preferences (User / Driver / Admin)
+query {
+  myNotificationPreferences {
+    statusCode
+    message
+    success
+    items {
+      id
+      type
+      channel
+      enabled
+    }
+  }
+}
+
+# Update notification preferences (User / Driver / Admin)
+mutation {
+  updateNotificationPreferences(
+    preferences: [
+      {
+        type: DELIVERY_CREATED
+        channels: [
+          { channel: SMS, enabled: false }
+          { channel: EMAIL, enabled: true }
+        ]
+      }
+    ]
+  ) {
+    statusCode
+    message
+    success
+    items {
+      id
+      type
+      channel
+      enabled
+    }
+  }
+}

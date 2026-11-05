@@ -1,3 +1,13 @@
+# Check if user service is reachable (Public)
+query {
+  pingForUser {
+    statusCode
+    message
+    success
+    data
+  }
+}
+
 # Get the profile of the currently logged-in user (User / Driver / Admin)
 query {
   myProfile {
@@ -9,6 +19,19 @@ query {
       firstName
       lastName
       email
+      isActive
+      imageUrl
+      addresses {
+        title
+        street
+        city
+        state
+        postalCode
+        latitude
+        longitude
+        isDefault
+        createdAt
+      }
       role
       phoneNumber
       createdAt
@@ -18,7 +41,7 @@ query {
 
 # Get a specific user by their ID (Admin)
 query {
-  user(id: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
+  user(id: "367980963323449344") {
     statusCode
     message
     success
@@ -27,7 +50,21 @@ query {
       firstName
       lastName
       email
+      isActive
+      imageUrl
+      addresses {
+        title
+        street
+        city
+        state
+        postalCode
+        latitude
+        longitude
+        isDefault
+        createdAt
+      }
       role
+      phoneNumber
       createdAt
     }
   }
@@ -44,6 +81,19 @@ mutation {
       firstName
       lastName
       email
+      isActive
+      imageUrl
+      addresses {
+        title
+        street
+        city
+        state
+        postalCode
+        latitude
+        longitude
+        isDefault
+        createdAt
+      }
       role
       phoneNumber
       createdAt
@@ -53,16 +103,17 @@ mutation {
 
 # Promote a user to Admin (Admin)
 mutation {
-  promoteUserToAdmin(id: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
+  promoteUserToAdmin(id: "367981481311604736") {
     statusCode
     message
     success
+    data
   }
 }
 
 # Toggle user active status (Admin)
 mutation {
-  toggleUserActive(id: "01KPJSGYC1XNRH3DP7Y1D20CDP", isActive: false) {
+  toggleUserActive(id: "367981824183373824", isActive: false) {
     statusCode
     message
     success
@@ -71,14 +122,14 @@ mutation {
 
 # Delete a user (Admin)
 mutation {
-  deleteUser(id: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
+  deleteUser(id: "367981824183373824") {
     statusCode
     message
     success
   }
 }
 
-# Add a new address to user profile (User)
+# Add a new address to user profile
 mutation {
   addAddress(
     input: {
@@ -100,30 +151,33 @@ mutation {
       city
       state
       postalCode
+      latitude
+      longitude
       isDefault
+      createdAt
     }
   }
 }
 
-# Delete an address from user profile (User)
+# Delete an address from user profile
 mutation {
-  deleteAddress(addressId: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
+  deleteAddress(addressId: "367982146935066624") {
     statusCode
     message
     success
   }
 }
 
-# Set an address as default (User)
+# Set an address as default
 mutation {
-  setDefaultAddress(addressId: "01KPJSGYC1XNRH3DP7Y1D20CDP") {
+  setDefaultAddress(addressId: "367982285561008128") {
     statusCode
     message
     success
   }
 }
 
-# Retrieve currently logged-in user's addresses (User)
+# Retrieve currently logged-in user's addresses
 query {
   myAddresses {
     statusCode
@@ -136,6 +190,8 @@ query {
       city
       state
       postalCode
+      latitude
+      longitude
       isDefault
       createdAt
     }

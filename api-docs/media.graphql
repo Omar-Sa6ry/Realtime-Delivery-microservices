@@ -1,37 +1,6 @@
-# Get a specific media file by ID (User / Driver / Admin)
-query GetMedia {
-  media(mediaId: "media-001") {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      mediaId
-      ownerId
-      fileName
-      contentType
-      mediaType
-      size
-      status
-      objectKey
-      createdAt
-      updatedAt
-      versions {
-        versionType
-        objectKey
-        contentType
-        size
-        width
-        height
-        durationMs
-      }
-    }
-  }
-}
-
 # Get paginated list of media files for owner (User / Driver / Admin)
 query ListMedia {
-  listMedia(ownerId: "user-001", limit: 10, cursor: "") {
+  listMedia(ownerId: "364829287083151360", limit: 10, cursor: "") {
     success
     statusCode
     message
@@ -49,9 +18,51 @@ query ListMedia {
         contentType
         mediaType
         size
+        objectKey
+
+        versions {
+          versionType
+          objectKey
+          contentType
+          size
+          width
+          height
+          durationMs
+        }
         status
         createdAt
       }
+    }
+  }
+}
+
+# Get a specific media file by ID (User / Driver / Admin)
+query GetMedia {
+  media(mediaId: "66354b8c-4cec-45c8-afc0-46254e276663") {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      mediaId
+      ownerId
+      fileName
+      contentType
+      mediaType
+      size
+      objectKey
+
+      versions {
+        versionType
+        objectKey
+        contentType
+        size
+        width
+        height
+        durationMs
+      }
+      status
+      createdAt
     }
   }
 }
@@ -77,7 +88,7 @@ query GetUploadStatus {
 # Get presigned download URL (User / Driver / Admin)
 query GetDownloadUrl {
   downloadUrl(
-    mediaId: "media-001"
+    mediaId: "66354b8c-4cec-45c8-afc0-46254e276663"
     versionType: "original"
     expirySeconds: 3600
   ) {
@@ -129,6 +140,31 @@ query GetDLQStats {
   }
 }
 
+# Delete media file (User / Driver / Admin)
+mutation DeleteMedia {
+  deleteMedia(
+    mediaId: "66354b8c-4cec-45c8-afc0-46254e276663"
+    idempotencyKey: "del-001"
+  ) {
+    success
+    statusCode
+    message
+    timeStamp
+    data
+  }
+}
+
+# Abort upload session (User / Driver / Admin)
+mutation AbortUpload {
+  abortUpload(uploadId: "upload-001") {
+    success
+    statusCode
+    message
+    timeStamp
+    data
+  }
+}
+
 # Create upload session (User / Driver / Admin)
 mutation CreateUploadSession {
   createUploadSession(
@@ -177,28 +213,6 @@ mutation CompleteUpload {
       mediaId
       status
     }
-  }
-}
-
-# Abort upload session (User / Driver / Admin)
-mutation AbortUpload {
-  abortUpload(uploadId: "upload-001") {
-    success
-    statusCode
-    message
-    timeStamp
-    data
-  }
-}
-
-# Delete media file (User / Driver / Admin)
-mutation DeleteMedia {
-  deleteMedia(mediaId: "media-001", idempotencyKey: "del-001") {
-    success
-    statusCode
-    message
-    timeStamp
-    data
   }
 }
 

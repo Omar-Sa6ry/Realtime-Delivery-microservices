@@ -13,9 +13,47 @@ query GetPaymentServiceInfo {
   }
 }
 
+# List Payments - Paginated with paginationInfo (Admin)
+query GetPaymentsList {
+  payments(page: 1, limit: 10) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        id
+        deliveryId
+        delivery {
+          id
+        }
+        userId
+        user {
+          id
+        }
+        amountMinor
+        currency
+        status
+        provider
+        correlationId
+        causationId
+        createdAt
+        updatedAt
+        authorizedAt
+        capturedAt
+      }
+    }
+  }
+}
+
 # Get Payment by ID with federated User & Delivery stubs (User / Driver / Admin)
 query GetPaymentById {
-  payment(id: "12345678-1234-1234-1234-123456789abc") {
+  payment(id: "63359164469") {
     success
     statusCode
     message
@@ -34,49 +72,12 @@ query GetPaymentById {
       currency
       status
       provider
-      providerPaymentId
       correlationId
       causationId
       createdAt
       updatedAt
       authorizedAt
       capturedAt
-    }
-  }
-}
-
-# List Payments - Paginated with paginationInfo (Admin)
-query GetPaymentsList {
-  payments(page: 1, limit: 10) {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      paginationInfo {
-        totalItems
-        currentPage
-        totalPages
-        hasNextPage
-        hasPreviousPage
-        nextPage
-        previousPage
-      }
-      items {
-        id
-        deliveryId
-        delivery {
-          id
-        }
-        userId
-        user {
-          id
-        }
-        amountMinor
-        currency
-        status
-        createdAt
-      }
     }
   }
 }

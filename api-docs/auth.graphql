@@ -4,9 +4,9 @@ mutation {
     input: {
       firstName: "Omar"
       lastName: "sabry"
-      email: "omarsdabry@gmail.com"
+      email: "dffffr1@gmffail.com"
       password: "ni7CV1a5+=2004"
-      phoneNumber: "+201000000000"
+      phoneNumber: "+201137836162"
     }
   ) {
     statusCode
@@ -20,6 +20,20 @@ mutation {
         firstName
         lastName
         email
+        isActive
+        imageUrl
+        addresses {
+          title
+
+          street
+          city
+          state
+          postalCode
+          latitude
+          longitude
+          isDefault
+          createdAt
+        }
         role
         phoneNumber
         createdAt
@@ -30,7 +44,7 @@ mutation {
 
 # Login with email and password (Public)
 mutation {
-  login(input: { email: "omarsdabry@gmail.com", password: "Password123!" }) {
+  login(input: { email: "ujnjngj@yutgrt.iuytr", password: "ni7CV1a5+=2004" }) {
     statusCode
     message
     success
@@ -42,7 +56,22 @@ mutation {
         firstName
         lastName
         email
+        isActive
+        imageUrl
+        addresses {
+          title
+
+          street
+          city
+          state
+          postalCode
+          latitude
+          longitude
+          isDefault
+          createdAt
+        }
         role
+        phoneNumber
         createdAt
       }
     }
@@ -52,7 +81,7 @@ mutation {
 # Change password for the currently logged-in user (User / Driver / Admin)
 mutation {
   changePassword(
-    input: { passwordOld: "ni7CV1a5+=2004", passwordNew: "O12345hgtehight-" }
+    input: { passwordNew: "ni7CV1a5+=2004", passwordOld: "O12345hgtehight-" }
   ) {
     statusCode
     message
@@ -62,7 +91,7 @@ mutation {
 
 # Request a password reset link/token (Public)
 mutation {
-  forgetPassword(input: { email: "omarsdabry@gmail.com" }) {
+  forgetPassword(input: { email: "omarsfcdaffbry@gmail.com" }) {
     statusCode
     message
     success
@@ -83,15 +112,6 @@ mutation {
   }
 }
 
-# Logout the current user (User / Driver / Admin)
-mutation {
-  logout {
-    statusCode
-    message
-    success
-  }
-}
-
 # Refresh the access token (Public)
 mutation {
   refreshToken(input: { refreshToken: "YOUR_REFRESH_TOKEN_HERE" }) {
@@ -106,5 +126,14 @@ mutation {
         email
       }
     }
+  }
+}
+
+# Logout the current user (User / Driver / Admin)
+mutation {
+  logout {
+    statusCode
+    message
+    success
   }
 }

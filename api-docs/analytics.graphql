@@ -17,7 +17,7 @@ query GetAnalyticsServiceInfo {
 query GetPlatformOverview {
   platformOverview(range: {
     from: "2026-09-12T00:00:00Z"
-    to: "2026-09-19T23:59:59Z"
+    to: "2026-10-19T23:59:59Z"
     granularity: DAY
   }) {
     success
@@ -44,7 +44,7 @@ query GetDeliveryAnalytics {
   deliveryAnalytics(filter: {
     range: {
       from: "2026-09-12T00:00:00Z"
-      to: "2026-09-19T23:59:59Z"
+      to: "2026-10-19T23:59:59Z"
       granularity: HOUR
     }
   }) {
@@ -106,12 +106,15 @@ query GetDriverAnalytics($driverId: ID!) {
     }
   }
 }
+{
+  "driverId": "e8b7e043-a5ca-4753-b24d-43587c507ab7"
+}
 
 # Top Drivers ranked by acceptance rate (Admin)
 query GetTopDrivers {
   topDrivers(range: {
     from: "2026-09-12T00:00:00Z"
-    to: "2026-09-19T23:59:59Z"
+    to: "2026-10-19T23:59:59Z"
     granularity: DAY
   }, limit: 10) {
     success
@@ -144,7 +147,7 @@ query GetPaymentAnalytics {
   paymentAnalytics(filter: {
     range: {
       from: "2026-09-12T00:00:00Z"
-      to: "2026-09-19T23:59:59Z"
+      to: "2026-10-19T23:59:59Z"
       granularity: DAY
     }
     provider: STRIPE
@@ -169,7 +172,7 @@ query GetPaymentAnalytics {
 
 # Raw Events for Admin or Debugging (Admin)
 query GetRawAnalyticsEvents {
-  rawAnalyticsEvents(page: 1, limit: 20, eventType: PAYMENT_CAPTURED) {
+  rawAnalyticsEvents(page: 1, limit: 20, eventType: DELIVERY_CREATED) {
     success
     statusCode
     message
@@ -198,7 +201,7 @@ query GetRawAnalyticsEvents {
 
 # Data Quality Issues (Admin)
 query GetDataQualityIssues {
-  dataQualityIssues(page: 1, limit: 20, severity: ERROR) {
+  dataQualityIssues(page: 1, limit: 20, severity: INFO) {
     success
     statusCode
     message
@@ -222,3 +225,4 @@ query GetDataQualityIssues {
     }
   }
 }
+

@@ -14,7 +14,7 @@ query SearchHealth {
 
 # Autocomplete Suggestions (Public)
 query Autocomplete {
-  autocomplete(input: { prefix: "high", index: "media", limit: 5 }) {
+  autocomplete(input: { prefix: "Screen", index: "media", limit: 5 }) {
     success
     statusCode
     message
@@ -25,11 +25,37 @@ query Autocomplete {
   }
 }
 
+# Search Media (User / Driver / Admin)
+query SearchMedia {
+  searchMedia(input: { query: "Screen", pagination: { limit: 10 } }) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        media_id
+        file_name
+        mime_type
+        owner_id
+        size
+        status
+        created_at
+      }
+    }
+  }
+}
+
 # Search Users (Admin)
 query SearchUsers {
   searchUsers(
     input: {
-      query: "omarrrr"
+      query: "omar"
       role: "user"
       isActive: true
       pagination: { limit: 4 }
@@ -50,34 +76,9 @@ query SearchUsers {
         first_name
         last_name
         email
-        role
-        is_active
-        created_at
-      }
-    }
-  }
-}
+        email
 
-# Search Media (User / Driver / Admin)
-query SearchMedia {
-  searchMedia(input: { query: "High", pagination: { limit: 10 } }) {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      paginationInfo {
-        totalItems
-        currentPage
-        nextPage
-      }
-      items {
-        media_id
-        file_name
-        mime_type
-        owner_id
-        size
-        status
+        is_active
         created_at
       }
     }
@@ -128,9 +129,50 @@ query SearchDeliveries {
   }
 }
 
+# Search Nearby Deliveries using Geo Coordinates (Driver / Admin)
+query NearbyDeliveries {
+  nearbyDeliveries(
+    input: { lat: 1.0, lon: 1.0, radiusKm: 1000.0, pagination: { limit: 10 } }
+  ) {
+    success
+    statusCode
+    message
+    timeStamp
+    data {
+      paginationInfo {
+        totalItems
+        currentPage
+        nextPage
+      }
+      items {
+        delivery_id
+        customer_id
+        status
+        pickup {
+          city
+          country
+          location {
+            lat
+            lon
+          }
+        }
+      }
+    }
+  }
+}
+
 # Search Drivers (Admin)
 query SearchDrivers {
-  searchDrivers(input: { query: "Ahmed", pagination: { limit: 10 } }) {
+  searchDrivers(
+    input: {
+      query: "omar"
+      geo: { lat: 1.0, lon: 10.0, radiusKm: 10.0 }
+      vehicleType: "CAR"
+      status: "AVAILABLE"
+      minRating: 1
+      pagination: { limit: 10 }
+    }
+  ) {
     success
     statusCode
     message
@@ -158,15 +200,10 @@ query SearchDrivers {
   }
 }
 
-# Search Nearby Drivers using Geo Coordinates (User / Admin)
+# # Search Nearby Drivers using Geo Coordinates (User / Admin)
 query SearchNearbyDrivers {
   searchNearbyDrivers(
-    input: {
-      lat: 30.0444
-      lon: 31.2357
-      radiusKm: 5.0
-      pagination: { limit: 10 }
-    }
+    input: { lat: 12.0, lon: 10.0, radiusKm: 10.0, pagination: { limit: 10 } }
   ) {
     success
     statusCode
@@ -187,43 +224,6 @@ query SearchNearbyDrivers {
         location {
           lat
           lon
-        }
-      }
-    }
-  }
-}
-
-# Search Nearby Deliveries using Geo Coordinates (Driver / Admin)
-query NearbyDeliveries {
-  nearbyDeliveries(
-    input: {
-      lat: 30.0444
-      lon: 31.2357
-      radiusKm: 5.0
-      pagination: { limit: 10 }
-    }
-  ) {
-    success
-    statusCode
-    message
-    timeStamp
-    data {
-      paginationInfo {
-        totalItems
-        currentPage
-        nextPage
-      }
-      items {
-        delivery_id
-        customer_id
-        status
-        pickup {
-          city
-          country
-          location {
-            lat
-            lon
-          }
         }
       }
     }

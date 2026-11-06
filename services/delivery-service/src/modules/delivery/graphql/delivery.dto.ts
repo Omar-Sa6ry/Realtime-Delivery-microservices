@@ -1,6 +1,13 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
-import { IsString, IsOptional, IsNumber, ValidateNested, IsNotEmpty, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  ValidateNested,
+  IsNotEmpty,
+  IsEnum,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 @InputType()

@@ -1,6 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DeliveryRabbitMQPublisher } from './rabbitmq.publisher';
-import { RabbitMQService, RabbitMQExchanges, OrdersRoutingKeys, DispatchRoutingKeys } from '@delivery-micro/shard';
+import {
+  RabbitMQService,
+  RabbitMQExchanges,
+  OrdersRoutingKeys,
+  DispatchRoutingKeys,
+} from '@delivery-micro/shard';
 import { createMockRabbitMQService } from '../../../test-utils';
 
 describe('DeliveryRabbitMQPublisher', () => {
@@ -17,7 +22,9 @@ describe('DeliveryRabbitMQPublisher', () => {
       ],
     }).compile();
 
-    publisher = module.get<DeliveryRabbitMQPublisher>(DeliveryRabbitMQPublisher);
+    publisher = module.get<DeliveryRabbitMQPublisher>(
+      DeliveryRabbitMQPublisher,
+    );
   });
 
   it('should be defined', () => {
@@ -50,7 +57,7 @@ describe('DeliveryRabbitMQPublisher', () => {
           customerId: 'customer-123',
           status: 'CREATED',
         }),
-        { aggregateId: 'delivery-123', aggregateType: 'delivery' }
+        { aggregateId: 'delivery-123', aggregateType: 'delivery' },
       );
     });
   });
@@ -80,7 +87,7 @@ describe('DeliveryRabbitMQPublisher', () => {
           deliveryId: 'delivery-123',
           status: 'DRIVER_ASSIGNED',
         }),
-        { aggregateId: 'delivery-123', aggregateType: 'delivery' }
+        { aggregateId: 'delivery-123', aggregateType: 'delivery' },
       );
     });
 
@@ -94,21 +101,23 @@ describe('DeliveryRabbitMQPublisher', () => {
         'order.picked_up',
         'delivery.status.changed',
         expect.any(Object),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
 
   describe('publishDriverAssigned', () => {
     it('should publish driver assigned event', async () => {
-      await publisher.publishDriverAssigned('delivery-123', 'driver-123', { extra: 'data' });
+      await publisher.publishDriverAssigned('delivery-123', 'driver-123', {
+        extra: 'data',
+      });
 
       expect(rabbitmq.publish).toHaveBeenCalledWith(
         RabbitMQExchanges.ORDERS,
         OrdersRoutingKeys.DRIVER_ASSIGNED,
         'delivery.driver.assigned',
         { deliveryId: 'delivery-123', driverId: 'driver-123', extra: 'data' },
-        { aggregateId: 'delivery-123', aggregateType: 'delivery' }
+        { aggregateId: 'delivery-123', aggregateType: 'delivery' },
       );
     });
 
@@ -120,7 +129,7 @@ describe('DeliveryRabbitMQPublisher', () => {
         OrdersRoutingKeys.DRIVER_ASSIGNED,
         'delivery.driver.assigned',
         { deliveryId: 'delivery-123', driverId: 'driver-123' },
-        { aggregateId: 'delivery-123', aggregateType: 'delivery' }
+        { aggregateId: 'delivery-123', aggregateType: 'delivery' },
       );
     });
   });
@@ -150,7 +159,7 @@ describe('DeliveryRabbitMQPublisher', () => {
           deliveryId: 'delivery-123',
           status: 'COMPLETED',
         }),
-        { aggregateId: 'delivery-123', aggregateType: 'delivery' }
+        { aggregateId: 'delivery-123', aggregateType: 'delivery' },
       );
     });
   });
@@ -175,7 +184,7 @@ describe('DeliveryRabbitMQPublisher', () => {
           deliveryId: 'delivery-123',
           reason: 'Customer cancelled',
         }),
-        { aggregateId: 'delivery-123', aggregateType: 'delivery' }
+        { aggregateId: 'delivery-123', aggregateType: 'delivery' },
       );
     });
 
@@ -189,7 +198,7 @@ describe('DeliveryRabbitMQPublisher', () => {
         OrdersRoutingKeys.CANCELLED,
         'delivery.cancelled',
         expect.objectContaining({ reason: null }),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
@@ -219,7 +228,7 @@ describe('DeliveryRabbitMQPublisher', () => {
           amount: '100.00',
           currency: 'USD',
         },
-        { aggregateId: 'delivery-123', aggregateType: 'delivery' }
+        { aggregateId: 'delivery-123', aggregateType: 'delivery' },
       );
     });
   });

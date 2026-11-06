@@ -6,12 +6,19 @@ import { DeliveryRepository } from './delivery.repository';
 import { Delivery } from '../entities/delivery.entity';
 import { DeliveryStatusHistory } from '../entities/delivery-status-history.entity';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
-import { createMockI18nService, mockDelivery, createMockAddress, mockDeliveryStatusHistory } from '../../../test-utils';
+import {
+  createMockI18nService,
+  mockDelivery,
+  createMockAddress,
+  mockDeliveryStatusHistory,
+} from '../../../test-utils';
 
 describe('DeliveryRepository', () => {
   let repository: DeliveryRepository;
   let deliveriesRepo: Partial<Record<keyof Repository<Delivery>, jest.Mock>>;
-  let historyRepo: Partial<Record<keyof Repository<DeliveryStatusHistory>, jest.Mock>>;
+  let historyRepo: Partial<
+    Record<keyof Repository<DeliveryStatusHistory>, jest.Mock>
+  >;
   let i18nService: ReturnType<typeof createMockI18nService>;
 
   beforeEach(async () => {
@@ -85,7 +92,9 @@ describe('DeliveryRepository', () => {
 
   describe('findById', () => {
     it('should return delivery when found', async () => {
-      const delivery = mockDelivery({ statusHistory: [mockDeliveryStatusHistory()] });
+      const delivery = mockDelivery({
+        statusHistory: [mockDeliveryStatusHistory()],
+      });
       deliveriesRepo.findOne.mockResolvedValue(delivery);
 
       const result = await repository.findById('test-delivery-id');
@@ -99,10 +108,16 @@ describe('DeliveryRepository', () => {
 
     it('should throw NotFoundException when delivery not found', async () => {
       deliveriesRepo.findOne.mockResolvedValue(null);
-      i18nService.t.mockResolvedValue('Delivery with ID test-delivery-id not found');
+      i18nService.t.mockResolvedValue(
+        'Delivery with ID test-delivery-id not found',
+      );
 
-      await expect(repository.findById('test-delivery-id')).rejects.toThrow(NotFoundException);
-      expect(i18nService.t).toHaveBeenCalledWith('delivery.notFound', { args: { id: 'test-delivery-id' } });
+      await expect(repository.findById('test-delivery-id')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(i18nService.t).toHaveBeenCalledWith('delivery.notFound', {
+        args: { id: 'test-delivery-id' },
+      });
     });
   });
 
@@ -138,7 +153,13 @@ describe('DeliveryRepository', () => {
 
   describe('findUnassignedPendingDeliveries', () => {
     it('should return unassigned pending deliveries ordered by createdAt', async () => {
-      const deliveries = [mockDelivery({ id: '1', status: DeliveryStatus.PAYMENT_CONFIRMED, driverId: null })];
+      const deliveries = [
+        mockDelivery({
+          id: '1',
+          status: DeliveryStatus.PAYMENT_CONFIRMED,
+          driverId: null,
+        }),
+      ];
       deliveriesRepo.find.mockResolvedValue(deliveries);
 
       const result = await repository.findUnassignedPendingDeliveries();
@@ -161,15 +182,25 @@ describe('DeliveryRepository', () => {
 
       await repository.clearDriverId('test-delivery-id');
 
-      expect(deliveriesRepo.update).toHaveBeenCalledWith('test-delivery-id', { driverId: null });
+      expect(deliveriesRepo.update).toHaveBeenCalledWith('test-delivery-id', {
+        driverId: null,
+      });
     });
   });
 
   describe('findOpenDeliveries', () => {
     it('should return open deliveries with correct filters', async () => {
       const deliveries = [
-        mockDelivery({ id: '1', status: DeliveryStatus.PAYMENT_CONFIRMED, driverId: null }),
-        mockDelivery({ id: '2', status: DeliveryStatus.DRIVER_ASSIGNED, driverId: null }),
+        mockDelivery({
+          id: '1',
+          status: DeliveryStatus.PAYMENT_CONFIRMED,
+          driverId: null,
+        }),
+        mockDelivery({
+          id: '2',
+          status: DeliveryStatus.DRIVER_ASSIGNED,
+          driverId: null,
+        }),
       ];
       deliveriesRepo.findAndCount.mockResolvedValue([deliveries, 2]);
 
@@ -195,7 +226,12 @@ describe('DeliveryRepository', () => {
       historyRepo.create.mockReturnValue(historyItem);
       historyRepo.save.mockResolvedValue(historyItem);
 
-      const result = await repository.appendHistory(delivery, DeliveryStatus.DRIVER_ASSIGNED, 'driver-123', 'Assigned');
+      const result = await repository.appendHistory(
+        delivery,
+        DeliveryStatus.DRIVER_ASSIGNED,
+        'driver-123',
+        'Assigned',
+      );
 
       expect(historyRepo.create).toHaveBeenCalledWith({
         deliveryId: delivery.id,
@@ -211,7 +247,10 @@ describe('DeliveryRepository', () => {
 
     it('should use null for optional parameters when not provided', async () => {
       const delivery = mockDelivery({ statusHistory: [] });
-      const historyItem = mockDeliveryStatusHistory({ changedBy: null, note: null });
+      const historyItem = mockDeliveryStatusHistory({
+        changedBy: null,
+        note: null,
+      });
       historyRepo.create.mockReturnValue(historyItem);
       historyRepo.save.mockResolvedValue(historyItem);
 

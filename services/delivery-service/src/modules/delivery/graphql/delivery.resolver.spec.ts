@@ -5,9 +5,21 @@ import { DeliveryResolver } from './delivery.resolver';
 import { DeliveryCommandService } from '../services/delivery-command.service';
 import { DeliveryQueryService } from '../services/delivery-query.service';
 import { DeliverySagaOrchestrator } from '../saga/delivery-saga.orchestrator';
-import { DeliveryStatus } from '../../enums/delivery-status.enum';
-import { CreateDeliveryInputDto, TransitionDeliveryInput } from './delivery.dto';
-import { createMockDeliveryCommandService, createMockDeliveryQueryService, createMockDeliverySagaOrchestrator, createMockI18nService, createMockGraphQLContext, createMockGraphQLContextForAdmin, mockDelivery, createMockAddress } from '../../../../test-utils';
+import { DeliveryStatus } from '../enums/delivery-status.enum';
+import {
+  CreateDeliveryInputDto,
+  TransitionDeliveryInput,
+} from './delivery.dto';
+import {
+  createMockDeliveryCommandService,
+  createMockDeliveryQueryService,
+  createMockDeliverySagaOrchestrator,
+  createMockI18nService,
+  createMockGraphQLContext,
+  createMockGraphQLContextForAdmin,
+  mockDelivery,
+  createMockAddress,
+} from '../../../test-utils';
 
 describe('DeliveryResolver', () => {
   let resolver: DeliveryResolver;
@@ -23,7 +35,7 @@ describe('DeliveryResolver', () => {
     i18n = createMockI18nService();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
+      providers: [ { provide: 'USER_SERVICE', useValue: {} }, { provide: require('@nestjs/jwt').JwtService, useValue: { verifyAsync: jest.fn() } }, { provide: require('@nestjs/core').Reflector, useValue: new (require('@nestjs/core').Reflector)() },
         DeliveryResolver,
         { provide: DeliveryCommandService, useValue: commands },
         { provide: DeliveryQueryService, useValue: queries },
@@ -44,7 +56,10 @@ describe('DeliveryResolver', () => {
       const delivery = mockDelivery({ id: 'ref-123' });
       queries.getById.mockResolvedValue(delivery);
 
-      const result = await resolver.resolveReference({ __typename: 'DeliveryType', id: 'ref-123' });
+      const result = await resolver.resolveReference({
+        __typename: 'DeliveryType',
+        id: 'ref-123',
+      });
 
       expect(queries.getById).toHaveBeenCalledWith('ref-123');
       expect(result).toEqual(expect.objectContaining({ id: 'ref-123' }));
@@ -66,9 +81,15 @@ describe('DeliveryResolver', () => {
       idempotencyKey: 'idem-key-123',
     };
 
-    const ctx = createMockGraphQLContext({ userId: 'user-123', userRole: 'customer' });
+    const ctx = createMockGraphQLContext({
+      userId: 'user-123',
+      userRole: 'customer',
+    });
     const createdDelivery = mockDelivery({ customerId: 'user-123' });
-    const confirmedDelivery = mockDelivery({ customerId: 'user-123', status: DeliveryStatus.PAYMENT_CONFIRMED });
+    const confirmedDelivery = mockDelivery({
+      customerId: 'user-123',
+      status: DeliveryStatus.PAYMENT_CONFIRMED,
+    });
 
     beforeEach(() => {
       i18n.t.mockResolvedValue('translated message');
@@ -79,16 +100,20 @@ describe('DeliveryResolver', () => {
     it('should create delivery and execute saga', async () => {
       const result = await resolver.createDelivery(createInput, ctx);
 
-      expect(commands.create).toHaveBeenCalledWith(expect.objectContaining({
-        customerId: 'user-123',
-        amount: '100.00',
-      }));
+      expect(commands.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customerId: 'user-123',
+          amount: '100.00',
+        }),
+      );
       expect(saga.execute).toHaveBeenCalledWith(createdDelivery.id);
-      expect(result).toEqual(expect.objectContaining({
-        success: true,
-        statusCode: 201,
-        data: expect.objectContaining({ id: confirmedDelivery.id }),
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          success: true,
+          statusCode: 201,
+          data: expect.objectContaining({ id: confirmedDelivery.id }),
+        }),
+      );
     });
 
     it('should use idempotency when key provided', async () => {
@@ -101,46 +126,79 @@ describe('DeliveryResolver', () => {
 
       await resolver.createDelivery(createInput, ctx);
 
-      expect(commands.executeWithIdempotency).toHaveBeenCalledWith('idem-key-123', expect.any(Function));
+      expect(commands.executeWithIdempotency).toHaveBeenCalledWith(
+        'idem-key-123',
+        expect.any(Function),
+      );
     });
 
     it('should throw ForbiddenException for admin user', async () => {
-      const adminCtx = createMockGraphQLContextForAdmin({ userId: 'admin-123' });
+      const adminCtx = createMockGraphQLContextForAdmin({
+        userId: 'admin-123',
+      });
 
-      await expect(resolver.createDelivery(createInput, adminCtx)).rejects.toThrow(ForbiddenException);
-      expect(i18n.t).toHaveBeenCalledWith('delivery.onlyRegularUsersCanCreate', { lang: 'en' });
+      await expect(
+        resolver.createDelivery(createInput, adminCtx),
+      ).rejects.toThrow(ForbiddenException);
+      expect(i18n.t).toHaveBeenCalledWith(
+        'delivery.onlyRegularUsersCanCreate',
+        { lang: 'en' },
+      );
     });
 
     it('should throw BadRequestException when customerId missing', async () => {
-      const noUserCtx = createMockGraphQLContext({ userId: undefined });
+      const noUserCtx = {
+        req: {
+          user: undefined,
+          headers: {},
+        },
+        language: 'en',
+      };
 
-      await expect(resolver.createDelivery(createInput, noUserCtx)).rejects.toThrow(BadRequestException);
-      expect(i18n.t).toHaveBeenCalledWith('delivery.customerIdRequired', { lang: 'en' });
+      await expect(
+        resolver.createDelivery(createInput, noUserCtx as any),
+      ).rejects.toThrow(BadRequestException);
+      expect(i18n.t).toHaveBeenCalledWith('delivery.customerIdRequired', {
+        lang: 'en',
+      });
     });
 
     it('should throw BadRequestException when saga fails', async () => {
       i18n.t.mockResolvedValueOnce('Payment authorization failed');
       saga.execute.mockRejectedValue(new Error('Payment failed'));
 
-      await expect(resolver.createDelivery(createInput, ctx)).rejects.toThrow(BadRequestException);
+      await expect(resolver.createDelivery(createInput, ctx)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should schedule timeout check when not pending payment', async () => {
       const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
-      saga.execute.mockResolvedValue(mockDelivery({ status: DeliveryStatus.PAYMENT_CONFIRMED }));
+      setTimeoutSpy.mockClear();
+      saga.execute.mockResolvedValue(
+        mockDelivery({ status: DeliveryStatus.PAYMENT_CONFIRMED }),
+      );
 
       await resolver.createDelivery(createInput, ctx);
 
-      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 10 * 60 * 1000);
+      expect(setTimeoutSpy).toHaveBeenCalledWith(
+        expect.any(Function),
+        10 * 60 * 1000,
+      );
+      setTimeoutSpy.mockRestore();
     });
 
     it('should not schedule timeout check when pending payment', async () => {
       const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
-      saga.execute.mockResolvedValue(mockDelivery({ status: DeliveryStatus.PENDING_PAYMENT }));
+      setTimeoutSpy.mockClear();
+      saga.execute.mockResolvedValue(
+        mockDelivery({ status: DeliveryStatus.PENDING_PAYMENT }),
+      );
 
       await resolver.createDelivery(createInput, ctx);
 
       expect(setTimeoutSpy).not.toHaveBeenCalled();
+      setTimeoutSpy.mockRestore();
     });
   });
 
@@ -152,7 +210,9 @@ describe('DeliveryResolver', () => {
     };
 
     const ctx = createMockGraphQLContext({ userId: 'user-123' });
-    const updatedDelivery = mockDelivery({ status: DeliveryStatus.DRIVER_ASSIGNED });
+    const updatedDelivery = mockDelivery({
+      status: DeliveryStatus.DRIVER_ASSIGNED,
+    });
 
     beforeEach(() => {
       i18n.t.mockResolvedValue('translated message');
@@ -162,29 +222,55 @@ describe('DeliveryResolver', () => {
     it('should transition delivery status', async () => {
       const result = await resolver.transitionDelivery(transitionInput, ctx);
 
-      expect(commands.transition).toHaveBeenCalledWith('delivery-123', DeliveryStatus.DRIVER_ASSIGNED, 'user-123', 'Driver assigned');
-      expect(result).toEqual(expect.objectContaining({
-        success: true,
-        statusCode: 200,
-        data: expect.objectContaining({ status: DeliveryStatus.DRIVER_ASSIGNED }),
-      }));
+      expect(commands.transition).toHaveBeenCalledWith(
+        'delivery-123',
+        DeliveryStatus.DRIVER_ASSIGNED,
+        'user-123',
+        'Driver assigned',
+      );
+      expect(result).toEqual(
+        expect.objectContaining({
+          success: true,
+          statusCode: 200,
+          data: expect.objectContaining({
+            status: DeliveryStatus.DRIVER_ASSIGNED,
+          }),
+        }),
+      );
     });
 
     it('should use id field when deliveryId not provided', async () => {
-      const inputWithId = { ...transitionInput, deliveryId: undefined, id: 'delivery-456' };
+      const inputWithId = {
+        ...transitionInput,
+        deliveryId: undefined,
+        id: 'delivery-456',
+      };
       commands.transition.mockResolvedValue(updatedDelivery);
 
       await resolver.transitionDelivery(inputWithId, ctx);
 
-      expect(commands.transition).toHaveBeenCalledWith('delivery-456', DeliveryStatus.DRIVER_ASSIGNED, 'user-123', 'Driver assigned');
+      expect(commands.transition).toHaveBeenCalledWith(
+        'delivery-456',
+        DeliveryStatus.DRIVER_ASSIGNED,
+        'user-123',
+        'Driver assigned',
+      );
     });
 
     it('should throw BadRequestException when no deliveryId provided', async () => {
-      const noIdInput = { ...transitionInput, deliveryId: undefined, id: undefined };
+      const noIdInput = {
+        ...transitionInput,
+        deliveryId: undefined,
+        id: undefined,
+      };
       i18n.t.mockResolvedValue('Delivery ID is required');
 
-      await expect(resolver.transitionDelivery(noIdInput, ctx)).rejects.toThrow(BadRequestException);
-      expect(i18n.t).toHaveBeenCalledWith('delivery.deliveryIdRequired', { lang: 'en' });
+      await expect(resolver.transitionDelivery(noIdInput, ctx)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(i18n.t).toHaveBeenCalledWith('delivery.deliveryIdRequired', {
+        lang: 'en',
+      });
     });
   });
 
@@ -197,7 +283,10 @@ describe('DeliveryResolver', () => {
 
     const ctx = createMockGraphQLContext({ userId: 'user-123' });
     const existingDelivery = mockDelivery({ customerId: 'user-123' });
-    const cancelledDelivery = mockDelivery({ status: DeliveryStatus.CANCELLED, customerId: 'user-123' });
+    const cancelledDelivery = mockDelivery({
+      status: DeliveryStatus.CANCELLED,
+      customerId: 'user-123',
+    });
 
     beforeEach(() => {
       i18n.t.mockResolvedValue('translated message');
@@ -206,25 +295,47 @@ describe('DeliveryResolver', () => {
     });
 
     it('should cancel delivery for owner', async () => {
-      const result = await resolver.cancelDelivery(cancelArgs.deliveryIdArg, cancelArgs.idArg, cancelArgs.reason, ctx);
+      const result = await resolver.cancelDelivery(
+        cancelArgs.deliveryIdArg,
+        cancelArgs.idArg,
+        cancelArgs.reason,
+        ctx,
+      );
 
       expect(queries.getById).toHaveBeenCalledWith('delivery-123');
-      expect(commands.cancel).toHaveBeenCalledWith('delivery-123', 'user-123', 'Customer cancelled');
-      expect(result).toEqual(expect.objectContaining({
-        success: true,
-        statusCode: 200,
-        data: expect.objectContaining({ status: DeliveryStatus.CANCELLED }),
-      }));
+      expect(commands.cancel).toHaveBeenCalledWith(
+        'delivery-123',
+        'user-123',
+        'Customer cancelled',
+      );
+      expect(result).toEqual(
+        expect.objectContaining({
+          success: true,
+          statusCode: 200,
+          data: expect.objectContaining({ status: DeliveryStatus.CANCELLED }),
+        }),
+      );
     });
 
     it('should allow admin to cancel any delivery', async () => {
-      const adminCtx = createMockGraphQLContextForAdmin({ userId: 'admin-123' });
+      const adminCtx = createMockGraphQLContextForAdmin({
+        userId: 'admin-123',
+      });
       const otherUserDelivery = mockDelivery({ customerId: 'other-user' });
       queries.getById.mockResolvedValue(otherUserDelivery);
 
-      await resolver.cancelDelivery('delivery-123', undefined, 'Admin cancel', adminCtx);
+      await resolver.cancelDelivery(
+        'delivery-123',
+        undefined,
+        'Admin cancel',
+        adminCtx,
+      );
 
-      expect(commands.cancel).toHaveBeenCalledWith('delivery-123', 'admin-123', 'Admin cancel');
+      expect(commands.cancel).toHaveBeenCalledWith(
+        'delivery-123',
+        'admin-123',
+        'Admin cancel',
+      );
     });
 
     it('should throw ForbiddenException when non-owner tries to cancel', async () => {
@@ -232,21 +343,33 @@ describe('DeliveryResolver', () => {
       queries.getById.mockResolvedValue(otherUserDelivery);
       i18n.t.mockResolvedValue('Unauthorized to cancel');
 
-      await expect(resolver.cancelDelivery('delivery-123', undefined, 'Cancel', ctx)).rejects.toThrow(ForbiddenException);
-      expect(i18n.t).toHaveBeenCalledWith('delivery.unauthorizedCancel', { lang: 'en' });
+      await expect(
+        resolver.cancelDelivery('delivery-123', undefined, 'Cancel', ctx),
+      ).rejects.toThrow(ForbiddenException);
+      expect(i18n.t).toHaveBeenCalledWith('delivery.unauthorizedCancel', {
+        lang: 'en',
+      });
     });
 
     it('should throw BadRequestException when no deliveryId provided', async () => {
       i18n.t.mockResolvedValue('Delivery ID is required');
 
-      await expect(resolver.cancelDelivery(undefined, undefined, 'reason', ctx)).rejects.toThrow(BadRequestException);
-      expect(i18n.t).toHaveBeenCalledWith('delivery.deliveryIdRequired', { lang: 'en' });
+      await expect(
+        resolver.cancelDelivery(undefined, undefined, 'reason', ctx),
+      ).rejects.toThrow(BadRequestException);
+      expect(i18n.t).toHaveBeenCalledWith('delivery.deliveryIdRequired', {
+        lang: 'en',
+      });
     });
 
     it('should use id field when deliveryId not provided', async () => {
       await resolver.cancelDelivery(undefined, 'delivery-456', 'reason', ctx);
 
-      expect(commands.cancel).toHaveBeenCalledWith('delivery-456', 'user-123', 'reason');
+      expect(commands.cancel).toHaveBeenCalledWith(
+        'delivery-456',
+        'user-123',
+        'reason',
+      );
     });
   });
 });

@@ -91,8 +91,18 @@ describe('DeliveryMapper', () => {
         createdAt: new Date('2024-01-01T09:00:00Z'),
         updatedAt: new Date('2024-01-01T10:00:00Z'),
         statusHistory: [
-          { status: DeliveryStatus.CREATED, changedBy: 'system', note: 'Created', createdAt: new Date('2024-01-01T09:00:00Z') },
-          { status: DeliveryStatus.PICKED_UP, changedBy: 'driver-123', note: 'Picked up', createdAt: new Date('2024-01-01T10:00:00Z') },
+          {
+            status: DeliveryStatus.CREATED,
+            changedBy: 'system',
+            note: 'Created',
+            createdAt: new Date('2024-01-01T09:00:00Z'),
+          },
+          {
+            status: DeliveryStatus.PICKED_UP,
+            changedBy: 'driver-123',
+            note: 'Picked up',
+            createdAt: new Date('2024-01-01T10:00:00Z'),
+          },
         ],
       });
 
@@ -128,8 +138,18 @@ describe('DeliveryMapper', () => {
           longitude: -122.4194,
         },
         statusHistory: [
-          { status: DeliveryStatus.CREATED, changedBy: 'system', note: 'Created', createdAt: new Date('2024-01-01T09:00:00Z') },
-          { status: DeliveryStatus.PICKED_UP, changedBy: 'driver-123', note: 'Picked up', createdAt: new Date('2024-01-01T10:00:00Z') },
+          {
+            status: DeliveryStatus.CREATED,
+            changedBy: 'system',
+            note: 'Created',
+            createdAt: new Date('2024-01-01T09:00:00Z'),
+          },
+          {
+            status: DeliveryStatus.PICKED_UP,
+            changedBy: 'driver-123',
+            note: 'Picked up',
+            createdAt: new Date('2024-01-01T10:00:00Z'),
+          },
         ],
         pickedUpAt: new Date('2024-01-01T10:00:00Z'),
         completedAt: undefined,
@@ -174,19 +194,31 @@ describe('DeliveryMapper', () => {
     it('should handle date strings in statusHistory', () => {
       const delivery = mockDelivery({
         statusHistory: [
-          { status: DeliveryStatus.CREATED, changedBy: 'system', note: 'Created', createdAt: '2024-01-01T09:00:00Z' },
+          {
+            status: DeliveryStatus.CREATED,
+            changedBy: 'system',
+            note: 'Created',
+            createdAt: '2024-01-01T09:00:00Z',
+          },
         ],
       });
 
       const result = deliveryToGraphql(delivery);
 
-      expect(result.statusHistory?.[0].createdAt).toEqual(new Date('2024-01-01T09:00:00Z'));
+      expect(result.statusHistory?.[0].createdAt).toEqual(
+        new Date('2024-01-01T09:00:00Z'),
+      );
     });
 
     it('should handle undefined dates in statusHistory', () => {
       const delivery = mockDelivery({
         statusHistory: [
-          { status: DeliveryStatus.CREATED, changedBy: 'system', note: 'Created', createdAt: undefined as any },
+          {
+            status: DeliveryStatus.CREATED,
+            changedBy: 'system',
+            note: 'Created',
+            createdAt: undefined as any,
+          },
         ],
       });
 
@@ -225,8 +257,26 @@ describe('DeliveryMapper', () => {
 
     it('should handle address with undefined optional fields', () => {
       const delivery = mockDelivery({
-        pickupAddress: { line1: '123 St', line2: null, city: 'SF', state: null, postalCode: null, countryCode: 'US', latitude: null, longitude: null },
-        dropoffAddress: { line1: '456 Ave', line2: null, city: 'LA', state: null, postalCode: null, countryCode: 'US', latitude: null, longitude: null },
+        pickupAddress: {
+          line1: '123 St',
+          line2: null,
+          city: 'SF',
+          state: null,
+          postalCode: null,
+          countryCode: 'US',
+          latitude: null,
+          longitude: null,
+        },
+        dropoffAddress: {
+          line1: '456 Ave',
+          line2: null,
+          city: 'LA',
+          state: null,
+          postalCode: null,
+          countryCode: 'US',
+          latitude: null,
+          longitude: null,
+        },
       });
 
       const result = deliveryToGraphql(delivery);

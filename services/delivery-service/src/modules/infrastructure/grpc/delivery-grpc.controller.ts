@@ -37,7 +37,8 @@ export class DeliveryGrpcController {
         return { isParticipant: false };
       }
       const isParticipant =
-        delivery.customerId === data.userId || delivery.driverId === data.userId;
+        delivery.customerId === data.userId ||
+        delivery.driverId === data.userId;
       return { isParticipant };
     } catch {
       return { isParticipant: false };
@@ -100,7 +101,8 @@ export class DeliveryGrpcController {
     try {
       const page = Math.max(1, data?.page || 1);
       const limit = Math.max(1, Math.min(100, data?.limit || 50));
-      const [deliveries, total] = await this.deliveryQueryService.getOpenDeliveries(page, limit);
+      const [deliveries, total] =
+        await this.deliveryQueryService.getOpenDeliveries(page, limit);
 
       const items = (deliveries || []).map((d) => ({
         id: d.id,
@@ -112,7 +114,9 @@ export class DeliveryGrpcController {
         dropoff_country: d.dropoffAddress?.countryCode || '',
         amount: d.amount ? String(d.amount) : '0',
         currency: d.currency || 'USD',
-        created_at: d.createdAt ? new Date(d.createdAt).toISOString() : new Date().toISOString(),
+        created_at: d.createdAt
+          ? new Date(d.createdAt).toISOString()
+          : new Date().toISOString(),
       }));
 
       return {
@@ -127,4 +131,3 @@ export class DeliveryGrpcController {
     }
   }
 }
-

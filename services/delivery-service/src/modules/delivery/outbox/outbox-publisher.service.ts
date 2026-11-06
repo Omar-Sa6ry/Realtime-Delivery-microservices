@@ -1,4 +1,4 @@
-﻿import {
+import {
   Injectable,
   Logger,
   OnModuleDestroy,
@@ -47,13 +47,14 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
     if (this.running) return;
     this.running = true;
     try {
-      for (const event of await this.outbox.claimPending(this.batchSize))
+      const pendingEvents = (await this.outbox.claimPending(this.batchSize)) ?? [];
+      for (const event of pendingEvents)
         await this.publish(event);
     } finally {
       this.running = false;
     }
   }
-  
+
   private async publish(event: Outbox): Promise<void> {
     try {
       await this.producer.publish(event);

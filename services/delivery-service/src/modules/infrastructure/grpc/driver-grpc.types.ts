@@ -20,7 +20,8 @@ export interface GetDriverResponse {
   driverId: string;
   userId: string;
   status: string;
-  vehicleType: 'CAR' | 'MOTORCYCLE' | 'TRUCK' | 'BICYCLE' | 'VAN' | 'VEHICLE_TYPE_UNKNOWN';
+  vehicleType:
+    'CAR' | 'MOTORCYCLE' | 'TRUCK' | 'BICYCLE' | 'VAN' | 'VEHICLE_TYPE_UNKNOWN';
 }
 
 export interface GetDriverStatusRequest {
@@ -35,7 +36,13 @@ export interface GetDriverStatusResponse {
 }
 
 export interface DriverGrpcService {
-  ValidateID(request: ValidateIDRequest): import('rxjs').Observable<ValidateIDResponse>;
-  GetDriver(request: GetDriverRequest): import('rxjs').Observable<GetDriverResponse>;
-  GetDriverStatus(request: GetDriverStatusRequest): import('rxjs').Observable<GetDriverStatusResponse>;
+  ValidateID(
+    request: ValidateIDRequest,
+  ): import('rxjs').Observable<ValidateIDResponse>;
+  GetDriver(
+    request: GetDriverRequest,
+  ): import('rxjs').Observable<GetDriverResponse>;
+  GetDriverStatus(
+    request: GetDriverStatusRequest,
+  ): import('rxjs').Observable<GetDriverStatusResponse>;
 }

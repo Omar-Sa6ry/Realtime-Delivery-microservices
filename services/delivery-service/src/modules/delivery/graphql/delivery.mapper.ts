@@ -51,12 +51,13 @@ export function deliveryToGraphql(delivery: Delivery): DeliveryType {
       latitude: delivery.dropoffAddress.latitude ?? undefined,
       longitude: delivery.dropoffAddress.longitude ?? undefined,
     },
-    statusHistory: delivery.statusHistory?.map((h) => ({
-      status: h.status,
-      changedBy: h.changedBy ?? undefined,
-      note: h.note ?? undefined,
-      createdAt: toDate(h.createdAt)!,
-    })) ?? undefined,
+    statusHistory:
+      delivery.statusHistory?.map((h) => ({
+        status: h.status,
+        changedBy: h.changedBy ?? undefined,
+        note: h.note ?? undefined,
+        createdAt: toDate(h.createdAt)!,
+      })) ?? undefined,
     pickedUpAt: toDate(delivery.pickedUpAt),
     completedAt: toDate(delivery.completedAt),
     cancelledAt: toDate(delivery.cancelledAt),

@@ -15,7 +15,8 @@ export class GrpcServer implements OnModuleInit {
   constructor(@Inject('DRIVER_SERVICE') private readonly client: ClientGrpc) {}
 
   onModuleInit() {
-    this.driverService = this.client.getService<DriverGrpcService>('DriverService');
+    this.driverService =
+      this.client.getService<DriverGrpcService>('DriverService');
   }
 
   async validateDriverId(driverId: string): Promise<ValidateIDResponse> {
@@ -24,7 +25,12 @@ export class GrpcServer implements OnModuleInit {
         this.driverService.ValidateID({ id: driverId, idType: 'driver' }),
       );
     } catch {
-      return { valid: false, driverId, status: '', message: 'Driver validation failed' };
+      return {
+        valid: false,
+        driverId,
+        status: '',
+        message: 'Driver validation failed',
+      };
     }
   }
 
@@ -34,17 +40,26 @@ export class GrpcServer implements OnModuleInit {
         this.driverService.ValidateID({ id: userId, idType: 'user' }),
       );
     } catch {
-      return { valid: false, driverId: '', status: '', message: 'User validation failed' };
+      return {
+        valid: false,
+        driverId: '',
+        status: '',
+        message: 'User validation failed',
+      };
     }
   }
 
   async getDriver(driverId: string): Promise<GetDriverResponse> {
     try {
-      return await firstValueFrom(
-        this.driverService.GetDriver({ driverId }),
-      );
+      return await firstValueFrom(this.driverService.GetDriver({ driverId }));
     } catch {
-      return { found: false, driverId, userId: '', status: '', vehicleType: 'VEHICLE_TYPE_UNKNOWN' };
+      return {
+        found: false,
+        driverId,
+        userId: '',
+        status: '',
+        vehicleType: 'VEHICLE_TYPE_UNKNOWN',
+      };
     }
   }
 
@@ -54,7 +69,12 @@ export class GrpcServer implements OnModuleInit {
         this.driverService.GetDriverStatus({ driverId }),
       );
     } catch {
-      return { driverId, status: 'UNKNOWN', hasActiveAssignment: false, activeDeliveryId: '' };
+      return {
+        driverId,
+        status: 'UNKNOWN',
+        hasActiveAssignment: false,
+        activeDeliveryId: '',
+      };
     }
   }
 }

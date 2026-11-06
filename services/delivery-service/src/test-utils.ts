@@ -24,12 +24,14 @@ export const mockDelivery = (overrides: Partial<Delivery> = {}): Delivery => {
   delivery.createdAt = new Date();
   delivery.updatedAt = new Date();
   delivery.statusHistory = [];
-  delivery.sagaState = null;
+  delivery.sagaState = undefined;
 
   return { ...delivery, ...overrides };
 };
 
-export const createMockAddress = (overrides: Partial<Address> = {}): Address => {
+export const createMockAddress = (
+  overrides: Partial<Address> = {},
+): Address => {
   const address = new Address();
   address.line1 = '123 Source St';
   address.line2 = 'Apt 1';
@@ -42,7 +44,9 @@ export const createMockAddress = (overrides: Partial<Address> = {}): Address => 
   return { ...address, ...overrides };
 };
 
-export const mockDeliveryStatusHistory = (overrides: Partial<DeliveryStatusHistory> = {}): DeliveryStatusHistory => {
+export const mockDeliveryStatusHistory = (
+  overrides: Partial<DeliveryStatusHistory> = {},
+): DeliveryStatusHistory => {
   const history = new DeliveryStatusHistory();
   history.id = 'history-123';
   history.deliveryId = 'test-delivery-id';
@@ -72,13 +76,15 @@ export const mockOutbox = (overrides: Partial<Outbox> = {}): Outbox => {
   return { ...outbox, ...overrides };
 };
 
-export const mockSagaState = (overrides: Partial<DeliverySagaState> = {}): DeliverySagaState => {
+export const mockSagaState = (
+  overrides: Partial<DeliverySagaState> = {},
+): DeliverySagaState => {
   const sagaState = new DeliverySagaState();
   sagaState.id = 'saga-123';
   sagaState.deliveryId = 'test-delivery-id';
   sagaState.currentStep = 'PAYMENT_AUTHORIZATION';
   sagaState.status = 'IN_PROGRESS';
-  sagaState.compensationData = null;
+  sagaState.context = {};
   sagaState.createdAt = new Date();
   sagaState.updatedAt = new Date();
   return { ...sagaState, ...overrides };
@@ -123,10 +129,19 @@ export const createMockRedisService = () => ({
 });
 
 export const createMockI18nService = () => ({
-  t: jest.fn().mockImplementation((key: string, options?: { args?: Record<string, any>; lang?: string }) => {
-    const args = options?.args || {};
-    return Promise.resolve(key.replace(/\./g, ' ').replace(/{(\w+)}/g, (_, k) => args[k] || ''));
-  }),
+  t: jest
+    .fn()
+    .mockImplementation(
+      (
+        key: string,
+        options?: { args?: Record<string, any>; lang?: string },
+      ) => {
+        const args = options?.args || {};
+        return Promise.resolve(
+          key.replace(/\./g, ' ').replace(/{(\w+)}/g, (_, k) => args[k] || ''),
+        );
+      },
+    ),
   translate: jest.fn(),
 });
 
@@ -197,11 +212,11 @@ export const createMockIdempotencyService = () => ({
 });
 
 export const createMockOutboxRepository = () => ({
-  createEvent: jest.fn(),
-  save: jest.fn(),
-  claimPending: jest.fn(),
-  markPublished: jest.fn(),
-  markFailed: jest.fn(),
+  createEvent: jest.fn().mockImplementation((event) => event),
+  save: jest.fn().mockResolvedValue(undefined),
+  claimPending: jest.fn().mockResolvedValue([]),
+  markPublished: jest.fn().mockResolvedValue(undefined),
+  markFailed: jest.fn().mockResolvedValue(undefined),
 });
 
 export const createMockKafkaProducer = () => ({
@@ -210,7 +225,7 @@ export const createMockKafkaProducer = () => ({
 
 export const createMockDeliveryCommandService = () => ({
   create: jest.fn(),
-  executeWithIdempotency: jest.fn(),
+  executeWithIdempotency: jest.fn().mockImplementation((key, op) => op()),
   transition: jest.fn(),
   updatePaymentStatus: jest.fn(),
   assignDriver: jest.fn(),
@@ -259,18 +274,22 @@ export const createMockDeliveryRabbitMQPublisher = () => ({
   publishDispatchRequest: jest.fn().mockResolvedValue(undefined),
 });
 
-export const createMockGraphQLContext = (overrides: any = {}) => ({
-  req: {
-    user: overrides.user || { id: 'user-123', role: 'customer' },
-    headers: {
-      'x-user-id': overrides.userId || 'user-123',
-      'x-user-role': overrides.userRole || 'customer',
-      'accept-language': overrides.language || 'en',
-      ...overrides.headers,
+export const createMockGraphQLContext = (overrides: any = {}) => {
+  const userId = overrides.userId !== undefined ? overrides.userId : 'user-123';
+  const userRole = overrides.userRole !== undefined ? overrides.userRole : 'customer';
+  return {
+    req: {
+      user: overrides.user !== undefined ? overrides.user : (userId ? { id: userId, role: userRole } : undefined),
+      headers: {
+        ...(userId ? { 'x-user-id': userId } : {}),
+        'x-user-role': userRole,
+        'accept-language': overrides.language || 'en',
+        ...overrides.headers,
+      },
     },
-  },
-  language: overrides.language || 'en',
-});
+    language: overrides.language || 'en',
+  };
+};
 
 export const createMockGraphQLContextForAdmin = (overrides: any = {}) => ({
   req: {
@@ -327,8 +346,14 @@ export const createMockDeliverySagaContext = (overrides: any = {}) => ({
 });
 
 export const createMockDeliveryMetricsService = () => ({
-  getContentType: jest.fn().mockReturnValue('text/plain; version=0.0.4; charset=utf-8'),
-  getMetrics: jest.fn().mockResolvedValue('# HELP test_metric Test metric\n# TYPE test_metric gauge\ntest_metric 1\n'),
+  getContentType: jest
+    .fn()
+    .mockReturnValue('text/plain; version=0.0.4; charset=utf-8'),
+  getMetrics: jest
+    .fn()
+    .mockResolvedValue(
+      '# HELP test_metric Test metric\n# TYPE test_metric gauge\ntest_metric 1\n',
+    ),
 });
 
 export const mockDeliveryStatusValues = Object.values(DeliveryStatus);

@@ -94,7 +94,7 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!(@nestjs|typeorm|@bts-soft)/)"
+      "node_modules/(?!(.*\\.mjs$|@nestjs/.*|typeorm|@bts-soft/.*))"
     ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"

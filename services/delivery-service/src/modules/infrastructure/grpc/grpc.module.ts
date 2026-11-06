@@ -20,7 +20,9 @@ import { DeliveryModule } from '../../delivery/delivery.module';
           options: {
             package: 'driver',
             protoPath: join(process.cwd(), '../../protos/driver.proto'),
-            url: configService.get<string>('DRIVER_SERVICE_URL') || 'driver-srv:50055',
+            url:
+              configService.get<string>('DRIVER_SERVICE_URL') ||
+              'driver-srv:50055',
             loader: {
               keepCase: true,
               longs: String,
@@ -40,7 +42,9 @@ import { DeliveryModule } from '../../delivery/delivery.module';
           options: {
             package: 'payment.v1',
             protoPath: join(process.cwd(), '../../protos/payment.proto'),
-            url: configService.get<string>('PAYMENT_SERVICE_URL') || 'payment-srv:50056',
+            url:
+              configService.get<string>('PAYMENT_SERVICE_URL') ||
+              'payment-srv:50056',
             loader: {
               keepCase: true,
               longs: String,

@@ -55,9 +55,9 @@ export class DeliveryRepository {
       take: 100,
     });
   }
-  
+
   async clearDriverId(id: string): Promise<void> {
-    await this.deliveries.update(id, { driverId: null as any });
+    await this.deliveries.update(id, { driverId: null });
   }
 
   async findOpenDeliveries(skip = 0, take = 50): Promise<[Delivery[], number]> {

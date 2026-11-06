@@ -102,7 +102,7 @@ export class DeliveryQueryResolver {
           nextPage,
         },
       },
-    } as DeliveryListResponse;
+    };
   }
 
   @Auth([Permission.VIEW_DELIVERY])
@@ -126,7 +126,7 @@ export class DeliveryQueryResolver {
       data: {
         statuses: this.queries.nextStatuses(delivery),
       },
-    } as DeliveryStatusesResponse;
+    };
   }
 
   @Auth([Permission.VIEW_DELIVERY])
@@ -166,6 +166,6 @@ export class DeliveryQueryResolver {
           nextPage,
         },
       },
-    } as DeliveryListResponse;
+    };
   }
 }

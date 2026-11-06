@@ -17,7 +17,8 @@ export class DriverAssignmentStep implements DeliverySagaStep, OnModuleInit {
 
   onModuleInit() {
     try {
-      this.driverServiceClient = this.driverClientGrpc.getService('DriverService');
+      this.driverServiceClient =
+        this.driverClientGrpc.getService('DriverService');
     } catch (err: any) {
       this.logger.warn(`Could not bind DriverService gRPC: ${err.message}`);
     }
@@ -73,7 +74,9 @@ export class DriverAssignmentStep implements DeliverySagaStep, OnModuleInit {
             correlationId: delivery.id,
           }),
         );
-        this.logger.log(`[SAGA Compensation] Driver ${delivery.driverId} released.`);
+        this.logger.log(
+          `[SAGA Compensation] Driver ${delivery.driverId} released.`,
+        );
       } catch (err: any) {
         this.logger.error(
           `[SAGA Compensation] Failed to release driver via gRPC: ${err.message}`,

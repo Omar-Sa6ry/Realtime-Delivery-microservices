@@ -23,7 +23,9 @@ export class DeliverySagaOrchestrator {
   async execute(deliveryId: string): Promise<Delivery> {
     const delivery = await this.repository.findById(deliveryId);
     if (!delivery) {
-      throw new Error(`Delivery with ID ${deliveryId} not found for Saga execution`);
+      throw new Error(
+        `Delivery with ID ${deliveryId} not found for Saga execution`,
+      );
     }
 
     let context: DeliverySagaContext = {
@@ -35,15 +37,22 @@ export class DeliverySagaOrchestrator {
       this.logger.log(`Starting Saga execution for delivery ${deliveryId}...`);
       for (const step of this.steps) {
         // If delivery is waiting for customer payment, do not execute driver assignment step yet
-        if (context.delivery.status === 'PENDING_PAYMENT' && step.name === 'DRIVER_ASSIGNMENT') {
-          this.logger.log(`Delivery ${deliveryId} is PENDING_PAYMENT. Deferring driver assignment until payment is confirmed.`);
+        if (
+          context.delivery.status === 'PENDING_PAYMENT' &&
+          step.name === 'DRIVER_ASSIGNMENT'
+        ) {
+          this.logger.log(
+            `Delivery ${deliveryId} is PENDING_PAYMENT. Deferring driver assignment until payment is confirmed.`,
+          );
           break;
         }
         this.logger.log(`Executing Saga step: ${step.name}`);
         context = await step.execute(context);
         completed.push(step);
       }
-      this.logger.log(`Saga completed successfully for delivery ${deliveryId}.`);
+      this.logger.log(
+        `Saga completed successfully for delivery ${deliveryId}.`,
+      );
       return context.delivery;
     } catch (error: any) {
       this.logger.error(

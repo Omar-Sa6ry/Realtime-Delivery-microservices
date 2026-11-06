@@ -56,9 +56,7 @@ async function bootstrap() {
 
     await app.listen(port, '0.0.0.0');
     const i18n = app.get(I18nService);
-    console.log(
-      i18n.t('delivery.serviceInfo' as never) + ': http://0.0.0.0:' + port,
-    );
+    console.log(i18n.t('delivery.serviceInfo') + ': http://0.0.0.0:' + port);
 
     // Start NATS + gRPC transports in the background after HTTP is live.
     app

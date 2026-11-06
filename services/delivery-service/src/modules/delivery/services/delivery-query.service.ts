@@ -28,11 +28,8 @@ export class DeliveryQueryService {
       safeSize,
     );
   }
-  
-  getOpenDeliveries(
-    page = 1,
-    pageSize = 50,
-  ): Promise<[Delivery[], number]> {
+
+  getOpenDeliveries(page = 1, pageSize = 50): Promise<[Delivery[], number]> {
     const safePage = Math.max(1, page);
     const safeSize = Math.min(100, Math.max(1, pageSize));
     return this.repository.findOpenDeliveries(

@@ -18,7 +18,8 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
 
   onModuleInit() {
     try {
-      this.paymentServiceClient = this.paymentClientGrpc.getService('PaymentService');
+      this.paymentServiceClient =
+        this.paymentClientGrpc.getService('PaymentService');
     } catch (err: any) {
       this.logger.warn(`Could not bind PaymentService gRPC: ${err.message}`);
     }
@@ -36,7 +37,10 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
       if (!rawAmount || isNaN(amountFloat) || amountMinor <= 0) {
         const errorMsg = `Invalid delivery amount: "${rawAmount}". Amount must be greater than zero.`;
         this.logger.error(`[SAGA Step 1 Failed] ${errorMsg}`);
-        await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.FAILED);
+        await this.commands.updatePaymentStatus(
+          delivery.id,
+          PaymentStatus.FAILED,
+        );
         await this.commands.cancel(delivery.id, 'system', errorMsg);
         throw new Error(errorMsg);
       }
@@ -70,20 +74,36 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
           `[SAGA Step 1] Payment hold/authorization response: ID=${paymentId}, Status=${status}`,
         );
 
-        const checkoutUrl = res?.paymentLink || res?.payment_link || res?.checkoutUrl || res?.checkout_url;
+        const checkoutUrl =
+          res?.paymentLink ||
+          res?.payment_link ||
+          res?.checkoutUrl ||
+          res?.checkout_url;
         delivery.checkoutUrl = checkoutUrl;
 
-        if (checkoutUrl || status === 'PENDING' || status === 'PROCESSING' || status === 'REQUIRES_PAYMENT' || status === 'REQUIRES_ACTION') {
+        if (
+          checkoutUrl ||
+          status === 'PENDING' ||
+          status === 'PROCESSING' ||
+          status === 'REQUIRES_PAYMENT' ||
+          status === 'REQUIRES_ACTION'
+        ) {
           // Async checkout required - customer needs to pay via checkoutUrl before driver dispatch
-          this.logger.log(`[SAGA Step 1] Payment requires customer completion via Checkout URL: ${checkoutUrl}`);
+          this.logger.log(
+            `[SAGA Step 1] Payment requires customer completion via Checkout URL: ${checkoutUrl}`,
+          );
           await this.commands.transition(
             delivery.id,
             DeliveryStatus.PENDING_PAYMENT,
             undefined,
             'Awaiting customer checkout payment',
           );
-          const updated = await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.PENDING);
+          const updated = await this.commands.updatePaymentStatus(
+            delivery.id,
+            PaymentStatus.PENDING,
+          );
           updated.checkoutUrl = checkoutUrl;
+          updated.status = DeliveryStatus.PENDING_PAYMENT;
           return {
             delivery: updated,
             paymentId,
@@ -96,8 +116,12 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
             undefined,
             'Payment authorized & held in escrow',
           );
-          const updated = await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.AUTHORIZED);
+          const updated = await this.commands.updatePaymentStatus(
+            delivery.id,
+            PaymentStatus.AUTHORIZED,
+          );
           updated.checkoutUrl = checkoutUrl;
+          updated.status = DeliveryStatus.PAYMENT_CONFIRMED;
           return {
             delivery: updated,
             paymentId,
@@ -105,7 +129,10 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
         } else {
           const errMsg = `Payment authorization incomplete. Current status: ${status || 'FAILED'}.`;
           this.logger.error(`[SAGA Step 1 Failed] ${errMsg}`);
-          await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.FAILED);
+          await this.commands.updatePaymentStatus(
+            delivery.id,
+            PaymentStatus.FAILED,
+          );
           await this.commands.cancel(delivery.id, 'system', errMsg);
           throw new Error(errMsg);
         }
@@ -114,8 +141,15 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
           `[SAGA Step 1 Failed] Payment authorization failed for delivery ${delivery.id}: ${err.message}`,
         );
         // Mark payment status as failed and cancel delivery
-        await this.commands.updatePaymentStatus(delivery.id, PaymentStatus.FAILED);
-        await this.commands.cancel(delivery.id, 'system', `Payment authorization failed: ${err.message}`);
+        await this.commands.updatePaymentStatus(
+          delivery.id,
+          PaymentStatus.FAILED,
+        );
+        await this.commands.cancel(
+          delivery.id,
+          'system',
+          `Payment authorization failed: ${err.message}`,
+        );
         throw err;
       }
     }
@@ -139,7 +173,9 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
             idempotency_key: `delivery-${context.delivery.id}-void`,
           }),
         );
-        this.logger.log(`[SAGA Compensation] Payment ${context.paymentId} authorization cancelled.`);
+        this.logger.log(
+          `[SAGA Compensation] Payment ${context.paymentId} authorization cancelled.`,
+        );
       } catch (err: any) {
         this.logger.error(
           `[SAGA Compensation] Failed to cancel payment authorization: ${err.message}`,
@@ -152,6 +188,9 @@ export class PaymentConfirmationStep implements DeliverySagaStep, OnModuleInit {
       'saga',
       'Saga compensation: delivery process cancelled',
     );
-    await this.commands.updatePaymentStatus(context.delivery.id, PaymentStatus.CANCELLED);
+    await this.commands.updatePaymentStatus(
+      context.delivery.id,
+      PaymentStatus.CANCELLED,
+    );
   }
 }

@@ -135,11 +135,14 @@ export class DeliveryCommandService implements OnModuleInit {
     note?: string,
   ): Promise<Delivery> {
     const delivery = await this.repository.findById(id);
-    await this.stateMachine.assertTransition(delivery.status, status);
     if (delivery.status === status) {
       return delivery;
     }
+    await this.stateMachine.assertTransition(delivery.status, status);
     delivery.status = status;
+    if (status === DeliveryStatus.DRIVER_ASSIGNED && !delivery.driverId && changedBy) {
+      delivery.driverId = changedBy;
+    }
     if (status === DeliveryStatus.PICKED_UP) delivery.pickedUpAt = new Date();
     if (status === DeliveryStatus.COMPLETED) delivery.completedAt = new Date();
     if (status === DeliveryStatus.CANCELLED) delivery.cancelledAt = new Date();

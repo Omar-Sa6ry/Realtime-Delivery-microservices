@@ -3,7 +3,7 @@ import { Repository } from 'typeorm';
 import { MoreThanOrEqual } from 'typeorm';
 import { OutboxRepository } from './outbox.repository';
 import { Outbox, OutboxStatus } from '../entities/outbox.entity';
-import { mockOutbox } from '../../../../test-utils';
+import { mockOutbox } from '../../../test-utils';
 
 describe('OutboxRepository', () => {
   let repository: OutboxRepository;
@@ -66,9 +66,11 @@ describe('OutboxRepository', () => {
 
       repository.createEvent(input);
 
-      expect(ormRepository.create).toHaveBeenCalledWith(expect.objectContaining({
-        aggregateType: 'custom-type',
-      }));
+      expect(ormRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          aggregateType: 'custom-type',
+        }),
+      );
     });
   });
 
@@ -94,8 +96,14 @@ describe('OutboxRepository', () => {
 
       expect(ormRepository.find).toHaveBeenCalledWith({
         where: [
-          { status: OutboxStatus.PENDING, availableAt: MoreThanOrEqual(expect.any(Date)) },
-          { status: OutboxStatus.FAILED, availableAt: MoreThanOrEqual(expect.any(Date)) },
+          {
+            status: OutboxStatus.PENDING,
+            availableAt: MoreThanOrEqual(expect.any(Date)),
+          },
+          {
+            status: OutboxStatus.FAILED,
+            availableAt: MoreThanOrEqual(expect.any(Date)),
+          },
         ],
         order: { createdAt: 'ASC' },
         take: 10,
@@ -122,11 +130,15 @@ describe('OutboxRepository', () => {
 
       await repository.claimPending(200);
 
-      expect(ormRepository.find).toHaveBeenCalledWith(expect.objectContaining({ take: 100 }));
+      expect(ormRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 100 }),
+      );
 
       await repository.claimPending(0);
 
-      expect(ormRepository.find).toHaveBeenCalledWith(expect.objectContaining({ take: 1 }));
+      expect(ormRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 1 }),
+      );
     });
 
     it('should only return successfully claimed events', async () => {
@@ -146,7 +158,12 @@ describe('OutboxRepository', () => {
   describe('markPublished', () => {
     it('should mark event as published', async () => {
       const event = mockOutbox({ status: OutboxStatus.PROCESSING });
-      const savedEvent = { ...event, status: OutboxStatus.PUBLISHED, publishedAt: expect.any(Date), lastError: null };
+      const savedEvent = {
+        ...event,
+        status: OutboxStatus.PUBLISHED,
+        publishedAt: expect.any(Date),
+        lastError: null,
+      };
       ormRepository.save.mockResolvedValue(savedEvent);
 
       const result = await repository.markPublished(event);
@@ -161,10 +178,18 @@ describe('OutboxRepository', () => {
 
   describe('markFailed', () => {
     it('should mark event as failed with retry delay', async () => {
-      const event = mockOutbox({ status: OutboxStatus.PROCESSING, attempts: 1 });
+      const event = mockOutbox({
+        status: OutboxStatus.PROCESSING,
+        attempts: 1,
+      });
       const error = new Error('Kafka connection failed');
       const retryDelayMs = 5000;
-      const savedEvent = { ...event, status: OutboxStatus.FAILED, lastError: error.message, availableAt: expect.any(Date) };
+      const savedEvent = {
+        ...event,
+        status: OutboxStatus.FAILED,
+        lastError: error.message,
+        availableAt: expect.any(Date),
+      };
       ormRepository.save.mockResolvedValue(savedEvent);
 
       const result = await repository.markFailed(event, error, retryDelayMs);
@@ -172,7 +197,9 @@ describe('OutboxRepository', () => {
       expect(event.status).toBe(OutboxStatus.FAILED);
       expect(event.lastError).toBe(error.message);
       expect(event.availableAt).toBeInstanceOf(Date);
-      expect(event.availableAt.getTime()).toBeGreaterThanOrEqual(Date.now() + retryDelayMs - 100);
+      expect(event.availableAt.getTime()).toBeGreaterThanOrEqual(
+        Date.now() + retryDelayMs - 100,
+      );
       expect(ormRepository.save).toHaveBeenCalledWith(event);
       expect(result).toEqual(savedEvent);
     });

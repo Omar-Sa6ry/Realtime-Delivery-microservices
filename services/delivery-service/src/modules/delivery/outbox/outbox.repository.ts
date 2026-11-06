@@ -57,7 +57,7 @@ export class OutboxRepository {
     }
     return claimed;
   }
-  
+
   markPublished(event: Outbox): Promise<Outbox> {
     event.status = OutboxStatus.PUBLISHED;
     event.publishedAt = new Date();

@@ -61,13 +61,21 @@ describe('HealthController', () => {
 
   describe('getMetrics', () => {
     it('should return metrics in prometheus format', async () => {
-      metricsService.getContentType.mockReturnValue('text/plain; version=0.0.4; charset=utf-8');
-      metricsService.getMetrics.mockResolvedValue('# HELP test_metric Test metric\n# TYPE test_metric gauge\ntest_metric 1\n');
+      metricsService.getContentType.mockReturnValue(
+        'text/plain; version=0.0.4; charset=utf-8',
+      );
+      metricsService.getMetrics.mockResolvedValue(
+        '# HELP test_metric Test metric\n# TYPE test_metric gauge\ntest_metric 1\n',
+      );
 
       await controller.getMetrics(mockResponse as Response);
 
-      expect(mockResponse.type).toHaveBeenCalledWith('text/plain; version=0.0.4; charset=utf-8');
-      expect(mockResponse.send).toHaveBeenCalledWith('# HELP test_metric Test metric\n# TYPE test_metric gauge\ntest_metric 1\n');
+      expect(mockResponse.type).toHaveBeenCalledWith(
+        'text/plain; version=0.0.4; charset=utf-8',
+      );
+      expect(mockResponse.send).toHaveBeenCalledWith(
+        '# HELP test_metric Test metric\n# TYPE test_metric gauge\ntest_metric 1\n',
+      );
       expect(metricsService.getContentType).toHaveBeenCalled();
       expect(metricsService.getMetrics).toHaveBeenCalled();
     });

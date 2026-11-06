@@ -3,7 +3,11 @@ import { DeliveryQueryService } from './delivery-query.service';
 import { DeliveryRepository } from '../repositories/delivery.repository';
 import { DeliveryStateMachine } from './delivery.state-machine';
 import { DeliveryStatus } from '../enums/delivery-status.enum';
-import { mockDelivery, createMockDeliveryRepository, createMockDeliveryStateMachine } from '../../../test-utils';
+import {
+  mockDelivery,
+  createMockDeliveryRepository,
+  createMockDeliveryStateMachine,
+} from '../../../test-utils';
 
 describe('DeliveryQueryService', () => {
   let service: DeliveryQueryService;
@@ -48,7 +52,11 @@ describe('DeliveryQueryService', () => {
 
       const result = await service.listByCustomer('customer-123', 2, 10);
 
-      expect(repository.findByCustomerId).toHaveBeenCalledWith('customer-123', 10, 10);
+      expect(repository.findByCustomerId).toHaveBeenCalledWith(
+        'customer-123',
+        10,
+        10,
+      );
       expect(result).toEqual([deliveries, 2]);
     });
 
@@ -57,7 +65,11 @@ describe('DeliveryQueryService', () => {
 
       await service.listByCustomer('customer-123', 0, 50);
 
-      expect(repository.findByCustomerId).toHaveBeenCalledWith('customer-123', 0, 50);
+      expect(repository.findByCustomerId).toHaveBeenCalledWith(
+        'customer-123',
+        0,
+        50,
+      );
     });
 
     it('should enforce minimum pageSize of 1', async () => {
@@ -65,7 +77,11 @@ describe('DeliveryQueryService', () => {
 
       await service.listByCustomer('customer-123', 1, 0);
 
-      expect(repository.findByCustomerId).toHaveBeenCalledWith('customer-123', 0, 1);
+      expect(repository.findByCustomerId).toHaveBeenCalledWith(
+        'customer-123',
+        0,
+        1,
+      );
     });
 
     it('should enforce maximum pageSize of 100', async () => {
@@ -73,7 +89,11 @@ describe('DeliveryQueryService', () => {
 
       await service.listByCustomer('customer-123', 1, 200);
 
-      expect(repository.findByCustomerId).toHaveBeenCalledWith('customer-123', 0, 100);
+      expect(repository.findByCustomerId).toHaveBeenCalledWith(
+        'customer-123',
+        0,
+        100,
+      );
     });
 
     it('should use default values when not provided', async () => {
@@ -81,13 +101,19 @@ describe('DeliveryQueryService', () => {
 
       await service.listByCustomer('customer-123');
 
-      expect(repository.findByCustomerId).toHaveBeenCalledWith('customer-123', 0, 50);
+      expect(repository.findByCustomerId).toHaveBeenCalledWith(
+        'customer-123',
+        0,
+        50,
+      );
     });
   });
 
   describe('getOpenDeliveries', () => {
     it('should delegate to repository findOpenDeliveries with correct pagination', async () => {
-      const deliveries = [mockDelivery({ id: '1', status: DeliveryStatus.PAYMENT_CONFIRMED })];
+      const deliveries = [
+        mockDelivery({ id: '1', status: DeliveryStatus.PAYMENT_CONFIRMED }),
+      ];
       repository.findOpenDeliveries.mockResolvedValue([deliveries, 1]);
 
       const result = await service.getOpenDeliveries(2, 25);
@@ -116,12 +142,17 @@ describe('DeliveryQueryService', () => {
   describe('nextStatuses', () => {
     it('should delegate to stateMachine nextStates', () => {
       const delivery = mockDelivery({ status: DeliveryStatus.CREATED });
-      const nextStates = [DeliveryStatus.PENDING_PAYMENT, DeliveryStatus.PAYMENT_CONFIRMED];
+      const nextStates = [
+        DeliveryStatus.PENDING_PAYMENT,
+        DeliveryStatus.PAYMENT_CONFIRMED,
+      ];
       stateMachine.nextStates.mockReturnValue(nextStates);
 
       const result = service.nextStatuses(delivery);
 
-      expect(stateMachine.nextStates).toHaveBeenCalledWith(DeliveryStatus.CREATED);
+      expect(stateMachine.nextStates).toHaveBeenCalledWith(
+        DeliveryStatus.CREATED,
+      );
       expect(result).toEqual(nextStates);
     });
 
@@ -131,7 +162,9 @@ describe('DeliveryQueryService', () => {
 
       const result = service.nextStatuses(delivery);
 
-      expect(stateMachine.nextStates).toHaveBeenCalledWith(DeliveryStatus.COMPLETED);
+      expect(stateMachine.nextStates).toHaveBeenCalledWith(
+        DeliveryStatus.COMPLETED,
+      );
       expect(result).toEqual([]);
     });
   });

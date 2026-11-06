@@ -40,7 +40,7 @@ describe('KafkaProducer', () => {
         'delivery.created',
         'delivery.created',
         { deliveryId: 'delivery-123', status: 'CREATED' },
-        { key: 'delivery-123' }
+        { key: 'delivery-123' },
       );
     });
 
@@ -57,7 +57,7 @@ describe('KafkaProducer', () => {
         'delivery.updated',
         'delivery.updated',
         { deliveryId: 'delivery-456', status: 'DRIVER_ASSIGNED' },
-        { key: 'delivery-456' }
+        { key: 'delivery-456' },
       );
     });
 
@@ -87,7 +87,7 @@ describe('KafkaProducer', () => {
         'delivery.picked_up',
         'delivery.picked_up',
         complexPayload,
-        { key: 'delivery-123' }
+        { key: 'delivery-123' },
       );
     });
   });

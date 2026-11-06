@@ -2,9 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { of, throwError } from 'rxjs';
 import { lastValueFrom } from 'rxjs';
 import { DriverAssignmentStep } from './driver-assignment.step';
-import { DeliveryCommandService } from '../../../services/delivery-command.service';
+import { DeliveryCommandService } from '../../services/delivery-command.service';
 import { DeliverySagaContext } from '../saga-step';
-import { createMockDeliveryCommandService, createMockGrpcClient, mockDelivery } from '../../../../../test-utils';
+import {
+  createMockDeliveryCommandService,
+  createMockGrpcClient,
+  mockDelivery,
+} from '../../../../test-utils';
 
 describe('DriverAssignmentStep', () => {
   let step: DriverAssignmentStep;
@@ -18,7 +22,9 @@ describe('DriverAssignmentStep', () => {
       ReleaseDriver: jest.fn(),
     };
 
-    const driverClientGrpc = { getService: jest.fn().mockReturnValue(driverServiceClient) };
+    const driverClientGrpc = {
+      getService: jest.fn().mockReturnValue(driverServiceClient),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -49,8 +55,12 @@ describe('DriverAssignmentStep', () => {
 
     async function createStepWithoutDriverClient() {
       const commands = createMockDeliveryCommandService();
-      const driverClientGrpc = { getService: jest.fn().mockImplementation(() => { throw new Error('No service'); }) };
-      
+      const driverClientGrpc = {
+        getService: jest.fn().mockImplementation(() => {
+          throw new Error('No service');
+        }),
+      };
+
       const module = await Test.createTestingModule({
         providers: [
           DriverAssignmentStep,
@@ -83,9 +93,13 @@ describe('DriverAssignmentStep', () => {
     it('should throw error if ReserveDriver fails', async () => {
       const delivery = mockDelivery({ driverId: 'driver-123' });
       const context: DeliverySagaContext = { delivery };
-      driverServiceClient.ReserveDriver.mockReturnValue(throwError(() => new Error('Driver not available')));
+      driverServiceClient.ReserveDriver.mockReturnValue(
+        throwError(() => new Error('Driver not available')),
+      );
 
-      await expect(step.execute(context)).rejects.toThrow('Driver not available');
+      await expect(step.execute(context)).rejects.toThrow(
+        'Driver not available',
+      );
     });
 
     it('should not call ReserveDriver when driverId is not set', async () => {
@@ -132,22 +146,30 @@ describe('DriverAssignmentStep', () => {
         delivery: mockDelivery({ id: 'delivery-123', driverId: 'driver-123' }),
       };
 
-      await expect(stepWithoutDriver.compensate(context)).resolves.not.toThrow();
+      await expect(
+        stepWithoutDriver.compensate(context),
+      ).resolves.not.toThrow();
     });
 
     it('should not throw if ReleaseDriver fails', async () => {
       const context: DeliverySagaContext = {
         delivery: mockDelivery({ id: 'delivery-123', driverId: 'driver-123' }),
       };
-      driverServiceClient.ReleaseDriver.mockReturnValue(throwError(() => new Error('Failed to release')));
+      driverServiceClient.ReleaseDriver.mockReturnValue(
+        throwError(() => new Error('Failed to release')),
+      );
 
       await expect(step.compensate(context)).resolves.not.toThrow();
     });
 
     async function createStepWithoutDriverClient() {
       const commands = createMockDeliveryCommandService();
-      const driverClientGrpc = { getService: jest.fn().mockImplementation(() => { throw new Error('No service'); }) };
-      
+      const driverClientGrpc = {
+        getService: jest.fn().mockImplementation(() => {
+          throw new Error('No service');
+        }),
+      };
+
       const module = await Test.createTestingModule({
         providers: [
           DriverAssignmentStep,

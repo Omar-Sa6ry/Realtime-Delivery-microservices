@@ -99,8 +99,8 @@ export class DeliveryResolver {
         setTimeout(
           () => {
             this.commands
-              .handleDriverSearchTimeout(confirmedDelivery.id)
-              .catch((err: Error) => {
+              ?.handleDriverSearchTimeout(confirmedDelivery.id)
+              ?.catch((err: Error) => {
                 this.logger.error(
                   `Driver search timeout check failed for delivery [${confirmedDelivery.id}]: ${err.message}`,
                 );
@@ -143,8 +143,8 @@ export class DeliveryResolver {
     }
     const tokenUserId = ctx.req?.user?.id ?? ctx.req?.headers?.['x-user-id'];
     const delivery = await this.commands.transition(
-      targetId as string,
-      input.status as DeliveryStatus,
+      targetId,
+      input.status,
       tokenUserId,
       input.note,
     );
@@ -182,7 +182,7 @@ export class DeliveryResolver {
       (ctx?.req?.user as any)?.role ?? ctx?.req?.headers?.['x-user-role'];
     const isAdmin = userRole === 'ADMIN' || userRole === 'admin';
 
-    const existing = await this.queries.getById(targetId as string);
+    const existing = await this.queries.getById(targetId);
     if (!isAdmin && existing.customerId !== tokenUserId) {
       throw new ForbiddenException(
         await this.i18n.t('delivery.unauthorizedCancel', {
@@ -191,11 +191,7 @@ export class DeliveryResolver {
       );
     }
 
-    const delivery = await this.commands.cancel(
-      targetId as string,
-      tokenUserId,
-      reason,
-    );
+    const delivery = await this.commands.cancel(targetId, tokenUserId, reason);
     return {
       success: true,
       statusCode: 200,

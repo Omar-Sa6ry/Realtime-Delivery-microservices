@@ -7,4 +7,3 @@ export interface GraphqlContext {
   req?: GraphqlRequest;
   language?: string;
 }
-

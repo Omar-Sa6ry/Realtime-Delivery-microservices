@@ -1,0 +1,81 @@
+# Self-contained infrastructure for the driver-service end-to-end suite.
+#
+#   docker compose -f docker-compose.e2e.yml -p driver-e2e up -d --wait
+#   DRIVER_E2E=1 go test ./test/e2e/... -count=1
+#
+# Host ports are deliberately offset from the development compose file
+# (27018/6380/9094/4223 instead of 27017/6379/9092/4222) so both stacks can
+# run side by side without fighting over a port.
+services:
+  mongo:
+    image: mongo:7
+    container_name: driver-e2e-mongo
+    ports:
+      - "27018:27017"
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ping:1})' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: driver-e2e-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: driver-e2e-kafka
+    ports:
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: CONTROLLER://:9093,PLAINTEXT://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:9094
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9094 --list >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 30s
+      retries: 30
+      start_period: 15s
+
+  nats:
+    image: nats:2-alpine
+    container_name: driver-e2e-nats
+    ports:
+      - "4223:4222"
+      - "8223:8222"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8222/healthz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: driver-e2e-rabbitmq
+    ports:
+      - "5673:5672"
+      - "15674:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 30
+      start_period: 30s

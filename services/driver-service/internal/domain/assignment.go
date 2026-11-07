@@ -182,8 +182,12 @@ func (a *Assignment) Cancel() error {
 	switch a.Status {
 	case AssignmentStatusOffered, AssignmentStatusAccepted, AssignmentStatusActive:
 		now := time.Now()
+		// The transition detail has to be read from the status this assignment
+		// had before the switch below: switching on the freshly assigned
+		// CANCELLED value would never match either case.
+		previous := a.Status
 		a.Status = AssignmentStatusCancelled
-		switch a.Status {
+		switch previous {
 		case AssignmentStatusOffered:
 			a.RejectedAt = &now
 		case AssignmentStatusAccepted:

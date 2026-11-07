@@ -41,6 +41,13 @@ import (
 )
 
 func main() {
+	os.Exit(run(context.Background()))
+}
+
+// run wires the whole service together and blocks until ctx is cancelled or an
+// OS shutdown signal arrives. It returns a process exit code instead of calling
+// log.Fatalf so the exact same wiring can be exercised by the end-to-end suite.
+func run(ctx context.Context) int {
 	sharedlogging.InitLoggerWithStdlibBridge()
 
 	cfg := config.Load()
@@ -57,9 +64,9 @@ func main() {
 	}
 	if tracer != nil {
 		defer func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			_ = tracer.Shutdown(ctx)
+			_ = tracer.Shutdown(shutdownCtx)
 		}()
 	}
 
@@ -68,7 +75,8 @@ func main() {
 	defer mongoCancel()
 	mongoClient, err := mongo.Connect(options.Client().ApplyURI(cfg.MongoDBURI))
 	if err != nil {
-		log.Fatalf("failed to connect to MongoDB: %v", err)
+		log.Printf("failed to connect to MongoDB: %v", err)
+		return 1
 	}
 	if err = mongoClient.Ping(mongoCtx, nil); err != nil {
 		log.Printf("WARNING: MongoDB ping failed: %v — service will retry on demand", err)
@@ -152,7 +160,8 @@ func main() {
 	// ─── gRPC Clients ─────────────────────────────────────────────────────────
 	userSvcConn, err := grpc.NewClient(cfg.UserServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("failed to dial user-service: %v", err)
+		log.Printf("failed to dial user-service: %v", err)
+		return 1
 	}
 	defer userSvcConn.Close()
 	userClient := adaptergrpcproto.NewUserServiceClient(userSvcConn)
@@ -219,7 +228,8 @@ func main() {
 	// ─── gRPC Server ──────────────────────────────────────────────────────────
 	grpcListener, err := net.Listen("tcp", ":"+cfg.PortGRPC)
 	if err != nil {
-		log.Fatalf("failed to bind gRPC port %s: %v", cfg.PortGRPC, err)
+		log.Printf("failed to bind gRPC port %s: %v", cfg.PortGRPC, err)
+		return 1
 	}
 	grpcSrv := adaptergrpc.NewGRPCServer(dispatchSvc, driverRepo)
 	go func() {
@@ -287,7 +297,10 @@ func main() {
 	// ─── Graceful Shutdown ────────────────────────────────────────────────────
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	select {
+	case <-quit:
+	case <-ctx.Done():
+	}
 
 	log.Println("Shutting down Driver Service gracefully...")
 	grpcSrv.Stop()
@@ -299,4 +312,5 @@ func main() {
 	_ = metricsSrv.Shutdown(shutdownCtx)
 
 	log.Println("Driver Service stopped.")
+	return 0
 }

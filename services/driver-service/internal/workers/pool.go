@@ -40,7 +40,12 @@ func NewWorkerPool(numWorkers int) *WorkerPool {
 func (p *WorkerPool) Start(ctx context.Context) {
 	for _, w := range p.workers {
 		p.wg.Add(1)
-		go w.run()
+		// The worker must decrement the WaitGroup when it returns, otherwise
+		// Stop() would block forever in wg.Wait().
+		go func(w *worker) {
+			defer p.wg.Done()
+			w.run()
+		}(w)
 	}
 }
 

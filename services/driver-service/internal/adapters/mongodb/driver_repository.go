@@ -137,9 +137,11 @@ func (r *DriverRepository) UpdateRating(ctx context.Context, driverID string, av
 	col := r.client.Database(r.database).Collection(r.collection)
 	update := bson.M{
 		"$set": bson.M{
+			// Keys must match domain.Driver's bson tags, otherwise the update
+			// writes shadow fields that the decoder never reads.
 			"rating":      averageRating,
-			"ratingcount": totalReviews,
-			"updatedat":   time.Now(),
+			"ratingCount": totalReviews,
+			"updatedAt":   time.Now(),
 		},
 	}
 	_, err := col.UpdateByID(ctx, driverID, update)

@@ -74,7 +74,8 @@ func startFakeClamAV(t *testing.T, reply string) *config.Config {
 		defer conn.Close()
 		_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
 		reader := bufio.NewReader(conn)
-		if _, err := reader.ReadString('\n'); err != nil {
+		// z-protocol: the command is null-terminated ("zINSTREAM\x00").
+		if _, err := reader.ReadBytes(0); err != nil {
 			return
 		}
 		var lenBuf [4]byte
@@ -89,7 +90,8 @@ func startFakeClamAV(t *testing.T, reply string) *config.Config {
 				return
 			}
 		}
-		_, _ = conn.Write([]byte(reply))
+		// z-protocol replies are null-terminated too.
+		_, _ = conn.Write(append([]byte(reply), 0))
 	}()
 
 	_, port, err := net.SplitHostPort(ln.Addr().String())

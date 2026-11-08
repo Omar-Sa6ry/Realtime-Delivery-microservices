@@ -318,7 +318,7 @@ func main() {
 		})
 		defer consumer.Close()
 		if err := consumer.Run(ctx, func(ctx context.Context, msg kafkago.Message) error {
-			return scanPool.Submit(ctx, func(ctx context.Context) error {
+			return scanPool.SubmitSync(ctx, func(ctx context.Context) error {
 				return scnWorker.Handle(ctx, msg)
 			})
 		}); err != nil && err != context.Canceled {
@@ -337,7 +337,7 @@ func main() {
 		})
 		defer consumer.Close()
 		if err := consumer.Run(ctx, func(ctx context.Context, msg kafkago.Message) error {
-			return imagePool.Submit(ctx, func(ctx context.Context) error {
+			return imagePool.SubmitSync(ctx, func(ctx context.Context) error {
 				return imgWorker.Handle(ctx, msg)
 			})
 		}); err != nil && err != context.Canceled {
@@ -356,7 +356,7 @@ func main() {
 		})
 		defer consumer.Close()
 		if err := consumer.Run(ctx, func(ctx context.Context, msg kafkago.Message) error {
-			return videoPool.Submit(ctx, func(ctx context.Context) error {
+			return videoPool.SubmitSync(ctx, func(ctx context.Context) error {
 				return vidWorker.Handle(ctx, msg)
 			})
 		}); err != nil && err != context.Canceled {
@@ -375,7 +375,7 @@ func main() {
 		})
 		defer consumer.Close()
 		if err := consumer.Run(ctx, func(ctx context.Context, msg kafkago.Message) error {
-			return compressPool.Submit(ctx, func(ctx context.Context) error {
+			return compressPool.SubmitSync(ctx, func(ctx context.Context) error {
 				return cmpWorker.Handle(ctx, msg)
 			})
 		}); err != nil && err != context.Canceled {
@@ -394,7 +394,7 @@ func main() {
 		})
 		defer consumer.Close()
 		if err := consumer.Run(ctx, func(ctx context.Context, msg kafkago.Message) error {
-			return metaPool.Submit(ctx, func(ctx context.Context) error {
+			return metaPool.SubmitSync(ctx, func(ctx context.Context) error {
 				return metaWorker.Handle(ctx, msg)
 			})
 		}); err != nil && err != context.Canceled {
@@ -413,7 +413,7 @@ func main() {
 		})
 		defer consumer.Close()
 		if err := consumer.Run(ctx, func(ctx context.Context, msg kafkago.Message) error {
-			return deletePool.Submit(ctx, func(ctx context.Context) error {
+			return deletePool.SubmitSync(ctx, func(ctx context.Context) error {
 				return delWorker.Handle(ctx, msg)
 			})
 		}); err != nil && err != context.Canceled {

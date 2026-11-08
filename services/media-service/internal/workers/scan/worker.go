@@ -1,10 +1,10 @@
 package scan
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"strings"
@@ -158,10 +158,12 @@ func (w *Worker) scanWithClamAV(ctx context.Context, objectKey string) (infected
 	}
 	defer reader.Close()
 
-	// Send INSTREAM command to clamd
-	// Protocol: "INSTREAM\n" then chunks of 4-byte length + data, then 4-byte 0
+	// Send INSTREAM command to clamd.
+	// Protocol: "zINSTREAM\x00" (null-terminated, required for INSTREAM),
+	// then chunks of 4-byte big-endian length + data, then a 4-byte zero
+	// terminator. Replies are also null-terminated.
 	conn.SetWriteDeadline(time.Now().Add(30 * time.Second))
-	if _, err := conn.Write([]byte("INSTREAM\n")); err != nil {
+	if _, err := conn.Write([]byte("zINSTREAM\x00")); err != nil {
 		return false, "", fmt.Errorf("write INSTREAM: %w", err)
 	}
 
@@ -194,31 +196,52 @@ func (w *Worker) scanWithClamAV(ctx context.Context, objectKey string) (infected
 		return false, "", fmt.Errorf("write zero chunk: %w", err)
 	}
 
-	// Read response
-	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-	scanner := bufio.NewScanner(conn)
-	for scanner.Scan() {
-		line := scanner.Text()
-		slog.Debug("ClamAV response", "line", line)
-		if strings.Contains(line, "FOUND") {
-			// Format: "stream: Threat.Name FOUND"
-			parts := strings.Split(line, " ")
-			if len(parts) >= 2 {
-				threat = parts[1]
-			}
-			return true, threat, nil
-		}
-		if strings.Contains(line, "OK") {
-			return false, "", nil
-		}
-	}
-	if err := scanner.Err(); err != nil {
+	// Read the null-terminated response from clamd.
+	conn.SetReadDeadline(time.Now().Add(15 * time.Second))
+	response, err := readNullTerminated(conn)
+	if err != nil {
 		return false, "", fmt.Errorf("read clamd response: %w", err)
+	}
+	slog.Debug("ClamAV response", "line", response)
+	if strings.Contains(response, "FOUND") {
+		// Format: "stream: Threat.Name FOUND"
+		parts := strings.Split(response, " ")
+		if len(parts) >= 2 {
+			threat = parts[1]
+		}
+		return true, threat, nil
+	}
+	if strings.Contains(response, "OK") {
+		return false, "", nil
 	}
 
 	// Default to clean if no clear result
-	slog.Warn("ClamAV: unexpected response, treating as clean", "objectKey", objectKey)
+	slog.Warn("ClamAV: unexpected response, treating as clean", "objectKey", objectKey, "response", response)
 	return false, "", nil
+}
+
+// readNullTerminated reads from r until a NUL byte (clamd z-protocol reply).
+func readNullTerminated(r io.Reader) (string, error) {
+	var out []byte
+	single := make([]byte, 1)
+	for {
+		n, err := r.Read(single)
+		if n > 0 {
+			if single[0] == 0 {
+				return string(out), nil
+			}
+			out = append(out, single[0])
+			if len(out) > 4096 {
+				return string(out), nil
+			}
+		}
+		if err != nil {
+			if err == io.EOF && len(out) > 0 {
+				return string(out), nil
+			}
+			return string(out), err
+		}
+	}
 }
 
 // publishEvent fires a Kafka event via the outbox publisher.

@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 )
@@ -42,6 +43,25 @@ func (p *WorkerPool) Submit(ctx context.Context, job Job) error {
 		}
 	}()
 	return nil
+}
+
+// SubmitSync runs job under the pool's concurrency limit and returns its
+// result. Unlike Submit, job errors and panics surface to the caller so
+// Kafka consumers can retry and route poison messages to the DLQ.
+func (p *WorkerPool) SubmitSync(ctx context.Context, job Job) (err error) {
+	select {
+	case p.semaphore <- struct{}{}: // acquire slot
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	defer func() { <-p.semaphore }() // release slot
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("Worker panic recovered", "pool", p.name, "panic", r)
+			err = fmt.Errorf("worker panic: %v", r)
+		}
+	}()
+	return job(ctx)
 }
 
 func (p *WorkerPool) Shutdown() {

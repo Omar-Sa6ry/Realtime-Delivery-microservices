@@ -219,3 +219,45 @@ func TestSubmitAfterShutdownStillRunsJob(t *testing.T) {
 	}
 	p.Shutdown()
 }
+
+func TestSubmitSyncReturnsJobError(t *testing.T) {
+	p := NewWorkerPool("sync-err", 1)
+	want := errors.New("boom")
+	if err := p.SubmitSync(context.Background(), func(ctx context.Context) error { return want }); !errors.Is(err, want) {
+		t.Fatalf("SubmitSync = %v, want %v", err, want)
+	}
+}
+
+func TestSubmitSyncRecoversPanicAndReleasesSlot(t *testing.T) {
+	p := NewWorkerPool("sync-panic", 1)
+	if err := p.SubmitSync(context.Background(), func(ctx context.Context) error { panic("boom") }); err == nil {
+		t.Fatal("SubmitSync on panicking job = nil, want error")
+	}
+	if err := p.SubmitSync(context.Background(), func(ctx context.Context) error { return nil }); err != nil {
+		t.Fatalf("SubmitSync after panic = %v, want nil", err)
+	}
+	if got := p.ActiveWorkers(); got != 0 {
+		t.Fatalf("ActiveWorkers() = %d after panicking job, want 0", got)
+	}
+}
+
+func TestSubmitSyncHonorsContextCancel(t *testing.T) {
+	p := NewWorkerPool("sync-cancel", 1)
+	block := make(chan struct{})
+	started := make(chan struct{})
+	go func() {
+		_ = p.SubmitSync(context.Background(), func(ctx context.Context) error {
+			close(started)
+			<-block
+			return nil
+		})
+	}()
+	<-started
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := p.SubmitSync(ctx, func(ctx context.Context) error { return nil }); !errors.Is(err, context.Canceled) {
+		t.Fatalf("SubmitSync on cancelled ctx = %v, want context.Canceled", err)
+	}
+	close(block)
+}

@@ -30,10 +30,6 @@ import { NotificationOutbox } from './database/entities/notification-outbox.enti
       useExisting: RedisService,
     },
   ],
-  exports: [
-    TypeOrmModule,
-    RedisModule,
-    'SHARED_REDIS_SERVICE',
-  ],
+  exports: [TypeOrmModule, RedisModule, 'SHARED_REDIS_SERVICE'],
 })
 export class CommonModule {}

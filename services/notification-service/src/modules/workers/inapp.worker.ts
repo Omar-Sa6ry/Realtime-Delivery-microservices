@@ -28,10 +28,14 @@ export class InAppWorker extends WorkerHost {
   async process(job: Job<{ notificationId: string; deliveryId: string }>) {
     const { notificationId, deliveryId } = job.data;
 
-    const delivery = await this.deliveryRepository.findOne({ where: { id: deliveryId } });
+    const delivery = await this.deliveryRepository.findOne({
+      where: { id: deliveryId },
+    });
     if (!delivery) return;
 
-    const notification = await this.notificationRepository.findOne({ where: { id: notificationId } });
+    const notification = await this.notificationRepository.findOne({
+      where: { id: notificationId },
+    });
     if (!notification) return;
 
     await this.deliveryState.beginProcessing(delivery);
@@ -39,16 +43,25 @@ export class InAppWorker extends WorkerHost {
     try {
       await this.notificationService.send(
         ChannelType.IN_APP,
-        buildChannelMessage(notification, `in-app:${notification.id}:${delivery.id}`),
+        buildChannelMessage(
+          notification,
+          `in-app:${notification.id}:${delivery.id}`,
+        ),
       );
 
-      await this.deliveryState.complete(delivery, notification, { delivered: true });
+      await this.deliveryState.complete(delivery, notification, {
+        delivered: true,
+      });
 
-      this.logger.debug(`InApp sent successfully for notification ${notificationId}`);
+      this.logger.debug(
+        `InApp sent successfully for notification ${notificationId}`,
+      );
     } catch (error) {
       await this.deliveryState.fail(delivery, notification, error);
 
-      this.logger.error(`InApp failed for notification ${notificationId}: ${error.message}`);
+      this.logger.error(
+        `InApp failed for notification ${notificationId}: ${error.message}`,
+      );
       throw error; // Let BullMQ handle retry
     }
   }

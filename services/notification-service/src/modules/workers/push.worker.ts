@@ -28,10 +28,14 @@ export class PushWorker extends WorkerHost {
   async process(job: Job<{ notificationId: string; deliveryId: string }>) {
     const { notificationId, deliveryId } = job.data;
 
-    const delivery = await this.deliveryRepository.findOne({ where: { id: deliveryId } });
+    const delivery = await this.deliveryRepository.findOne({
+      where: { id: deliveryId },
+    });
     if (!delivery) return;
 
-    const notification = await this.notificationRepository.findOne({ where: { id: notificationId } });
+    const notification = await this.notificationRepository.findOne({
+      where: { id: notificationId },
+    });
     if (!notification) return;
 
     await this.deliveryState.beginProcessing(delivery);
@@ -39,16 +43,23 @@ export class PushWorker extends WorkerHost {
     try {
       await this.notificationService.send(
         ChannelType.FIREBASE_FCM,
-        buildChannelMessage(notification, `push:${notification.id}:${delivery.id}`),
+        buildChannelMessage(
+          notification,
+          `push:${notification.id}:${delivery.id}`,
+        ),
       );
 
       await this.deliveryState.complete(delivery, notification);
 
-      this.logger.debug(`Push sent successfully for notification ${notificationId}`);
+      this.logger.debug(
+        `Push sent successfully for notification ${notificationId}`,
+      );
     } catch (error) {
       await this.deliveryState.fail(delivery, notification, error);
 
-      this.logger.error(`Push failed for notification ${notificationId}: ${error.message}`);
+      this.logger.error(
+        `Push failed for notification ${notificationId}: ${error.message}`,
+      );
       throw error; // Let BullMQ handle retry
     }
   }

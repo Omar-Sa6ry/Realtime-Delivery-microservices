@@ -25,7 +25,9 @@ export class RealtimeWorker extends WorkerHost {
   async process(job: Job<{ notificationId: string; deliveryId: string }>) {
     const { notificationId, deliveryId } = job.data;
 
-    const delivery = await this.deliveryRepository.findOne({ where: { id: deliveryId } });
+    const delivery = await this.deliveryRepository.findOne({
+      where: { id: deliveryId },
+    });
     if (!delivery) return;
 
     const notification = await this.notificationRepository.findOne({
@@ -42,13 +44,19 @@ export class RealtimeWorker extends WorkerHost {
 
     try {
       // Delivery is dispatched to clients through the NATS outbox.
-      await this.deliveryState.complete(delivery, notification, { delivered: true });
+      await this.deliveryState.complete(delivery, notification, {
+        delivered: true,
+      });
 
-      this.logger.debug(`Realtime dispatched via outbox for notification ${notificationId}`);
+      this.logger.debug(
+        `Realtime dispatched via outbox for notification ${notificationId}`,
+      );
     } catch (error) {
       await this.deliveryState.fail(delivery, notification, error);
 
-      this.logger.error(`Realtime failed for notification ${notificationId}: ${error.message}`);
+      this.logger.error(
+        `Realtime failed for notification ${notificationId}: ${error.message}`,
+      );
       throw error;
     }
   }

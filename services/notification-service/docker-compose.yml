@@ -46,7 +46,7 @@ services:
       - zookeeper-srv
 
   zookeeper-srv:
-    image: bitnami/zookeeper:3.9
+    image: soldevelo/zookeeper:3.9
     pull_policy: missing
     container_name: zookeeper-srv
     ports:

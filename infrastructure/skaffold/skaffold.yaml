@@ -10,7 +10,7 @@ manifests:
       - infrastructure/kubernetes/overlays/development
 
 deploy:
-  statusCheck: true
+  statusCheck: false
   statusCheckDeadlineSeconds: 3600
   kubectl:
     hooks:

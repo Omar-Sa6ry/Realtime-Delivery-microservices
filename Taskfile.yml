@@ -3,7 +3,8 @@ version: '3'
 vars:
   ENV: '{{.ENV | default "development"}}'
   ENV_FILE: 'config/env/.env.{{.ENV}}'
-  COMPOSE: 'docker-compose --env-file {{.ENV_FILE}}'
+  COMPOSE: 'docker compose --env-file {{.ENV_FILE}}'
+  SERVICE: '{{.SERVICE | default "all"}}'
 
 tasks:
   default:
@@ -14,19 +15,34 @@ tasks:
   env-check:
     desc: Verify that the selected environment file exists
     cmds:
-      - test -f {{.ENV_FILE}}
+      - powershell -Command "if (!(Test-Path {{.ENV_FILE}})) { Write-Error 'Env file not found: {{.ENV_FILE}}'; exit 1 }"
 
+  # ----------------------------------------------------------------------------
+  # Docker Compose Stack
+  # ----------------------------------------------------------------------------
   infra-up:
-    desc: Start infrastructure for ENV=test|development|production
+    desc: Start infrastructure containers (DBs, Redis, Kafka, NATS, etc.)
     deps: [env-check]
     cmds:
       - '{{.COMPOSE}} -f infrastructure/docker/compose.infra.yml up -d'
 
   infra-down:
-    desc: Stop infrastructure for the selected environment
+    desc: Stop infrastructure containers
     deps: [env-check]
     cmds:
       - '{{.COMPOSE}} -f infrastructure/docker/compose.infra.yml down'
+
+  infra-logs:
+    desc: Tail infrastructure container logs
+    deps: [env-check]
+    cmds:
+      - '{{.COMPOSE}} -f infrastructure/docker/compose.infra.yml logs -f'
+
+  infra-ps:
+    desc: Show status of infrastructure containers
+    deps: [env-check]
+    cmds:
+      - '{{.COMPOSE}} -f infrastructure/docker/compose.infra.yml ps'
 
   dev-up:
     desc: Start the full Docker stack for the selected environment
@@ -40,22 +56,164 @@ tasks:
     cmds:
       - '{{.COMPOSE}} -f infrastructure/docker/compose.yml -f infrastructure/docker/compose.integration.yml down'
 
+  dev-logs:
+    desc: Tail full dev stack logs
+    deps: [env-check]
+    cmds:
+      - '{{.COMPOSE}} -f infrastructure/docker/compose.yml -f infrastructure/docker/compose.integration.yml logs -f'
+
+  dev-ps:
+    desc: Show running stack containers
+    deps: [env-check]
+    cmds:
+      - '{{.COMPOSE}} -f infrastructure/docker/compose.yml -f infrastructure/docker/compose.integration.yml ps'
+
+  integration-up:
+    desc: Start integration stack (observability & selected services)
+    deps: [env-check]
+    cmds:
+      - '{{.COMPOSE}} -f infrastructure/docker/compose.integration.yml up -d'
+
+  integration-down:
+    desc: Stop integration stack
+    deps: [env-check]
+    cmds:
+      - '{{.COMPOSE}} -f infrastructure/docker/compose.integration.yml down'
+
+  docker-ps:
+    desc: List all active Docker containers
+    cmds:
+      - 'docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}"'
+
+  docker-clean:
+    desc: Clean up unused Docker containers, networks, and images
+    cmds:
+      - 'docker system prune -f'
+
+  # ----------------------------------------------------------------------------
+  # Kubernetes & Minikube
+  # ----------------------------------------------------------------------------
   k8s-validate:
     desc: Validate Kubernetes manifests locally
     cmds:
       - kubectl kustomize infrastructure/kubernetes/overlays/development
 
+  k8s-apply:
+    desc: Apply Kubernetes manifests to the active cluster
+    cmds:
+      - kubectl apply -k infrastructure/kubernetes/overlays/development
+
+  k8s-delete:
+    desc: Delete Kubernetes resources defined in overlay
+    cmds:
+      - kubectl delete -k infrastructure/kubernetes/overlays/development
+
+  minikube-start:
+    desc: Start local Minikube cluster
+    cmds:
+      - minikube start --driver=docker --cpus 6 --memory 15000
+
+  minikube-stop:
+    desc: Stop Minikube cluster
+    cmds:
+      - minikube stop
+
+  minikube-status:
+    desc: Display Minikube status
+    cmds:
+      - minikube status
+
+  minikube-tunnel:
+    desc: Start Minikube network tunnel
+    cmds:
+      - minikube tunnel
+
+  minikube-env:
+    desc: Configure shell environment to use Minikube's Docker daemon
+    cmds:
+      - powershell -Command "& minikube -p minikube docker-env | Invoke-Expression"
+
+  # ----------------------------------------------------------------------------
+  # Skaffold
+  # ----------------------------------------------------------------------------
   skaffold-dev:
     desc: Start Skaffold development mode
     cmds:
       - skaffold dev -f infrastructure/skaffold/skaffold.yaml --cache-artifacts=true --build-concurrency=0
+
+  skaffold-run:
+    desc: One-shot deploy via Skaffold without dev loop
+    cmds:
+      - skaffold run -f infrastructure/skaffold/skaffold.yaml --cache-artifacts=true
+
+  skaffold-build:
+    desc: Build images via Skaffold
+    cmds:
+      - skaffold build -f infrastructure/skaffold/skaffold.yaml
+
+  skaffold-logs:
+    desc: Tail application logs via Skaffold
+    cmds:
+      - skaffold logs -f infrastructure/skaffold/skaffold.yaml
 
   skaffold-delete:
     desc: Delete Skaffold-managed resources
     cmds:
       - skaffold delete -f infrastructure/skaffold/skaffold.yaml
 
-  proto-generate:
-    desc: Show the protobuf generation reference
+  skaffold-diagnose:
+    desc: Diagnose Skaffold configuration
     cmds:
-      - echo "Run the protobuf generation commands documented in infrastructure/commands.txt"
+      - skaffold diagnose -f infrastructure/skaffold/skaffold.yaml
+
+  # ----------------------------------------------------------------------------
+  # Code Generation & Protobuf
+  # ----------------------------------------------------------------------------
+  proto-generate:
+    desc: Compile Protobuf definitions
+    cmds:
+      - powershell -Command "if (!(Test-Path services/delivery-service/internal/protos/user)) { New-Item -ItemType Directory -Force -Path services/delivery-service/internal/protos/user | Out-Null }"
+      - protoc --proto_path=. --proto_path=protos --go_out=services/delivery-service/internal/protos --go-grpc_out=services/delivery-service/internal/protos protos/user.proto
+      - protoc --proto_path=. --proto_path=protos --go_out=services/delivery-service/internal/protos --go-grpc_out=services/delivery-service/internal/protos protos/delivery.proto
+      - protoc --proto_path=. --proto_path=protos --go_out=services/payment-service/internal/adapters/grpc/proto --go-grpc_out=services/payment-service/internal/adapters/grpc/proto protos/payment.proto
+
+  # ----------------------------------------------------------------------------
+  # Build & Quality Tasks
+  # ----------------------------------------------------------------------------
+  build:
+    desc: Build a specific service or shared ts package (e.g. task build SERVICE=user-service)
+    cmds:
+      - powershell -NoProfile -ExecutionPolicy Bypass -Command "if ('{{.SERVICE}}' -eq 'all') { npm --prefix packages/ts run build } else { if (Test-Path 'services/{{.SERVICE}}/package.json') { npm --prefix services/{{.SERVICE}} run build } elseif (Test-Path 'services/{{.SERVICE}}/go.mod') { Push-Location services/{{.SERVICE}}; go build ./...; Pop-Location } elseif (Test-Path '{{.SERVICE}}/package.json') { npm --prefix {{.SERVICE}} run build } elseif (Test-Path '{{.SERVICE}}/go.mod') { Push-Location {{.SERVICE}}; go build ./...; Pop-Location } }"
+
+  build-all:
+    desc: Build all TypeScript and Go services and packages
+    cmds:
+      - powershell -NoProfile -ExecutionPolicy Bypass -Command "npm --prefix packages/ts run build; @('api-gateway','delivery-service','notification-service','realtime-service','user-service') | ForEach-Object { npm --prefix services/$$_ run build }; @('analytics-service','driver-service','media-service','payment-service','search-service') | ForEach-Object { Push-Location services/$$_; go build ./...; Pop-Location }"
+
+  lint:
+    desc: Lint TypeScript services and packages (e.g. task lint SERVICE=api-gateway)
+    cmds:
+      - powershell -NoProfile -ExecutionPolicy Bypass -Command "if ('{{.SERVICE}}' -eq 'all') { @('packages/ts','services/api-gateway','services/delivery-service','services/notification-service','services/realtime-service','services/user-service') | ForEach-Object { if (Test-Path \"$$_/package.json\") { npm --prefix $$_ run lint } } } else { if (Test-Path 'services/{{.SERVICE}}') { npm --prefix services/{{.SERVICE}} run lint } else { npm --prefix {{.SERVICE}} run lint } }"
+
+  format:
+    desc: Format TypeScript and Go codebases
+    cmds:
+      - powershell -NoProfile -ExecutionPolicy Bypass -Command "if ('{{.SERVICE}}' -eq 'all') { @('packages/ts','services/api-gateway','services/delivery-service','services/notification-service','services/realtime-service','services/user-service') | ForEach-Object { if (Test-Path \"$$_/package.json\") { npm --prefix $$_ run format } }; @('packages/go','services/analytics-service','services/driver-service','services/media-service','services/payment-service','services/search-service') | ForEach-Object { Push-Location $$_; go fmt ./...; Pop-Location } } else { if (Test-Path 'services/{{.SERVICE}}/package.json') { npm --prefix services/{{.SERVICE}} run format } elseif (Test-Path 'services/{{.SERVICE}}/go.mod') { Push-Location services/{{.SERVICE}}; go fmt ./...; Pop-Location } }"
+
+  # ----------------------------------------------------------------------------
+  # Unified Testing (3 Tasks)
+  # ----------------------------------------------------------------------------
+  test-unit:
+    desc: Run unit tests across services and packages (e.g. task test-unit SERVICE=user-service)
+    cmds:
+      - powershell -ExecutionPolicy Bypass -File ./scripts/test-unit.ps1 -Target "{{.SERVICE}}"
+
+  test-e2e:
+    desc: Run E2E tests across services (e.g. task test-e2e SERVICE=payment-service)
+    cmds:
+      - powershell -ExecutionPolicy Bypass -File ./scripts/test-e2e.ps1 -Target "{{.SERVICE}}"
+
+  test-cov:
+    desc: Run test coverage across services and packages (e.g. task test-cov SERVICE=delivery-service)
+    cmds:
+      - powershell -ExecutionPolicy Bypass -File ./scripts/test-cov.ps1 -Target "{{.SERVICE}}"

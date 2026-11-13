@@ -7,6 +7,7 @@ metadata:
     app: clamav
 spec:
   replicas: 1
+  progressDeadlineSeconds: 1200
   selector:
     matchLabels:
       app: clamav
@@ -22,16 +23,27 @@ spec:
           ports:
             - name: clamav
               containerPort: 3310
+          env:
+            - name: FRESHCLAM_CHECKS
+              value: "1"
+            - name: CLAMAV_NO_FRESHCLAM
+              value: "false"
           readinessProbe:
             tcpSocket:
               port: clamav
-            initialDelaySeconds: 60
+            initialDelaySeconds: 30
             periodSeconds: 15
-            failureThreshold: 20
+            failureThreshold: 30
+          startupProbe:
+            tcpSocket:
+              port: clamav
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 60
           livenessProbe:
             tcpSocket:
               port: clamav
-            initialDelaySeconds: 120
+            initialDelaySeconds: 30
             periodSeconds: 30
             failureThreshold: 5
           resources:

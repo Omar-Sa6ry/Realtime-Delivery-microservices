@@ -64,7 +64,7 @@ type Config struct {
 	DeliveryServiceURL string
 }
 
-func Load() (*Config, error) {
+func Load() *Config {
 	_ = godotenv.Load()
 
 	getEnv := func(key, defaultValue string) string {
@@ -146,5 +146,5 @@ func Load() (*Config, error) {
 		StripeSuccessURL:     getEnv("STRIPE_WEBHOOK_SUCCESSURL", ""),
 		StripeFailURL:        getEnv("STRIPE_WEBHOOK_FAILURL", ""),
 		DeliveryServiceURL:   getEnv("DELIVERY_SERVICE_URL", "http://localhost:4003"),
-	}, nil
+	}
 }

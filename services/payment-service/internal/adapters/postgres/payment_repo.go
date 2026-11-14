@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/domain"
 	"github.com/lib/pq"
@@ -213,24 +212,4 @@ func scanPayments(rows *sql.Rows) ([]*domain.Payment, error) {
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 	return payments, nil
-}
-
-type nullTime struct {
-	Time  time.Time
-	Valid bool
-}
-
-func (n *nullTime) Scan(value interface{}) error {
-	if value == nil {
-		n.Valid = false
-		return nil
-	}
-	switch v := value.(type) {
-	case time.Time:
-		n.Time = v
-		n.Valid = true
-	default:
-		return fmt.Errorf("nullTime: unsupported type %T", v)
-	}
-	return nil
 }

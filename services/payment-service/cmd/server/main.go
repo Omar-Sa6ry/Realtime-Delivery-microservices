@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"database/sql"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -35,17 +35,35 @@ import (
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/payment-service/internal/workers"
 )
 
-func main() {
-	// Shared Logger (packages/go/logging)
-	logger := pkglogging.InitLogger()
-	_ = logger // slog.Default() is set inside InitLogger
+// test seams. Production always uses the defaults; tests swap them to exercise
+// failure paths without waiting for real infrastructure to time out.
+var (
+	pgConnect             = pgadapter.Connect
+	rabbitMQConnect       = pkgrmq.ConnectURL
+	ensurePaymentTopology = rmqadapter.EnsurePaymentTopology
+	natsConnect           = natsadapter.NewRealtimePublisher
+	tracerInit            = observability.NewTracer
+	grpcListen            = net.Listen
+)
 
-	// Configuration
-	cfg, err := config.Load()
-	if err != nil {
-		slog.Error("failed to load config", "error", err)
+func main() {
+	pkglogging.InitLogger()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	if err := run(stop); err != nil {
+		slog.Error("payment service exited with error", "error", err)
 		os.Exit(1)
 	}
+}
+
+func run(stop <-chan os.Signal) error {
+	// Shared Logger (packages/go/logging)
+	pkglogging.InitLogger()
+
+	// Configuration
+	cfg := config.Load()
 
 	if cfg.NodeEnv == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -56,13 +74,11 @@ func main() {
 		WorkerID: cfg.SnowflakeWorkerID,
 	})
 	if err != nil {
-		slog.Error("failed to initialize snowflake", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("initialize snowflake: %w", err)
 	}
-	_ = sf // passed to application services
 
 	// PostgreSQL
-	db, err := pgadapter.Connect(
+	db, err := pgConnect(
 		cfg.PostgresDSN,
 		cfg.DBUser,
 		cfg.DBPassword,
@@ -72,8 +88,7 @@ func main() {
 		cfg.DBSSLMode,
 	)
 	if err != nil {
-		slog.Error("failed to connect to PostgreSQL", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("connect to postgresql: %w", err)
 	}
 	defer pgadapter.Close(db)
 
@@ -97,11 +112,11 @@ func main() {
 	// RabbitMQ (Phase 4, best-effort, alongside Kafka): publisher + dispatch
 	// responses consumer start only when RABBITMQ_URL is set. Non-fatal.
 	if rabbitMQURL := os.Getenv("RABBITMQ_URL"); rabbitMQURL != "" {
-		if rmqConn, rmqErr := pkgrmq.ConnectURL(rabbitMQURL, "payment-service"); rmqErr != nil {
+		if rmqConn, rmqErr := rabbitMQConnect(rabbitMQURL, "payment-service"); rmqErr != nil {
 			slog.Warn("RabbitMQ connection failed (non-fatal — Kafka remains active)", "error", rmqErr)
 		} else {
 			defer rmqConn.Close()
-			if terr := rmqadapter.EnsurePaymentTopology(rmqConn); terr != nil {
+			if terr := ensurePaymentTopology(rmqConn); terr != nil {
 				slog.Warn("RabbitMQ topology ensure failed (non-fatal)", "error", terr)
 			}
 			rmqPublisher := rmqadapter.NewRabbitMQPublisher(rmqConn)
@@ -111,17 +126,17 @@ func main() {
 				slog.Info("RabbitMQ dispatch.response received", "eventType", env.EventType, "eventId", env.EventID)
 				return nil
 			})
+			consumerCtx, consumerCancel := context.WithCancel(context.Background())
+			defer consumerCancel()
 			go func() {
-				if err := rmqConsumer.Run(context.Background()); err != nil {
-					slog.Warn("RabbitMQ dispatch consumer stopped", "error", err)
-				}
+				_ = rmqConsumer.Run(consumerCtx)
 			}()
 			slog.Info("RabbitMQ payment adapters enabled")
 		}
 	}
 
 	// NATS Realtime Publisher
-	natsPublisher, err := natsadapter.NewRealtimePublisher(cfg.NATSUrl)
+	natsPublisher, err := natsConnect(cfg.NATSUrl)
 	if err != nil {
 		slog.Warn("NATS connection failed (non-fatal — realtime disabled)", "error", err)
 	}
@@ -131,7 +146,7 @@ func main() {
 
 	// Observability
 	observability.M()
-	tracer, err := observability.NewTracer(observability.TracerConfig{
+	tracer, err := tracerInit(observability.TracerConfig{
 		ServiceName:    "payment-service",
 		OTLPEndpoint:   cfg.OTELEndpoint,
 		SamplingRate:   0.1,
@@ -193,7 +208,7 @@ func main() {
 	)
 	go func() {
 		slog.Info("gRPC server starting", "port", cfg.PortGRPC)
-		lis, err := net.Listen("tcp", ":"+cfg.PortGRPC)
+		lis, err := grpcListen("tcp", ":"+cfg.PortGRPC)
 		if err != nil {
 			slog.Error("gRPC listen failed", "error", err)
 			return
@@ -268,9 +283,7 @@ func main() {
 	}()
 
 	//  16. Graceful Shutdown ─
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	<-stop
 
 	slog.Info("shutting down payment service...")
 
@@ -282,6 +295,7 @@ func main() {
 	grpcSrv.Stop()
 
 	slog.Info("payment service stopped")
+	return nil
 }
 
 // splitBrokers splits a comma-separated broker string into a slice.
@@ -310,8 +324,3 @@ func splitString(s string, sep rune) []string {
 	parts = append(parts, s[start:])
 	return parts
 }
-
-// dbPinger wraps *sql.DB to satisfy the ReadyHandler interface.
-type dbPinger struct{ *sql.DB }
-
-func (d *dbPinger) Ping() error { return d.DB.Ping() }

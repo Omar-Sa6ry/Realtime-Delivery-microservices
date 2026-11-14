@@ -114,10 +114,10 @@ func NormalizeLang(tag string) string {
 
 func T(lang, key string, args ...interface{}) string {
 	lang = NormalizeLang(lang)
-	dict, exists := messages[lang]
-	if !exists {
-		dict = messages[DefaultLang]
-	}
+	// NormalizeLang only ever returns "en" or "ar", both always present.
+	// Reading a missing key from a nil map is safe and falls through to the
+	// English fallback below, so no existence check is needed.
+	dict := messages[lang]
 
 	msg, found := dict[key]
 	if !found {

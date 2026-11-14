@@ -50,15 +50,14 @@ func NewTracer(config TracerConfig) (*Tracer, error) {
 		return nil, fmt.Errorf("failed to create OTLP exporter: %w", err)
 	}
 
-	res, err := resource.New(context.Background(),
+	// resource.New only fails when a detector fails; WithAttributes cannot fail,
+	// so the error is intentionally ignored here.
+	res, _ := resource.New(context.Background(),
 		resource.WithAttributes(
 			semconv.ServiceName(config.ServiceName),
 			semconv.ServiceVersion("1.0.0"),
 		),
 	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create resource: %w", err)
-	}
 
 	// Create tracer provider
 	provider := sdktrace.NewTracerProvider(
@@ -130,11 +129,8 @@ func (t *Tracer) Shutdown(ctx context.Context) error {
 }
 
 func ExtractTraceID(ctx context.Context) string {
-	span := trace.SpanFromContext(ctx)
-	if span == nil {
-		return ""
-	}
-	spanContext := span.SpanContext()
+	// SpanFromContext returns a non-nil no-op span when there is none.
+	spanContext := trace.SpanFromContext(ctx).SpanContext()
 	if !spanContext.IsValid() {
 		return ""
 	}
@@ -142,11 +138,7 @@ func ExtractTraceID(ctx context.Context) string {
 }
 
 func ExtractSpanID(ctx context.Context) string {
-	span := trace.SpanFromContext(ctx)
-	if span == nil {
-		return ""
-	}
-	spanContext := span.SpanContext()
+	spanContext := trace.SpanFromContext(ctx).SpanContext()
 	if !spanContext.IsValid() {
 		return ""
 	}
@@ -251,9 +243,5 @@ func (p *PaymentOperation) Context() context.Context {
 }
 
 func GetTracerFromContext(ctx context.Context) trace.Tracer {
-	span := trace.SpanFromContext(ctx)
-	if span == nil {
-		return nil
-	}
-	return span.TracerProvider().Tracer("")
+	return trace.SpanFromContext(ctx).TracerProvider().Tracer("")
 }

@@ -11,24 +11,32 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// Swappable dial/retry knobs so tests can exercise every branch hermetically
+// without waiting on a real server.
+var (
+	openConnection = sql.Open
+	pingAttempts   = 60
+	pingRetryWait  = 2 * time.Second
+)
+
 func EnsureDatabaseExists(user, password, host, port, targetDB, sslmode string) error {
 	userInfo := url.UserPassword(user, password)
 	defaultDSN := fmt.Sprintf("postgres://%s@%s:%s/postgres?sslmode=%s", userInfo.String(), host, port, sslmode)
-	
-	defaultDB, err := sql.Open("postgres", defaultDSN)
+
+	defaultDB, err := openConnection("postgres", defaultDSN)
 	if err != nil {
 		return fmt.Errorf("open default db: %w", err)
 	}
 	defer defaultDB.Close()
 
 	var lastErr error
-	for attempt := 1; attempt <= 60; attempt++ {
+	for attempt := 1; attempt <= pingAttempts; attempt++ {
 		if err := defaultDB.Ping(); err == nil {
 			lastErr = nil
 			break
 		} else {
 			lastErr = err
-			time.Sleep(2 * time.Second)
+			time.Sleep(pingRetryWait)
 		}
 	}
 	if lastErr != nil {
@@ -66,7 +74,7 @@ func Connect(dsn string, user, password, host, port, targetDB, sslmode string) (
 	}
 
 	// 2. Open connection to target database
-	db, err := sql.Open("postgres", dsn)
+	db, err := openConnection("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("postgres: failed to open connection: %w", err)
 	}
@@ -77,7 +85,7 @@ func Connect(dsn string, user, password, host, port, targetDB, sslmode string) (
 	db.SetConnMaxIdleTime(1 * time.Minute)
 
 	var lastErr error
-	for attempt := 1; attempt <= 60; attempt++ {
+	for attempt := 1; attempt <= pingAttempts; attempt++ {
 		if err := db.Ping(); err == nil {
 			slog.Info("PostgreSQL ping succeeded", "attempt", attempt)
 			lastErr = nil
@@ -85,7 +93,7 @@ func Connect(dsn string, user, password, host, port, targetDB, sslmode string) (
 		} else {
 			lastErr = err
 			slog.Warn("PostgreSQL ping failed, retrying in 2s...", "attempt", attempt, "error", err)
-			time.Sleep(2 * time.Second)
+			time.Sleep(pingRetryWait)
 		}
 	}
 
@@ -232,11 +240,4 @@ func EnsureSchema(ctx context.Context, db *sql.DB) error {
 
 	slog.Info("PostgreSQL database schema initialized successfully (no external migration files required)")
 	return nil
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

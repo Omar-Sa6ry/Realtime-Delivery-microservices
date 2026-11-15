@@ -1,10 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { ServerMessageType, MessagePriority } from '@delivery-micro/shard';
+import { ServerMessageType } from '@delivery-micro/shard';
 import { ConnectionRegistry } from '../connection/connection.registry';
-import { ConnectionService } from '../connection/connection.service';
 import { ConnectionStateStore } from '../connection/connection-state.store';
-import { SocketWriter } from '../connection/socket-writer.service';
 import { TIMINGS } from '../../../common/common-types/constants';
 import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
 import { AuthenticatedSocket } from '../connection/connection.types';
@@ -22,9 +20,7 @@ export class HeartbeatService {
 
   constructor(
     private readonly registry: ConnectionRegistry,
-    private readonly connectionService: ConnectionService,
     private readonly stateStore: ConnectionStateStore,
-    private readonly writer: SocketWriter,
     private readonly metrics: RealtimeMetricsService,
   ) {}
 
@@ -39,7 +35,7 @@ export class HeartbeatService {
   }
 
   @Cron('*/20 * * * * *')
-  async checkStaleConnections(): Promise<void> {
+  async checkStaleConnections() {
     const now = Date.now();
     for (const socket of this.registry.values()) {
       if (now - socket.data.lastPongAt > TIMINGS.STALE_CONNECTION_MS) {

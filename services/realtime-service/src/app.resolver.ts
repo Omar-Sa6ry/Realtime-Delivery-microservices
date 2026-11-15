@@ -17,7 +17,7 @@ export class AppResolver {
   ) {}
 
   @Query(() => BooleanResponse)
-  async pingForRealtime(@Context() ctx?: any): Promise<BooleanResponse> {
+  async pingForRealtime(@Context() ctx?: any) {
     const lang = ctx?.language || ctx?.req?.headers?.['x-lang'] || 'en';
     const message = await this.i18n.translate('messages.service.running', {
       lang,
@@ -35,7 +35,7 @@ export class AppResolver {
   async getConnectionStatus(
     @Args('userId') userId: string,
     @Context() ctx: any,
-  ): Promise<ConnectionStatusResponse> {
+  ) {
     const lang = ctx?.language || ctx?.req?.headers?.['x-lang'] || 'en';
     const tokenUserId = ctx?.req?.user?.id ?? ctx?.req?.headers?.['x-user-id'];
     const userRole = (
@@ -68,9 +68,7 @@ export class AppResolver {
 
   @Auth()
   @Query(() => ConnectionsCountResponse)
-  async getActiveConnections(
-    @Context() ctx: any,
-  ): Promise<ConnectionsCountResponse> {
+  async getActiveConnections(@Context() ctx: any) {
     const lang = ctx?.language || ctx?.req?.headers?.['x-lang'] || 'en';
     const userRole = (
       ctx?.req?.user?.role ?? ctx?.req?.headers?.['x-user-role']

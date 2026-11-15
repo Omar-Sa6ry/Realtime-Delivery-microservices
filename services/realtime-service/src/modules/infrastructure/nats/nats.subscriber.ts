@@ -93,7 +93,7 @@ export class NatsSubscriber implements OnModuleInit, OnModuleDestroy {
     let message: NatsFanoutMessage;
     try {
       message = this.nats.getCodec().decode(data) as NatsFanoutMessage;
-    } catch (err) {
+    } catch {
       this.logger.warn(`Failed to decode NATS message on ${subject}`);
       return;
     }

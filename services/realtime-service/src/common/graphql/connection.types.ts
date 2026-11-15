@@ -1,4 +1,10 @@
-import { ObjectType, Field, Int, Directive, registerEnumType } from '@nestjs/graphql';
+import {
+  ObjectType,
+  Field,
+  Int,
+  Directive,
+  registerEnumType,
+} from '@nestjs/graphql';
 
 export enum PresenceStatus {
   ONLINE = 'ONLINE',
@@ -14,7 +20,10 @@ registerEnumType(PresenceStatus, {
 @Directive('@shareable')
 @ObjectType()
 export class BooleanResponse {
-  @Field(() => String, { nullable: true, defaultValue: 'Operation executed successfully' })
+  @Field(() => String, {
+    nullable: true,
+    defaultValue: 'Operation executed successfully',
+  })
   message?: string = 'Operation executed successfully';
 
   @Field(() => Boolean, { nullable: true, defaultValue: true })
@@ -69,7 +78,10 @@ export class ConnectionsCountData {
 @Directive('@shareable')
 @ObjectType()
 export class ConnectionStatusResponse {
-  @Field(() => String, { nullable: true, defaultValue: 'Operation executed successfully' })
+  @Field(() => String, {
+    nullable: true,
+    defaultValue: 'Operation executed successfully',
+  })
   message?: string = 'Operation executed successfully';
 
   @Field(() => Boolean, { nullable: true, defaultValue: true })
@@ -88,7 +100,10 @@ export class ConnectionStatusResponse {
 @Directive('@shareable')
 @ObjectType()
 export class ConnectionsCountResponse {
-  @Field(() => String, { nullable: true, defaultValue: 'Operation executed successfully' })
+  @Field(() => String, {
+    nullable: true,
+    defaultValue: 'Operation executed successfully',
+  })
   message?: string = 'Operation executed successfully';
 
   @Field(() => Boolean, { nullable: true, defaultValue: true })

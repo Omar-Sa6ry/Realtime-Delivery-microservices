@@ -1,6 +1,5 @@
 import {
   ClientMessageType,
-  ClientMessage,
   ServerMessage,
   MessagePriority,
   WsErrorCode,

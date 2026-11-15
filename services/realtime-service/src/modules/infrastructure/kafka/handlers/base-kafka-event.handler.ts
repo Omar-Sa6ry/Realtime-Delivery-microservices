@@ -41,7 +41,7 @@ export abstract class BaseKafkaEventHandler<T> implements KafkaEventHandler {
   }
 
   async handle(envelope: KafkaEventEnvelope): Promise<void> {
-    const payload = this.validate(envelope.payload);
+    this.validate(envelope.payload);
 
     if (await this.deduplicator.isDuplicate(envelope.eventId)) {
       this.logger.debug(

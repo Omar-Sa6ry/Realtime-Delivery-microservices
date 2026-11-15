@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
-import { join } from 'path';
 import { GraphQLModule } from '@nestjs/graphql';
 import {
   ApolloFederationDriver,

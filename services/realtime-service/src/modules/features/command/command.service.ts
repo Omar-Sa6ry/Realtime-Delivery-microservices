@@ -1,14 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  ServerMessageType,
-  RealtimeNatsSubjects,
-  MessagePriority,
-} from '@delivery-micro/shard';
+import { RealtimeNatsSubjects } from '@delivery-micro/shard';
 import { IdempotencyStore } from '../events/idempotency.store';
 import { RealtimeAuthorizationService } from '../../gateway/authorization/realtime-authorization.service';
 import { NatsPublisher } from '../../infrastructure/nats/nats.publisher';
 import { WsErrorCode, WsException } from '@delivery-micro/shard';
-import { IJwtPayload, Role } from '@delivery-micro/shard';
+import { IJwtPayload } from '@delivery-micro/shard';
 import { AssignmentCommandPayload } from '../../../common/common-types/ws-message.types';
 import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
 
@@ -101,7 +97,6 @@ export class CommandService {
       );
     }
 
-    this.metrics.natsPublished.inc({ subject: this.subjects[kind] });
     return { accepted: true };
   }
 }

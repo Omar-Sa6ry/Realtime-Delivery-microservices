@@ -1,5 +1,16 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { connect, NatsConnection, JSONCodec, Codec, ConnectionOptions } from 'nats';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import {
+  connect,
+  NatsConnection,
+  JSONCodec,
+  Codec,
+  ConnectionOptions,
+} from 'nats';
 import { ConfigService } from '@nestjs/config';
 import type { RealtimeConfig } from '../../../common/config/realtime.config';
 
@@ -16,7 +27,9 @@ export class RealtimeNatsService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.connect();
     } catch (err: any) {
-      this.logger.warn(`Initial NATS connection failed: ${err.message}. Reconnecting in background...`);
+      this.logger.warn(
+        `Initial NATS connection failed: ${err.message}. Reconnecting in background...`,
+      );
       this.scheduleReconnect();
     }
   }
@@ -53,11 +66,13 @@ export class RealtimeNatsService implements OnModuleInit, OnModuleDestroy {
         this.connected = status.type === 'update' && this.clientIsConnected();
         if (!this.connected) {
           this.logger.warn(`NATS status changed: ${status.type}`);
-        } else if (status.type === 'update') {
+        } else {
           this.logger.log('NATS reconnected');
         }
       }
-    })().catch((err) => this.logger.error(`NATS status loop error: ${err.message}`));
+    })().catch((err) =>
+      this.logger.error(`NATS status loop error: ${err.message}`),
+    );
   }
 
   private clientIsConnected(): boolean {

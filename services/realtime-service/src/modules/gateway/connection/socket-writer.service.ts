@@ -104,7 +104,7 @@ export class SocketWriter implements OnModuleDestroy {
         });
         try {
           socket.send(payload);
-        } catch (err) {
+        } catch {
           this.metrics.messagesDropped.inc({
             type: ServerMessageType.DELIVERY_LOCATION_UPDATED,
             reason: 'send_error',

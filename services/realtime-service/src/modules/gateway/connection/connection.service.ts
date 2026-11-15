@@ -34,17 +34,15 @@ export class ConnectionService {
 
   async unregister(socket: WebSocket & { data: SocketData }): Promise<void> {
     const ctx = this.toContext(socket);
-    if (ctx) {
-      await this.stateStore.unregister(ctx);
+    await this.stateStore.unregister(ctx);
 
-      const remainingSockets = await this.stateStore.userConnectionCount(
-        ctx.userId,
-      );
-      if (remainingSockets === 0) {
-        await this.presence.setOffline(ctx.userId);
-        if (ctx.userRole === Role.DRIVER) {
-          await this.stateStore.removeDriverGeoLocation(ctx.userId);
-        }
+    const remainingSockets = await this.stateStore.userConnectionCount(
+      ctx.userId,
+    );
+    if (remainingSockets === 0) {
+      await this.presence.setOffline(ctx.userId);
+      if (ctx.userRole === Role.DRIVER) {
+        await this.stateStore.removeDriverGeoLocation(ctx.userId);
       }
     }
     this.registry.remove(socket.data.socketId);
@@ -102,7 +100,7 @@ export class ConnectionService {
 
   private toContext(
     socket: WebSocket & { data: SocketData },
-  ): ConnectionContext | null {
+  ): ConnectionContext {
     const d = socket.data;
     return {
       socketId: d.socketId,

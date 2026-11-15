@@ -18,7 +18,11 @@ export class ConnectionStateStore {
 
   async register(ctx: ConnectionContext): Promise<void> {
     try {
-      await this.redis.set(redisKeys.connection(ctx.socketId), ctx, TTL.CONNECTION);
+      await this.redis.set(
+        redisKeys.connection(ctx.socketId),
+        ctx,
+        TTL.CONNECTION,
+      );
       await this.redis.sAdd(redisKeys.userSockets(ctx.userId), ctx.socketId);
       await this.redis.sAdd(redisKeys.roleSockets(ctx.userRole), ctx.socketId);
       await this.redis.sAdd(
@@ -26,7 +30,9 @@ export class ConnectionStateStore {
         ctx.socketId,
       );
     } catch (err) {
-      this.logger.error(`Failed to register connection ${ctx.socketId}: ${err.message}`);
+      this.logger.error(
+        `Failed to register connection ${ctx.socketId}: ${err.message}`,
+      );
     }
   }
 
@@ -35,9 +41,14 @@ export class ConnectionStateStore {
       await this.redis.del(redisKeys.connection(ctx.socketId));
       await this.redis.sRem(redisKeys.userSockets(ctx.userId), ctx.socketId);
       await this.redis.sRem(redisKeys.roleSockets(ctx.userRole), ctx.socketId);
-      await this.redis.sRem(redisKeys.nodeConnections(ctx.nodeId), ctx.socketId);
+      await this.redis.sRem(
+        redisKeys.nodeConnections(ctx.nodeId),
+        ctx.socketId,
+      );
     } catch (err) {
-      this.logger.error(`Failed to unregister connection ${ctx.socketId}: ${err.message}`);
+      this.logger.error(
+        `Failed to unregister connection ${ctx.socketId}: ${err.message}`,
+      );
     }
   }
 
@@ -45,7 +56,9 @@ export class ConnectionStateStore {
     try {
       await this.redis.expire(redisKeys.connection(socketId), TTL.CONNECTION);
     } catch (err) {
-      this.logger.error(`Failed to refresh heartbeat for ${socketId}: ${err.message}`);
+      this.logger.error(
+        `Failed to refresh heartbeat for ${socketId}: ${err.message}`,
+      );
     }
   }
 
@@ -53,7 +66,9 @@ export class ConnectionStateStore {
     try {
       return await this.redis.sCard(redisKeys.userSockets(userId));
     } catch (err) {
-      this.logger.error(`Failed to count connections for user ${userId}: ${err.message}`);
+      this.logger.error(
+        `Failed to count connections for user ${userId}: ${err.message}`,
+      );
       return 0;
     }
   }
@@ -62,7 +77,9 @@ export class ConnectionStateStore {
     const roles = ['user', 'driver', 'admin'] as const;
     const result: Record<string, number> = {};
     for (const role of roles) {
-      result[role] = await this.redis.sCard(redisKeys.roleSockets(role)).catch(() => 0);
+      result[role] = await this.redis
+        .sCard(redisKeys.roleSockets(role))
+        .catch(() => 0);
     }
     return result;
   }
@@ -83,9 +100,13 @@ export class ConnectionStateStore {
 
   async getContext(socketId: string): Promise<ConnectionContext | null> {
     try {
-      return await this.redis.get<ConnectionContext>(redisKeys.connection(socketId));
+      return await this.redis.get<ConnectionContext>(
+        redisKeys.connection(socketId),
+      );
     } catch (err) {
-      this.logger.error(`Failed to read connection context ${socketId}: ${err.message}`);
+      this.logger.error(
+        `Failed to read connection context ${socketId}: ${err.message}`,
+      );
       return null;
     }
   }
@@ -94,7 +115,9 @@ export class ConnectionStateStore {
     try {
       await this.redis.geoRemove(redisKeys.driverLocationsIndex(), driverId);
     } catch (err) {
-      this.logger.error(`Failed to remove driver geo location for ${driverId}: ${err.message}`);
+      this.logger.error(
+        `Failed to remove driver geo location for ${driverId}: ${err.message}`,
+      );
     }
   }
 }

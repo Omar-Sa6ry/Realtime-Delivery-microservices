@@ -3,7 +3,6 @@ import { GrpcClient } from '../../../infrastructure/grpc/grpc.client';
 import { RedisService } from '@bts-soft/cache';
 import { redisKeys, TTL } from '../../../../common/common-types/constants';
 
-
 @Injectable()
 export class DeliveryPolicy {
   private readonly logger = new Logger(DeliveryPolicy.name);

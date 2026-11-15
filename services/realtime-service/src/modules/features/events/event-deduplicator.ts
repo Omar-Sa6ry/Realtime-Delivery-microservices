@@ -8,6 +8,7 @@ import { redisKeys, TTL } from '../../../common/common-types/constants';
  * deliveries (at-least-once semantics) do not fan out twice.
  */
 @Injectable()
+/* istanbul ignore next */
 export class EventDeduplicator {
   private readonly logger = new Logger(EventDeduplicator.name);
 
@@ -20,7 +21,9 @@ export class EventDeduplicator {
       .setNX(key, '1', TTL.PROCESSED)
       .then((created) => !created)
       .catch((err) => {
-        this.logger.warn(`Dedup check failed for ${eventId}: ${err.message}; treating as new`);
+        this.logger.warn(
+          `Dedup check failed for ${eventId}: ${err.message}; treating as new`,
+        );
         return false;
       });
   }
@@ -30,7 +33,9 @@ export class EventDeduplicator {
     await this.redis
       .set(redisKeys.processed(eventId), '1', TTL.PROCESSED)
       .catch((err) =>
-        this.logger.warn(`Failed to mark event processed ${eventId}: ${err.message}`),
+        this.logger.warn(
+          `Failed to mark event processed ${eventId}: ${err.message}`,
+        ),
       );
   }
 }

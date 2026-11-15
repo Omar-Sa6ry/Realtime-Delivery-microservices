@@ -15,16 +15,28 @@ export class WebsocketRateLimiterService {
 
   async check(userId: string, action: RateAction): Promise<boolean> {
     let algo: SlidingWindowLogAlgorithm;
-    
+
     switch (action) {
       case 'connect':
-        algo = new SlidingWindowLogAlgorithm(RATE_LIMITS.CONNECT_PER_MINUTE, 60_000, this.store);
+        algo = new SlidingWindowLogAlgorithm(
+          RATE_LIMITS.CONNECT_PER_MINUTE,
+          60_000,
+          this.store,
+        );
         break;
       case 'subscribe':
-        algo = new SlidingWindowLogAlgorithm(RATE_LIMITS.SUBSCRIBE_PER_MINUTE, 60_000, this.store);
+        algo = new SlidingWindowLogAlgorithm(
+          RATE_LIMITS.SUBSCRIBE_PER_MINUTE,
+          60_000,
+          this.store,
+        );
         break;
       case 'command':
-        algo = new SlidingWindowLogAlgorithm(RATE_LIMITS.COMMANDS_PER_MINUTE, 60_000, this.store);
+        algo = new SlidingWindowLogAlgorithm(
+          RATE_LIMITS.COMMANDS_PER_MINUTE,
+          60_000,
+          this.store,
+        );
         break;
     }
 
@@ -33,4 +45,3 @@ export class WebsocketRateLimiterService {
     return result.allowed;
   }
 }
-

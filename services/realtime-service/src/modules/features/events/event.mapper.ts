@@ -6,36 +6,6 @@ import {
 } from '@delivery-micro/shard';
 import { RealtimeEventEnvelope, ClientEvent } from './event.types';
 
-const PRIORITY_FALLBACK: Record<ServerMessageType, MessagePriority> = {
-  [ServerMessageType.DELIVERY_LOCATION_UPDATED]:
-    MessagePriority.HIGH_FREQUENCY_LOSSY,
-  [ServerMessageType.DELIVERY_STATUS_UPDATED]: MessagePriority.NORMAL,
-  [ServerMessageType.DRIVER_ASSIGNED]: MessagePriority.CRITICAL,
-  [ServerMessageType.DELIVERY_COMPLETED]: MessagePriority.CRITICAL,
-  [ServerMessageType.DELIVERY_CANCELLED]: MessagePriority.CRITICAL,
-  [ServerMessageType.PAYMENT_STATUS_CHANGED]: MessagePriority.CRITICAL,
-  [ServerMessageType.DRIVER_PRESENCE_UPDATED]: MessagePriority.NORMAL,
-  [ServerMessageType.CONNECTED]: MessagePriority.NORMAL,
-  [ServerMessageType.SUBSCRIBED]: MessagePriority.NORMAL,
-  [ServerMessageType.UNSUBSCRIBED]: MessagePriority.NORMAL,
-  [ServerMessageType.PONG]: MessagePriority.NORMAL,
-  [ServerMessageType.ACK]: MessagePriority.NORMAL,
-  [ServerMessageType.LOCATION_UPDATE_REJECTED]: MessagePriority.NORMAL,
-  [ServerMessageType.NOTIFICATION_RECEIVED]: MessagePriority.NORMAL,
-  [ServerMessageType.ERROR]: MessagePriority.CRITICAL,
-  // Assignment priorities
-  [ServerMessageType.ASSIGNMENT_OFFERED]: MessagePriority.CRITICAL,
-  [ServerMessageType.DRIVER_SEARCH_RETRY]: MessagePriority.NORMAL,
-  [ServerMessageType.ASSIGNMENT_EXPIRED]: MessagePriority.NORMAL,
-  [ServerMessageType.ASSIGNMENT_REJECTED]: MessagePriority.NORMAL,
-  [ServerMessageType.MEDIA_UPLOAD_PROGRESS]:
-    MessagePriority.HIGH_FREQUENCY_LOSSY,
-  [ServerMessageType.MEDIA_PROCESSING_PROGRESS]: MessagePriority.NORMAL,
-  [ServerMessageType.MEDIA_READY]: MessagePriority.CRITICAL,
-  [ServerMessageType.MEDIA_DELETED]: MessagePriority.CRITICAL,
-  [ServerMessageType.MEDIA_FAILED]: MessagePriority.CRITICAL,
-};
-
 @Injectable()
 export class EventMapper {
   private readonly mappings: Record<

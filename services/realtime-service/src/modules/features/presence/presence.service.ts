@@ -1,13 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  Role,
-  ServerMessageType,
-  MessagePriority,
-} from '@delivery-micro/shard';
 import { PresenceStore, PresenceState, PresenceRecord } from './presence.store';
 import { NatsPublisher } from '../../infrastructure/nats/nats.publisher';
 import { RealtimeNatsSubjects } from '@delivery-micro/shard';
-import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
 
 @Injectable()
 export class PresenceService {
@@ -16,7 +10,6 @@ export class PresenceService {
   constructor(
     private readonly store: PresenceStore,
     private readonly natsPublisher: NatsPublisher,
-    private readonly metrics: RealtimeMetricsService,
   ) {}
 
   async setOnline(userId: string): Promise<void> {
@@ -50,9 +43,6 @@ export class PresenceService {
     userId: string,
     status: PresenceState,
   ): Promise<void> {
-    this.metrics.natsPublished.inc({
-      subject: RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED,
-    });
     await this.natsPublisher
       .publish(RealtimeNatsSubjects.DRIVER_PRESENCE_UPDATED, {
         driverId: userId,

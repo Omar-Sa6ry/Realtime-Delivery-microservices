@@ -56,7 +56,7 @@ export class LocationService {
     if (socket.data.userRole !== Role.DRIVER) {
       throw new WsException(
         WsErrorCode.FORBIDDEN,
-        this.t('ws.unauthorized'),
+        this.t('messages.ws.unauthorized'),
         false,
       );
     }
@@ -68,7 +68,7 @@ export class LocationService {
       this.metrics.locationUpdates.inc({ result: 'rejected_unauthorized' });
       throw new WsException(
         WsErrorCode.FORBIDDEN,
-        this.t('ws.notAssignedDriver'),
+        this.t('messages.ws.notAssignedDriver'),
         false,
       );
     }

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RealtimeNatsSubjects, RealtimeMessage } from '@delivery-micro/shard';
+import { RealtimeNatsSubjects } from '@delivery-micro/shard';
 import { RealtimeNatsService } from './nats.service';
 import { RealtimeMetricsService } from '../../../common/metrics/realtime-metrics.service';
 

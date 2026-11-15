@@ -14,6 +14,11 @@ import { PresenceModule } from '../../features/presence/presence.module';
     ConnectionStateStore,
     SocketWriter,
   ],
-  exports: [ConnectionService, ConnectionRegistry, ConnectionStateStore, SocketWriter],
+  exports: [
+    ConnectionService,
+    ConnectionRegistry,
+    ConnectionStateStore,
+    SocketWriter,
+  ],
 })
 export class ConnectionModule {}

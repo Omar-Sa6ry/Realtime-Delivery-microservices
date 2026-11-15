@@ -20,7 +20,9 @@ export class PresenceStore {
     await this.redis
       .set(redisKeys.presence(userId), record, TTL.PRESENCE)
       .catch((err) =>
-        this.logger.error(`Failed to set presence for ${userId}: ${err.message}`),
+        this.logger.error(
+          `Failed to set presence for ${userId}: ${err.message}`,
+        ),
       );
   }
 

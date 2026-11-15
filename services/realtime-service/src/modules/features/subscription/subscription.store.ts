@@ -29,7 +29,10 @@ export class SubscriptionStore {
   }
 
   async isSubscribed(deliveryId: string, socketId: string): Promise<boolean> {
-    return await this.redis.sIsMember(redisKeys.deliverySubscribers(deliveryId), socketId);
+    return await this.redis.sIsMember(
+      redisKeys.deliverySubscribers(deliveryId),
+      socketId,
+    );
   }
 
   /**
@@ -37,9 +40,14 @@ export class SubscriptionStore {
    * Relies on the reverse index ws:socket:{socketId}:subscriptions.
    */
   async removeSocketFromAllSubscriptions(socketId: string): Promise<string[]> {
-    const deliveries = await this.redis.sMembers(redisKeys.socketSubscriptions(socketId));
+    const deliveries = await this.redis.sMembers(
+      redisKeys.socketSubscriptions(socketId),
+    );
     for (const deliveryId of deliveries) {
-      await this.redis.sRem(redisKeys.deliverySubscribers(deliveryId), socketId);
+      await this.redis.sRem(
+        redisKeys.deliverySubscribers(deliveryId),
+        socketId,
+      );
     }
     await this.redis.del(redisKeys.socketSubscriptions(socketId));
     return deliveries;

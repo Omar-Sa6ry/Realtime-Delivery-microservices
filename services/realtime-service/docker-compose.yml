@@ -18,7 +18,7 @@ services:
       - "8222:8222"
 
   kafka-srv:
-    image: bitnami/kafka:3.6
+    image: bitnamilegacy/kafka:3.6
     pull_policy: missing
     container_name: kafka-srv
     ports:
@@ -32,7 +32,7 @@ services:
       - zookeeper-srv
 
   zookeeper-srv:
-    image: bitnami/zookeeper:3.9
+    image: bitnamilegacy/zookeeper:3.9
     pull_policy: missing
     container_name: zookeeper-srv
     ports:
@@ -46,9 +46,9 @@ services:
       dockerfile: services/realtime-service/Dockerfile
     container_name: realtime-service
     env_file:
-      - ../../.env
+      - ../../config/env/.env.${APP_ENV:-development}
     ports:
-      - "4004:4004"
+      - "4006:4006"
       - "50053:50053"
     environment:
       PORT_realtime: ${PORT_realtime:-4006}
@@ -112,7 +112,6 @@ services:
       FIREBASE_CLIENT_EMAIL: ${CLIENT_EMAIL}
       FIREBASE_PRIVATE_KEY: ${PRIVATE_KEY}
     depends_on:
-      - realtime-db-srv
       - redis-srv
       - nats-srv
       - kafka-srv

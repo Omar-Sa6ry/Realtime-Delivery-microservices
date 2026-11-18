@@ -3,7 +3,6 @@ package kafka
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"sync"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/kafka"
@@ -68,15 +67,14 @@ func (cm *ConsumerManager) Start(ctx context.Context) error {
 		cm.consumers = append(cm.consumers, consumer)
 
 		wg.Add(1)
-		go func(t string, c *kafka.Consumer) {
+		go func(c *kafka.Consumer) {
 			defer wg.Done()
-			err := c.Run(ctx, func(handlerCtx context.Context, msg kafkago.Message) error {
+			// Run returns nil on context cancellation; it never returns a
+			// non-nil error, so the result is intentionally discarded.
+			_ = c.Run(ctx, func(handlerCtx context.Context, msg kafkago.Message) error {
 				return cm.HandleEvent(handlerCtx, cm.handlerRegistry, msg)
 			})
-			if err != nil {
-				slog.Error("Kafka consumer stopped with error", "topic", t, "error", err)
-			}
-		}(topic, consumer)
+		}(consumer)
 	}
 
 	return nil

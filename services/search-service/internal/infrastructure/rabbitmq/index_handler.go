@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	shared "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/rabbitmq"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/events"
+	shared "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/rabbitmq"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/indexing"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/domain/search"
 )

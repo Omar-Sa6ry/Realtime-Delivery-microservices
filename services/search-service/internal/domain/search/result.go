@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-
 type PaginationInput struct {
 	Limit  int    `json:"limit"`
 	Cursor string `json:"cursor"`

@@ -2,8 +2,10 @@ package reindex
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/domain/search"
@@ -18,15 +20,18 @@ func NewService(repo search.SearchRepository) *Service {
 }
 
 type ReindexJob struct {
-	JobID       string    `json:"jobId"`
-	Index       string    `json:"index"`
-	Status      string    `json:"status"` // IN_PROGRESS | COMPLETED | FAILED
-	StartedAt   time.Time `json:"startedAt"`
-	CompletedAt *time.Time`json:"completedAt,omitempty"`
-	Error       string    `json:"error,omitempty"`
+	JobID       string     `json:"jobId"`
+	Index       string     `json:"index"`
+	Status      string     `json:"status"` // IN_PROGRESS | COMPLETED | FAILED
+	StartedAt   time.Time  `json:"startedAt"`
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
+	Error       string     `json:"error,omitempty"`
 }
 
 func (s *Service) StartReindex(ctx context.Context, indexName string) (*ReindexJob, error) {
+	if strings.TrimSpace(indexName) == "" {
+		return nil, errors.New("index name is required")
+	}
 	jobID := fmt.Sprintf("reindex-%s-%d", indexName, time.Now().Unix())
 	job := &ReindexJob{
 		JobID:     jobID,

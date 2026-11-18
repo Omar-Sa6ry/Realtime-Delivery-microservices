@@ -8,10 +8,10 @@ import (
 	sharedauth "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/auth"
 	sharedconstants "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/constants"
 	sharedlogging "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/logging"
-	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/i18n"
-	appSearch "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/search"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/reindex"
+	appSearch "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/search"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/domain/search"
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/i18n"
 	gql "github.com/graphql-go/graphql"
 )
 

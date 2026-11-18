@@ -358,7 +358,7 @@ var driverRefType = gql.NewObject(gql.ObjectConfig{
 var driverDocumentType = gql.NewObject(gql.ObjectConfig{
 	Name: "DriverDocument",
 	Fields: gql.Fields{
-		"driver_id":      &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"driver_id": &gql.Field{Type: gql.NewNonNull(gql.String)},
 		"driver": &gql.Field{
 			Type: driverRefType,
 			Resolve: func(p gql.ResolveParams) (interface{}, error) {
@@ -401,14 +401,14 @@ var driverSearchResponseType = gql.NewObject(gql.ObjectConfig{
 var mediaDocumentType = gql.NewObject(gql.ObjectConfig{
 	Name: "MediaDocument",
 	Fields: gql.Fields{
-		"media_id":    &gql.Field{Type: gql.NewNonNull(gql.String)},
-		"owner_id":    &gql.Field{Type: gql.NewNonNull(gql.String)},
-		"file_name":   &gql.Field{Type: gql.NewNonNull(gql.String)},
-		"mime_type":   &gql.Field{Type: gql.NewNonNull(gql.String)},
-		"media_type":  &gql.Field{Type: gql.NewNonNull(gql.String)},
-		"status":      &gql.Field{Type: gql.NewNonNull(gql.String)},
-		"size":        &gql.Field{Type: gql.NewNonNull(gql.Int)},
-		"created_at":  &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"media_id":   &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"owner_id":   &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"file_name":  &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"mime_type":  &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"media_type": &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"status":     &gql.Field{Type: gql.NewNonNull(gql.String)},
+		"size":       &gql.Field{Type: gql.NewNonNull(gql.Int)},
+		"created_at": &gql.Field{Type: gql.NewNonNull(gql.String)},
 	},
 })
 
@@ -509,9 +509,9 @@ var paginationInput = gql.NewInputObject(gql.InputObjectConfig{
 var geoSearchInput = gql.NewInputObject(gql.InputObjectConfig{
 	Name: "GeoSearchInput",
 	Fields: gql.InputObjectConfigFieldMap{
-		"lat":       &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.Float)},
-		"lon":       &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.Float)},
-		"radiusKm":  &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.Float)},
+		"lat":        &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.Float)},
+		"lon":        &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.Float)},
+		"radiusKm":   &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.Float)},
 		"pagination": &gql.InputObjectFieldConfig{Type: paginationInput},
 	},
 })
@@ -585,9 +585,9 @@ var userSearchInput = gql.NewInputObject(gql.InputObjectConfig{
 var autocompleteInput = gql.NewInputObject(gql.InputObjectConfig{
 	Name: "AutocompleteInput",
 	Fields: gql.InputObjectConfigFieldMap{
-		"prefix":   &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.String)},
-		"index":    &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.String)},
-		"limit":    &gql.InputObjectFieldConfig{Type: gql.Int},
+		"prefix": &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.String)},
+		"index":  &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.String)},
+		"limit":  &gql.InputObjectFieldConfig{Type: gql.Int},
 	},
 })
 
@@ -651,7 +651,7 @@ func buildSchema(r *Resolver) (gql.Schema, error) {
 				Resolve: r.ResolveNearbyDrivers,
 			},
 			"searchHealth": &gql.Field{
-				Type: gql.NewNonNull(searchHealthResponseType),
+				Type:    gql.NewNonNull(searchHealthResponseType),
 				Resolve: r.ResolveSearchHealth,
 			},
 		},

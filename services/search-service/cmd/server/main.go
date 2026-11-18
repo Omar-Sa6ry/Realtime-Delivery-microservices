@@ -30,18 +30,33 @@ import (
 )
 
 func main() {
+	os.Exit(runMain(context.Background()))
+}
+
+// runMain wires OS-interrupt signals onto parent and returns the process exit code.
+func runMain(parent context.Context) int {
 	logging.InitLogger()
 	slog.Info("Starting Search Service...")
 
 	if err := sharedenv.Load(); err != nil {
 		slog.Error("Failed to load environment", "error", err)
-		os.Exit(1)
+		return 1
 	}
 
+	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := run(ctx); err != nil {
+		slog.Error("Search service failed", "error", err)
+		return 1
+	}
+	return 0
+}
+
+func run(ctx context.Context) error {
 	cfg, err := config.Load()
 	if err != nil {
-		slog.Error("Failed to load configuration", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("load configuration: %w", err)
 	}
 
 	// OTLP tracer (no endpoint -> the service runs untraced).
@@ -57,16 +72,15 @@ func main() {
 	// 1. Initialize OpenSearch
 	osClient, err := opensearch.NewClient(cfg)
 	if err != nil {
-		slog.Error("Failed to connect to OpenSearch", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("connect to OpenSearch: %w", err)
 	}
 
 	indexManager := opensearch.NewIndexManager(osClient)
 
 	// Wait for OpenSearch indices to be ready before starting Kafka consumers.
-	maxRetries := 30
+	maxRetries := cfg.IndexInitMaxRetries
 	for i := 0; i < maxRetries; i++ {
-		ctxInit, cancelInit := context.WithTimeout(context.Background(), 5*time.Second)
+		ctxInit, cancelInit := context.WithTimeout(ctx, 5*time.Second)
 		err := indexManager.EnsureIndices(ctxInit)
 		cancelInit()
 		if err == nil {
@@ -77,7 +91,11 @@ func main() {
 			slog.Warn("Index initialization failed after max retries, continuing anyway", "error", err)
 		} else {
 			slog.Warn("Waiting for OpenSearch indices", "attempt", i+1, "maxRetries", maxRetries, "error", err)
-			time.Sleep(3 * time.Second)
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(cfg.IndexInitRetryDelay):
+			}
 		}
 	}
 
@@ -92,7 +110,6 @@ func main() {
 	reindexService := reindex.NewService(searchRepo)
 
 	// 4. Ensure Kafka topics exist before starting consumers.
-
 	searchTopics := []string{
 		"delivery.created", "delivery.driver.assigned", "delivery.driver.accepted",
 		"delivery.picked_up", "delivery.in_transit", "delivery.completed",
@@ -109,22 +126,25 @@ func main() {
 
 	// 5. Kafka Event Consumer Manager
 	consumerManager := kafka.NewConsumerManager(cfg, indexingService)
-	consumerCtx, consumerCancel := context.WithCancel(context.Background())
-	if err := consumerManager.Start(consumerCtx); err != nil {
-		slog.Error("Failed to start Kafka consumers", "error", err)
-	}
+	// Start never returns a non-nil error (consumers run in background goroutines).
+	_ = consumerManager.Start(ctx)
 
 	// 5b. RabbitMQ Event Consumer (dual-consumption / fast events)
 	var rmqConn *sharedRabbitMQ.Connection
 	if cfg.RabbitMQURL != "" {
 		var err error
-		rmqConn, err = sharedRabbitMQ.ConnectURL(cfg.RabbitMQURL, "search-service")
+		rmqConn, err = sharedRabbitMQ.Connect(sharedRabbitMQ.Config{
+			URL:         cfg.RabbitMQURL,
+			ServiceName: "search-service",
+			MaxAttempts: cfg.RabbitMQMaxAttempts,
+			BaseDelay:   cfg.RabbitMQBaseDelay,
+		})
 		if err != nil {
 			slog.Warn("Failed to connect to RabbitMQ (search-service will continue with Kafka only)", "error", err)
 		} else {
 			rmqConsumer := searchRabbitMQ.NewSearchRabbitMQConsumer(rmqConn, indexingService)
 			go func() {
-				if err := rmqConsumer.Start(consumerCtx); err != nil {
+				if err := rmqConsumer.Start(ctx); err != nil {
 					slog.Error("RabbitMQ search consumer stopped", "error", err)
 				}
 			}()
@@ -132,29 +152,14 @@ func main() {
 		}
 	}
 
-	// 6. HTTP & GraphQL Server - Create GraphQL server first to get its handler
+	// 6. HTTP & GraphQL Server
 	gqlServer, err := graphql.NewServer(searchService, reindexService, cfg.PortGraphQL)
 	if err != nil {
-		slog.Error("Failed to create GraphQL server", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("create GraphQL server: %w", err)
 	}
 	healthHandler := health.NewHandler(searchRepo, cache)
 
-	// Single mux for both health and GraphQL endpoints
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health/live", healthHandler.LivenessHandler())
-	mux.HandleFunc("/health/ready", healthHandler.ReadinessHandler())
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
-
-	// GraphQL endpoints - delegate to GraphQL server's handler
-	mux.HandleFunc("/search/graphql", gqlServer.Handler())
-	mux.HandleFunc("/graphql", gqlServer.Handler())
-
-	// Wrap with metrics and tracing middleware
-	var handler http.Handler = mux
+	var handler http.Handler = buildHandler(healthHandler, gqlServer)
 	handler = metrics.HTTPMetricsMiddleware(handler)
 	handler = sharedtracing.HTTPTracingMiddleware(handler)
 
@@ -165,7 +170,7 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 	}
 
-	// 6. Prometheus Metrics Server
+	// 6b. Prometheus Metrics Server
 	go func() {
 		slog.Info("Starting metrics server", "port", cfg.PortMetrics)
 		if err := metrics.StartMetricsServer(cfg.PortMetrics); err != nil && err != http.ErrServerClosed {
@@ -174,21 +179,26 @@ func main() {
 	}()
 
 	// 7. Start Main HTTP Server (health + GraphQL endpoints)
+	serverErr := make(chan error, 1)
 	go func() {
 		slog.Info("Search Service listening", "port", cfg.PortGraphQL)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("Server error", "error", err)
-			os.Exit(1)
+			serverErr <- err
 		}
 	}()
 
-	// 8. Graceful Shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	// 8. Wait for shutdown signal or server failure
+	select {
+	case <-ctx.Done():
+		slog.Info("Shutting down Search Service gracefully...")
+	case err := <-serverErr:
+		_ = consumerManager.Close()
+		if rmqConn != nil {
+			_ = rmqConn.Close()
+		}
+		return fmt.Errorf("http server: %w", err)
+	}
 
-	slog.Info("Shutting down Search Service gracefully...")
-	consumerCancel()
 	_ = consumerManager.Close()
 	if rmqConn != nil {
 		_ = rmqConn.Close()
@@ -210,4 +220,19 @@ func main() {
 	}
 
 	slog.Info("Search Service stopped.")
+	return nil
+}
+
+// buildHandler assembles the production HTTP mux (health + GraphQL routes).
+func buildHandler(healthHandler *health.Handler, gqlServer *graphql.Server) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health/live", healthHandler.LivenessHandler())
+	mux.HandleFunc("/health/ready", healthHandler.ReadinessHandler())
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	mux.HandleFunc("/search/graphql", gqlServer.Handler())
+	mux.HandleFunc("/graphql", gqlServer.Handler())
+	return mux
 }

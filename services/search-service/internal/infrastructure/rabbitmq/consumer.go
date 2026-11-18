@@ -2,7 +2,7 @@ package rabbitmq
 
 import (
 	"context"
-	"log/slog"
+	"sync"
 
 	shared "github.com/Omar-Sa6ry/Realtime-Delivery-microservices/packages/go/rabbitmq"
 	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/application/indexing"
@@ -12,13 +12,13 @@ import (
 type IndexEventHandler func(ctx context.Context, env *shared.EventEnvelope) error
 
 type SearchRabbitMQConsumer struct {
-	orders        *shared.Consumer
-	media         *shared.Consumer
-	users         *shared.Consumer
-	drivers       *shared.Consumer
-	ordersHandler shared.MessageHandler
-	mediaHandler  shared.MessageHandler
-	usersHandler  shared.MessageHandler
+	orders         *shared.Consumer
+	media          *shared.Consumer
+	users          *shared.Consumer
+	drivers        *shared.Consumer
+	ordersHandler  shared.MessageHandler
+	mediaHandler   shared.MessageHandler
+	usersHandler   shared.MessageHandler
 	driversHandler shared.MessageHandler
 }
 
@@ -77,48 +77,22 @@ func NewSearchRabbitMQConsumerWithHandler(conn *shared.Connection, handler Index
 }
 
 func (c *SearchRabbitMQConsumer) Start(ctx context.Context) error {
-	errCh := make(chan error, 4)
-	go func() {
-		if err := c.orders.Run(ctx, c.ordersHandler); err != nil {
-			slog.Error("search RabbitMQ orders consumer stopped", "error", err)
-			errCh <- err
-			return
-		}
-		errCh <- nil
-	}()
-	go func() {
-		if err := c.media.Run(ctx, c.mediaHandler); err != nil {
-			slog.Error("search RabbitMQ media consumer stopped", "error", err)
-			errCh <- err
-			return
-		}
-		errCh <- nil
-	}()
-	go func() {
-		if err := c.users.Run(ctx, c.usersHandler); err != nil {
-			slog.Error("search RabbitMQ users consumer stopped", "error", err)
-			errCh <- err
-			return
-		}
-		errCh <- nil
-	}()
-	go func() {
-		if err := c.drivers.Run(ctx, c.driversHandler); err != nil {
-			slog.Error("search RabbitMQ drivers consumer stopped", "error", err)
-			errCh <- err
-			return
-		}
-		errCh <- nil
-	}()
-
-	// Wait for context cancellation, then drain all 4 goroutines.
-	<-ctx.Done()
-	var firstErr error
-	for i := 0; i < 4; i++ {
-		err := <-errCh
-		if err != nil && firstErr == nil {
-			firstErr = err
-		}
+	// shared.Consumer.Run returns nil on context cancellation (never errors), so
+	// there is no error to propagate — just wait for shutdown and drain.
+	var wg sync.WaitGroup
+	run := func(cons *shared.Consumer, h shared.MessageHandler) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = cons.Run(ctx, h)
+		}()
 	}
-	return firstErr
+	run(c.orders, c.ordersHandler)
+	run(c.media, c.mediaHandler)
+	run(c.users, c.usersHandler)
+	run(c.drivers, c.driversHandler)
+
+	<-ctx.Done()
+	wg.Wait()
+	return nil
 }

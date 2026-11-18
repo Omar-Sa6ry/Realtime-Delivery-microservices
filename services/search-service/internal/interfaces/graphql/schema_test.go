@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Omar-Sa6ry/Realtime-Delivery-microservices/services/search-service/internal/domain/search"
 	gql "github.com/graphql-go/graphql"
 )
 
@@ -26,6 +27,25 @@ func runQuery(t *testing.T, schema gql.Schema, query string, variables map[strin
 		VariableValues: variables,
 		Context:        context.Background(),
 	})
+}
+
+func TestDriverFieldResolve_NonDocumentSourceReturnsNil(t *testing.T) {
+	fld := driverDocumentType.Fields()["driver"]
+	if fld.Resolve == nil {
+		t.Fatal("driver field should have a Resolve func")
+	}
+	got, err := fld.Resolve(gql.ResolveParams{Source: map[string]interface{}{"driver_id": "d1"}})
+	if err != nil || got != nil {
+		t.Errorf("non-DriverDocument source: got %v err %v", got, err)
+	}
+	got, err = fld.Resolve(gql.ResolveParams{Source: search.DriverDocument{DriverID: "d9"}})
+	if err != nil {
+		t.Fatalf("DriverDocument source: %v", err)
+	}
+	m := got.(map[string]interface{})
+	if m["id"] != "d9" {
+		t.Errorf("id = %v", m["id"])
+	}
 }
 
 func TestServiceField(t *testing.T) {

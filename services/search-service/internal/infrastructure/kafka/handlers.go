@@ -47,14 +47,6 @@ func (b *baseHandler) EventType() string {
 	return b.eventType
 }
 
-func (b *baseHandler) logInfo(msg string, fields ...interface{}) {
-	slog.Info(msg, fields...)
-}
-
-func (b *baseHandler) logWarn(msg string, fields ...interface{}) {
-	slog.Warn(msg, fields...)
-}
-
 type DeliveryCreatedHandler struct {
 	baseHandler
 }

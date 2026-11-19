@@ -133,6 +133,37 @@ describe('UserService', () => {
       expect(result).toEqual(mockUser);
       expect(dbUserService.findById).toHaveBeenCalledWith('user-123');
     });
+
+    it('should hydrate the dates of cached addresses', async () => {
+      const cached = {
+        id: 'user-123',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-02-01T00:00:00.000Z',
+        addresses: [
+          { id: 'addr-1', createdAt: '2024-03-01T00:00:00.000Z' },
+          { id: 'addr-2' },
+        ],
+      };
+      redisService.hGet.mockResolvedValue(JSON.stringify(cached));
+
+      const result = (await service.findById('user-123')) as any;
+
+      expect(dbUserService.findById).not.toHaveBeenCalled();
+      expect(result.createdAt).toBeInstanceOf(Date);
+      expect(result.updatedAt).toBeInstanceOf(Date);
+      expect(result.addresses[0].createdAt).toBeInstanceOf(Date);
+      expect(result.addresses[1].createdAt).toBeUndefined();
+    });
+
+    it('should return the cached payload untouched when no dates exist', async () => {
+      const cached = { id: 'user-123', email: 'test@example.com' };
+      redisService.hGet.mockResolvedValue(JSON.stringify(cached));
+
+      const result = (await service.findById('user-123')) as any;
+
+      expect(dbUserService.findById).not.toHaveBeenCalled();
+      expect(result).toEqual(cached);
+    });
   });
 
   describe('findByEmail', () => {
@@ -239,20 +270,20 @@ describe('UserService', () => {
 
   describe('updateUserRole', () => {
     it('should update user role and publish event', async () => {
-      const updatedUser = { ...mockUser, role: Role.MERCHANT };
+      const updatedUser = { ...mockUser, role: 'merchant' as unknown as Role };
       dbUserService.updateUserRole.mockResolvedValue(updatedUser);
 
-      await service.updateUserRole('user-123', Role.MERCHANT);
+      await service.updateUserRole('user-123', 'merchant' as unknown as Role);
 
       expect(dbUserService.updateUserRole).toHaveBeenCalledWith(
         'user-123',
-        Role.MERCHANT,
+        'merchant' as unknown as Role,
       );
       expect(redisService.hSet).toHaveBeenCalled();
       expect(rmqPublisher.publishUserUpdated).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 'user-123',
-          role: Role.MERCHANT,
+          role: 'merchant' as unknown as Role,
         }),
       );
     });
@@ -316,6 +347,17 @@ describe('UserService', () => {
       expect(dbUserService.findById).toHaveBeenCalledWith('user-123');
       expect(redisService.hSet).toHaveBeenCalled();
     });
+
+    it('should skip the cache refresh when the user vanished', async () => {
+      dbUserService.addAddress.mockResolvedValue(mockAddress);
+      dbUserService.findById.mockResolvedValue(null);
+
+      const result = await service.addAddress('user-123', { title: 'Home' });
+
+      expect(result).toEqual(mockAddress);
+      expect(redisService.hSet).not.toHaveBeenCalled();
+      expect(redisService.expire).not.toHaveBeenCalled();
+    });
   });
 
   describe('deleteAddress', () => {
@@ -332,6 +374,15 @@ describe('UserService', () => {
       expect(dbUserService.findById).toHaveBeenCalledWith('user-123');
       expect(redisService.hSet).toHaveBeenCalled();
     });
+
+    it('should skip the cache refresh when the user vanished', async () => {
+      dbUserService.deleteAddress.mockResolvedValue(undefined);
+      dbUserService.findById.mockResolvedValue(null);
+
+      await service.deleteAddress('user-123', 'addr-123');
+
+      expect(redisService.hSet).not.toHaveBeenCalled();
+    });
   });
 
   describe('setDefaultAddress', () => {
@@ -347,6 +398,15 @@ describe('UserService', () => {
       );
       expect(dbUserService.findById).toHaveBeenCalledWith('user-123');
       expect(redisService.hSet).toHaveBeenCalled();
+    });
+
+    it('should skip the cache refresh when the user vanished', async () => {
+      dbUserService.setDefaultAddress.mockResolvedValue(undefined);
+      dbUserService.findById.mockResolvedValue(null);
+
+      await service.setDefaultAddress('user-123', 'addr-123');
+
+      expect(redisService.hSet).not.toHaveBeenCalled();
     });
   });
 

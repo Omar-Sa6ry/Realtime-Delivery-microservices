@@ -40,6 +40,7 @@ describe('AuthService', () => {
   let userFactory: jest.Mocked<UserFactory>;
   let i18n: jest.Mocked<I18nService>;
   let rabbitmqPublisher: jest.Mocked<UserRabbitMQPublisher>;
+  let providers: any[];
 
   const mockUser: User = {
     id: 'user-123',
@@ -136,21 +137,23 @@ describe('AuthService', () => {
       publishUserDeleted: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<UserRabbitMQPublisher>;
 
+    providers = [
+      AuthService,
+      { provide: 'UserRepository', useValue: userRepo },
+      { provide: BcryptPasswordHasher, useValue: passwordHasher },
+      { provide: JwtTokenProvider, useValue: tokenProvider },
+      { provide: RedisSessionRepository, useValue: sessionRepo },
+      { provide: DataSource, useValue: dataSource },
+      { provide: OutboxWorkerService, useValue: outboxWorkerService },
+      { provide: NotificationService, useValue: notificationService },
+      { provide: KafkaService, useValue: kafkaService },
+      { provide: UserFactory, useValue: userFactory },
+      { provide: I18nService, useValue: i18n },
+      { provide: UserRabbitMQPublisher, useValue: rabbitmqPublisher },
+    ];
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        { provide: 'UserRepository', useValue: userRepo },
-        { provide: BcryptPasswordHasher, useValue: passwordHasher },
-        { provide: JwtTokenProvider, useValue: tokenProvider },
-        { provide: RedisSessionRepository, useValue: sessionRepo },
-        { provide: DataSource, useValue: dataSource },
-        { provide: OutboxWorkerService, useValue: outboxWorkerService },
-        { provide: NotificationService, useValue: notificationService },
-        { provide: KafkaService, useValue: kafkaService },
-        { provide: UserFactory, useValue: userFactory },
-        { provide: I18nService, useValue: i18n },
-        { provide: UserRabbitMQPublisher, useValue: rabbitmqPublisher },
-      ],
+      providers,
     }).compile();
 
     service = module.get<AuthService>(AuthService);
@@ -174,7 +177,7 @@ describe('AuthService', () => {
       userRepo.findOne.mockResolvedValue(null);
       userRepo.count.mockResolvedValue(0);
       passwordHasher.hash.mockResolvedValue('hashed-password');
-      queryRunner.manager.save.mockResolvedValue(mockUser);
+      (queryRunner.manager.save as jest.Mock).mockResolvedValue(mockUser);
       tokenProvider.generateTokens.mockResolvedValue(mockTokens);
     });
 
@@ -268,7 +271,9 @@ describe('AuthService', () => {
     });
 
     it('should rollback transaction on error', async () => {
-      queryRunner.manager.save.mockRejectedValue(new Error('DB error'));
+      (queryRunner.manager.save as jest.Mock).mockRejectedValue(
+        new Error('DB error'),
+      );
 
       await expect(service.register(registerInput)).rejects.toThrow('DB error');
       expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
@@ -279,6 +284,53 @@ describe('AuthService', () => {
       kafkaService.emit.mockRejectedValue(new Error('Kafka failed'));
 
       await expect(service.register(registerInput)).resolves.toBeDefined();
+    });
+
+    it('should skip the phone lookup when no phone number is given', async () => {
+      const result = await service.register({
+        ...registerInput,
+        phoneNumber: undefined,
+      });
+
+      expect(result).toBeDefined();
+      expect(userRepo.findOne).toHaveBeenCalledTimes(1);
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { email: 'test@example.com' },
+      });
+    });
+
+    it('should fall back to empty permissions and addresses for an unknown role', async () => {
+      (queryRunner.manager.save as jest.Mock).mockResolvedValue({
+        ...mockUser,
+        role: 'super-admin',
+        addresses: undefined,
+      } as any);
+
+      const result = await service.register(registerInput);
+
+      expect(tokenProvider.generateTokens).toHaveBeenCalledWith(
+        expect.objectContaining({ permissions: [] }),
+      );
+      expect(result.user.addresses).toEqual([]);
+    });
+
+    it('should skip the RabbitMQ publish when no publisher is wired', async () => {
+      const bareProviders = providers.map((provider) =>
+        typeof provider === 'object' &&
+        provider.provide === UserRabbitMQPublisher
+          ? { provide: UserRabbitMQPublisher, useValue: null }
+          : provider,
+      );
+      const bareModule = await Test.createTestingModule({
+        providers: bareProviders,
+      }).compile();
+      const bare = bareModule.get<AuthService>(AuthService);
+
+      const result = await bare.register(registerInput);
+
+      expect(result).toBeDefined();
+      expect(rabbitmqPublisher.publishUserCreated).not.toHaveBeenCalled();
+      await bareModule.close();
     });
   });
 
@@ -327,6 +379,22 @@ describe('AuthService', () => {
         UnauthorizedException,
       );
       expect(i18n.t).toHaveBeenCalledWith('user.INVALID_CREDENTIALS');
+    });
+
+    it('should fall back to empty permissions and addresses for an unknown role', async () => {
+      userRepo.findOne.mockResolvedValue({
+        ...mockUser,
+        role: 'super-admin',
+        addresses: undefined,
+      } as any);
+      passwordHasher.compare.mockResolvedValue(true);
+
+      const result = await service.login(loginInput);
+
+      expect(tokenProvider.generateTokens).toHaveBeenCalledWith(
+        expect.objectContaining({ permissions: [] }),
+      );
+      expect(result.user.addresses).toEqual([]);
     });
   });
 
@@ -537,6 +605,32 @@ describe('AuthService', () => {
         UnauthorizedException,
       );
       expect(i18n.t).toHaveBeenCalledWith('user.NOT_FOUND');
+    });
+
+    it('should fall back to empty permissions and addresses for an unknown role', async () => {
+      tokenProvider.verifyRefreshToken.mockResolvedValue({
+        userId: 'user-123',
+        sessionId: 'session-123',
+      } as any);
+      sessionRepo.getSession.mockResolvedValue({
+        userId: 'user-123',
+        email: 'test@example.com',
+        role: Role.USER,
+        sessionId: 'session-123',
+        createdAt: new Date(),
+      });
+      userRepo.findOne.mockResolvedValue({
+        ...mockUser,
+        role: 'super-admin',
+        addresses: undefined,
+      } as any);
+
+      const result = await service.refreshToken(refreshTokenInput);
+
+      expect(tokenProvider.generateTokens).toHaveBeenCalledWith(
+        expect.objectContaining({ permissions: [] }),
+      );
+      expect(result.user.addresses).toEqual([]);
     });
   });
 });

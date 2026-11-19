@@ -94,8 +94,11 @@ import { AppResolver } from './app.resolver';
       autoSchemaFile: {
         federation: 2,
       },
-      context: ({ req }) => ({
+      // `res` is part of the context so the Redis rate-limiter guard can set
+      // the X-RateLimit-* / Retry-After headers on GraphQL responses too.
+      context: ({ req, res }) => ({
         req,
+        res,
         user: req.user,
         language: req.headers['accept-language'] || 'en',
       }),

@@ -68,9 +68,11 @@ describe('OutboxWorkerService', () => {
       save: jest.fn(),
     };
 
-    outboxRepo.manager.transaction.mockImplementation(async (callback) => {
-      return callback(mockTransactionManager);
-    });
+    (outboxRepo.manager.transaction as jest.Mock).mockImplementation(
+      async (callback: (manager: typeof mockTransactionManager) => unknown) => {
+        return callback(mockTransactionManager);
+      },
+    );
 
     mockClientProxyFactory = ClientProxyFactory as jest.Mocked<
       typeof ClientProxyFactory
@@ -117,12 +119,37 @@ describe('OutboxWorkerService', () => {
 
       expect(mockClient.connect).toHaveBeenCalled();
     });
+
+    it('should tolerate a non-Error failure at boot', async () => {
+      mockClient.connect.mockRejectedValueOnce('NATS is down');
+
+      await expect(service.onModuleInit()).resolves.toBeUndefined();
+      expect(mockClient.connect).toHaveBeenCalled();
+    });
+
+    it('should reconcile the outbox when the interval fires', async () => {
+      await service.onModuleInit();
+      mockTransactionManager.find.mockResolvedValue([]);
+
+      await jest.advanceTimersByTimeAsync(60000);
+
+      expect(mockTransactionManager.find).toHaveBeenCalledWith(
+        Outbox,
+        expect.objectContaining({ where: { processed: false } }),
+      );
+    });
   });
 
   describe('onModuleDestroy', () => {
     it('should close client', async () => {
       await service.onModuleInit();
       await service.onModuleDestroy();
+
+      expect(mockClient.close).toHaveBeenCalled();
+    });
+
+    it('should skip the timer cleanup when the worker never started', () => {
+      expect(() => service.onModuleDestroy()).not.toThrow();
 
       expect(mockClient.close).toHaveBeenCalled();
     });
@@ -202,11 +229,21 @@ describe('OutboxWorkerService', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-      outboxRepo.manager.transaction.mockRejectedValueOnce(
+      (outboxRepo.manager.transaction as jest.Mock).mockRejectedValueOnce(
         new Error('DB error'),
       );
 
       await expect(service.reconcileOutbox()).resolves.toBeUndefined();
+    });
+
+    it('should keep reconciling when a single event fails', async () => {
+      mockTransactionManager.find.mockResolvedValue([mockOutboxEvent]);
+      mockClient.connect.mockRejectedValueOnce(new Error('connect refused'));
+
+      await expect(service.reconcileOutbox()).resolves.toBeUndefined();
+
+      expect(mockTransactionManager.save).not.toHaveBeenCalled();
+      expect(mockClient.emit).not.toHaveBeenCalled();
     });
   });
 });

@@ -235,6 +235,41 @@ describe('MediaGrpcService', () => {
         expect.any(Function),
       );
     });
+
+    it('should default the optional fields of the resolve result', async () => {
+      mockClient.ResolveMediaUrl.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback(null, {
+            url: 'https://media.example.com/file.jpg',
+            expiresAtSeconds: 60,
+          });
+        },
+      );
+
+      const result = await service.resolveMediaUrl({
+        mediaId: 'media-123',
+        requesterId: 'user-123',
+      });
+
+      expect(result.contentType).toBe('');
+      expect(result.mediaId).toBe('media-123');
+      expect(result.status).toBe('');
+    });
+
+    it('should describe an error without details or message', async () => {
+      mockClient.ResolveMediaUrl.mockImplementation(
+        (args, metadata, options, callback) => {
+          callback({ code: grpc.status.FAILED_PRECONDITION }, null);
+        },
+      );
+
+      await expect(
+        service.resolveMediaUrl({
+          mediaId: 'media-123',
+          requesterId: 'user-123',
+        }),
+      ).rejects.toThrow('media not ready: unknown');
+    });
   });
 
   describe('getMedia', () => {
@@ -301,6 +336,30 @@ describe('MediaGrpcService', () => {
       const serviceWithoutClient = new MediaGrpcService(configService);
       const result = serviceWithoutClient.onModuleDestroy();
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe('bootstrap', () => {
+    it('should fall back to the default address when none is configured', () => {
+      const bareConfig = {
+        get: jest.fn().mockReturnValue(undefined),
+      } as unknown as ConfigService;
+
+      const bare = new MediaGrpcService(bareConfig);
+
+      expect((bare as any).address).toBe('media-srv:50052');
+      expect(bareConfig.get).toHaveBeenCalledWith('MEDIA_SERVICE_GRPC_URL');
+    });
+
+    it('should refuse to start when the proto lacks MediaService', () => {
+      (grpc.loadPackageDefinition as jest.Mock).mockReturnValue({
+        media: {},
+      });
+      const bare = new MediaGrpcService(configService);
+
+      expect(() => bare.onModuleInit()).toThrow(
+        'media.proto must define package "media" service "MediaService"',
+      );
     });
   });
 

@@ -6,7 +6,7 @@ import {
   PhoneField,
   TextField,
 } from '@bts-soft/core';
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, Length } from 'class-validator';
 import { GeneralResponse } from '@delivery-micro/shard';
 
 import { UserType } from '../../user/dto/user.types';
@@ -77,6 +77,14 @@ export class ResetPasswordInput {
 
 @InputType()
 export class RefreshTokenInput {
-  @TextField('refreshToken', 10, 1000, false, true, false)
+  /**
+   * Plain string checks only: the shared `TextField` would reject the
+   * base64url alphabet of a JWT (it has no `_`) and lowercase the token,
+   * which breaks the signature verification. The service itself verifies
+   * the signature and the `type: 'refresh'` claim.
+   */
+  @Field(() => String)
+  @IsString()
+  @Length(10, 1000)
   refreshToken: string;
 }

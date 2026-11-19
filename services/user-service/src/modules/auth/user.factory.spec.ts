@@ -130,10 +130,10 @@ describe('UserFactory', () => {
         'hashed',
         'Merchant',
         'User',
-        Role.MERCHANT,
+        'merchant' as unknown as Role,
       );
 
-      expect(user.role).toBe(Role.MERCHANT);
+      expect(user.role).toBe('merchant' as unknown as Role);
     });
   });
 });

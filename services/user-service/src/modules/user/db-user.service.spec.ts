@@ -185,7 +185,7 @@ describe('DbUserService', () => {
 
     beforeEach(() => {
       userRepo.findOne.mockResolvedValue(mockUser);
-      queryRunner.manager.save.mockResolvedValue({
+      (queryRunner.manager.save as jest.Mock).mockResolvedValue({
         ...mockUser,
         firstName: 'Jane',
         lastName: 'Smith',
@@ -225,7 +225,9 @@ describe('DbUserService', () => {
     });
 
     it('should rollback transaction on error', async () => {
-      queryRunner.manager.save.mockRejectedValue(new Error('DB error'));
+      (queryRunner.manager.save as jest.Mock).mockRejectedValue(
+        new Error('DB error'),
+      );
 
       await expect(
         service.updateProfile('user-123', updateInput),
@@ -285,7 +287,7 @@ describe('DbUserService', () => {
         new Error('Persistent error'),
       );
       userRepo.findOne.mockResolvedValue(mockUser);
-      queryRunner.manager.save.mockResolvedValue({
+      (queryRunner.manager.save as jest.Mock).mockResolvedValue({
         ...mockUser,
         imageUrl: undefined,
       });
@@ -304,6 +306,46 @@ describe('DbUserService', () => {
       await expect(
         service.updateProfile('user-123', invalidInput),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should skip name and image updates when nothing is provided', async () => {
+      const untouched = { ...mockUser, firstName: 'John', lastName: 'Doe' };
+      userRepo.findOne.mockResolvedValue(untouched);
+
+      const result = await service.updateProfile('user-123', {});
+
+      expect(result).toBeDefined();
+      expect(untouched.firstName).toBe('John');
+      expect(untouched.lastName).toBe('Doe');
+      expect(mediaGrpcService.resolveMediaUrl).not.toHaveBeenCalled();
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should stamp a fresh updatedAt when the saved user has none', async () => {
+      (queryRunner.manager.save as jest.Mock).mockResolvedValue({
+        ...mockUser,
+        updatedAt: undefined,
+      } as any);
+
+      await service.updateProfile('user-123', { firstName: 'Jane' });
+
+      expect(kafkaService.emit).toHaveBeenCalledWith(
+        UserKafkaTopics.USER_UPDATED,
+        UserKafkaTopics.USER_UPDATED,
+        expect.objectContaining({ updatedAt: expect.any(Date) }),
+      );
+    });
+
+    it('should keep the update when the search-index publish fails', async () => {
+      kafkaService.emit.mockImplementation(() => {
+        throw new Error('kafka down');
+      });
+
+      const result = await service.updateProfile('user-123', updateInput);
+
+      expect(result).toBeDefined();
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+      expect(outboxWorkerService.enqueueEvent).toHaveBeenCalled();
     });
   });
 
@@ -373,16 +415,35 @@ describe('DbUserService', () => {
         NotFoundException,
       );
     });
+
+    it('should tolerate a failing publish and a missing updatedAt', async () => {
+      userRepo.findOne.mockResolvedValue({
+        ...mockUser,
+        updatedAt: undefined,
+      } as unknown as User);
+      userRepo.save.mockImplementation(async (u) => u as User);
+      kafkaService.emit.mockImplementation(() => {
+        throw new Error('kafka down');
+      });
+
+      const result = await service.promoteUserToAdmin('user-123');
+
+      expect(result.role).toBe(Role.ADMIN);
+      expect(result.updatedAt).toBeUndefined();
+    });
   });
 
   describe('updateUserRole', () => {
     it('should update user role', async () => {
       userRepo.findOne.mockResolvedValue(mockUser);
-      userRepo.save.mockResolvedValue({ ...mockUser, role: Role.MERCHANT });
+      userRepo.save.mockResolvedValue({
+        ...mockUser,
+        role: 'merchant' as unknown as Role,
+      });
 
       const result = await service.updateUserRole('user-123', 'merchant');
 
-      expect(result.role).toBe(Role.MERCHANT);
+      expect(result.role).toBe('merchant' as unknown as Role);
       expect(userRepo.save).toHaveBeenCalled();
     });
 
@@ -392,6 +453,28 @@ describe('DbUserService', () => {
       await expect(
         service.updateUserRole('user-123', 'merchant'),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should normalize a role that exists in the enum', async () => {
+      userRepo.findOne.mockResolvedValue(mockUser);
+      userRepo.save.mockImplementation(async (u) => u as User);
+
+      await service.updateUserRole('user-123', 'ADMIN');
+
+      expect(userRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ role: Role.ADMIN }),
+      );
+    });
+
+    it('should keep the provided value when the role is not in the enum', async () => {
+      userRepo.findOne.mockResolvedValue(mockUser);
+      userRepo.save.mockImplementation(async (u) => u as User);
+
+      await service.updateUserRole('user-123', 'super-admin');
+
+      expect(userRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ role: 'super-admin' }),
+      );
     });
   });
 
@@ -440,6 +523,32 @@ describe('DbUserService', () => {
         NotFoundException,
       );
     });
+
+    it('should report false when the delete reports no affected rows', async () => {
+      userRepo.findOne.mockResolvedValue(mockUser);
+      userRepo.delete.mockResolvedValue({ raw: [] } as any);
+
+      const result = await service.deleteUser('user-123');
+
+      expect(result).toBe(false);
+      expect(kafkaService.emit).toHaveBeenCalledWith(
+        UserKafkaTopics.USER_DELETED,
+        UserKafkaTopics.USER_DELETED,
+        expect.objectContaining({ userId: 'user-123' }),
+      );
+    });
+
+    it('should keep the result when the search-index publish fails', async () => {
+      userRepo.findOne.mockResolvedValue(mockUser);
+      userRepo.delete.mockResolvedValue({ affected: 1, raw: [] });
+      kafkaService.emit.mockImplementation(() => {
+        throw new Error('kafka down');
+      });
+
+      const result = await service.deleteUser('user-123');
+
+      expect(result).toBe(true);
+    });
   });
 
   describe('addAddress', () => {
@@ -483,6 +592,20 @@ describe('DbUserService', () => {
       expect(existingAddress.isDefault).toBe(false);
       expect(addressRepo.save).toHaveBeenCalledTimes(2);
     });
+
+    it('should skip the default reset when the user has no addresses', async () => {
+      userRepo.findOne.mockResolvedValue({ ...mockUser, addresses: [] });
+      addressRepo.save.mockResolvedValue(mockAddress);
+
+      await service.addAddress('user-123', {
+        title: 'Work',
+        street: '456 Work St',
+        city: 'New York',
+        isDefault: true,
+      });
+
+      expect(addressRepo.save).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('deleteAddress', () => {
@@ -523,7 +646,7 @@ describe('DbUserService', () => {
         ...mockUser,
         addresses: [addr1, addr2],
       });
-      addressRepo.save.mockResolvedValue([
+      (addressRepo.save as jest.Mock).mockResolvedValue([
         { ...addr1, isDefault: false },
         { ...addr2, isDefault: true },
       ]);

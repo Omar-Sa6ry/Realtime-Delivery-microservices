@@ -8,7 +8,7 @@
   },
   "testTimeout": 60000,
   "maxWorkers": 1,
-  "setupFilesAfterEnv": [],
+  "setupFilesAfterEnv": ["<rootDir>/support/test-env.ts"],
   "moduleNameMapper": {
     "^@delivery-micro/shard$": "<rootDir>/../node_modules/@delivery-micro/shard",
     "^@bts-soft/core$": "<rootDir>/../node_modules/@bts-soft/core"

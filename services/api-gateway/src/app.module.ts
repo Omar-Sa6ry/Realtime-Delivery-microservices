@@ -4,15 +4,11 @@ import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { JwtModule } from '@nestjs/jwt';
 import { GraphQLModule } from '@nestjs/graphql';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { ApolloDriverConfig } from '@nestjs/apollo';
 import { RedisModule, RedisService } from '@bts-soft/cache';
-import {
-  RateLimiter,
-  RateLimiterAlgorithm,
-  RedisStore,
-} from '@bts-soft/validation';
 import { AppController } from './app.controller';
 import { JwtAuthGuard } from './common/guards/auth.guard';
+import { createRateLimiterGuard } from './common/guards/rate-limiter.factory';
 import { HealthController } from './health/health.controller';
 import { MetricsController } from './health/metrics.controller';
 import {
@@ -22,13 +18,13 @@ import {
   MetricsInterceptor,
 } from '@delivery-micro/shard';
 import depthLimit from 'graphql-depth-limit';
-import {
-  CorrelationIdMiddleware,
-  CORRELATION_ID_HEADER,
-} from './common/middlewares/correlation-id.middleware';
+import { CorrelationIdMiddleware } from './common/middlewares/correlation-id.middleware';
 import { JwtAuthMiddleware } from './common/middlewares/jwt-auth.middleware';
 import { ApolloGatewayDriver, ApolloGatewayDriverConfig } from '@nestjs/apollo';
-import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
+import { IntrospectAndCompose } from '@apollo/gateway';
+import { buildGraphQLContext } from './common/graphql/graphql-context';
+import { formatGatewayError } from './common/graphql/format-error';
+import { buildSubgraphService } from './common/graphql/subgraph-service';
 
 @Module({
   imports: [
@@ -49,78 +45,11 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloGatewayDriver,
       server: {
-        context: ({ req }: any) => {
-          if (
-            req &&
-            !req.user &&
-            req.headers?.authorization?.startsWith('Bearer ')
-          ) {
-            try {
-              const token = req.headers.authorization.split(' ')[1];
-              const parts = token.split('.');
-              if (parts.length === 3) {
-                const payload = JSON.parse(
-                  Buffer.from(parts[1], 'base64').toString('utf-8'),
-                );
-                req.user = {
-                  userId: payload.sub || payload.userId || payload.id,
-                  role: payload.role || 'USER',
-                  sessionId: payload.sessionId,
-                };
-              }
-            } catch {
-              // ignore invalid format
-            }
-          }
-          return { req };
-        },
+        context: buildGraphQLContext,
         validationRules: [depthLimit(7)],
         playground: true,
         introspection: true,
-        formatError: (error: any) => {
-          // Handle subgraph errors (new format: extensions directly on error)
-          const subgraphError = error.extensions;
-
-          if (
-            subgraphError &&
-            subgraphError.success === false &&
-            subgraphError.statusCode
-          ) {
-            return {
-              success: false,
-              statusCode: subgraphError.statusCode,
-              message: error.message,
-              timeStamp: subgraphError.timeStamp || new Date().toISOString(),
-              error: subgraphError.error,
-            } as any;
-          }
-
-          // Handle legacy subgraph error format (if any)
-          const legacySubgraphError =
-            error.extensions?.response?.body?.errors?.[0];
-          if (legacySubgraphError) {
-            return {
-              success: false,
-              statusCode: legacySubgraphError.statusCode || 400,
-              message: legacySubgraphError.message,
-              timeStamp:
-                legacySubgraphError.timeStamp || new Date().toISOString(),
-            } as any;
-          }
-
-          // Handle gateway-level errors
-          const originalError = error.extensions?.originalError as any;
-          const msg = originalError?.message || error.message;
-          const code =
-            error.extensions?.statusCode || originalError?.statusCode || 400;
-
-          return {
-            success: false,
-            statusCode: code,
-            message: Array.isArray(msg) ? msg[0] : msg,
-            timeStamp: new Date().toISOString(),
-          } as any;
-        },
+        formatError: formatGatewayError,
       },
       gateway: {
         supergraphSdl: new IntrospectAndCompose({
@@ -182,62 +111,7 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
           ],
           pollIntervalInMs: 5000,
         }),
-        buildService: ({ url }) => {
-          return new RemoteGraphQLDataSource({
-            url,
-            willSendRequest({ request, context }: any) {
-              let user = context.req?.user;
-              if (
-                !user &&
-                context.req?.headers?.authorization?.startsWith('Bearer ')
-              ) {
-                try {
-                  const token = context.req.headers.authorization.split(' ')[1];
-                  const parts = token.split('.');
-                  if (parts.length === 3) {
-                    const payload = JSON.parse(
-                      Buffer.from(parts[1], 'base64').toString('utf-8'),
-                    );
-                    user = {
-                      userId: payload.sub || payload.userId || payload.id,
-                      role: payload.role || 'USER',
-                      sessionId: payload.sessionId,
-                    };
-                  }
-                } catch {
-                  // ignore
-                }
-              }
-
-              if (user) {
-                request.http.headers.set('x-user-id', user.userId || '');
-                request.http.headers.set('x-user-role', user.role || '');
-                if (user.sessionId) {
-                  request.http.headers.set('x-user-session', user.sessionId);
-                }
-              }
-              if (context.req?.headers?.[CORRELATION_ID_HEADER]) {
-                request.http.headers.set(
-                  CORRELATION_ID_HEADER,
-                  context.req.headers[CORRELATION_ID_HEADER],
-                );
-              }
-              if (context.req?.headers?.authorization) {
-                request.http.headers.set(
-                  'authorization',
-                  context.req.headers.authorization,
-                );
-              }
-              const lang =
-                context.req?.headers?.['x-lang'] ||
-                context.req?.headers?.['accept-language'];
-              if (lang) {
-                request.http.headers.set('x-lang', lang);
-                request.http.headers.set('accept-language', lang);
-              }
-            },
-          });
-        },
+        buildService: buildSubgraphService,
       },
     } as ApolloGatewayDriverConfig),
     LoggingModule,
@@ -257,18 +131,7 @@ import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
 
     {
       provide: APP_GUARD,
-      useFactory: (redisService: RedisService) => {
-        return new ((RateLimiter as any)(
-          {
-            algorithm: RateLimiterAlgorithm.TOKEN_BUCKET,
-            limit: Number(process.env.RATE_LIMIT_LIMIT) || 100,
-            windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
-            skipIntrospection: true,
-            store: new RedisStore(redisService),
-          },
-          new RedisStore(redisService),
-        ))();
-      },
+      useFactory: createRateLimiterGuard,
       inject: [RedisService],
     },
   ],

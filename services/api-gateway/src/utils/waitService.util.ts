@@ -35,10 +35,7 @@ export async function waitForService(
         return;
       }
 
-      logger.warn(
-        `[startup] ${url} is not ready. Retrying...`,
-        'Startup',
-      );
+      logger.warn(`[startup] ${url} is not ready. Retrying...`, 'Startup');
     } catch (err) {
       logger.warn(
         `[startup] ${url} is unreachable (${(err as Error).message}). Retrying...`,

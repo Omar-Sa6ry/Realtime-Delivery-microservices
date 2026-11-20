@@ -7,7 +7,12 @@ const LIVENESS_PORT = Number(process.env.PORT_LIVENESS ?? 4099);
 
 const logger = new StructuredLogger();
 
-function startLivenessServer(): http.Server {
+/** Resolves a CommonJS module to its default export when one is present. */
+export function interopDefault(mod: any): any {
+  return mod?.default ?? mod;
+}
+
+export function startLivenessServer(): http.Server {
   const server = http.createServer((req, res) => {
     if (
       req.url === '/health' ||
@@ -41,7 +46,7 @@ function startLivenessServer(): http.Server {
   return server;
 }
 
-async function waitForDependencies() {
+export async function waitForDependencies(): Promise<void> {
   await waitForRedis();
 
   const subgraphs = [
@@ -61,8 +66,10 @@ async function waitForDependencies() {
   logger.log('All subgraphs are reachable.', 'Startup');
 }
 
-async function setupProxies(app: NestExpressApplication) {
-  const { createProxyMiddleware } = await import('http-proxy-middleware');
+export async function setupProxies(app: NestExpressApplication): Promise<{
+  wsProxy: any;
+}> {
+  const { createProxyMiddleware } = require('http-proxy-middleware');
 
   // WebSocket Proxy for Realtime Service
   const wsProxy = createProxyMiddleware({
@@ -87,21 +94,23 @@ async function setupProxies(app: NestExpressApplication) {
   return { wsProxy };
 }
 
-async function bootstrap() {
+export async function bootstrap(): Promise<void> {
   await waitForDependencies();
 
   // Lazy-load AppModule and NestJS
   const { AppModule } = require('./app.module');
-  const { NestFactory } = await import('@nestjs/core');
+  const { NestFactory } = require('@nestjs/core');
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+  // `require` returns `any`, so the generic is applied to the variable instead
+  // of the call: TypeScript rejects type arguments on untyped calls (TS2347).
+  const app: NestExpressApplication = await NestFactory.create(AppModule, {
     logger,
   });
 
   app.set('trust proxy', 1);
   app.enableShutdownHooks();
 
-  const helmet = (await import('helmet')).default;
+  const helmet = interopDefault(require('helmet'));
   app.use(
     helmet({
       contentSecurityPolicy:
@@ -134,7 +143,7 @@ async function bootstrap() {
   );
 }
 
-function runBootstrap() {
+export function runBootstrap(): void {
   bootstrap().catch((err) => {
     logger.error(
       'Bootstrap failed, retrying in 10s...',
@@ -146,16 +155,47 @@ function runBootstrap() {
 }
 
 // ─── Process-level error guards ─────────────────────────────────────────────
-process.on('unhandledRejection', (reason) => {
-  const err = reason instanceof Error ? reason : new Error(String(reason));
-  logger.error('Unhandled promise rejection', err.stack, 'Process');
-});
+export function registerProcessHandlers(): void {
+  process.on('unhandledRejection', (reason) => {
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    logger.error('Unhandled promise rejection', err.stack, 'Process');
+  });
 
-process.on('uncaughtException', (err) => {
-  logger.error(`Uncaught exception: ${err.message}`, err.stack, 'Process');
-  process.exit(1);
-});
+  process.on('uncaughtException', (err) => {
+    logger.error(`Uncaught exception: ${err.message}`, err.stack, 'Process');
+    process.exit(1);
+  });
+}
 
-// Start Liveness Server, then trigger Bootstrap
-startLivenessServer();
-runBootstrap();
+/** The startup actions `runIfEntryPoint` triggers when this file is the entry point. */
+export interface EntryPointActions {
+  registerProcessHandlers: () => void;
+  startLivenessServer: () => void;
+  runBootstrap: () => void;
+}
+
+/**
+ * Kick off the gateway only when this file is the process entry point
+ * (`node dist/main`). When imported by the unit tests, we skip the side effects
+ * so the module can be exercised without binding ports or hitting the network.
+ *
+ * The predicate and actions are injectable (defaulting to the real behaviour)
+ * purely so tests can exercise the entry-point branch without side effects.
+ */
+export function runIfEntryPoint(
+  isEntryPoint: boolean = typeof require !== 'undefined' &&
+    require.main === module,
+  actions: EntryPointActions = {
+    registerProcessHandlers,
+    startLivenessServer,
+    runBootstrap,
+  },
+): void {
+  if (isEntryPoint) {
+    actions.registerProcessHandlers();
+    actions.startLivenessServer();
+    actions.runBootstrap();
+  }
+}
+
+runIfEntryPoint();

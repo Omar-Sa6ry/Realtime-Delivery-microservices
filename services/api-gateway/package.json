@@ -8,16 +8,23 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint:check": "eslint \"{src,apps,libs,test}/**/*.ts\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json --maxWorkers=2",
+    "test:e2e:cov": "jest --config ./test/jest-e2e.json --maxWorkers=2 --coverage",
+    "test:all": "npm run test:cov && npm run test:e2e",
+    "verify": "npm run format:check && npm run lint:check && npm run typecheck && npm run build && npm run test:all",
+    "clean": "node -e \"const fs=require('fs');['dist','coverage','test/coverage','.tmp-check','.tmp-cov','src/.tmp-cov','node_modules/.cache'].forEach((p)=>fs.rmSync(p,{recursive:true,force:true}))\""
   },
   "dependencies": {
     "@apollo/gateway": "^2.14.3",
@@ -85,12 +92,36 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "diagnostics": {
+            "ignoreCodes": [151002]
+          }
+        }
+      ]
+    },
+    "moduleNameMapper": {
+      "^uuid$": "<rootDir>/../test/support/uuid-shim.ts"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.ts",
+      "!**/*.spec.ts"
     ],
     "coverageDirectory": "../coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "json-summary"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 100,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
+      }
+    },
     "testEnvironment": "node"
   }
 }

@@ -1,18 +1,92 @@
+# ─── OS & IDE Files ────────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# IDEs & Editors
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+
+# ─── Logs & Diagnostics ───────────────────────────────────────────────────
 *.log
+*.log.*
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─── Environment & Secrets ────────────────────────────────────────────────
 .env
 .env.*
+*.env
 config/.env
 config/.env.*
-node_modules/
-dist/
-coverage/
+config/env/.env.*
+!config/env/.env.example
+!config/.env.example
+!.env.example
 
-# Go
-/bin/
-/obj/
+# Kubernetes secrets & local credentials
+infrastructure/kubernetes/base/secrets/*.yaml
+infrastructure/kubernetes/base/secrets/*.local.yaml
+*.pem
+*.key
+*.cert
+*.crt
+
+# ─── Node.js & TypeScript ─────────────────────────────────────────────────
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist
+packages/ts/dist/
+build/
+**/build/
+out/
+**/out/
+.next/
+.nuxt/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+coverage
+
+# TypeScript cache
+*.tsbuildinfo
+.npm/
+.yarn/
+.pnpm-store/
+
+# ─── Testing & Code Coverage ──────────────────────────────────────────────
+coverage/
+**/coverage/
+*.lcov
+coverage.html
+coverage.out
+.nyc_output/
+*.test.out
+*.coverage
+
+# ─── Go ───────────────────────────────────────────────────────────────────
+bin/
+**/bin/
+obj/
+**/obj/
 *.exe
 *.exe~
 *.dll
@@ -20,13 +94,22 @@ coverage/
 *.dylib
 *.test
 *.out
+*.err
+driver-service-e2e
 vendor/
+**/vendor/
+go.work
+go.work.sum
 
-# Kubernetes local secrets (never commit real credentials)
-infrastructure/kubernetes/base/secrets/*.yaml
-infrastructure/kubernetes/base/secrets/*.local.yaml
-
-frontend/
-
-system_articture.md
+# ─── Local Tooling & Caches ───────────────────────────────────────────────
+.trunk/
+.qodo/
+.cache/
+**/node_modules/.cache/
+.eslintcache
+.stylelintcache
+.prettiercache
+tmp/
+temp/
 notes.txt
+infrastructure/commands.txt

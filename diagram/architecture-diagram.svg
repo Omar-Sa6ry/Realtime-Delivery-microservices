@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" style="background:#ffffff; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <style>
+      .title-box { fill: #ffffff; stroke: #111827; stroke-width: 2.5; rx: 12px; }
+      .box { fill: #ffffff; stroke: #1f2937; stroke-width: 2; rx: 10px; }
+      .inner-box { fill: #f9fafb; stroke: #9ca3af; stroke-width: 1.5; rx: 6px; }
+      .edge-box { fill: #ffffff; stroke: #374151; stroke-width: 2; rx: 8px; }
+      .heading { font-size: 26px; font-weight: 700; fill: #111827; }
+      .subheading { font-size: 15px; font-weight: 600; fill: #374151; }
+      .txt-bold { font-size: 14px; font-weight: 700; fill: #111827; }
+      .txt-normal { font-size: 12px; fill: #4b5563; }
+      .txt-badge { font-size: 11px; font-weight: 600; fill: #1f2937; }
+      .arrow { stroke: #374151; stroke-width: 1.8; fill: none; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#374151" />
+    </marker>
+  </defs>
+
+  <!-- Header Section -->
+  <g transform="translate(60, 40)">
+    <!-- GitHub Link Box -->
+    <rect x="0" y="0" width="360" height="48" rx="8" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5" />
+    <text x="18" y="29" font-size="14" font-weight="600" fill="#1f2937">github.com/Omar-Sa6ry/Realtime-Delivery</text>
+
+    <!-- Main Title -->
+    <rect x="420" y="-8" width="680" height="64" class="title-box" />
+    <text x="760" y="32" text-anchor="middle" class="heading">Realtime Delivery Microservices Platform</text>
+    <text x="760" y="49" text-anchor="middle" font-size="12" fill="#6b7280">Polyglot Architecture • Event-Driven • 10 Independent Services</text>
+
+    <!-- Author Badge -->
+    <rect x="1160" y="0" width="320" height="48" rx="8" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5" />
+    <circle cx="1185" cy="24" r="14" fill="#374151" />
+    <text x="1185" y="29" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">OS</text>
+    <text x="1210" y="24" font-size="14" font-weight="700" fill="#111827">Omar Sabry</text>
+    <text x="1210" y="38" font-size="11" fill="#6b7280">Backend &amp; Distributed Systems</text>
+  </g>
+
+  <!-- Ingress / Edge Gateway Layer -->
+  <g transform="translate(60, 130)">
+    <rect x="0" y="0" width="1480" height="110" class="box" />
+    <text x="24" y="28" class="subheading">EDGE &amp; INGRESS LAYER</text>
+
+    <!-- Client Box -->
+    <rect x="24" y="42" width="180" height="52" class="inner-box" />
+    <text x="114" y="66" text-anchor="middle" class="txt-bold">Client Apps</text>
+    <text x="114" y="82" text-anchor="middle" class="txt-normal">Web • Mobile (iOS/Android)</text>
+
+    <!-- Arrow Client -> Edge -->
+    <path d="M 204 68 L 270 68" class="arrow" />
+
+    <!-- API Gateway Box -->
+    <rect x="280" y="38" width="560" height="60" class="edge-box" />
+    <text x="295" y="60" class="txt-bold">API Gateway (NestJS / Apollo Federation v2)</text>
+    <text x="295" y="80" class="txt-normal">Unified Supergraph • JWT Auth Guard • Redis Sliding-Window Rate Limiting</text>
+
+    <!-- Realtime WS Gateway Box -->
+    <rect x="880" y="38" width="570" height="60" class="edge-box" />
+    <text x="895" y="60" class="txt-bold">Realtime Service (NestJS / WebSockets)</text>
+    <text x="895" y="80" class="txt-normal">Driver GPS Stream Ingestion • Room Fanout • Presence Heartbeats via Redis</text>
+  </g>
+
+  <!-- Core Microservices Grid (Middle Layer) -->
+  <g transform="translate(60, 270)">
+    <rect x="0" y="0" width="1480" height="360" class="box" />
+    <text x="24" y="28" class="subheading">CORE MICROSERVICES (POLYGLOT: GO &amp; NESTJS)</text>
+
+    <!-- Row 1: Services 1-4 -->
+    <!-- Service 1: User -->
+    <rect x="24" y="44" width="340" height="135" class="inner-box" />
+    <rect x="34" y="54" width="75" height="20" rx="4" fill="#e0e7ff" />
+    <text x="71" y="68" text-anchor="middle" font-size="11" font-weight="700" fill="#3730a3">NestJS</text>
+    <text x="120" y="69" class="txt-bold">User Service</text>
+    <text x="34" y="94" class="txt-normal">• Identity &amp; Argon2/Bcrypt Hashing</text>
+    <text x="34" y="112" class="txt-normal">• RBAC Permissions &amp; Profile API</text>
+    <text x="34" y="130" class="txt-normal">• gRPC: ValidateToken, GetUser</text>
+    <text x="34" y="152" font-size="11" font-weight="600" fill="#4338ca">Store: PostgreSQL</text>
+
+    <!-- Service 2: Delivery (Saga) -->
+    <rect x="390" y="44" width="340" height="135" class="inner-box" />
+    <rect x="400" y="54" width="75" height="20" rx="4" fill="#e0e7ff" />
+    <text x="437" y="68" text-anchor="middle" font-size="11" font-weight="700" fill="#3730a3">NestJS</text>
+    <text x="486" y="69" class="txt-bold">Delivery Service (Saga)</text>
+    <text x="400" y="94" class="txt-normal">• Distributed Saga Orchestrator</text>
+    <text x="400" y="112" class="txt-normal">• Order State Machine &amp; Compensations</text>
+    <text x="400" y="130" class="txt-normal">• Idempotency Lock via SHA256</text>
+    <text x="400" y="152" font-size="11" font-weight="600" fill="#4338ca">Store: PostgreSQL</text>
+
+    <!-- Service 3: Driver (Go / Geo) -->
+    <rect x="756" y="44" width="340" height="135" class="inner-box" />
+    <rect x="766" y="54" width="60" height="20" rx="4" fill="#cffafe" />
+    <text x="796" y="68" text-anchor="middle" font-size="11" font-weight="700" fill="#155e75">Go</text>
+    <text x="836" y="69" class="txt-bold">Driver Service</text>
+    <text x="766" y="94" class="txt-normal">• Geospatial Proximity ($nearSphere)</text>
+    <text x="766" y="112" class="txt-normal">• Reservation Leases &amp; Expiry Worker</text>
+    <text x="766" y="130" class="txt-normal">• gRPC: FindDrivers, ReserveDriver</text>
+    <text x="766" y="152" font-size="11" font-weight="600" fill="#0e7490">Store: MongoDB (2dsphere)</text>
+
+    <!-- Service 4: Payment -->
+    <rect x="1120" y="44" width="335" height="135" class="inner-box" />
+    <rect x="1130" y="54" width="60" height="20" rx="4" fill="#cffafe" />
+    <text x="1160" y="68" text-anchor="middle" font-size="11" font-weight="700" fill="#155e75">Go</text>
+    <text x="1200" y="69" class="txt-bold">Payment Service</text>
+    <text x="1130" y="94" class="txt-normal">• Stripe PaymentIntents &amp; Webhooks</text>
+    <text x="1130" y="112" class="txt-normal">• Idempotent Auth, Capture, Refund</text>
+    <text x="1130" y="130" class="txt-normal">• Automated Reconciliation Workers</text>
+    <text x="1130" y="152" font-size="11" font-weight="600" fill="#0e7490">Store: PostgreSQL</text>
+
+    <!-- Row 2: Services 5-8 -->
+    <!-- Service 5: Media Service -->
+    <rect x="24" y="200" width="340" height="140" class="inner-box" />
+    <rect x="34" y="210" width="60" height="20" rx="4" fill="#cffafe" />
+    <text x="64" y="224" text-anchor="middle" font-size="11" font-weight="700" fill="#155e75">Go</text>
+    <text x="104" y="225" class="txt-bold">Media Service</text>
+    <text x="34" y="250" class="txt-normal">• S3 Multipart Presigned Uploads</text>
+    <text x="34" y="268" class="txt-normal">• ClamAV Antivirus Stream Scanner</text>
+    <text x="34" y="286" class="txt-normal">• WebP &amp; Multi-Res Thumbnails Pool</text>
+    <text x="34" y="308" font-size="11" font-weight="600" fill="#0e7490">Store: AWS S3 &amp; DynamoDB</text>
+
+    <!-- Service 6: Search Service -->
+    <rect x="390" y="200" width="340" height="140" class="inner-box" />
+    <rect x="400" y="210" width="60" height="20" rx="4" fill="#cffafe" />
+    <text x="430" y="224" text-anchor="middle" font-size="11" font-weight="700" fill="#155e75">Go</text>
+    <text x="470" y="225" class="txt-bold">Search Service</text>
+    <text x="400" y="250" class="txt-normal">• OpenSearch Query DSL &amp; Fuzzy Match</text>
+    <text x="400" y="268" class="txt-normal">• Real-time Kafka Ingestion Pipeline</text>
+    <text x="400" y="286" class="txt-normal">• Zero-Downtime Alias Reindexing</text>
+    <text x="400" y="308" font-size="11" font-weight="600" fill="#0e7490">Store: OpenSearch</text>
+
+    <!-- Service 7: Analytics Service -->
+    <rect x="756" y="200" width="340" height="140" class="inner-box" />
+    <rect x="766" y="210" width="60" height="20" rx="4" fill="#cffafe" />
+    <text x="796" y="224" text-anchor="middle" font-size="11" font-weight="700" fill="#155e75">Go</text>
+    <text x="836" y="225" class="txt-bold">Analytics Service</text>
+    <text x="766" y="250" class="txt-normal">• Real-time Columnar OLAP Analytics</text>
+    <text x="766" y="268" class="txt-normal">• Driver Acceptance &amp; Delivery KPIs</text>
+    <text x="766" y="286" class="txt-normal">• High-Throughput Kafka Consumers</text>
+    <text x="766" y="308" font-size="11" font-weight="600" fill="#0e7490">Store: ClickHouse</text>
+
+    <!-- Service 8: Notification Service -->
+    <rect x="1120" y="200" width="335" height="140" class="inner-box" />
+    <rect x="1130" y="210" width="75" height="20" rx="4" fill="#e0e7ff" />
+    <text x="1167" y="224" text-anchor="middle" font-size="11" font-weight="700" fill="#3730a3">NestJS</text>
+    <text x="1215" y="225" class="txt-bold">Notification Service</text>
+    <text x="1130" y="250" class="txt-normal">• Multi-Channel: Push, Email, SMS</text>
+    <text x="1130" y="268" class="txt-normal">• User Quiet Hours &amp; Preferences</text>
+    <text x="1130" y="286" class="txt-normal">• RabbitMQ DLX Retries &amp; Templates</text>
+    <text x="1130" y="308" font-size="11" font-weight="600" fill="#4338ca">Store: PostgreSQL</text>
+  </g>
+
+  <!-- Message Brokers & Asynchronous Backbone Layer -->
+  <g transform="translate(60, 650)">
+    <rect x="0" y="0" width="1480" height="140" class="box" />
+    <text x="24" y="28" class="subheading">MESSAGE BROKERS &amp; TRANSACTIONAL OUTBOX LAYER</text>
+
+    <!-- Kafka -->
+    <rect x="24" y="42" width="460" height="80" class="inner-box" />
+    <text x="40" y="68" class="txt-bold">Apache Kafka (Durable Event Streaming)</text>
+    <text x="40" y="88" class="txt-normal">• Ordered Partitioning • Replayability • Audit Trail</text>
+    <text x="40" y="106" class="txt-normal">• Event Topics: DeliveryCreated, PaymentCaptured, MediaReady</text>
+
+    <!-- RabbitMQ -->
+    <rect x="510" y="42" width="460" height="80" class="inner-box" />
+    <text x="526" y="68" class="txt-bold">RabbitMQ (Task Queuing &amp; Retries)</text>
+    <text x="526" y="88" class="txt-normal">• Dead Letter Exchanges (DLX) • Explicit Acknowledgment</text>
+    <text x="526" y="106" class="txt-normal">• Decoupled Jobs: NotificationDispatch, OrderTaskQueue</text>
+
+    <!-- NATS JetStream -->
+    <rect x="995" y="42" width="460" height="80" class="inner-box" />
+    <text x="1011" y="68" class="txt-bold">NATS JetStream (Low-Latency Telemetry)</text>
+    <text x="1011" y="88" class="txt-normal">• Ultra-Low Latency Pub/Sub • Sub-millisecond Delivery</text>
+    <text x="1011" y="106" class="txt-normal">• High-Frequency Driver GPS Coordinates • Presence Pings</text>
+  </g>
+
+  <!-- Observability & Infrastructure Footer -->
+  <g transform="translate(60, 810)">
+    <rect x="0" y="0" width="1480" height="140" class="box" fill="#f8fafc" />
+    <text x="24" y="28" class="subheading">INFRASTRUCTURE, OBSERVABILITY &amp; CI/CD</text>
+
+    <!-- Box 1: Shared Packages -->
+    <rect x="24" y="42" width="340" height="80" class="inner-box" />
+    <text x="40" y="68" class="txt-bold">Shared Monorepo Packages</text>
+    <text x="40" y="88" class="txt-normal">• Go Kernel: Zap, OTel, Snowflake, Kafka</text>
+    <text x="40" y="106" class="txt-normal">• TS Shard: Guards, DTOs, Decorators</text>
+
+    <!-- Box 2: Telemetry -->
+    <rect x="390" y="42" width="340" height="80" class="inner-box" />
+    <text x="406" y="68" class="txt-bold">Full Observability Stack</text>
+    <text x="406" y="88" class="txt-normal">• OpenTelemetry Collector • Tempo Traces</text>
+    <text x="406" y="106" class="txt-normal">• Prometheus Metrics • Loki Logs • Grafana</text>
+
+    <!-- Box 3: Kubernetes & Docker -->
+    <rect x="756" y="42" width="340" height="80" class="inner-box" />
+    <text x="772" y="68" class="txt-bold">Kubernetes &amp; Kustomize</text>
+    <text x="772" y="88" class="txt-normal">• Base Manifests + Dev/Prod Overlays</text>
+    <text x="772" y="106" class="txt-normal">• Skaffold Workflow • Docker Multi-Stage</text>
+
+    <!-- Box 4: Quality & Testing -->
+    <rect x="1120" y="42" width="335" height="80" class="inner-box" />
+    <text x="1136" y="68" class="txt-bold">Testing &amp; Code Quality</text>
+    <text x="1136" y="88" class="txt-normal">• Unit &amp; E2E Tests (Jest &amp; Go Testify)</text>
+    <text x="1136" y="106" class="txt-normal">• Trunk Linter • GitHub Actions CI Matrix</text>
+  </g>
+</svg>
